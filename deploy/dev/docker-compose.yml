@@ -1,0 +1,99 @@
+# =====================================================================
+# INFRAESTRUTURA DE DESENVOLVIMENTO LOCAL
+#
+# Sobe InfluxDB e Mosquitto sempre; MySQL apenas sob demanda (ver o
+# comentario no servico). Backend, telemetria e frontend rodam
+# NATIVAMENTE (mvnw / ng serve) para permitir hot reload e debug —
+# ver start-dev.cmd na raiz.
+#
+# ⚠️ NAO USE EM PRODUCAO. Credenciais fixas e broker sem autenticacao.
+#    Para producao, use deploy/vm1-transacional e deploy/vm2-telemetria.
+# =====================================================================
+
+name: geopetro-dev
+
+services:
+
+  # ⚠️ OPCIONAL — so sobe com: docker compose --profile mysql up -d
+  #
+  # Muitas maquinas de desenvolvimento ja tem um MySQL instalado como servico
+  # do Windows ocupando a porta 3306. Subir este container junto causaria
+  # conflito de porta e, pior, faria o backend apontar para um banco vazio
+  # em vez do banco de trabalho ja existente.
+  #
+  # O start-dev.cmd detecta se ha MySQL respondendo em localhost:3306 e so
+  # ativa este perfil quando nao ha.
+  mysql:
+    profiles: ["mysql"]
+    image: mysql:8
+    container_name: geopetro-dev-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      # Credenciais fixas, iguais aos defaults de application-dev.properties.
+      # Assim o backend sobe sem precisar de nenhuma variavel de ambiente.
+      MYSQL_ROOT_PASSWORD: bilzao90
+      MYSQL_DATABASE: geopetro_io
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=-03:00
+    volumes:
+      - mysql-dev-data:/var/lib/mysql
+    # Sem mysql-init: em dev o perfil usa ddl-auto=update e o proprio Hibernate
+    # cria as tabelas. O schema pronto so e necessario em producao (validate).
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pbilzao90"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: geopetro-dev-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: devpassword123
+      DOCKER_INFLUXDB_INIT_ORG: braserv
+      DOCKER_INFLUXDB_INIT_BUCKET: telemetria
+      DOCKER_INFLUXDB_INIT_RETENTION: 7d
+      # Token fixo de desenvolvimento — o start-dev.cmd passa o mesmo valor
+      # ao servico de telemetria via INFLUX_TOKEN.
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dev-token-geopetro-local-0000000000
+    volumes:
+      - influxdb-dev-data:/var/lib/influxdb2
+      - influxdb-dev-config:/etc/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: geopetro-dev-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-dev-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t '$$SYS/#' -C 1 -W 3 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  mysql-dev-data:
+  influxdb-dev-data:
+  influxdb-dev-config:
+  mosquitto-dev-data:

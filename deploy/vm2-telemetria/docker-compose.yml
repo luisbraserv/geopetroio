@@ -1,0 +1,102 @@
+# =====================================================================
+# VM-2 · TELEMETRIA
+#
+# Broker MQTT + consumidor + InfluxDB. Os tres juntos de proposito: a
+# escrita e continua (1 msg/s por sonda) e mantê-la local evita que cada
+# ponto atravesse a rede.
+#
+# Exposicao de rede: esta VM recebe conexoes das SONDAS EM CAMPO (porta
+# 1883). E o unico ponto do sistema exposto a essa origem — motivo pelo
+# qual nao compartilha maquina com o banco de usuarios.
+#
+# Uso:  cp .env.example .env  &&  editar  &&  docker compose up -d
+# =====================================================================
+
+services:
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: geopetro-mosquitto
+    restart: unless-stopped
+    ports:
+      # Exposto as sondas. Restrinja por firewall/security group a faixa
+      # de IPs das sondas — o broker nao deve estar aberto na internet.
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    healthcheck:
+      # mosquitto_sub sai com codigo 0 ao conectar e receber o retido (ou expirar em -W).
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t '$$SYS/#' -C 1 -W 3 -u \"$$MQTT_USERNAME\" -P \"$$MQTT_PASSWORD\" >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:?defina MQTT_USERNAME no .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?defina MQTT_PASSWORD no .env}
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: geopetro-influxdb
+    restart: unless-stopped
+    ports:
+      # Apenas loopback: so o consumidor, na mesma VM, precisa acessar.
+      - "127.0.0.1:8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_ADMIN_USER:?defina no .env}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_ADMIN_PASSWORD:?defina no .env}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_ORG:-braserv}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_BUCKET:-telemetria}
+      # Retencao do dado bruto. 0 = infinito — NAO recomendado: a 5 pontos/s por
+      # sonda, 20 sondas geram ~8,6 milhoes de pontos/dia. Ver OQ-028.
+      DOCKER_INFLUXDB_INIT_RETENTION: ${INFLUX_RETENTION:-90d}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:?defina INFLUX_TOKEN no .env}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  telemetria:
+    build:
+      context: ../../Backend-Telemetria-Sonda-Geopetro-io
+      dockerfile: Dockerfile
+    image: geopetro/telemetria:${TAG:-latest}
+    container_name: geopetro-telemetria
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    ports:
+      # Consumido pelo Backend-Sonda, que esta na VM-1. Restrinja por firewall
+      # ao IP da VM-1 — nao ha autenticacao servico-a-servico ainda (OQ-029).
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      MQTT_TOPICO: telemetria/+/batch
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORG: ${INFLUX_ORG:-braserv}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-telemetria}
+      TELEMETRIA_ZONA_SONDA: ${TELEMETRIA_ZONA_SONDA:-America/Sao_Paulo}
+      TELEMETRIA_MAX_PONTOS: ${TELEMETRIA_MAX_PONTOS:-2000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+  influxdb-data:
+  influxdb-config:

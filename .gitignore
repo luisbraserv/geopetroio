@@ -1,0 +1,17 @@
+# Repositório de specs do sistema GeopetroIO.
+# Este repo versiona APENAS a pasta specs/ — as aplicações têm seus próprios
+# repositórios Git independentes e não devem ser rastreadas aqui.
+
+/Backend-Sonda-Geopetro-IO/
+/Backend-Telemetria-Sonda-Geopetro-io/
+/Front-Sonda-Geopetro-IO/
+/Desktop-Sonda-Geopetro-IO/
+/Braserv-Horus-Desktop/
+
+# Ruído de sistema/IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.iml

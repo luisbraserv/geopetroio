@@ -1,0 +1,91 @@
+# =====================================================================
+# VM-1 · TRANSACIONAL
+#
+# Frontend + Backend-Sonda + MySQL. Separado da telemetria porque a
+# ingestao e continua e write-heavy, enquanto esta VM e intermitente e
+# read-heavy — juntas, competiriam por I/O de disco.
+#
+# Exposicao de rede: navegadores dos usuarios (portas 80/443).
+#
+# Uso:  cp .env.example .env  &&  editar  &&  docker compose up -d
+# =====================================================================
+
+services:
+
+  mysql:
+    image: mysql:8
+    container_name: geopetro-mysql
+    restart: unless-stopped
+    ports:
+      # Apenas loopback: so o backend, na mesma VM, precisa acessar.
+      - "127.0.0.1:3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina no .env}
+      MYSQL_DATABASE: ${DB_NAME:-geopetro_io}
+      MYSQL_USER: ${DB_USERNAME:?defina no .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?defina no .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=-03:00
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Roda APENAS na primeira inicializacao, com o volume vazio.
+      # Necessario porque em producao o Hibernate usa ddl-auto=validate e nao
+      # cria tabelas — sem isto, a aplicacao falha no startup. Ver README.
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    build:
+      context: ../../Backend-Sonda-Geopetro-IO
+      dockerfile: Dockerfile
+    image: geopetro/backend-sonda:${TAG:-latest}
+    # O nginx do frontend faz proxy para o host 'backend-sonda' — o nome do
+    # servico e do alias precisam bater com o nginx.conf.
+    container_name: backend-sonda
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # A imagem ja define SPRING_PROFILES_ACTIVE=prod. Explicito aqui para que
+      # fique visivel na leitura do compose — sem isto, o application-prod.properties
+      # nao seria lido e as variaveis abaixo seriam ignoradas.
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-geopetro_io}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
+      # Aponta para a VM-2. Substitua pelo IP/host real da maquina de telemetria.
+      MONITORAMENTO_BASE_URL: ${MONITORAMENTO_BASE_URL:?defina o endereco da VM-2 no .env}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS}
+    expose:
+      - "8080"
+
+  front:
+    build:
+      context: ../../Front-Sonda-Geopetro-IO
+      dockerfile: Dockerfile
+    image: geopetro/front:${TAG:-latest}
+    container_name: geopetro-front
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    # O nginx.conf do frontend faz proxy para 'telemetria:8081'. Como a telemetria
+    # agora vive em outra VM, este alias resolve o nome para o endereco externo,
+    # sem exigir alteracao no nginx.conf da imagem.
+    extra_hosts:
+      - "telemetria:${TELEMETRIA_HOST_IP:?defina o IP da VM-2 no .env}"
+
+volumes:
+  mysql-data:
