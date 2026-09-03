@@ -282,3 +282,40 @@ relevante do sistema.
 
 **Nota:** a contagem caiu de 61 para 43 testes com as remoções, mas **a proporção não piorou** — os
 testes removidos cobriam exatamente os módulos removidos.
+
+## Design system
+
+**[FATO]** A fonte normativa é [`specs/index.html`](index.html) — tokens, componentes e princípios.
+Os dois desktops JavaFX transcrevem esses tokens em `geopetro-design-system.css`, arquivo idêntico
+em Desktop-Sonda e Horus. Detalhes e lista de classes em
+[`Braserv-Horus-Desktop/specs/README.md`](../Braserv-Horus-Desktop/specs/README.md#design-system-revisão-2026-08-31).
+
+⚠️ **[DECIDIDO 2026-08-31]** Ação primária é **azul-marinho** `#051833`. Vermelho ficou reservado a
+ação destrutiva e estado de erro; o acento de destaque é o **laranja** `#d4852f`. Antes o vermelho
+era a cor de toda ação comum, o que anulava seu valor como alerta numa tela de operação.
+
+**[FATO]** JavaFX CSS não tem custom properties: os tokens vivem como valores literais num único
+arquivo, e o `rem` da fonte normativa é convertido para `px` na base 16.
+
+### Ícones dos aplicativos (2026-08-31)
+
+**[FATO]** Fonte: `specs/image/Icon-fundo-branco.png`. Gerados em 256×256 com canal alfa preservado
+(o ícone tem cantos transparentes) e distribuídos para os três aplicativos:
+
+| Aplicação | Arquivos |
+|---|---|
+| Desktop-Sonda | `icon/logo.png` · `icon/logo.ico` |
+| Horus | `icons/logo.png` · `icons/app.ico` |
+| Front | `public/logo.png` · `public/favicon.ico` |
+
+⚠️ **[FATO] `logo2.png` (472×143) é o logotipo horizontal, não um ícone.** Aparece no cabeçalho das
+duas telas desktop, no splash e no PDF da carta de operação. Trocá-lo pelo ícone quadrado deixaria a
+marca esticada no cabeçalho. **Não substituir junto.**
+
+⚠️ **[FATO]** Os `.ico` são multi-resolução de verdade (256→16 px, seis entradas, assinatura
+`00000100`). O `jpackage` exige ICO real: o `logo.ico` anterior do Desktop-Sonda era um **PNG
+renomeado**, e o instalador sairia com ícone quebrado. Ao trocar o logo, regenere com
+`Braserv-Horus-Desktop/scripts/create-windows-icon.ps1` ou equivalente — nunca renomeie um PNG.
+
+**[FATO]** O PNG de origem tem 907 KB, tamanho de ilustração. Os derivados ficam em ~58 KB; carregar
+o original como ícone de janela seria desperdício em cada inicialização.

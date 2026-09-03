@@ -1,0 +1,6 @@
+{
+  "ipPlc" : "10.0.0.200",
+  "constante" : 0.0235,
+  "rangePressaoBar" : 400.0,
+  "sensibilidadePressao" : 0.9999999999999998
+}

@@ -234,22 +234,70 @@ validação correta foi a que se perdeu. Se um novo domínio de estoque nascer, 
 > São candidatas prioritárias a spec formal — erro aqui produz dado operacional errado silenciosamente,
 > em toda a frota.
 
-### RN-030 · Conversão 4-20mA → PSI
-**[FATO]** `PlcConnectionService.converterValorPlcParaPressaoPsi`:
-```
-correnteMa    = (bruto / 1000) × 20
-pressaoMaxPsi = rangeBar × 14.5037738
-pressaoPsi    = ((correnteMa - 4) / 16) × pressaoMaxPsi
-resultado     = pressaoPsi × sensibilidade
-```
-⚠️ **[PENDENTE]** A escala bruta 0–1000 tem comentário no próprio código: *"A escala 0..1000 é
-preservada até sua confirmação no PLC"*. **Os próprios desenvolvedores marcam como não validado.**
-Ver [OQ-016](open-questions.md#oq-016--a-escala-analógica-01000-do-clp-foi-confirmada).
+### RN-030 · Conversão do Ax do LOGO! → PSI
+**[FATO 2026-08-31]** `ConversaoPressao` (Desktop-Sonda) — ponto único de conversão.
 
-### RN-031 · Peso da coluna
-**[FATO]** `peso_lbf = max(0, pressaoB002 - pressaoZeroPsi) × areaEfetivaPol2 × fatorCalibracao`,
-arredondado a 2 casas. O `max(0, ...)` impede peso negativo.
+O bloco *Analog Amplifier* do LOGO! já reescalona o laço 4–20 mA para a faixa configurada em
+*Measurement Range*. Com `Minimum -50`, `Maximum 750`, `Gain 1,00` e `Offset -250`:
 
+```
+ 4 mA -> Ax = -50        12 mA -> Ax = 350        20 mA -> Ax = 750
+
+fracao = (Ax + 50) / 800
+bar    = fracao × rangeSensorBar        (faixa do transmissor, por canal)
+psi    = bar × 14,5037738 × sensibilidade
+```
+
+⚠️ **[FATO] O Ax não é pressão nem corrente** — é a posição no laço. Convertê-lo de novo para mA,
+ou tratá-lo como bar direto, aplica o escalonamento duas vezes e produz números plausíveis e errados.
+
+⚠️ **[FATO] Leitura com sinal.** O offset −250 leva a base da escala a valores negativos. Lido como
+Word *unsigned*, `-50` chega como `65486` e vira pressão absurda. `ConversaoPressao.axComoSigned`
+reinterpreta como inteiro de 16 bits com sinal.
+
+⚠️ **[DECIDIDO] Sem clamp.** Ax fora de −50..750 é preservado como veio e **sinalizado** — `WARN`
+no log com endereço e valor, e o Ax cru visível em vermelho no rodapé do card. Recortar em silêncio
+esconderia laço aberto, sensor sem alimentação ou bloco com outra escala. Substitui a decisão
+anterior de limitar em zero.
+
+**[FATO]** A escala antiga 0–1000 → mA foi **removida** junto com suas constantes, para que não haja
+como reconverter por engano. Coberto por 11 testes em `ConversaoPressaoTest`.
+
+### RN-031 · Peso da coluna pela cadeia do sargento
+**[FATO 2026-08-31]** `PesoColunaCalculator`. O sensor está no **sargento (deadline anchor)** e mede
+a reação da linha morta — não o peso no gancho.
+
+```
+P_corrigida = max(0, P - P0)                  P0 = zero do sensor, apenas offset
+F_sensor    = P_corrigida × A                 (psi × pol² = lbf)
+Torque      = F_sensor × L                    L = braço do sensor
+R_efetivo   = (D_tambor + D_cabo) / 2
+T_deadline  = (Torque / R_efetivo) × K        K = fator de calibração
+HookLoad    = T_deadline × N                  N = número de linhas
+PesoColuna  = max(0, HookLoad - W_catarina)
+```
+
+⚠️ **[DECIDIDO]** Substitui `peso = pressão × área × fator`, que era **fisicamente incompleto**:
+devolvia apenas a força hidráulica na célula, ignorando alavanca do sargento, raio do tambor, número
+de linhas e tara do conjunto móvel. O resultado não tinha relação dimensional com o peso da coluna.
+
+⚠️ **[FATO] O diâmetro do cabo entra no braço, não na área.** A tração age na linha de centro do
+cabo, então o raio efetivo é `(tambor + cabo) / 2`. Não há `π·D²/4` nesta conversão.
+
+⚠️ **[FATO] A Catarina é descontada no fim, nunca via `pressaoZeroPsi`.** Descontada como offset de
+pressão, a tara escalaria junto com o número de linhas e o erro cresceria com a carga.
+
+**[FATO] Modelo estático.** `HookLoad ≈ T_deadline × N` vale com a Catarina parada ou quase-estática.
+Atrito de polias, eficiência das sheaves, flexão do cabo e aceleração criam diferença entre linhas —
+e dependem do sentido do movimento, o que um fator único não modela. Fica para um modelo dinâmico
+separado. **Calibrar com a Catarina parada.**
+
+**Calibração:** `K = CargaSuspensaReal / CargaSuspensaCalculada`. Se a referência for o peso líquido,
+somar a Catarina antes. K muito distante de 1,0 indica geometria errada, não falta de calibração.
+
+**[FATO]** Valores intermediários preservados em `PesoColunaCalculo` e exibidos na tela de
+configuração — durante a calibração importa saber em qual etapa a conta se afasta. Coberto por 13
+testes em `PesoColunaCalculatorTest`.
 ### RN-032 · Torque hidráulico por tipo de movimento
 **[FATO]** `HydraulicTorqueCalculator.calculateTorque`:
 - **Avanço**: área total do pistão

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<!--
+   Barra de marca no topo, ações abaixo.
+
+   A configuração saiu da barra de ações: não é uma ação de operação como conectar o CLP ou gerar
+   o relatório — é ajuste da estação, consultado raramente. Como ícone à direita da barra de marca,
+   fica fora do caminho do fluxo diário e alinhado ao Desktop-Sonda, que já traz a engrenagem ali.
+-->
+<BorderPane fx:id="rootPane"
+            stylesheets="@geopetro-design-system.css"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.braservhorusdesktop.controller.CartaOperacao">
+
+    <top>
+        <VBox>
+            <!-- Barra unica: marca, acoes e estado na mesma linha -->
+            <HBox alignment="CENTER_LEFT" spacing="14.0" styleClass="barra-marca">
+                <ImageView fitHeight="32.0" preserveRatio="true" smooth="true">
+                    <image><Image url="@icons/logo2-inverso.png" /></image>
+                </ImageView>
+
+                <Separator orientation="VERTICAL" style="-fx-opacity: 0.35;" />
+
+                <Button styleClass="botao-primario" text="Conectar PLC" onAction="#onConectarPlc" />
+                <Button styleClass="botao-secundario" text="Gerar PDF" onAction="#onGerarPdf" />
+
+                <Region HBox.hgrow="ALWAYS" />
+
+                <HBox alignment="CENTER_RIGHT" spacing="8.0">
+                    <Circle fx:id="plcStatusCircle" radius="6.0" fill="#d92d20" />
+                    <Label fx:id="plcStatusLabel" styleClass="texto-inverso" text="Não conectado" />
+                </HBox>
+
+                <Button onAction="#onAbrirConfiguracao" text="⚙"
+                        styleClass="botao-icone-inverso" />
+            </HBox>
+
+
+            <Label fx:id="plcDebugLabel" text="" styleClass="rotulo-debug">
+                <padding><Insets top="6.0" right="24.0" bottom="0.0" left="24.0" /></padding>
+            </Label>
+        </VBox>
+    </top>
+
+    <center>
+                <GridPane hgap="12.0" vgap="12.0">
+
+                    <padding>
+                        <Insets bottom="20" left="24" right="24" top="16" />
+                    </padding>
+
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="50.0" />
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="50.0" />
+                    </columnConstraints>
+
+                    <rowConstraints>
+                        <RowConstraints percentHeight="50.0" vgrow="ALWAYS" />
+                        <RowConstraints percentHeight="50.0" vgrow="ALWAYS" />
+                    </rowConstraints>
+
+                    <children>
+
+                        <!-- PRESSÃO -->
+<StackPane styleClass="card-grandeza">
+    <children>
+        <VBox alignment="CENTER" spacing="12">
+            <children>
+                <Label fx:id="pressaoTituloLabel" text="Pressão (PSI)"
+                       styleClass="card-grandeza-titulo" />
+                <Label fx:id="pressaoLabel"
+                       text="0.00"
+                       styleClass="card-grandeza-valor" />
+            </children>
+        </VBox>
+        <Button onAction="#onAbrirConfiguracao"
+                text="⚙"
+                styleClass="botao-icone"
+                StackPane.alignment="TOP_RIGHT">
+            <StackPane.margin>
+                <Insets top="8.0" right="8.0" />
+            </StackPane.margin>
+        </Button>
+    </children>
+</StackPane>
+
+<!-- STROKE ATUAL -->
+<StackPane GridPane.columnIndex="1"
+           styleClass="card-grandeza">
+    <children>
+        <VBox alignment="CENTER" spacing="12">
+            <children>
+                <Label text="Stroke Atual"
+                       styleClass="card-grandeza-titulo" />
+                <Label fx:id="strokeAtualLabel"
+                       text="0"
+                       styleClass="card-grandeza-valor" />
+            </children>
+        </VBox>
+    </children>
+</StackPane>
+
+<!-- VOLUME TOTAL BOMBEADO -->
+<StackPane GridPane.rowIndex="1"
+           styleClass="card-grandeza">
+    <children>
+        <VBox alignment="CENTER" spacing="12">
+            <children>
+                <Label text="Volume Total Bombeado (bbl)"
+                       styleClass="card-grandeza-titulo" />
+                <Label fx:id="volumeLabel"
+                       text="0.00"
+                       styleClass="card-grandeza-valor" />
+            </children>
+        </VBox>
+    </children>
+</StackPane>
+
+<!-- VAZÃO -->
+<StackPane GridPane.columnIndex="1" GridPane.rowIndex="1"
+           styleClass="card-grandeza">
+    <children>
+        <VBox alignment="CENTER" spacing="12">
+            <children>
+                <Label text="Vazão Atual (bbl/min)"
+                       styleClass="card-grandeza-titulo" />
+                <Label fx:id="vazaoLabel"
+                       text="0.00"
+                       styleClass="card-grandeza-valor" />
+            </children>
+        </VBox>
+    </children>
+</StackPane>
+
+                    </children>
+                </GridPane>
+    </center>
+
+</BorderPane>

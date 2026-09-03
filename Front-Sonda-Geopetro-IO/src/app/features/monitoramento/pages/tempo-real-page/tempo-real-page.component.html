@@ -1,0 +1,94 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Sonda/Unidade</p>
+      <h1>Tempo Real</h1>
+      <p class="page-subtitle">
+        Estado instantâneo da sonda, direto do CLP. Para o histórico, use Monitoramento.
+      </p>
+    </div>
+
+    <div class="status-badge" [class]="classeStatus()">
+      <span class="status-dot"></span>
+      {{ status() }}
+    </div>
+  </header>
+
+  <div class="controls">
+    <label class="control-field">
+      <span>Unidade/Sonda</span>
+      <select name="sonda" [(ngModel)]="sondaSelecionadaValue" [disabled]="carregandoSondas()">
+        <option [ngValue]="null">Selecione uma sonda</option>
+        @for (sonda of sondas(); track sonda.id) {
+          <option [ngValue]="sonda">
+            {{ sonda.nome }}@if (sonda.apelido) { — {{ sonda.apelido }} }
+          </option>
+        }
+      </select>
+    </label>
+
+    @if (!conectado()) {
+      <button tuiButton type="button" [disabled]="!podeConectar()" (click)="conectar()">
+        Conectar
+      </button>
+    } @else {
+      <button tuiButton type="button" appearance="secondary" (click)="desconectar()">
+        Desconectar
+      </button>
+    }
+  </div>
+
+  @if (erro()) {
+    <div class="alerta alerta--erro">{{ erro() }}</div>
+  }
+
+  @if (conectado() && dadoDefasado()) {
+    <!-- Conexão viva mas sem dados novos: a sonda parou de publicar. Sem este aviso,
+         os cards ficariam congelados aparentando normalidade. -->
+    <div class="alerta alerta--atencao">
+      Sem leitura nova há mais de 5 segundos. A sonda pode estar offline ou desconectada do CLP.
+    </div>
+  }
+
+  @if (sondas().length === 0 && !carregandoSondas()) {
+    <div class="vazio">
+      Nenhuma Unidade/Sonda disponível para o seu usuário.
+    </div>
+  }
+
+  <div class="cards" [class.cards--inativo]="!conectado()">
+    @for (card of cards; track card.chave) {
+      <article class="card">
+        <span class="card__rotulo">{{ card.rotulo }}</span>
+        <span class="card__valor">{{ valorCard(card) }}</span>
+        @if (card.unidade) {
+          <span class="card__unidade">{{ card.unidade }}</span>
+        }
+      </article>
+    }
+  </div>
+
+  <!-- Gráficos da janela deslizante: mostram a tendência que os cards, sozinhos, não revelam. -->
+  <section class="graficos-secao">
+    <h2 class="secao-titulo">Tendência — últimos 2 minutos</h2>
+
+    <div class="graficos" [class.graficos--inativo]="!conectado()">
+      @for (card of cards; track card.chave) {
+        <app-grafico-tempo-real
+          [titulo]="card.rotulo"
+          [valores]="serieDe(card)"
+          [unidade]="card.unidade"
+          [casas]="card.casas"
+          [cor]="card.cor"
+        />
+      }
+    </div>
+  </section>
+
+  <footer class="rodape">
+    <span>Última leitura: <strong>{{ horaUltimaLeitura() }}</strong></span>
+    @if (sondaSelecionada(); as sonda) {
+      <span>Sonda: <strong>{{ sonda.nome }}</strong></span>
+    }
+  </footer>
+</section>

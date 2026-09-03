@@ -1,0 +1,100 @@
+<div
+  class="shell"
+  [class.shell--collapsed]="sidebarCollapsed()"
+  [class.shell--mobile-open]="mobileOpen()"
+>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-header__left">
+      <div class="brand-logo">
+        <img src="/logo.png" alt="GeoPetro IO" class="brand-logo__img" />
+      </div>
+      <div class="brand-text">
+        <span class="brand-text__name">Geopetro IO</span>
+        <span class="brand-text__version">v1.0.0 · ESTÁVEL</span>
+      </div>
+    </div>
+    <div class="app-header__right">
+      @if (currentUser()) {
+        <a class="user-badge" routerLink="/app/meu-usuario">
+          <div class="user-badge__avatar">
+            {{ currentUser()!.nome.charAt(0).toUpperCase() }}
+          </div>
+          <div class="user-badge__info">
+            <span class="user-badge__name">{{ currentUser()!.nome }}</span>
+            <span class="user-badge__role">{{ currentUser()!.roles.join(', ') }}</span>
+          </div>
+        </a>
+      }
+      <button class="header-action header-action--logout" type="button" (click)="logout()" title="Sair">
+        <tui-icon icon="@tui.log-out"></tui-icon>
+      </button>
+    </div>
+  </header>
+
+  <!-- Body: sidebar + content -->
+  <div class="shell__body">
+    <!-- Mobile overlay backdrop -->
+    @if (mobileOpen()) {
+      <div class="sidebar-backdrop" (click)="closeMobileMenu()"></div>
+    }
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <button class="sidebar__toggle" (click)="toggleSidebar()" type="button" title="Recolher menu">
+        <tui-icon [icon]="toggleIcon()"></tui-icon>
+      </button>
+      <nav class="sidebar__nav">
+      @for (entry of navEntries(); track entry.label) {
+
+        @if (entry.kind === 'leaf') {
+          <!-- Item direto -->
+          <a
+            class="nav-item"
+            [routerLink]="asLeaf(entry).route"
+            routerLinkActive="nav-item--active"
+            [title]="!showLabels() ? entry.label : ''"
+            (click)="closeMobileMenu()"
+          >
+            <tui-icon [icon]="entry.icon" class="nav-item__icon"></tui-icon>
+            @if (showLabels()) {
+              <span class="nav-item__label">{{ entry.label }}</span>
+            }
+          </a>
+        }
+
+        @if (entry.kind === 'group') {
+          <!-- Rótulo de seção (só quando expandido) -->
+          @if (showLabels()) {
+            <div class="nav-section-label">{{ entry.label }}</div>
+          }
+
+          <!-- Filhos sempre visíveis, sem botão de grupo -->
+          @for (child of asGroup(entry).children; track child.route) {
+            <a
+              class="nav-item nav-item--child"
+              [routerLink]="child.route"
+              routerLinkActive="nav-item--active"
+              [title]="!showLabels() ? child.label : ''"
+              (click)="closeMobileMenu()"
+            >
+              <tui-icon [icon]="child.icon" class="nav-item__icon"></tui-icon>
+              @if (showLabels()) {
+                <span class="nav-item__label">{{ child.label }}</span>
+              }
+            </a>
+          }
+        }
+
+      }
+    </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="shell__content">
+      <div class="shell__page">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+</div>

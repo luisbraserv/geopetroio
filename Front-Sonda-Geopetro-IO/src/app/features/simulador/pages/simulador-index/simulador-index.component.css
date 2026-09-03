@@ -1,0 +1,68 @@
+:host {
+  display: block;
+  padding: 32px;
+  background: transparent;
+  min-height: 100%;
+}
+
+.sim-index__header {
+  margin-bottom: 32px;
+}
+
+.sim-index__header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-text-strong);
+  margin: 0 0 8px;
+}
+
+.sim-index__subtitle {
+  color: var(--color-text-body);
+  font-size: 15px;
+  margin: 0;
+}
+
+.sim-index__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.sim-index__card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid var(--color-card-border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.sim-index__card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 24px rgba(66, 145, 225, 0.14);
+  transform: translateY(-2px);
+}
+
+.sim-index__card-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+}
+
+.sim-index__card h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  margin: 0 0 10px;
+}
+
+.sim-index__card p {
+  font-size: 13px;
+  color: var(--color-text-body);
+  line-height: 1.6;
+  margin: 0;
+}

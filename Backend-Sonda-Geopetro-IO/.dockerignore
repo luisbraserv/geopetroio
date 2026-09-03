@@ -1,0 +1,16 @@
+# build artifacts
+**/target/
+# vcs / ide
+.git/
+.idea/
+*.iml
+# logs (podem estar em uso por processos -> quebram o envio do contexto)
+*.log
+**/*.log
+*.out.log
+.logs/
+.codex-*
+# runtime / dados locais
+data/
+config/
+docs/

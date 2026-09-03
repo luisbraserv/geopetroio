@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Documentação — Geopetro IO Sonda</title>
+  <style>
+    :root {
+      --blue-dark:  #1e3a8a;
+      --blue-mid:   #1e40af;
+      --blue-light: #dbeafe;
+      --blue-pale:  #eff6ff;
+      --gray-900:   #111827;
+      --gray-700:   #374151;
+      --gray-500:   #6b7280;
+      --gray-200:   #e5e7eb;
+      --gray-100:   #f3f4f6;
+      --green:      #16a34a;
+      --green-bg:   #f0fdf4;
+      --yellow:     #ca8a04;
+      --yellow-bg:  #fefce8;
+      --red:        #dc2626;
+      --red-bg:     #fef2f2;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .print-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 999;
+      background: var(--blue-dark);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 32px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .print-bar span { color: #93c5fd; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }
+    .print-bar span strong { color: white; }
+    .btn-print {
+      background: white; color: var(--blue-dark); border: none; border-radius: 8px;
+      padding: 8px 22px; font-size: 13px; font-weight: 700;
+      font-family: 'Segoe UI', Arial, sans-serif; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; transition: background .15s;
+    }
+    .btn-print:hover { background: #dbeafe; }
+
+    body {
+      background: #9ca3af;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: var(--gray-700);
+      line-height: 1.65;
+      padding-top: 56px;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 32px auto;
+      background: white;
+      padding: 18mm 20mm 20mm;
+      box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    }
+
+    .cover {
+      display: flex; flex-direction: column; justify-content: center;
+      min-height: 257mm; border-bottom: 3px solid var(--blue-light);
+      padding-bottom: 16mm;
+    }
+    .cover-badge {
+      display: inline-block; background: var(--blue-light); color: var(--blue-dark);
+      font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 20px; margin-bottom: 20px; width: fit-content;
+    }
+    .cover h1 { font-size: 30px; font-weight: 800; color: var(--blue-dark); line-height: 1.2; margin-bottom: 14px; }
+    .cover .subtitle { font-size: 14px; color: var(--gray-500); max-width: 120mm; margin-bottom: 32px; }
+    .cover-line { width: 60mm; height: 4px; background: var(--blue-dark); border-radius: 2px; margin-bottom: 32px; }
+    .cover-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .cover-meta-item label { display: block; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-500); margin-bottom: 4px; }
+    .cover-meta-item span { font-size: 13px; font-weight: 600; color: var(--gray-900); }
+
+    .page-break { page-break-before: always; }
+
+    h2 {
+      font-size: 17px; font-weight: 800; color: var(--blue-dark);
+      padding-bottom: 7px; border-bottom: 2px solid var(--blue-light);
+      margin: 20px 0 14px; display: flex; align-items: center; gap: 8px;
+    }
+    h2 .icon {
+      background: var(--blue-light); color: var(--blue-dark);
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    h3 { font-size: 12px; font-weight: 700; color: var(--gray-900); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
+    p { font-size: 12px; margin-bottom: 8px; color: var(--gray-700); }
+
+    .flow { display: flex; align-items: center; flex-wrap: nowrap; gap: 0; margin: 14px 0; overflow: hidden; }
+    .flow-step { background: var(--blue-pale); border: 1px solid var(--blue-light); border-radius: 8px; padding: 8px 12px; font-size: 11px; font-weight: 600; color: var(--blue-dark); text-align: center; flex: 1; }
+    .flow-step small { display: block; font-size: 9px; font-weight: 400; color: var(--gray-500); margin-top: 2px; }
+    .flow-arrow { font-size: 14px; color: var(--gray-500); padding: 0 4px; flex-shrink: 0; }
+
+    .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .sensor-card { border-radius: 8px; padding: 12px 14px; border-left: 4px solid var(--blue-mid); background: var(--gray-100); }
+    .sensor-card.vazao   { border-left-color: #0891b2; background: #f0f9ff; }
+    .sensor-card.peso    { border-left-color: #7c3aed; background: #faf5ff; }
+    .sensor-card.torque  { border-left-color: #d97706; background: #fffbeb; }
+    .sensor-card.pressao { border-left-color: #dc2626; background: #fff5f5; }
+    .sensor-card .tag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; margin-bottom: 6px; }
+    .vazao  .tag { background: #cffafe; color: #0e7490; }
+    .peso   .tag { background: #ede9fe; color: #5b21b6; }
+    .torque .tag { background: #fef3c7; color: #92400e; }
+    .pressao .tag { background: #fee2e2; color: #991b1b; }
+    .sensor-card h4 { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+    .sensor-card .code { font-family: 'Courier New', monospace; font-size: 10px; background: white; color: var(--blue-dark); padding: 1px 6px; border-radius: 3px; margin-bottom: 6px; display: inline-block; border: 1px solid var(--blue-light); }
+    .sensor-card p { font-size: 11px; color: var(--gray-500); margin: 0 0 6px; }
+    .sensor-card .mqtt { font-size: 10px; font-family: 'Courier New', monospace; background: white; border: 1px solid var(--gray-200); padding: 3px 8px; border-radius: 4px; color: var(--gray-700); display: inline-block; }
+
+    .field-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 10px 0; }
+    .field-table th { background: var(--blue-dark); color: white; padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 600; }
+    .field-table th:first-child { border-radius: 6px 0 0 0; }
+    .field-table th:last-child  { border-radius: 0 6px 0 0; }
+    .field-table td { padding: 7px 10px; border-bottom: 1px solid var(--gray-200); vertical-align: top; }
+    .field-table tr:nth-child(even) td { background: var(--gray-100); }
+    .field-table code { font-family: 'Courier New', monospace; background: var(--blue-light); color: var(--blue-dark); padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+
+    .steps { counter-reset: step; }
+    .step { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start; }
+    .step-num { counter-increment: step; background: var(--blue-dark); color: white; font-size: 11px; font-weight: 700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-num::before { content: counter(step); }
+    .step-body h4 { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 2px; }
+    .step-body p  { font-size: 11px; color: var(--gray-500); margin: 0; }
+
+    .topic-box { background: #1e293b; color: #86efac; font-family: 'Courier New', monospace; font-size: 12px; padding: 12px 16px; border-radius: 8px; margin: 10px 0; word-break: break-all; }
+    .topic-box span.var { color: #fbbf24; }
+    .topic-box span.seg { color: #93c5fd; }
+
+    pre.payload { background: #1e293b; color: #e5e7eb; font-family: 'Courier New', monospace; font-size: 11px; padding: 14px 16px; border-radius: 8px; margin: 10px 0; line-height: 1.8; }
+    pre.payload .key  { color: #93c5fd; }
+    pre.payload .str  { color: #86efac; }
+    pre.payload .num  { color: #fbbf24; }
+    pre.payload .type { color: #f9a8d4; }
+
+    .callout { display: flex; gap: 10px; padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: 11px; }
+    .callout.info    { background: var(--blue-pale);  border-left: 3px solid var(--blue-mid); }
+    .callout.success { background: var(--green-bg);   border-left: 3px solid var(--green); }
+    .callout.warning { background: var(--yellow-bg);  border-left: 3px solid var(--yellow); }
+    .callout.danger  { background: var(--red-bg);     border-left: 3px solid var(--red); }
+    .callout .icon   { font-size: 15px; flex-shrink: 0; }
+    .callout p       { margin: 0; color: var(--gray-700); font-size: 11px; }
+    .callout strong  { color: var(--gray-900); }
+
+    .buffer-diagram { background: var(--gray-100); border-radius: 8px; padding: 14px 16px; margin: 10px 0; }
+    .buffer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; }
+    .buffer-row:last-child { margin-bottom: 0; }
+    .buffer-box { background: white; border-radius: 6px; padding: 5px 10px; font-weight: 600; color: var(--gray-900); font-size: 11px; white-space: nowrap; border: 1px solid var(--gray-200); }
+    .buffer-box.ok     { background: var(--green-bg);  color: var(--green);  border-color: #bbf7d0; }
+    .buffer-box.fail   { background: var(--red-bg);    color: var(--red);    border-color: #fecaca; }
+    .buffer-box.buf    { background: var(--yellow-bg); color: var(--yellow); border-color: #fde68a; }
+    .buffer-desc { color: var(--gray-500); font-size: 10px; }
+
+    /* Tabela de cores dos gráficos */
+    .color-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+
+    .page-footer { margin-top: 16mm; padding-top: 6px; border-top: 1px solid var(--gray-200); display: flex; justify-content: space-between; font-size: 9px; color: var(--gray-500); }
+
+    @media print {
+      .print-bar { display: none !important; }
+      body { background: white; padding-top: 0; }
+      .page { width: 100%; margin: 0; padding: 15mm 18mm 18mm; box-shadow: none; }
+      .page-break { page-break-before: always; }
+      .topic-box, pre.payload, .callout, .sensor-card, .buffer-box, .field-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="print-bar">
+  <span><strong>Geopetro IO</strong> — Documentação Técnica v2.0</span>
+  <button class="btn-print" onclick="window.print()">&#128438; Imprimir / Salvar PDF</button>
+</div>
+
+<!-- ══ PÁGINA 1 — CAPA ══ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-badge">Documentação Técnica</div>
+    <h1>Geopetro IO<br>Sistema de Monitoramento<br>de Sonda</h1>
+    <p class="subtitle">Guia completo de configuração, sensores, integração MQTT, gráficos e carta de operação para operadores e técnicos de campo.</p>
+    <div class="cover-line"></div>
+    <div class="cover-meta">
+      <div class="cover-meta-item"><label>Versão</label><span>2.0</span></div>
+      <div class="cover-meta-item"><label>Data</label><span>Maio 2026</span></div>
+      <div class="cover-meta-item"><label>Empresa</label><span>Braserv Petróleo</span></div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Braserv Petróleo Ltda. — Uso interno</span>
+    <span>Página 1</span>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 2 — VISÃO GERAL + SENSORES ══ -->
+<div class="page page-break">
+
+  <h2><span class="icon">&#128269;</span> Visão Geral do Sistema</h2>
+  <p>O sistema Geopetro IO coleta dados em tempo real dos sensores instalados na sonda, processa os valores e os transmite via protocolo MQTT para o servidor de monitoramento. O operador acompanha tudo pelo aplicativo desktop instalado no computador conectado ao CLP.</p>
+
+  <div class="flow">
+    <div class="flow-step">CLP (Sonda)<small>Siemens LOGO!</small></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step">Desktop App<small>Leitura a cada 1s</small></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step">Backend Telemetria<small>:8081</small></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step">Broker MQTT<small>Mosquitto</small></div>
+    <div class="flow-arrow">&#8594;</div>
+    <div class="flow-step">Backend Sonda<small>Monitoramento</small></div>
+  </div>
+
+  <div class="callout info">
+    <span class="icon">&#8505;</span>
+    <p>O app conecta ao CLP via <strong>Snap7 (S7)</strong>, lendo o Data Block 1 (DB1) a cada segundo. Os sinais analógicos <strong>4-20 mA</strong> são convertidos para as unidades de engenharia corretas. Todas as leituras são também persistidas no banco H2 local para uso nos gráficos e na carta de operação.</p>
+  </div>
+
+  <h2><span class="icon">&#128268;</span> Sensores do CLP</h2>
+
+  <div class="sensor-grid">
+    <div class="sensor-card vazao">
+      <span class="tag">Vazão</span>
+      <h4>B001 — Vazão</h4>
+      <span class="code">DB1.DBD0 — DWord (4 bytes)</span>
+      <p>Contador cumulativo de strokes da bomba de lama. A vazão em BBL/min é calculada pelo delta de strokes e pela constante da bomba.</p>
+      <span class="mqtt">&#128225; VAZAO_01</span>
+    </div>
+    <div class="sensor-card peso">
+      <span class="tag">Peso</span>
+      <h4>B002 — Peso da Coluna</h4>
+      <span class="code">DB1.DBW4 — Word (2 bytes)</span>
+      <p>Pressão hidráulica do sistema de içamento. Convertida para força (lbf) via área efetiva do pistão: <strong>lbf = (P - P₀) × área × fator</strong>.</p>
+      <span class="mqtt">&#128225; PESO_COLUNA_01</span>
+    </div>
+    <div class="sensor-card torque">
+      <span class="tag">Torque</span>
+      <h4>B003 — T. Ch. Hid. Tubos</h4>
+      <span class="code">DB1.DBW6 — Word (2 bytes)</span>
+      <p>Pressão efetiva no cilindro da chave de tubos. Torque em lbf·ft calculado via: <strong>T = P × A hidráulica × braço(ft)</strong>. A área usa o pistão no avanço e a área anular pistão−haste no recuo.</p>
+      <span class="mqtt">&#128225; TORQUE_01</span>
+    </div>
+    <div class="sensor-card torque">
+      <span class="tag">Torque</span>
+      <h4>B004 — T. Ch. Flutuante</h4>
+      <span class="code">DB1.DBW8 — Word (2 bytes)</span>
+      <p>Pressão hidráulica da chave flutuante. Mesma lógica de B003 com parâmetros independentes.</p>
+      <span class="mqtt">&#128225; TORQUE_02</span>
+    </div>
+    <div class="sensor-card pressao" style="grid-column: span 2;">
+      <span class="tag">Pressão</span>
+      <h4>B005 — P. Bomba de Lama / ESCP</h4>
+      <span class="code">DB1.DBW10 — Word (2 bytes)</span>
+      <p>Pressão da bomba de lama. Exibido nos cards "P. Bomba de Lama" e "ESCP". Sinal 4-20 mA convertido para PSI.</p>
+      <span class="mqtt">&#128225; PRESSAO_01</span>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Braserv Petróleo Ltda. — Uso interno</span>
+    <span>Página 2</span>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 3 — MAPEAMENTO + FLUXO ══ -->
+<div class="page page-break">
+
+  <h2><span class="icon">&#128203;</span> Tabela de Mapeamento Completo</h2>
+  <table class="field-table">
+    <thead>
+      <tr><th>Código</th><th>Nome</th><th>Endereço DB1</th><th>Sinal</th><th>Unidade</th><th>Dispositivo MQTT</th><th>Tipo</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>B001</code></td><td>Vazão</td><td><code>DBD0</code></td><td>Contador DWord</td><td>BBL/min</td><td><code>VAZAO_01</code></td><td>VAZAO</td></tr>
+      <tr><td><code>B002</code></td><td>Peso da Coluna</td><td><code>DBW4</code></td><td>4-20 mA</td><td>lbf</td><td><code>PESO_COLUNA_01</code></td><td>PESO_COLUNA</td></tr>
+      <tr><td><code>B003</code></td><td>T. Ch. Hid. Tubos</td><td><code>DBW6</code></td><td>4-20 mA</td><td>lbf·ft</td><td><code>TORQUE_01</code></td><td>TORQUE</td></tr>
+      <tr><td><code>B004</code></td><td>T. Ch. Flutuante</td><td><code>DBW8</code></td><td>4-20 mA</td><td>lbf·ft</td><td><code>TORQUE_02</code></td><td>TORQUE</td></tr>
+      <tr><td><code>B005</code></td><td>P. Bomba / ESCP</td><td><code>DBW10</code></td><td>4-20 mA</td><td>PSI</td><td><code>PRESSAO_01</code></td><td>PRESSAO</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warning">
+    <span class="icon">&#9888;</span>
+    <p><strong>Conversão 4-20 mA:</strong> O CLP retorna 0–1000. Fórmula: <strong>corrente = (valor / 1000) × 20 mA</strong> → <strong>grandeza = ((corrente − 4) / 16) × rangeMax</strong>. Range configurável por sensor. B002 aplica cálculo adicional de força hidráulica após a conversão PSI.</p>
+  </div>
+
+  <h2><span class="icon">&#8644;</span> Fluxo de Dados Detalhado</h2>
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Leitura do CLP — a cada 1 segundo</h4><p>Desktop conecta via Snap7, lê DB1. B001: DWord 4 bytes. B002–B005: Word 2 bytes cada.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Conversão e cálculo</h4><p>PSI via 4-20 mA. Peso (lbf) via área hidráulica. Torque via pressão × área × braço. Vazão via delta strokes × constante bomba.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Exibição no monitoramento</h4><p>Cards atualizados em tempo real. Visibilidade configurável individualmente.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Persistência local (SondaReading)</h4><p>Cada leitura é salva no banco H2 local com timestamp, peso, torques, pressão e vazão. Usada pelos gráficos e carta de operação.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Envio ao Backend Telemetria — POST /leituras</h4><p>HTTP para o Backend Telemetria. ID da sonda enviado junto para identificar o tópico MQTT.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Buffer local + publicação MQTT</h4><p>Dados salvos em <code>telemetria-buffer.json</code> e publicados por tópico. Se o broker falhar, dados ficam no buffer e são reenviados no próximo ciclo.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Consumo no Backend Sonda</h4><p>Inscrito em <code>telemetria/sondas/+/dispositivos/+</code>. Recebe, valida e encaminha para banco/InfluxDB.</p></div></div>
+  </div>
+
+  <div class="page-footer">
+    <span>Braserv Petróleo Ltda. — Uso interno</span>
+    <span>Página 3</span>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 4 — MQTT + BUFFER ══ -->
+<div class="page page-break">
+
+  <h2><span class="icon">&#128225;</span> Estrutura MQTT</h2>
+
+  <h3>Formato do tópico</h3>
+  <div class="topic-box">
+    <span class="seg">telemetria</span>/<span class="seg">sondas</span>/<span class="var">{idSondaUnidade}</span>/<span class="seg">dispositivos</span>/<span class="var">{dispositivoId}</span>
+  </div>
+
+  <h3>Exemplos com SONDA-01</h3>
+  <table class="field-table">
+    <thead><tr><th>Sensor</th><th>Tópico completo</th></tr></thead>
+    <tbody>
+      <tr><td>B001 — Vazão</td>       <td><code>telemetria/sondas/SONDA-01/dispositivos/VAZAO_01</code></td></tr>
+      <tr><td>B002 — Peso Coluna</td> <td><code>telemetria/sondas/SONDA-01/dispositivos/PESO_COLUNA_01</code></td></tr>
+      <tr><td>B003 — Torque 1</td>    <td><code>telemetria/sondas/SONDA-01/dispositivos/TORQUE_01</code></td></tr>
+      <tr><td>B004 — Torque 2</td>    <td><code>telemetria/sondas/SONDA-01/dispositivos/TORQUE_02</code></td></tr>
+      <tr><td>B005 — Pressão</td>     <td><code>telemetria/sondas/SONDA-01/dispositivos/PRESSAO_01</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Payload publicado — exemplo B002</h3>
+  <pre class="payload">{
+  <span class="key">"idSondaUnidade"</span>:    <span class="str">"SONDA-01"</span>,
+  <span class="key">"dataHora"</span>:          <span class="str">"2026-05-29T08:00:00.500"</span>,
+  <span class="key">"dispositivoId"</span>:    <span class="str">"PESO_COLUNA_01"</span>,
+  <span class="key">"nome"</span>:              <span class="str">"Peso Coluna"</span>,
+  <span class="key">"codigoOrigem"</span>:     <span class="str">"B002"</span>,
+  <span class="key">"tipo"</span>:              <span class="type">"PESO_COLUNA"</span>,
+  <span class="key">"unidade"</span>:           <span class="str">"lbf"</span>,
+  <span class="key">"valor"</span>:             <span class="num">95000.50</span>,
+  <span class="key">"valorBruto"</span>:        <span class="num">1250.0</span>,
+  <span class="key">"unidadeValorBruto"</span>: <span class="str">"psi"</span>
+}</pre>
+
+  <div class="callout info">
+    <span class="icon">&#8505;</span>
+    <p><strong>valorBruto:</strong> Para B002 o payload inclui a pressão bruta em PSI além do peso calculado em lbf. Útil para auditoria e diagnóstico do sensor.</p>
+  </div>
+
+  <h2><span class="icon">&#128190;</span> Buffer de Contingência</h2>
+  <p>O arquivo <code>./data/telemetria-buffer.json</code> é uma fila local que protege contra perda de dados quando o broker MQTT ou a internet estiver indisponível.</p>
+
+  <div class="buffer-diagram">
+    <div class="buffer-row">
+      <div class="buffer-box">Leitura do CLP</div><span>&#8594;</span>
+      <div class="buffer-box buf">Adiciona ao buffer JSON</div><span>&#8594;</span>
+      <div class="buffer-box">Tenta enviar via MQTT</div>
+    </div>
+    <div class="buffer-row" style="padding-left:16px;margin-top:4px;">
+      <div class="buffer-box ok">Sucesso &#10003;</div><span style="margin:0 6px">&#8594;</span>
+      <span class="buffer-desc">Buffer limpo. Arquivo mantido para o próximo ciclo.</span>
+    </div>
+    <div class="buffer-row" style="padding-left:16px;">
+      <div class="buffer-box fail">Falha &#10007;</div><span style="margin:0 6px">&#8594;</span>
+      <span class="buffer-desc">Dados permanecem. Novos dados somados. Nova tentativa no próximo ciclo.</span>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <span class="icon">&#9989;</span>
+    <p><strong>Escrita atômica:</strong> Buffer escrito via <code>.tmp</code> e movido atomicamente — sem corrupção em caso de encerramento abrupto.</p>
+  </div>
+
+  <div class="page-footer">
+    <span>Braserv Petróleo Ltda. — Uso interno</span>
+    <span>Página 4</span>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 5 — GRÁFICOS ══ -->
+<div class="page page-break">
+
+  <h2><span class="icon">&#128200;</span> Menu Gráficos</h2>
+  <p>O menu <strong>Gráficos</strong> na barra superior permite visualizar os dados históricos armazenados no banco local, sem precisar gerar PDF. Ideal para análise em campo durante ou após a operação.</p>
+
+  <h3>Como usar</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Selecionar período</h4><p>Informe data/hora de início e fim. Os dados do dia atual são carregados automaticamente ao abrir a tela.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Selecionar variáveis</h4><p>Marque as variáveis desejadas: Peso Coluna, Torque Tubos, Torque Flutuante, Pressão Bomba e/ou Vazão.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Clicar em Atualizar</h4><p>Os gráficos são gerados e exibidos na tela. Cada variável tem seu próprio gráfico empilhado verticalmente.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Zoom</h4><p>Use os botões <strong>＋ Zoom In</strong> / <strong>－ Zoom Out</strong> ou o scroll do mouse sobre qualquer gráfico. O botão <strong>↺ Resetar</strong> volta ao tamanho original.</p></div></div>
+  </div>
+
+  <h3>Cores dos gráficos</h3>
+  <table class="field-table">
+    <thead><tr><th>Variável</th><th>Linha original</th><th>Linha suavizada</th><th>Unidade</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Peso da Coluna</td>
+        <td><span class="color-dot" style="background:#7c3aed"></span>Roxo</td>
+        <td><span class="color-dot" style="background:#f59e0b"></span>Âmbar</td>
+        <td>lbf</td>
+      </tr>
+      <tr>
+        <td>Torque Ch. Hid. Tubos</td>
+        <td><span class="color-dot" style="background:#d97706"></span>Âmbar</td>
+        <td><span class="color-dot" style="background:#06b6d4"></span>Ciano</td>
+        <td>lbf·ft</td>
+      </tr>
+      <tr>
+        <td>Torque Ch. Flutuante</td>
+        <td><span class="color-dot" style="background:#0891b2"></span>Ciano</td>
+        <td><span class="color-dot" style="background:#f97316"></span>Laranja</td>
+        <td>lbf·ft</td>
+      </tr>
+      <tr>
+        <td>Pressão Bomba / ESCP</td>
+        <td><span class="color-dot" style="background:#dc2626"></span>Vermelho</td>
+        <td><span class="color-dot" style="background:#16a34a"></span>Verde</td>
+        <td>psi</td>
+      </tr>
+      <tr>
+        <td>Vazão</td>
+        <td><span class="color-dot" style="background:#1e40af"></span>Azul</td>
+        <td><span class="color-dot" style="background:#dc2626"></span>Vermelho</td>
+        <td>bbl/min</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <span class="icon">&#8505;</span>
+    <p><strong>Linha suavizada:</strong> Calculada por média móvel de 8 pontos. Usa cor de contraste (oposta no espectro) e traço mais grosso. Facilita identificar tendências eliminando ruído do sinal.</p>
+  </div>
+
+  <h2><span class="icon">&#128196;</span> Carta de Operação</h2>
+  <p>A <strong>Carta de Operação</strong> gera um PDF com os gráficos do período selecionado. Inclui cabeçalho com título, poço e período.</p>
+
+  <h3>Variáveis disponíveis na carta</h3>
+  <table class="field-table">
+    <thead><tr><th>Variável</th><th>Unidade</th><th>Checkbox</th></tr></thead>
+    <tbody>
+      <tr><td>Peso da Coluna</td><td>lbf</td><td>Peso da Coluna (lbf)</td></tr>
+      <tr><td>Torque Ch. Hid. Tubos</td><td>lbf·ft</td><td>Torque Ch. Hid. Tubos (lbf·ft)</td></tr>
+      <tr><td>Torque Ch. Flutuante</td><td>lbf·ft</td><td>Torque Ch. Flutuante (lbf·ft)</td></tr>
+      <tr><td>Pressão Bomba / ESCP</td><td>psi</td><td>Pressão Bomba / ESCP (psi)</td></tr>
+      <tr><td>Vazão</td><td>bbl/min</td><td>Vazão (bbl/min)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout success">
+    <span class="icon">&#9989;</span>
+    <p><strong>Visualizar antes de gerar:</strong> O botão <strong>Visualizar</strong> abre uma janela de preview interativa com zoom e linha suavizada — igual ao menu Gráficos — antes de salvar o PDF.</p>
+  </div>
+
+  <div class="page-footer">
+    <span>Braserv Petróleo Ltda. — Uso interno</span>
+    <span>Página 5</span>
+  </div>
+</div>
+
+<!-- ══ PÁGINA 6 — CONFIGURAÇÃO ══ -->
+<div class="page page-break">
+
+  <h2><span class="icon">&#9881;</span> Como Configurar o Aplicativo</h2>
+  <p>Clique no botão <strong>⚙</strong> no canto superior direito para abrir as configurações gerais.</p>
+
+  <h3>1. Configurações Gerais</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>IP do PLC</h4><p>IP do CLP Siemens LOGO! na rede local. Ex.: <code>10.0.0.200</code>. Clique em Conectar após alterar.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>ID da Sonda / Unidade</h4><p>Identificador único desta sonda. Usado no tópico MQTT. Ex.: <code>SONDA-01</code>. Cada sonda em campo deve ter um ID diferente.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>URL do Backend de Telemetria</h4><p>Endereço do servidor para envio dos dados. Ex.: <code>http://192.168.0.10:8081</code>. Deixe em branco para desativar envio remoto.</p></div></div>
+    <div class="step"><div class="step-num"></div><div class="step-body"><h4>Cards visíveis</h4><p>Marque/desmarque os sensores que devem aparecer no monitoramento. Sensores desmarcados não são enviados via MQTT.</p></div></div>
+  </div>
+
+  <h3>2. Peso da Coluna (B002) — ⚙ no card</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Descrição</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td><code>Pressão zero (psi)</code></td><td>Pressão lida com gancho vazio, sem carga.</td><td>0.0</td></tr>
+      <tr><td><code>Área efetiva (pol²)</code></td><td>Área do pistão do cilindro de içamento. Consulte a folha técnica do equipamento.</td><td>12.57</td></tr>
+      <tr><td><code>Fator de calibração</code></td><td>Slider 0.5–1.5. Ajuste fino para compensar perdas mecânicas. Use 1.0 para cálculo direto.</td><td>1.00</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:11px;color:#6b7280;">Fórmula: <strong>Peso (lbf) = (pressão − pressão zero) × área × fator</strong></p>
+
+  <h3>3. Chaves Hidráulicas (B003 e B004) — ⚙ no card</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Descrição</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td><code>Limite do sensor (bar)</code></td><td>Pressão máxima do sensor — corresponde a 20 mA.</td><td>400 bar</td></tr>
+      <tr><td><code>Sensibilidade</code></td><td>Slider 0.5–1.5. Fator multiplicador do PSI lido.</td><td>1.00</td></tr>
+      <tr><td><code>Diâmetro do pistão (in)</code></td><td>Diâmetro interno efetivo do cilindro hidráulico.</td><td>2.0"</td></tr>
+      <tr><td><code>Diâmetro da haste (in)</code></td><td>Usado para descontar a área da haste durante o recuo.</td><td>1.0"</td></tr>
+      <tr><td><code>Braço da chave (ft)</code></td><td>Distância entre o eixo de rotação e o ponto de aplicação da força.</td><td>2.0 ft</td></tr>
+      <tr><td><code>Movimento</code></td><td>Avanço usa a área total do pistão; recuo usa a área anular.</td><td>Avanço</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4. Sensores de Pressão (B005) — ⚙ no card</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Descrição</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td><code>Range (bar)</code></td><td>Pressão máxima do sensor — corresponde a 20 mA.</td><td>400 bar</td></tr>
+      <tr><td><code>Sensibilidade</code></td><td>Slider 0.5–1.5. Fator multiplicador aplicado ao PSI final.</td><td>1.00</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5. Bomba — Vazão (B001) — ⚙ no card</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Descrição</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td><code>Constante da bomba (BBL/stroke)</code></td><td>Volume deslocado por stroke. Fornecido pelo fabricante.</td><td>0.0523</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="icon">&#127760;</span> Indicadores de Status no Cabeçalho</h2>
+  <table class="field-table">
+    <thead><tr><th>Indicador</th><th>Verde</th><th>Vermelho</th><th>Atualização</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PLC</strong></td><td>Conectado e lendo dados</td><td>Sem conexão com o CLP</td><td>Imediato (evento)</td></tr>
+      <tr><td><strong>Internet</strong></td><td>Internet disponível</td><td>Sem acesso à internet</td><td>A cada 15 segundos</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout danger">
+    <span class="icon">&#128683;</span>
+    <p><strong>Atenção:</strong> O indicador de Internet verifica acesso ao DNS 8.8.8.8. Não confirma que o broker MQTT ou o Backend Telemetria estão acessíveis. Mesmo sem internet, os dados são salvos localmente no buffer e no banco H2.</p>
+  </div>
+
+  <div class="page-footer">
+    <span>Braserv Petróleo Ltda. — Uso interno</span>
+    <span>Página 6</span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,75 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = '21.0.6'
+    modules = [
+            'javafx.base',
+            'javafx.graphics',
+            'javafx.controls',
+            'javafx.fxml',
+            'javafx.swing'
+    ]
+}
+
+dependencies {
+    implementation 'si.trina:moka7-live:0.0.13'
+
+    implementation 'org.apache.pdfbox:pdfbox:2.0.32'
+    implementation 'org.apache.pdfbox:fontbox:2.0.32'
+    implementation 'org.slf4j:slf4j-simple:2.0.16'
+
+    implementation 'com.h2database:h2:2.2.224'
+    
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    mainClass = 'com.example.braservhorusdesktop.Launcher'
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+// Usar javaw.exe no Windows para suprimir a janela do terminal
+startScripts {
+    doLast {
+        def winScript = windowsScript
+        winScript.text = winScript.text.replace('java.exe', 'javaw.exe')
+        winScript.text = winScript.text.replace(
+                'if defined JAVA_HOME goto findJavaFromJavaHome',
+                '''if defined JAVA_HOME goto findJavaFromJavaHome
+
+set LOCAL_JAVA_HOME=%USERPROFILE%\\.jdks\\ms-21.0.10
+if exist "%LOCAL_JAVA_HOME%\\bin\\javaw.exe" (
+    set JAVA_HOME=%LOCAL_JAVA_HOME%
+    goto findJavaFromJavaHome
+)
+'''
+        )
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

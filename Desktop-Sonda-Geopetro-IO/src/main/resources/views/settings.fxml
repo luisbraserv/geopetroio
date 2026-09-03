@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+   Configuracoes em duas colunas.
+
+   Cabecalho e rodape ficam fixos e so o miolo rola. Com os botoes dentro da area rolavel, "Salvar"
+   saia de vista assim que a janela encolhia, e o usuario precisava rolar ate o fim para salvar.
+
+   As duas colunas viram uma quando a janela fica estreita. Quem faz isso e o SettingsController,
+   observando a largura: FXML nao tem media query.
+-->
+<BorderPane fx:id="raiz" prefWidth="920.0" prefHeight="660.0"
+            stylesheets="@settings.css"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.demo.controllers.SettingsController">
+
+   <top>
+      <VBox spacing="2.0" styleClass="cabecalho">
+         <Label text="Configurações" styleClass="cabecalho-titulo" />
+         <Label text="Ajustes desta estação. As alterações passam a valer ao salvar."
+                styleClass="cabecalho-subtitulo" />
+      </VBox>
+   </top>
+
+   <center>
+      <ScrollPane fx:id="rolagem" fitToWidth="true" styleClass="area-rolagem"
+                  hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+         <GridPane fx:id="grade" hgap="16.0" vgap="16.0">
+            <padding><Insets top="20.0" right="24.0" bottom="20.0" left="24.0" /></padding>
+
+            <columnConstraints>
+               <ColumnConstraints fx:id="coluna1" percentWidth="50.0" />
+               <ColumnConstraints fx:id="coluna2" percentWidth="50.0" />
+            </columnConstraints>
+
+            <!-- ================= Equipamento ================= -->
+            <VBox fx:id="cartaoEquipamento" spacing="12.0" styleClass="cartao"
+                  GridPane.columnIndex="0" GridPane.rowIndex="0">
+               <Label text="Equipamento" styleClass="cartao-titulo" />
+
+               <VBox spacing="5.0">
+                  <Label text="IP do PLC" styleClass="rotulo" />
+                  <TextField fx:id="txtPlcIp" promptText="Ex.: 192.168.0.10" maxWidth="Infinity" />
+               </VBox>
+
+               <VBox spacing="5.0">
+                  <Label text="Unidade/Sonda desta estação" styleClass="rotulo" />
+                  <HBox spacing="8.0">
+                     <ComboBox fx:id="cmbUnidadeSonda" maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                               promptText="Escolha a Unidade/Sonda" />
+                     <Button fx:id="btnRecarregar" text="Buscar" styleClass="botao-secundario" />
+                  </HBox>
+                  <Label fx:id="lblUnidadeStatus" styleClass="ajuda" />
+                  <Label styleClass="ajuda"
+                         text="A lista vem do cadastro do Backend. Escolher aqui define de uma vez o endereço do histórico e o do tempo real, que antes eram dois campos separados." />
+               </VBox>
+            </VBox>
+
+            <!-- ================= Broker MQTT ================= -->
+            <VBox fx:id="cartaoMqtt" spacing="12.0" styleClass="cartao"
+                  GridPane.columnIndex="1" GridPane.rowIndex="0">
+               <Label text="Broker MQTT de telemetria" styleClass="cartao-titulo" />
+               <Label styleClass="cartao-nota"
+                      text="Caminho do histórico: as leituras vão ao broker e são gravadas no InfluxDB." />
+
+               <VBox spacing="5.0">
+                  <Label text="Endereço do broker" styleClass="rotulo" />
+                  <TextField fx:id="txtTelemetriaUrl" promptText="Ex.: tcp://192.168.0.10:1883" maxWidth="Infinity" />
+               </VBox>
+
+               <VBox spacing="5.0">
+                  <Label text="Usuário" styleClass="rotulo" />
+                  <TextField fx:id="txtTelemetriaUsuario" promptText="Vazio se o broker não exigir autenticação" maxWidth="Infinity" />
+               </VBox>
+
+               <VBox spacing="5.0">
+                  <Label text="Senha" styleClass="rotulo" />
+                  <PasswordField fx:id="txtTelemetriaSenha" promptText="Senha do broker" maxWidth="Infinity" />
+               </VBox>
+            </VBox>
+
+            <!-- ================= Tempo real ================= -->
+            <VBox fx:id="cartaoTempoReal" spacing="12.0" styleClass="cartao"
+                  GridPane.columnIndex="0" GridPane.rowIndex="1">
+               <Label text="Tempo real (Backend-Sonda)" styleClass="cartao-titulo" />
+               <Label styleClass="cartao-nota"
+                      text="Caminho do tempo real: o estado atual vai ao backend por WebSocket e é retransmitido a quem tem acesso. Nada é gravado." />
+
+               <VBox spacing="5.0">
+                  <Label text="URL do Backend" styleClass="rotulo" />
+                  <TextField fx:id="txtBackendUrl" promptText="Ex.: http://10.0.0.10:8080" maxWidth="Infinity" />
+               </VBox>
+
+               <VBox spacing="5.0">
+                  <Label text="Usuário de serviço" styleClass="rotulo" />
+                  <TextField fx:id="txtBackendUsuario" promptText="Usuário desta sonda no backend" maxWidth="Infinity" />
+               </VBox>
+
+               <VBox spacing="5.0">
+                  <Label text="Senha" styleClass="rotulo" />
+                  <PasswordField fx:id="txtBackendSenha" promptText="Senha do usuário de serviço" maxWidth="Infinity" />
+               </VBox>
+
+               <Label styleClass="ajuda"
+                      text="O canal de tempo real é autenticado, não é público: a sonda faz login para obter um token e só então pode publicar. Sem isso, qualquer um na rede poderia injetar leituras falsas nesta unidade. As mesmas credenciais carregam a lista de Unidades/Sondas acima." />
+            </VBox>
+
+            <!-- ================= Cards visiveis ================= -->
+            <VBox fx:id="cartaoCards" spacing="12.0" styleClass="cartao"
+                  GridPane.columnIndex="1" GridPane.rowIndex="1">
+               <Label text="Cards visíveis no monitoramento" styleClass="cartao-titulo" />
+               <Label styleClass="cartao-nota"
+                      text="Cards desmarcados ficam ocultos e não salvam dados." />
+
+               <GridPane hgap="12.0" vgap="10.0">
+                  <columnConstraints>
+                     <ColumnConstraints percentWidth="50.0" />
+                     <ColumnConstraints percentWidth="50.0" />
+                  </columnConstraints>
+
+                  <CheckBox fx:id="chkPesoColuna"  text="Peso da Coluna"    GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                  <CheckBox fx:id="chkChHidTubos"  text="T. Ch. Hid. Tubos" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                  <CheckBox fx:id="chkChFlutuante" text="T. Ch. Flutuante"  GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                  <CheckBox fx:id="chkBombaLama"   text="P. Bomba de Lama"  GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                  <CheckBox fx:id="chkEscp"        text="ESCP"              GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                  <CheckBox fx:id="chkVazao"       text="Vazão"             GridPane.columnIndex="1" GridPane.rowIndex="2" />
+               </GridPane>
+            </VBox>
+
+         </GridPane>
+      </ScrollPane>
+   </center>
+
+   <bottom>
+      <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="rodape">
+         <Region HBox.hgrow="ALWAYS" />
+         <Button fx:id="btnCancel" text="Cancelar" styleClass="botao-secundario" />
+         <Button fx:id="btnSave" text="Salvar" styleClass="botao-primario" defaultButton="true" />
+      </HBox>
+   </bottom>
+
+</BorderPane>

@@ -1,0 +1,466 @@
+/*
+ * Braserv Design System para JavaFX.
+ * Fonte normativa: specs/index.html
+ *
+ * JavaFX CSS nao oferece custom properties. Por isso os tokens ficam centralizados neste arquivo;
+ * FXMLs devem usar styleClass e reservar estilos inline apenas para estados realmente dinamicos.
+ *
+ * Tokens da fonte normativa, transcritos (rem convertido para px, base 16):
+ *   brand-navy-950  #010e22    brand-navy-900  #051833    brand-navy-800  #061c39
+ *   brand-navy-700  #0b2b52    brand-blue-600  #154a7a    brand-blue-100  #dce6f0
+ *   brand-orange-800 #8d551f   brand-orange-700 #a96525   brand-orange-600 #d4852f
+ *   brand-orange-500 #e59a4c   brand-orange-200 #f4d6b8
+ *   danger-700 #b42318   danger-600 #d92d20   danger-200 #fda29b
+ *   success-700 #2e8b3a  success-500 #5fbf61  warning-500 #e5bd02
+ *   surface-canvas #f7f9fc   surface-subtle #edf1f8   surface-soft #eaf1f8
+ *   border-default #d6deeb   border-strong  #b7c3d5
+ *   text-primary #051833     text-secondary #5a667a   text-tertiary #757b86
+ *   radius: sm 3px · md 5px · lg 7px · xl 9px
+ */
+
+.root {
+    -fx-background-color: #f7f9fc;
+    -fx-font-family: "Coco Gothic", "Century Gothic", "Trebuchet MS", sans-serif;
+    -fx-font-size: 13px;
+}
+
+.label {
+    -fx-text-fill: #051833;
+}
+
+/*
+ * Texto sobre fundo escuro (barra superior, rodapes escuros).
+ *
+ * Precisa existir porque `.label` acima pinta tudo de #051833: no cabecalho azul o texto ficava
+ * azul-escuro sobre azul-escuro e sumia. O atributo textFill="WHITE" do FXML nao resolve — em
+ * JavaFX o stylesheet tem precedencia sobre valores vindos do FXML, entao a cor branca era
+ * descartada. Precisa vir DEPOIS de `.label`: mesma especificidade, quem vence e a ultima regra.
+ */
+.texto-inverso {
+    -fx-text-fill: #ffffff;
+}
+
+.heading {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #051833;
+}
+
+.muted {
+    -fx-text-fill: #5a667a;
+}
+
+/* Eyebrow: rotulo de secao. Laranja escuro, o unico lugar em que o acento vira texto. */
+.eyebrow {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8d551f;
+}
+
+.mono {
+    -fx-font-family: "Cascadia Code", Consolas, monospace;
+}
+
+/* --- Botoes --------------------------------------------------------------
+ *
+ * O primario e AZUL-MARINHO, nao vermelho. Vermelho e reservado a acao destrutiva
+ * (`.botao-perigo`) e a estados de alerta — usa-lo como cor de acao comum gasta o unico sinal
+ * que faz o operador parar e reler antes de clicar.
+ */
+
+.button {
+    -fx-min-height: 36px;
+    -fx-padding: 8 16 8 16;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 5;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 5;
+    -fx-text-fill: #051833;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #eaf1f8;
+}
+
+.button:disabled {
+    -fx-opacity: 0.46;
+    -fx-cursor: default;
+}
+
+.botao-primario,
+.primary-button {
+    -fx-background-color: #051833;
+    -fx-border-color: #051833;
+    -fx-text-fill: #ffffff;
+}
+
+.botao-primario:hover,
+.primary-button:hover {
+    -fx-background-color: #0b2b52;
+    -fx-border-color: #0b2b52;
+}
+
+.botao-secundario,
+.secondary-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #154a7a;
+    -fx-text-fill: #051833;
+}
+
+.botao-secundario:hover,
+.secondary-button:hover {
+    -fx-background-color: #154a7a;
+    -fx-border-color: #154a7a;
+    -fx-text-fill: #ffffff;
+}
+
+/* Acao destrutiva: desconectar, excluir, cancelar operacao em curso. */
+.botao-perigo {
+    -fx-background-color: #fff5f5;
+    -fx-border-color: #fda29b;
+    -fx-text-fill: #b42318;
+}
+
+.botao-perigo:hover {
+    -fx-background-color: #fdeaeb;
+}
+
+/* Sem moldura, para acoes secundarias dentro de cards e barras. */
+.botao-fantasma {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #051833;
+}
+
+.botao-fantasma:hover {
+    -fx-background-color: #eaf1f8;
+}
+
+/* --- Campos --- */
+
+.text-field,
+.password-field,
+.text-area {
+    -fx-min-height: 36px;
+    -fx-padding: 8 11 8 11;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #b7c3d5;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-text-fill: #051833;
+    -fx-font-size: 13px;
+    -fx-prompt-text-fill: #8994a7;
+}
+
+.text-field:hover,
+.password-field:hover,
+.text-area:hover {
+    -fx-border-color: #154a7a;
+}
+
+.text-field:focused,
+.password-field:focused,
+.text-area:focused {
+    -fx-border-color: #154a7a;
+    -fx-border-width: 1.5;
+}
+
+.text-field:disabled,
+.password-field:disabled {
+    -fx-background-color: #edf1f8;
+    -fx-text-fill: #757b86;
+}
+
+.combo-box,
+.date-picker,
+.choice-box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #b7c3d5;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-min-height: 36px;
+}
+
+.combo-box:hover,
+.date-picker:hover {
+    -fx-border-color: #154a7a;
+}
+
+.combo-box:focused,
+.date-picker:focused {
+    -fx-border-color: #154a7a;
+    -fx-border-width: 1.5;
+}
+
+.check-box {
+    -fx-font-size: 13px;
+    -fx-text-fill: #051833;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #154a7a;
+    -fx-border-color: #154a7a;
+}
+
+.rotulo {
+    -fx-font-size: 12px;
+    -fx-text-fill: #061c39;
+    -fx-font-weight: bold;
+}
+
+/* Explicacao sob um campo: menor e mais clara que o rotulo, para nao competir com ele. */
+.ajuda {
+    -fx-font-size: 11px;
+    -fx-text-fill: #5a667a;
+    -fx-wrap-text: true;
+}
+
+/* --- Superficies --- */
+
+.card,
+.cartao {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 7;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 7;
+    -fx-padding: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0, 12, 75, 0.05), 4, 0, 0, 1);
+}
+
+.cartao-muted {
+    -fx-background-color: #edf1f8;
+    -fx-effect: null;
+}
+
+.cartao-titulo {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #051833;
+}
+
+.cartao-nota {
+    -fx-font-size: 11px;
+    -fx-text-fill: #5a667a;
+    -fx-wrap-text: true;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* --- Cabecalho e rodape --- */
+
+.cabecalho {
+    -fx-background-color: #ffffff;
+    -fx-padding: 18 24 18 24;
+    -fx-border-color: transparent transparent #d6deeb transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.cabecalho-titulo {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #051833;
+}
+
+.cabecalho-subtitulo {
+    -fx-font-size: 12px;
+    -fx-text-fill: #5a667a;
+}
+
+.rodape {
+    -fx-background-color: #ffffff;
+    -fx-padding: 14 24 14 24;
+    -fx-border-color: #d6deeb transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* --- Tabelas --- */
+
+.table-view {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+}
+
+.table-view .column-header {
+    -fx-background-color: #edf1f8;
+    -fx-text-fill: #757b86;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #dce6f0;
+    -fx-text-fill: #051833;
+}
+
+/* --- Estados semanticos ---
+ *
+ * Separados do acento da marca: verde/ambar/vermelho comunicam condicao, nao identidade.
+ */
+
+.estado-ok      { -fx-text-fill: #2e8b3a; }
+.estado-atencao { -fx-text-fill: #725c00; }
+.estado-erro    { -fx-text-fill: #b42318; }
+
+/* =========================================================================
+ * Telas de acompanhamento (Desktop-Sonda e Horus).
+ *
+ * Mantido no arquivo comum, e nao num CSS por aplicacao: duas copias divergiriam na primeira
+ * alteracao, e a razao de existir um design system e nao ter dois azuis institucionais.
+ * ========================================================================= */
+
+.titulo-tela {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #051833;
+}
+
+.rotulo-campo {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #061c39;
+}
+
+/* --- Cards de grandeza (pressao, stroke, volume, vazao) --- */
+
+.card-grandeza {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 7;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 7;
+    -fx-effect: dropshadow(gaussian, rgba(0, 12, 75, 0.05), 4, 0, 0, 1);
+}
+
+.card-grandeza-titulo {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #061c39;
+}
+
+/* O numero e o que se le a distancia, no meio da operacao: por isso o tamanho. */
+.card-grandeza-valor {
+    -fx-font-size: 42px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #051833;
+}
+
+/* Engrenagem sobreposta ao card: sem fundo para nao competir com o valor. */
+.botao-icone {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-font-size: 16px;
+    -fx-text-fill: #5a667a;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+    -fx-min-height: 0;
+}
+
+.botao-icone:hover {
+    -fx-background-color: #eaf1f8;
+    -fx-text-fill: #051833;
+}
+
+/* --- Barra de ferramentas --- */
+
+.tool-bar {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #d6deeb transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 6 12 6 12;
+}
+
+.rotulo-status {
+    -fx-font-size: 12px;
+    -fx-text-fill: #061c39;
+}
+
+.rotulo-debug {
+    -fx-font-size: 11px;
+    -fx-text-fill: #757b86;
+}
+
+/*
+ * Valor cru do CLP no rodape do card. Vermelho porque e diagnostico de instalacao, nao leitura de
+ * operacao — quem opera le o numero grande, quem instala confere este.
+ */
+.valor-bruto {
+    -fx-font-size: 10px;
+    -fx-text-fill: #b42318;
+    -fx-font-family: "Cascadia Code", Consolas, monospace;
+}
+
+.progress-bar > .track {
+    -fx-background-color: #edf1f8;
+    -fx-background-radius: 5;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: #154a7a;
+    -fx-background-radius: 5;
+}
+
+/* Area rolavel de formulario: transparente para o fundo do dialogo aparecer. */
+.area-rolagem {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.area-rolagem > .viewport {
+    -fx-background-color: transparent;
+}
+
+/*
+ * Barra de marca: logo a esquerda, status e ajustes a direita.
+ *
+ * Fundo claro porque o logo horizontal tem o texto em azul-marinho — sobre o navy do cabecalho
+ * seria preciso uma versao invertida do logo, que a identidade visual nao fornece.
+ */
+/*
+ * Barra de marca em azul institucional.
+ *
+ * Usa `logo2-inverso.png` — versao reversa do logo, com tracos brancos e o dourado preservado.
+ * O logo normal tem texto azul-marinho: sobre esta barra exigiria um cartao branco atras, que e
+ * exatamente o remendo que se queria evitar.
+ */
+.barra-marca {
+    -fx-background-color: #051833;
+    -fx-border-color: transparent transparent #d4852f transparent;
+    -fx-border-width: 0 0 3 0;
+    -fx-padding: 10 24 10 24;
+}
+
+/* Barra que tambem carrega a navegacao: fecha com a faixa de acento da marca. */
+.barra-marca-nav {
+    -fx-background-color: #051833;
+    -fx-border-color: transparent transparent #d4852f transparent;
+    -fx-border-width: 0 0 3 0;
+    -fx-padding: 10 24 10 24;
+}
+
+/* Engrenagem e afins sobre a barra azul. */
+.botao-icone-inverso {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-font-size: 16px;
+    -fx-text-fill: rgba(255, 255, 255, 0.82);
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+    -fx-min-height: 0;
+}
+
+.botao-icone-inverso:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-radius: 5;
+    -fx-text-fill: #ffffff;
+}

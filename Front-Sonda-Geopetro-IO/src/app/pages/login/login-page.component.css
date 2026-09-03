@@ -1,0 +1,384 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: #ffffff;
+}
+
+/* ── Layout principal ── */
+.login-page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr minmax(360px, 460px);
+}
+
+/* ── Lado esquerdo — imagem com gradiente ── */
+.login-page__hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(2rem, 5vw, 4rem);
+  overflow: hidden;
+  /* Fallback da marca caso a imagem nao carregue */
+  background: linear-gradient(150deg, var(--brand-navy-950) 0%, var(--brand-navy-800) 58%, var(--brand-blue-600) 100%);
+}
+
+/*
+ * Fundo técnico, desenhado em CSS.
+ *
+ * Substitui uma fotografia de 4,5 MB — peso que a tela de login pagava a cada primeiro acesso,
+ * antes mesmo de o usuário digitar qualquer coisa. As camadas aqui não custam requisição nenhuma
+ * e falam do que o sistema faz: malha de esquemático, uma série temporal como as que o
+ * monitoramento desenha, e o halo da marca.
+ */
+.login-page__hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    /* Halo da marca, canto superior direito — mesmo recurso da sidebar do design system */
+    radial-gradient(circle at 88% 12%, rgba(212, 133, 47, 0.20), transparent 42%),
+    /* Malha fina: leitura de esquemático elétrico */
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.045) 0 1px,
+      transparent 1px 44px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.045) 0 1px,
+      transparent 1px 44px
+    ),
+    /* Malha grossa a cada 4 células, como divisão maior do papel técnico */
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.06) 0 1px,
+      transparent 1px 176px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.06) 0 1px,
+      transparent 1px 176px
+    );
+}
+
+/*
+ * Série temporal ao pé do painel: a mesma forma que o monitoramento desenha a partir do CLP.
+ * SVG embutido como data URI — sem requisição, e acompanha a largura do painel.
+ */
+.login-page__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 260' preserveAspectRatio='none'%3E%3Cpath d='M0 190 L40 186 L80 172 L120 178 L160 140 L200 148 L240 96 L280 104 L320 138 L360 132 L400 168 L440 160 L480 118 L520 126 L560 78 L600 86 L640 130 L680 122 L720 164 L760 156 L800 108 L840 116 L880 152 L920 144 L960 176 L1000 168 L1040 128 L1080 136 L1120 172 L1160 164 L1200 182' fill='none' stroke='%23d4852f' stroke-opacity='0.28' stroke-width='2'/%3E%3Cpath d='M0 214 L60 210 L120 216 L180 202 L240 206 L300 196 L360 200 L420 190 L480 194 L540 184 L600 188 L660 180 L720 186 L780 178 L840 184 L900 176 L960 182 L1020 174 L1080 180 L1140 172 L1200 178' fill='none' stroke='%23ffffff' stroke-opacity='0.13' stroke-width='1.5'/%3E%3C/svg%3E"),
+    /* Vinheta: garante contraste do texto sobre qualquer ponto do fundo */
+    linear-gradient(
+      to right,
+      rgba(1, 14, 34, 0.30) 0%,
+      rgba(1, 14, 34, 0.42) 55%,
+      rgba(1, 14, 34, 0.72) 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(1, 14, 34, 0.88) 0%,
+      rgba(1, 14, 34, 0.35) 34%,
+      transparent 62%
+    );
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-position: bottom center, center, center;
+  background-size: 100% 34%, cover, cover;
+}
+.login-page__hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hero-kicker {
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.75rem;
+  color: var(--brand-orange-500);
+  font-weight: 600;
+}
+
+.login-page__hero [tuiTitle] {
+  color: #ffffff;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 1rem;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.45);
+}
+
+.login-card__header [tuiTitle] {
+  color: var(--color-text-primary);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+  text-shadow: none;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  background: #ffffff;
+  box-shadow: -24px 0 80px rgba(0, 12, 75, 0.16);
+}
+
+.login-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login-card__eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.login-card__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ── Formulário ── */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-form tui-textfield {
+  --tui-text-primary: var(--color-text-primary);
+  --tui-text-secondary: var(--color-text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-canvas);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.login-form tui-textfield:hover {
+  border-color: var(--border-strong);
+}
+
+.login-form tui-textfield:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 90, 150, 0.18);
+  transform: translateY(-1px);
+}
+
+.login-form label[tuiLabel] {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.login-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.15rem;
+}
+
+.remember-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.remember-me input {
+  accent-color: var(--color-primary);
+}
+
+.forgot-link {
+  color: var(--color-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: 0.25rem;
+  /* Mantém o componente Taiga e aplica o token de ação Braserv. */
+  --tui-background-accent-1: var(--color-primary);
+  --tui-background-accent-1-hover: var(--color-primary-hover);
+  --tui-background-accent-1-pressed: var(--color-primary-hover);
+}
+
+/* ── Erro ── */
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  background: rgba(220,38,38,0.06);
+  border: 1px solid rgba(220,38,38,0.22);
+  color: #b91c1c;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.login-error__icon {
+  flex-shrink: 0;
+  color: #dc2626;
+}
+
+/* ── Responsivo ── */
+@media (max-width: 860px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-page__hero {
+    min-height: 240px;
+    justify-content: flex-end;
+    padding: 1.5rem;
+  }
+
+  .hero-highlights,
+  .hero-text {
+    display: none;
+  }
+
+  .login-card {
+    box-shadow: none;
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-form__actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* --- Identidade e módulos do sistema no hero --- */
+
+.hero-logo {
+  width: clamp(190px, 22vw, 260px);
+  height: auto;
+  align-self: flex-start;
+}
+
+/*
+ * Lista dos módulos reais em vez de textos de marketing.
+ * Numa tela de login de sistema industrial, saber o que existe do outro lado vale mais que
+ * adjetivos — e evita a dúvida de estar no sistema errado.
+ */
+.hero-modulos {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.hero-modulos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hero-modulos tui-icon {
+  flex: none;
+  margin-top: 0.1rem;
+  color: var(--brand-orange-500);
+}
+
+.hero-modulos div {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.hero-modulos strong {
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.hero-modulos span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.hero-rodape {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.75rem;
+}
+
+.hero-rodape tui-icon {
+  flex: none;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* --- Rodapé técnico do cartão --- */
+
+.login-card__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.login-versao {
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+}
+
+/* Só aparece fora de produção: serve para não confundir ambientes. */
+.login-ambiente {
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand-orange-200);
+  color: var(--brand-orange-800);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}

@@ -1,0 +1,20 @@
+{
+  "plcIp" : "10.0.0.201",
+  "sondaId" : "SPT-145",
+  "telemetriaUrl" : "tcp://localhost:1883",
+  "telemetriaUsuario" : "",
+  "telemetriaSenha" : "",
+  "unidadeSondaId" : 1,
+  "backendUrl" : "http://localhost:8080",
+  "backendUsuario" : "luis.silveira",
+  "backendSenha" : "bilzao90",
+  "pumpConstant" : 0.0523,
+  "sensor01" : { "rangeBar" : 400.0, "sensibilidade" : 1.0 },
+  "sensor02" : { "rangeBar" : 400.0, "sensibilidade" : 1.0 },
+  "sensor03" : { "rangeBar" : 400.0, "sensibilidade" : 1.0 },
+  "sensor04" : { "rangeBar" : 400.0, "sensibilidade" : 1.0 },
+  "chaveTubos" : { "diametroPistaoIn" : 2.0, "diametroHasteIn" : 1.0, "bracoAlavancaFt" : 2.0, "tipoMovimento" : "AVANCO" },
+  "chaveFlutuante" : { "diametroPistaoIn" : 2.0, "diametroHasteIn" : 1.0, "bracoAlavancaFt" : 2.0, "tipoMovimento" : "AVANCO" },
+  "pesoColuna" : { "pressaoZeroPsi" : 0.0, "areaEfetivaSensorPol2" : 0.0, "bracoSensorPol" : 0.0, "diametroTamborPol" : 0.0, "diametroCaboPol" : 0.0, "numeroLinhas" : 0, "pesoCatarinaLbf" : 0.0, "fatorCalibracao" : 1.0 },
+  "cardVisibility" : { "pesoColuna" : true, "chHidTubos" : true, "chFlutuante" : true, "bombaLama" : true, "escp" : true, "vazao" : true }
+}

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox spacing="0" style="-fx-background-color: #f7f9fc;"
+      stylesheets="@geopetro-design-system.css"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.demo.controllers.GraficosController">
+
+   <!-- Filtros -->
+   <VBox spacing="12.0" style="-fx-background-color: white; -fx-padding: 16 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 2);">
+      <Label text="Graficos de Operacao" style="-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #051833;" />
+
+      <HBox spacing="16.0" alignment="CENTER_LEFT">
+         <Label text="Data inicio:" style="-fx-font-size: 12;" />
+         <DatePicker fx:id="dateStart" prefWidth="145" />
+         <Label text="Hora:" style="-fx-font-size: 12;" />
+         <TextField fx:id="timeStart" prefWidth="90" />
+         <Label text="Data fim:" style="-fx-font-size: 12;" />
+         <DatePicker fx:id="dateEnd" prefWidth="145" />
+         <Label text="Hora:" style="-fx-font-size: 12;" />
+         <TextField fx:id="timeEnd" prefWidth="90" />
+         <Button fx:id="btnAtualizar" text="Atualizar" onAction="#onAtualizar"
+                 style="-fx-background-color: #051833; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 6 16; -fx-font-weight: bold;" />
+      </HBox>
+
+      <HBox spacing="20.0" alignment="CENTER_LEFT">
+         <Label text="Variaveis:" style="-fx-font-size: 12; -fx-font-weight: bold;" />
+         <CheckBox fx:id="chkPesoColuna"      text="Peso Coluna (lbf)"           style="-fx-font-size: 12;" />
+         <CheckBox fx:id="chkTorqueTubos"     text="Torque Tubos (lbf·ft)"       style="-fx-font-size: 12;" />
+         <CheckBox fx:id="chkTorqueFlutuante" text="Torque Flutuante (lbf·ft)"   style="-fx-font-size: 12;" />
+         <CheckBox fx:id="chkPressaoBomba"    text="Pressao Bomba (psi)"         style="-fx-font-size: 12;" />
+         <CheckBox fx:id="chkFlowRate"        text="Vazao (bbl/min)"             style="-fx-font-size: 12;" />
+      </HBox>
+
+      <HBox spacing="10.0" alignment="CENTER_LEFT">
+         <Button fx:id="btnZoomIn"  text="＋ Zoom In"  onAction="#onZoomIn"
+                 style="-fx-background-color: #eaf1f8; -fx-text-fill: #154a7a; -fx-background-radius: 5; -fx-padding: 4 12;" />
+         <Button fx:id="btnZoomOut" text="－ Zoom Out" onAction="#onZoomOut"
+                 style="-fx-background-color: #eaf1f8; -fx-text-fill: #154a7a; -fx-background-radius: 5; -fx-padding: 4 12;" />
+         <Button fx:id="btnReset"   text="↺ Resetar"  onAction="#onReset"
+                 style="-fx-background-color: #edf1f8; -fx-text-fill: #051833; -fx-background-radius: 5; -fx-padding: 4 12;" />
+         <Label fx:id="lblZoom" text="Zoom: 100%" style="-fx-font-size: 12; -fx-text-fill: #5a667a;" />
+      </HBox>
+   </VBox>
+
+   <!-- Área dos gráficos -->
+   <ScrollPane fx:id="scrollPane" fitToWidth="true" pannable="true" VBox.vgrow="ALWAYS"
+               style="-fx-background: #f7f9fc; -fx-background-color: #f7f9fc;">
+      <padding><Insets top="20" right="20" bottom="20" left="20" /></padding>
+      <VBox fx:id="chartsContainer" spacing="20.0" style="-fx-background-color: #f7f9fc;" />
+   </ScrollPane>
+
+</VBox>

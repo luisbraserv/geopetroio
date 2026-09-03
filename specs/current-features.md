@@ -282,7 +282,7 @@ puro).
 | Campo | Conteúdo |
 |---|---|
 | **Objetivo** | Calcular operações de cimentação (Squeeze e Tampão) e gerar relatórios técnicos |
-| **Atores** | `CIMENTACAO`, `ADMIN` |
+| **Atores** | `CIMENTACAO`, `ADMIN`, `GERENCIA`, `DIRETORIA` |
 | **Rotas** | `/app/simulador` · `/app/simulador/squeeze` · `/app/simulador/tampao` |
 | **Endpoints** | `/api/simulador/pastas[...]` · `/api/simulador/cenarios[...]` · `/cenarios/sem-pasta?operacao` |
 | **Entidades** | `PastaSimuladorEntity`, `CenarioSimuladorEntity` |
@@ -299,7 +299,7 @@ conformidade operacional
 
 **Regras [FATO]**
 - Cenários organizados em pastas por `operacao` — o backend é agnóstico de domínio.
-- ⚠️ **Sem checagem de posse**: qualquer `CIMENTACAO`/`ADMIN` edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015--cenários-do-simulador-não-têm-dono)).
+- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador (`CIMENTACAO`, `ADMIN`, `GERENCIA` ou `DIRETORIA`) edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015--cenários-do-simulador-não-têm-dono)).
 - Pasta com cenários: cascade `ALL` + `orphanRemoval`.
 
 ⚠️ **Validações [FATO]** — **ausência quase total**. Os ~40 campos numéricos críticos de engenharia
@@ -318,14 +318,14 @@ próprio** que resta no backend, além da identidade e da organização.
 |---|---|
 | **Objetivo** | Visualizar séries temporais de telemetria de uma sonda |
 | **Atores** | `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` (frota inteira) · `CLIENTE` (apenas as sondas concedidas) |
-| **Rota** | `/app/monitoramento-sondas` — **única rota lazy-loaded do app** |
+| **Rota** | `/app/monitoramento-sondas` — carregada sob demanda com `loadComponent` |
 | **Endpoints** | `GET /api/sondas/minhas` · `GET /api/sondas/{idSondaUnidade}/monitoramentos/series?dispositivoId&inicio&fim` |
 
 **Fluxo [FATO]**
 1. Front lista as sondas do usuário (`/api/sondas/minhas`).
 2. Usuário escolhe sonda, período (15m/1h/6h/personalizado) e dispositivos.
 3. Front busca até 5 séries em paralelo (`forkJoin`) — dispositivos fixos: `PESO_COLUNA_01`, `TORQUE_01`, `TORQUE_02`, `PRESSAO_01`, `VAZAO_01`.
-4. Backend **valida o acesso do usuário àquela sonda** (por regional) antes de repassar.
+4. Backend **valida o acesso do usuário àquela sonda**: `CLIENTE` precisa de concessão explícita; os demais perfis de monitoramento acessam a frota inteira.
 5. Backend chama `GET {monitoramento.base-url}/api/monitoramentos/sondas/{id}/series` via WebClient.
 6. Front renderiza em **SVG desenhado à mão**, com toggle Original/Suavizada.
 
@@ -436,6 +436,21 @@ eixos, grade, polilinha e curva suavizada com operadores PDF (`re`, `m`, `l`, `c
 
 **Configuração [FATO]** · IP · constante da bomba · range de pressão (bar) · sensibilidade (0.5–1.5) · aceita separador decimal `,` ou `.` de forma inteligente (testado)
 
+
+**Unidade da pressão [FATO 2026-08-28]** · O card mostra **PSI ou kgf/cm²**, escolhido em
+Configuração. **A gravação continua sempre em PSI** — a conversão acontece na exibição.
+
+⚠️ **[DECIDIDO]** Converter na leitura, não na gravação. Se a unidade escolhida chegasse ao arquivo,
+o mesmo campo passaria a significar coisas diferentes conforme a configuração vigente no dia, e
+séries antigas ficariam impossíveis de interpretar sem saber que configuração estava ativa quando
+cada ponto foi gravado.
+
+- 1 kgf/cm² = 14,223343307 PSI · `UnidadePressao` (7 testes)
+- O **título do card** acompanha a unidade. Sem isso, um número 14x menor apareceria sob o rótulo
+  "PSI", indistinguível de uma queda súbita de pressão
+- kgf/cm² usa **3 casas decimais** contra 2 do PSI: com os números ~14x menores, duas casas
+  apagariam variações reais
+- Configuração gravada antes deste campo existir é lida como PSI
 ⚠️ **Tela órfã [FATO]** · "Carregar CSV" existe em FXML e controller, mas **não é alcançável** e **não faz nada** — não há parser de CSV no projeto
 
 ---
@@ -452,6 +467,26 @@ eixos, grade, polilinha e curva suavizada com operadores PDF (`re`, `m`, `l`, `c
 
 **[FATO]** Usa **PDFBox 2.0.32** — diferente do F-17, que escreve PDF cru. Gráficos desenhados com
 `Graphics2D` e embutidos como raster, com suavização por média móvel sobreposta à série bruta.
+
+**Unidade do relatório [FATO 2026-08-28]** · A tela permite gerar em **PSI ou kgf/cm²**, começando
+na unidade configurada mas alterável a cada relatório — é comum precisar de uma cópia em kgf/cm²
+para um cliente específico sem mudar a configuração da estação. A conversão acontece **ao desenhar
+os gráficos**; os registros seguem em PSI. O rodapé de estatísticas usa a mesma unidade dos
+gráficos: fixá-lo em PSI traria dois números diferentes para a mesma grandeza no mesmo relatório.
+
+**Progresso da geração [FATO 2026-08-28]** · Barra de progresso com 8 etapas nomeadas (preparar,
+ler registros, 4 gráficos, montar página, gravar).
+
+⚠️ **[FATO]** Antes a geração rodava **na thread de UI**, dentro do handler do botão: a janela
+congelava enquanto os quatro gráficos eram desenhados e o arquivo gravado, e o único retorno era o
+alerta de sucesso surgindo do nada no fim. Sem sinal na tela, o clique parecia não ter funcionado.
+Agora roda em `Task` própria, e o botão fica desabilitado durante a geração para não disparar duas.
+
+⚠️ **[FATO] Defeito corrigido junto:** `gerarPdfComGraficos` capturava toda exceção e apenas
+imprimia no console, sem relançar — a tela anunciava **"PDF gerado com sucesso"** mesmo quando
+arquivo nenhum havia sido escrito. O mesmo valia para falha ao inserir um gráfico, que produzia um
+relatório incompleto dado como bem-sucedido. Agora ambas viram `PdfGeracaoException` e a mensagem de
+sucesso só aparece depois de o arquivo existir. Coberto por 5 testes em `PdfServiceTest`.
 
 ---
 

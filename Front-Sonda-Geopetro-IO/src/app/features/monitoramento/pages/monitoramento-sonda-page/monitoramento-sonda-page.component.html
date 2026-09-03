@@ -1,0 +1,111 @@
+<div class="monitoramento-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Telemetria</p>
+      <h1>Monitoramento de Sondas</h1>
+      <span>Selecione a sonda e o periodo para comparar as variaveis de operacao.</span>
+    </div>
+  </header>
+
+  <section class="filtros-panel">
+    @if (demonstracaoAtiva()) {
+      <div class="demo-notice" role="status">
+        <strong>Dados sinteticos de desenvolvimento</strong>
+        <span>A SPT-145 foi preenchida automaticamente para validar a leitura do InfluxDB.</span>
+      </div>
+    }
+
+    <div class="filtros-grid">
+      <label class="field">
+        <span>Sonda / Unidade</span>
+        <select [(ngModel)]="sondaSelecionadaValue" (ngModelChange)="onSondaChange()">
+          <option [ngValue]="null" disabled selected>Selecione uma sonda</option>
+          @for (sonda of sondas(); track sonda.idSondaUnidade) {
+            <option [ngValue]="sonda">{{ sonda.apelido || sonda.nome }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Periodo</span>
+        <select [(ngModel)]="periodoValue">
+          @for (p of periodos; track p.value) {
+            <option [value]="p.value">{{ p.label }}</option>
+          }
+        </select>
+      </label>
+
+      @if (periodo() === 'custom') {
+        <label class="field">
+          <span>Inicio</span>
+          <input type="datetime-local" [(ngModel)]="inicioPeriodoValue" />
+        </label>
+        <label class="field">
+          <span>Fim</span>
+          <input type="datetime-local" [(ngModel)]="fimPeriodoValue" />
+        </label>
+      }
+
+      <div class="field field--action">
+        <button tuiButton type="button" appearance="primary" size="m"
+          [disabled]="!podeconsultar() || carregando()"
+          (click)="consultar()">
+          @if (carregando()) {
+            <tui-icon icon="@tui.loader-circle" class="spin"></tui-icon>
+            Consultando...
+          } @else {
+            <tui-icon icon="@tui.search"></tui-icon>
+            Consultar graficos
+          }
+        </button>
+      </div>
+    </div>
+
+    <div class="variaveis-panel">
+      @for (dispositivo of dispositivos(); track dispositivo.id) {
+        <label class="toggle-chip">
+          <input
+            type="checkbox"
+            [checked]="dispositivo.visivel"
+            (change)="alternarDispositivo(dispositivo.id, $any($event.target).checked)"
+          />
+          <span>{{ dispositivo.label }}</span>
+        </label>
+      }
+    </div>
+  </section>
+
+  <section class="grafico-section">
+    @if (carregando()) {
+      <div class="estado-vazio">
+        <tui-icon icon="@tui.loader-circle" class="spin estado-vazio__icon"></tui-icon>
+        <p>Consultando dados de telemetria...</p>
+      </div>
+    } @else if (erro()) {
+      <div class="estado-vazio estado-vazio--erro">
+        <tui-icon icon="@tui.alert-circle" class="estado-vazio__icon"></tui-icon>
+        <p>{{ erro() }}</p>
+      </div>
+    } @else if (semDados()) {
+      <div class="estado-vazio">
+        <tui-icon icon="@tui.chart-no-axes-column" class="estado-vazio__icon"></tui-icon>
+        <p>Nenhum dado encontrado para o periodo selecionado.</p>
+      </div>
+    } @else if (series().length) {
+      <div class="graficos-grid">
+        @for (serie of series(); track serie.dispositivoId) {
+          <app-grafico-monitoramento
+            [serie]="serie"
+            [titulo]="nomeDispositivo(serie.dispositivoId)"
+            [unidade]="unidadeDispositivo(serie.dispositivoId)"
+          />
+        }
+      </div>
+    } @else {
+      <div class="estado-vazio">
+        <tui-icon icon="@tui.activity" class="estado-vazio__icon"></tui-icon>
+        <p>Selecione uma sonda e um periodo para visualizar os graficos.</p>
+      </div>
+    }
+  </section>
+</div>

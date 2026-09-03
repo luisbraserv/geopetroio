@@ -146,16 +146,24 @@ a aplicação de subir.
 
 ---
 
-### OQ-016 · A escala analógica 0–1000 do CLP foi confirmada?
-**Contexto [FATO]:** comentário no próprio código (`PlcConnectionService.java:181`): *"A escala 0..1000
-é preservada até sua confirmação no PLC"*. **Os próprios desenvolvedores marcam como não validado.**
+### OQ-016 · A escala analógica do CLP foi confirmada? — ✅ **RESOLVIDA 2026-08-31**
 
-**Por que importa:** toda a conversão de sinal depende disso. Erro aqui produz dado operacional errado
-silenciosamente, em toda a frota. Ver [RN-030](business-rules.md#rn-030--conversão-4-20ma--psi).
+**Era [FATO]:** comentário no próprio código dizia *"A escala 0..1000 é preservada até sua confirmação
+no PLC"* — a conversão inteira dependia de uma premissa que os desenvolvedores marcavam como não
+validada.
 
-**Prioridade elevada:** com o foco do sistema concentrado em telemetria, esta é a pergunta de maior
-impacto técnico em aberto.
+**Resposta:** a escala **não era** 0–1000. O bloco *Analog Amplifier* está configurado com
+*Measurement Range* −50..750 e `Offset -250`, então o Ax publicado vai de −50 (4 mA) a 750 (20 mA).
+A conversão foi reescrita conforme [RN-030](business-rules.md#rn-030--conversão-do-ax-do-logo--psi)
+e a escala antiga removida do código.
 
+**[FATO]** A premissa errada tinha duas consequências que já se manifestavam: valores fora de faixa
+e leitura *unsigned* de um Ax que pode ser negativo. Ambas corrigidas.
+
+⚠️ **Permanece em aberto:** confirmar em campo, com calibrador de laço, que o amplificador de **cada
+canal** está com essa mesma configuração. A conversão hoje assume −50..750 para os quatro. Um canal
+configurado diferente produz leitura proporcionalmente errada, e o Ax cru no rodapé do card é o que
+denuncia.
 ---
 
 ### OQ-017 · Rack/slot do CLP valem para toda a frota?

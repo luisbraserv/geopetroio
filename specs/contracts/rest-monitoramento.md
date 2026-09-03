@@ -29,14 +29,14 @@ hora local sem offset.
 Front                    Backend-Sonda                    Telemetria :8081
   │                            │                                 │
   │ GET /api/sondas/minhas     │                                 │
-  ├───────────────────────────►│ (consulta MySQL por regional)   │
+  ├───────────────────────────►│ (consulta o escopo no MySQL)  │
   │◄───────────────────────────┤                                 │
   │                            │                                 │
   │ GET /api/sondas/{id}/      │                                 │
   │     monitoramentos/series  │                                 │
   ├───────────────────────────►│                                 │
   │                            │ 1. valida acesso do usuário     │
-  │                            │    à sonda (por regional)       │
+  │                            │    à sonda (role/concessão)    │
   │                            │ 2. GET /api/monitoramentos/     │
   │                            ├────────────────────────────────►│
   │                            │◄────────────────────────────────┤
@@ -105,7 +105,9 @@ telemetria vira `502` na API pública, não `500`.
 
 ## 4. Endpoints expostos pelo Backend-Sonda
 
-**[FATO]** Já implementados. Roles: `SONDA`, `ADMIN`.
+**[FATO]** Já implementados. Roles: `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` e
+`CLIENTE`. O perfil `CLIENTE` tem escopo restrito às Unidades/Sondas concedidas no cadastro; os
+demais perfis listados acessam a frota inteira.
 
 ### `GET /api/sondas/minhas`
 
@@ -115,9 +117,9 @@ Lista as sondas às quais o usuário autenticado tem acesso.
 [ { "idSondaUnidade": "SPT-144", "nome": "SPT-144", "apelido": "Sonda 144" } ]
 ```
 
-**[FATO]** Determinado por `findBySetor_RegionalIdOrderByNomeAsc` — o usuário vê as sondas da sua
-regional. Sujeito à limitação de [RN-013](../business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização):
-só a regional **principal** conta.
+**[FATO]** `SondaMonitoramentoService` aplica uma regra por capacidade: perfis operacionais
+autorizados recebem todas as unidades; `CLIENTE` recebe somente a coleção N:N
+`usuario_cliente_unidades`. Um cliente sem concessão recebe uma lista vazia.
 
 ### `GET /api/sondas/{idSondaUnidade}/monitoramentos/series`
 

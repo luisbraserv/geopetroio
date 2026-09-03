@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+            style="-fx-background-color: #f7f9fc; -fx-background: #f7f9fc;"
+            stylesheets="@geopetro-design-system.css"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.demo.controllers.SensorSettingsController">
+
+   <content>
+      <VBox spacing="16.0" style="-fx-background-color: #f7f9fc; -fx-padding: 24;">
+         <children>
+
+            <Label fx:id="lblTitulo" style="-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #051833;" text="Configuração do Sensor" />
+
+            <!-- Limite do sensor -->
+            <VBox spacing="6.0">
+               <Label style="-fx-font-size: 13; -fx-text-fill: #061c39;" text="Limite do sensor (bar):" />
+               <TextField fx:id="txtRangeBar" promptText="Ex: 400" style="-fx-font-size: 14; -fx-padding: 6 10;" />
+               <Label style="-fx-font-size: 11; -fx-text-fill: #5a667a;" text="Faixa máxima do sensor de pressão." />
+            </VBox>
+
+            <!-- Sensibilidade -->
+            <VBox spacing="6.0">
+               <HBox spacing="8.0">
+                  <Label style="-fx-font-size: 13; -fx-text-fill: #061c39;" text="Sensibilidade:" />
+                  <Label fx:id="lblSensibilidade" style="-fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #154a7a;" text="1.00" />
+               </HBox>
+               <Slider fx:id="sliderSensibilidade"
+                       min="0.5" max="1.5" value="1.0"
+                       majorTickUnit="0.25" minorTickCount="4"
+                       blockIncrement="0.01"
+                       showTickLabels="true" showTickMarks="true" />
+               <Label style="-fx-font-size: 11; -fx-text-fill: #5a667a;" text="Fator de ajuste aplicado ao PSI lido pelo sensor. PSI ajustado = PSI bruto × sensibilidade." />
+            </VBox>
+
+            <!-- Botões -->
+            <HBox spacing="12.0">
+               <Button fx:id="btnSalvar" onAction="#onSalvar" text="Salvar"
+                       prefWidth="120" prefHeight="36"
+                       style="-fx-background-color: #051833; -fx-text-fill: white; -fx-font-size: 13; -fx-background-radius: 5;" />
+               <Button onAction="#onCancelar" text="Cancelar"
+                       prefWidth="100" prefHeight="36"
+                       style="-fx-background-color: #ffffff; -fx-border-color: #d6deeb; -fx-text-fill: #051833; -fx-font-size: 13; -fx-background-radius: 5; -fx-border-radius: 5;" />
+            </HBox>
+
+         </children>
+         <padding><Insets bottom="16.0" /></padding>
+      </VBox>
+   </content>
+</ScrollPane>

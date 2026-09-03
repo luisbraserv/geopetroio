@@ -5,7 +5,7 @@
 # ingestao e continua e write-heavy, enquanto esta VM e intermitente e
 # read-heavy — juntas, competiriam por I/O de disco.
 #
-# Exposicao de rede: navegadores dos usuarios (portas 80/443).
+# Exposicao de rede: navegadores dos usuarios (FRONT_PORT, default 8090).
 #
 # Uso:  cp .env.example .env  &&  editar  &&  docker compose up -d
 # =====================================================================
@@ -80,7 +80,9 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      # Porta externa configuravel: na VM-1 a 80 ja e do IIS, que permanece no ar.
+      # Dentro do container o nginx continua na 80 — so o lado de fora muda.
+      - "${FRONT_PORT:-8090}:80"
     # O nginx.conf do frontend faz proxy para 'telemetria:8081'. Como a telemetria
     # agora vive em outra VM, este alias resolve o nome para o endereco externo,
     # sem exigir alteracao no nginx.conf da imagem.

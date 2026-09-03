@@ -1,0 +1,311 @@
+{
+  "info": {
+    "_postman_id": "9bbfa2c3-2f2f-4d30-bc21-geopetro000001",
+    "name": "Geopetro IO API",
+    "description": "Collection para testar autenticacao JWT e endpoints de usuario do Backend Sonda Geopetro IO.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "username",
+      "value": "Luis123"
+    },
+    {
+      "key": "password",
+      "value": "Senha@123"
+    }
+  ],
+  "item": [
+    {
+      "name": "Autenticacao",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login retornou 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json.token) {",
+                  "  pm.collectionVariables.set(\"token\", json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Criar Usuario Cliente",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"empresa\": \"Braserv Petroleo\",\n  \"username\": \"Luis123\",\n  \"password\": \"Senha@123\",\n  \"nome\": \"Luis Silveira\",\n  \"telefone\": \"(27) 99999-9999\",\n  \"email\": \"luis.silveira@braserv.com.br\",\n  \"cep\": \"29123-456\",\n  \"logradouro\": \"Rua das Flores\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"Vitoria\",\n  \"estado\": \"ES\",\n  \"numero\": \"123\",\n  \"complemento\": \"Sala 2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "clientes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar Usuario Interno",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matricula\": 100,\n  \"setor\": \"Automacao\",\n  \"username\": \"Interno123\",\n  \"password\": \"Senha@123\",\n  \"nome\": \"Usuario Interno\",\n  \"telefone\": \"27988887777\",\n  \"email\": \"interno@braserv.com.br\",\n  \"cep\": \"29123456\",\n  \"logradouro\": \"Avenida Brasil\",\n  \"bairro\": \"Jardim Camburi\",\n  \"cidade\": \"Vitoria\",\n  \"estado\": \"ES\",\n  \"numero\": \"1000\",\n  \"complemento\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/internos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "internos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Usuarios Paginado",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios?pagina=0&tamanho=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "0"
+                },
+                {
+                  "key": "tamanho",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Usuario por Username",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{username}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{username}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ativar Usuario",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{username}}/ativar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{username}}",
+                "ativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Desativar Usuario",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{username}}/desativar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "usuarios",
+                "{{username}}",
+                "desativar"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentacao",
+      "item": [
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v3/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/swagger-ui.html",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "swagger-ui.html"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane prefHeight="220.0" prefWidth="720.0"
+            stylesheets="@geopetro-design-system.css" xmlns="http://javafx.com/javafx/25"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.braservhorusdesktop.controller.CarregarCsvController">
+
+   <children>
+
+      <TextField fx:id="filePathField"
+                 editable="false"
+                 layoutX="20.0"
+                 layoutY="20.0"
+                 prefWidth="460.0"
+                 promptText="Nenhum arquivo selecionado" />
+
+      <Button layoutX="500.0"
+              layoutY="20.0"
+              prefWidth="140.0"
+              text="Procurar..."
+              onAction="#onSelectCsv" />
+
+      <!-- Nome do Poço -->
+      <Label layoutX="20.0" layoutY="70.0" text="Nome do Poço:" />
+      <TextField fx:id="nomePocoField"
+                 layoutX="120.0"
+                 layoutY="66.0"
+                 prefWidth="200.0" />
+
+      <!-- Início -->
+      <Label layoutX="20.0" layoutY="130.0" text="Início:" />
+      <DatePicker fx:id="dataInicioPicker"
+                  layoutX="120.0"
+                  layoutY="106.0" />
+
+      <TextField fx:id="horaInicioField"
+                 layoutX="300.0"
+                 layoutY="106.0"
+                 prefWidth="80.0"
+                 promptText="HH:mm" />
+
+      <!-- Fim -->
+      <Label layoutX="380.0" layoutY="110.0" text="Fim:" />
+      <DatePicker fx:id="dataFimPicker"
+                  layoutX="430.0"
+                  layoutY="106.0" />
+
+      <TextField fx:id="horaFimField"
+                 layoutX="610.0"
+                 layoutY="106.0"
+                 prefWidth="60.0"
+                 promptText="HH:mm" />
+
+      <Button layoutX="20.0"
+              layoutY="160.0"
+              prefWidth="600.0"
+              style="-fx-background-color: #333; -fx-text-fill: white;"
+              text="Carregar CSV"
+              onAction="#onLoadCsv" />
+   </children>
+</AnchorPane>

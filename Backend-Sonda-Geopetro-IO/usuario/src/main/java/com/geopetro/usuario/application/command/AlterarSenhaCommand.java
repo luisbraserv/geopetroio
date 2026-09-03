@@ -1,0 +1,4 @@
+package com.geopetro.usuario.application.command;
+
+public record AlterarSenhaCommand(String senhaAtual, String novaSenha, String confirmacaoSenha) {
+}

@@ -1,0 +1,24 @@
+<div class="dashboard">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Painel Principal</p>
+      <h1>Dashboard</h1>
+      <span>Bem-vindo, <strong>{{ currentUser()?.nome }}</strong> · {{ currentUser()?.roles?.join(', ') }}</span>
+    </div>
+    <span class="dashboard__status">
+      <span class="status-dot"></span>
+      Status Operacional: Ativo
+    </span>
+  </header>
+
+  <div class="dashboard__cards">
+    <a class="dash-card" routerLink="/app/simulador">
+      <tui-icon icon="@tui.flask-conical" class="dash-card__icon"></tui-icon>
+      <div class="dash-card__content">
+        <strong>Simulador</strong>
+        <span>Acessar simuladores de cimentação</span>
+      </div>
+      <tui-icon icon="@tui.arrow-right" class="dash-card__arrow"></tui-icon>
+    </a>
+  </div>
+</div>

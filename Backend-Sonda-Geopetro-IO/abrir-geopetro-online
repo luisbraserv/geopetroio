@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$APP_DIR"
+
+if python3 - <<'PY' >/dev/null 2>&1
+import gi
+gi.require_version("AppIndicator3", "0.1")
+gi.require_version("Gtk", "3.0")
+PY
+then
+  exec python3 "$APP_DIR/geopetro-online-tray.py"
+fi
+
+exec "$APP_DIR/iniciar-aplicacao-online-fedora.sh" --background

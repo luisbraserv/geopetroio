@@ -1,0 +1,12 @@
+# Profile de teste: sem broker (MqttConfig e @Profile("!test")) e sem InfluxDB real.
+# O token precisa existir porque InfluxConfig falha de proposito quando ele esta vazio —
+# o cliente e construido preguicosamente e nao abre conexao ate a primeira escrita/consulta.
+influx:
+  url: http://localhost:8086
+  token: token-de-teste
+  org: teste
+  bucket: teste
+
+telemetria:
+  zona-sonda: America/Sao_Paulo
+  max-pontos-por-serie: 2000

@@ -1,0 +1,16 @@
+<div class="sim-index">
+  <div class="sim-index__header">
+    <h1>Simuladores</h1>
+    <p class="sim-index__subtitle">Selecione o tipo de simulação para iniciar.</p>
+  </div>
+
+  <div class="sim-index__grid">
+    @for (card of cards; track card.title) {
+      <a class="sim-index__card" [routerLink]="card.route">
+        <span class="sim-index__card-icon">{{ card.icon }}</span>
+        <h2>{{ card.title }}</h2>
+        <p>{{ card.description }}</p>
+      </a>
+    }
+  </div>
+</div>

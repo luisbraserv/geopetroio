@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="TOP_CENTER"
+      spacing="16.0"
+      prefWidth="420.0"
+      stylesheets="@geopetro-design-system.css"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.braservhorusdesktop.controller.ConfiguracaoController">
+
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+
+    <Label styleClass="titulo-tela" text="Configuração" />
+
+    <VBox spacing="8.0">
+        <Label styleClass="rotulo-campo" text="IP do PLC:" />
+        <TextField fx:id="ipPlcField" promptText="Ex: 10.0.0.200" />
+    </VBox>
+
+    <VBox spacing="8.0">
+        <Label styleClass="rotulo-campo" text="Constante da Bomba (BBL):" />
+        <TextField fx:id="constanteBombaField" promptText="Ex: 0.0235" />
+    </VBox>
+
+    <VBox spacing="8.0">
+        <Label styleClass="rotulo-campo" text="Range do sensor de pressao (bar):" />
+        <TextField fx:id="rangePressaoBarField" promptText="Ex: 400" />
+    </VBox>
+
+    <VBox spacing="8.0">
+        <Label styleClass="rotulo-campo" text="Unidade da pressão:" />
+        <ComboBox fx:id="unidadePressaoCombo" maxWidth="Infinity" />
+        <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
+               text="Muda apenas como a pressão aparece no card. O registro continua sendo gravado em PSI." />
+    </VBox>
+
+    <VBox spacing="8.0">
+        <HBox spacing="8.0">
+            <Label styleClass="rotulo-campo" text="Sensibilidade da pressao:" />
+            <Label fx:id="sensibilidadePressaoLabel" styleClass="rotulo-campo" text="1.00" />
+        </HBox>
+        <Slider fx:id="sensibilidadePressaoSlider"
+                min="0.5"
+                max="1.5"
+                value="1.0"
+                majorTickUnit="0.5"
+                minorTickCount="4"
+                blockIncrement="0.01"
+                showTickLabels="true"
+                showTickMarks="true"
+                snapToTicks="false" />
+    </VBox>
+
+    <HBox spacing="10.0" alignment="CENTER_RIGHT">
+        <Button onAction="#onSalvar" prefWidth="120.0" styleClass="botao-primario" text="Salvar" defaultButton="true" />
+
+        <Button onAction="#onCancelar" prefWidth="120.0" styleClass="botao-secundario" text="Cancelar" />
+    </HBox>
+
+</VBox>
