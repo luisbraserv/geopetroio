@@ -18,7 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.geopetro.core.exception.BusinessException;
 import com.geopetro.core.exception.ResourceNotFoundException;
-import com.geopetro.core.port.RegionalConsultaPort;
+import com.geopetro.core.port.VinculoCadastroPort;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 import com.geopetro.regional.adapter.in.web.request.RegionalRequest;
 import com.geopetro.regional.adapter.out.persistence.entity.RegionalEntity;
 import com.geopetro.regional.adapter.out.persistence.repository.RegionalJpaRepository;
@@ -31,13 +32,13 @@ class RegionalServiceTest {
 	private RegionalJpaRepository repository;
 
 	@Mock
-	private RegionalConsultaPort vinculoConsulta;
+	private VinculoCadastroPort vinculoConsulta;
 
 	private RegionalService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new RegionalService(repository, List.of(vinculoConsulta));
+		service = new RegionalService(repository, new GuardaDeExclusao(List.of(vinculoConsulta)));
 	}
 
 	@Test
@@ -117,7 +118,8 @@ class RegionalServiceTest {
 	void deveExcluirRegionalSemVinculos() {
 		RegionalEntity existente = regional(1L, "Norte");
 		when(repository.findById(1L)).thenReturn(Optional.of(existente));
-		when(vinculoConsulta.existeVinculoParaRegional(1L)).thenReturn(false);
+		when(vinculoConsulta.cadastro()).thenReturn(VinculoCadastroPort.Cadastro.REGIONAL);
+		when(vinculoConsulta.descreverVinculo(1L)).thenReturn(java.util.Optional.empty());
 
 		service.excluir(1L);
 
@@ -128,11 +130,13 @@ class RegionalServiceTest {
 	void deveLancarExcecaoAoExcluirRegionalComVinculos() {
 		RegionalEntity existente = regional(1L, "Norte");
 		when(repository.findById(1L)).thenReturn(Optional.of(existente));
-		when(vinculoConsulta.existeVinculoParaRegional(1L)).thenReturn(true);
+		when(vinculoConsulta.cadastro()).thenReturn(VinculoCadastroPort.Cadastro.REGIONAL);
+		when(vinculoConsulta.descreverVinculo(1L)).thenReturn(java.util.Optional.of("2 setores vinculados"));
 
+		// RN-063: a mensagem diz o que impede, nao apenas que impede.
 		assertThatThrownBy(() -> service.excluir(1L))
 				.isInstanceOf(BusinessException.class)
-				.hasMessageContaining("setores ou unidades/sondas vinculados");
+				.hasMessageContaining("2 setores vinculados");
 
 		verify(repository, never()).deleteById(any());
 	}

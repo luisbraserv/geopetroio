@@ -21,6 +21,16 @@
 		<paho.version>1.2.5</paho.version>
 		<influx.version>6.12.0</influx.version>
 		<springdoc.version>2.8.8</springdoc.version>
+
+		<!--
+		  Spring Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que nao reconhece o
+		  bytecode do Java 25 instalado nas maquinas de desenvolvimento: toda mockagem de classe
+		  falha com "Java 25 (69) is not supported by the current version of Byte Buddy".
+		  Estas versoes sao as mesmas que o Backend-Sonda ja resolve pelo Spring Boot 4, onde a
+		  suite roda sem erro. Removivel quando este servico subir para o Boot 4.
+		-->
+		<mockito.version>5.20.0</mockito.version>
+		<byte-buddy.version>1.17.8</byte-buddy.version>
 	</properties>
 
 	<dependencies>

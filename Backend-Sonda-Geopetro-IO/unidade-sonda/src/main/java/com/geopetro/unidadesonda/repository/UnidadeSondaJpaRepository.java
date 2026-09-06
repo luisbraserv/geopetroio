@@ -20,7 +20,9 @@ public interface UnidadeSondaJpaRepository extends JpaRepository<UnidadeSondaEnt
 
 	List<UnidadeSondaEntity> findBySetor_RegionalIdOrderByNomeAsc(Long regionalId);
 
-	boolean existsBySetor_RegionalId(Long regionalId);
+	long countBySetor_RegionalId(Long regionalId);
+
+	long countBySetorId(Long setorId);
 
 	Optional<UnidadeSondaEntity> findByNome(String nome);
 

@@ -281,13 +281,15 @@ adotar um domínio, não um passo opcional.
 
 **[FATO]** Cobertura no levantamento: **43 testes**, todos unitários, em 7 classes.
 
-**[FATO 2026-09-06]** Hoje são **96**. Duas lacunas fecharam parcialmente:
+**[FATO 2026-09-06]** Hoje são **110** no Backend-Sonda e **27** no Backend-Telemetria. Duas lacunas
+fecharam parcialmente:
 
 | Antes | Agora |
 |---|---|
 | Nenhum teste de controller / HTTP | `PocoSecurityTest` exercita `SecurityConfig` sobre `/api/simulador/pocos` |
 | Nenhum `@DataJpaTest` | `PocoPersistenceTest` usa H2 real, incluindo a restrição de FK |
 | Módulo `security` sem cobertura | `ContaAtivaVerificadorTest` e `JwtAuthenticationFilterTest` cobrem o corte de acesso |
+| Exclusão sem teste | `GuardaDeExclusaoTest` e `TelemetriaVinculoAdapterTest` cobrem RN-063 e RN-072, incluindo o caso em que a Telemetria está fora |
 
 ⚠️ **O que continua descoberto, e é o que mais importa:** `/auth/login` e `/usuarios/**` não têm
 **nenhum** teste HTTP — e é exatamente a superfície que [RN-079](business-rules.md#rn-079--a-api-padroniza-o-prefixo-api)
@@ -487,3 +489,4 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 - **[FATO]** Higiene no Horus: `data/registros_operacao.json` (3,3 MB de telemetria real) e binários H2 versionados no Git
 - Build do front usa `--configuration k8s`, mas **não há manifesto Kubernetes** no workspace — [OQ-012](open-questions.md#oq-012--onde-vivem-os-manifestos-de-deploy)
 - `Braserv-Horus-Desktop` injeta um `JAVA_HOME` de fallback fixo no `build.gradle` — frágil entre máquinas
+- ✅ **Resolvido 2026-09-06:** o Backend-Telemetria roda Spring Boot **3.4.5** enquanto o Backend-Sonda já está no **4.0.5**. O Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que **não reconhece o bytecode do Java 25** instalado — *toda* mockagem de classe falhava com `Java 25 (69) is not supported`, derrubando **10 dos 24 testes** do serviço. Corrigido fixando `mockito.version` e `byte-buddy.version` no `pom.xml` para as mesmas versões que o Boot 4 já resolve. ⚠️ **A divergência de Boot entre os dois serviços permanece** — este é o primeiro sintoma dela, e não será o último

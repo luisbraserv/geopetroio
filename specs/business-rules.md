@@ -537,9 +537,8 @@ aproximação por fase.
 
 ## Regras da rodada 2 — 2026-09-05
 
-> **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-06]** RN-061, RN-062, RN-064 e RN-065 estão
-> **implementadas** no working tree. Contrato e verificação em [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
-> RN-063 continua sem implementação.
+> **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-06]** A rodada 2 está **inteiramente implementada** no
+> working tree — RN-061, RN-062, RN-063, RN-064 e RN-065. Contrato e verificação em [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
 
 ### RN-061 · Política de senha unificada
 **[DECIDIDO 2026-09-05]** **8 a 20 caracteres**, com minúscula, maiúscula, dígito e caractere especial.
@@ -579,6 +578,14 @@ Empresa**: havendo vínculo, a exclusão é recusada com mensagem dizendo **o qu
 
 ⚠️ **Não cobre o histórico:** o vínculo verificado é relacional, e a telemetria vive no InfluxDB sem FK.
 Ver [OQ-039](open-questions.md#oq-039--excluir-sonda-com-histórico-de-telemetria).
+
+**[FATO 2026-09-06]** Implementada como `VinculoCadastroPort` + `GuardaDeExclusao`, que **substituem**
+o antigo `RegionalConsultaPort`. Duas mudanças sobre o mecanismo anterior: vale para os quatro
+cadastros, e a porta devolve **a descrição do que impede**, não um booleano — a recusa passou de
+*"existem setores ou unidades/sondas vinculados"* para *"2 setores vinculados e 1 unidade/sonda
+vinculada"*. A guarda consulta **todas** as fontes antes de recusar, para não revelar um impedimento
+por vez. A ressalva acima deixou de valer: o histórico entra pela mesma porta, via
+[RN-072](#rn-072--histórico-de-telemetria-conta-como-vínculo).
 
 ### RN-064 · O usuário não tem mais vínculo organizacional
 **[DECIDIDO 2026-09-05]** Saem do sistema: `regional` principal, a lista N:N de regionais e a lista N:N
@@ -700,6 +707,12 @@ endpoint que não existe. Ver [`contracts/rest-monitoramento.md`](contracts/rest
 
 **Comportamento na indisponibilidade:** se a Telemetria estiver fora, a resposta segura é **recusar a
 exclusão** — apagar um cadastro por não conseguir confirmar que ele tem histórico é o erro irreversível.
+
+**[FATO 2026-09-06]** Endpoint `GET /api/monitoramentos/sondas/{id}/existe` implementado no
+Backend-Telemetria; `TelemetriaVinculoAdapter` o consome pelo **nome** da sonda, que é a chave de
+integração ([RN-018](#rn-018--nome-da-unidadesonda-é-chave-de-integração)). A indisponibilidade
+bloqueia, com mensagem própria. É o único implementador da guarda que não consulta o banco relacional.
+Contrato em [`rest-monitoramento.md §7`](contracts/rest-monitoramento.md#7-verificação-de-existência-de-série).
 
 ### RN-073 · Atualização automática só com o CLP desconectado
 **[DECIDIDO 2026-09-05]** O Desktop-Sonda baixa e instala sozinho, mas **só** quando não há leitura

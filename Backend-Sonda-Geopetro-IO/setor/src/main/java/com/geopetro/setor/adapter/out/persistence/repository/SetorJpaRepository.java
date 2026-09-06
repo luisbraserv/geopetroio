@@ -14,7 +14,7 @@ public interface SetorJpaRepository extends JpaRepository<SetorEntity, Long> {
 
 	List<SetorEntity> findByRegionalIdOrderByNomeAsc(Long regionalId);
 
-	boolean existsByRegionalId(Long regionalId);
+	long countByRegionalId(Long regionalId);
 
 	Page<SetorEntity> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
 

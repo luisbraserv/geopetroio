@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -164,6 +165,57 @@ public class InfluxTelemetriaRepository {
 		return pontos;
 	}
 
+	/**
+	 * Primeiro e ultimo ponto gravados para uma sonda, em toda a retencao — RN-072.
+	 *
+	 * <p>Existe para responder "esta sonda tem historico?" antes de o Backend-Sonda excluir o
+	 * cadastro. <b>Nao e varredura de serie:</b> {@code first()} e {@code last()} sao empurrados
+	 * para o mecanismo de armazenamento, que resolve pelo indice.
+	 *
+	 * <p>O filtro por {@code _field == "valor"} evita contar o field {@code nome} como um ponto
+	 * separado — cada leitura grava os dois.
+	 *
+	 * @return vazio quando nao ha nenhum ponto para a sonda
+	 */
+	public Optional<IntervaloSerie> consultarIntervalo(String idSondaUnidade) {
+		validarIdentificador("idSondaUnidade", idSondaUnidade);
+
+		Instant primeiro = extremo(idSondaUnidade, "first");
+		if (primeiro == null) {
+			return Optional.empty();
+		}
+		Instant ultimo = extremo(idSondaUnidade, "last");
+		return Optional.of(new IntervaloSerie(primeiro, ultimo == null ? primeiro : ultimo));
+	}
+
+	private Instant extremo(String idSondaUnidade, String funcao) {
+		String flux = "from(bucket: \"" + escapar(properties.getBucket()) + "\")\n"
+				+ "  |> range(start: 0)\n"
+				+ "  |> filter(fn: (r) => r._measurement == \"" + escapar(properties.getMeasurement()) + "\")\n"
+				+ "  |> filter(fn: (r) => r.idSondaUnidade == \"" + idSondaUnidade + "\")\n"
+				+ "  |> filter(fn: (r) => r._field == \"valor\")\n"
+				+ "  |> " + funcao + "()\n"
+				+ "  |> keep(columns: [\"_time\"])";
+
+		log.debug("Flux ({}): {}", funcao, flux);
+
+		Instant escolhido = null;
+		for (FluxTable tabela : queryApi.query(flux)) {
+			for (FluxRecord registro : tabela.getRecords()) {
+				Instant tempo = registro.getTime();
+				if (tempo == null) {
+					continue;
+				}
+				// Ha uma tabela por combinacao de tags; o extremo da sonda e o extremo entre elas.
+				if (escolhido == null
+						|| ("first".equals(funcao) ? tempo.isBefore(escolhido) : tempo.isAfter(escolhido))) {
+					escolhido = tempo;
+				}
+			}
+		}
+		return escolhido;
+	}
+
 	private String montarFlux(String idSondaUnidade, String dispositivoId,
 			Instant inicio, Instant fim, int maxPontos, boolean agregar) {
 
@@ -220,5 +272,9 @@ public class InfluxTelemetriaRepository {
 
 	/** Um ponto da serie temporal. */
 	public record PontoSerie(Instant dataHora, double valor) {
+	}
+
+	/** Extremos da serie de uma sonda, em toda a retencao — RN-072. */
+	public record IntervaloSerie(Instant primeiroPonto, Instant ultimoPonto) {
 	}
 }

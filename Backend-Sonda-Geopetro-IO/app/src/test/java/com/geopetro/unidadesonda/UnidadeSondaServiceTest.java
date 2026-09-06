@@ -21,6 +21,7 @@ import com.geopetro.setor.adapter.out.persistence.entity.SetorEntity;
 import com.geopetro.setor.adapter.out.persistence.repository.SetorJpaRepository;
 import com.geopetro.unidadesonda.adapter.in.web.request.UnidadeSondaRequest;
 import com.geopetro.unidadesonda.adapter.out.persistence.entity.UnidadeSondaEntity;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 import com.geopetro.unidadesonda.application.service.UnidadeSondaService;
 import com.geopetro.unidadesonda.domain.TipoUnidadeSonda;
 import com.geopetro.unidadesonda.repository.UnidadeSondaJpaRepository;
@@ -38,7 +39,7 @@ class UnidadeSondaServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new UnidadeSondaService(repository, setorRepository);
+		service = new UnidadeSondaService(repository, setorRepository, new GuardaDeExclusao(java.util.List.of()));
 	}
 
 	@Test

@@ -13,14 +13,18 @@ import com.geopetro.empresa.adapter.out.persistence.entity.EmpresaEntity;
 import com.geopetro.empresa.adapter.out.persistence.repository.EmpresaJpaRepository;
 import com.geopetro.core.exception.BusinessException;
 import com.geopetro.core.exception.ResourceNotFoundException;
+import com.geopetro.core.port.VinculoCadastroPort.Cadastro;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 
 @Service
 public class EmpresaService {
 
 	private final EmpresaJpaRepository repository;
+	private final GuardaDeExclusao guarda;
 
-	public EmpresaService(EmpresaJpaRepository repository) {
+	public EmpresaService(EmpresaJpaRepository repository, GuardaDeExclusao guarda) {
 		this.repository = repository;
+		this.guarda = guarda;
 	}
 
 	@Transactional(readOnly = true)
@@ -59,6 +63,7 @@ public class EmpresaService {
 	@Transactional
 	public void excluir(Long id) {
 		EmpresaEntity empresa = buscar(id);
+		guarda.garantirSemVinculo(Cadastro.EMPRESA, id, "a empresa");
 		repository.delete(empresa);
 	}
 

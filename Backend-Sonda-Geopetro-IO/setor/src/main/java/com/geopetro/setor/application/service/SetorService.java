@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.geopetro.core.exception.ResourceNotFoundException;
+import com.geopetro.core.port.VinculoCadastroPort.Cadastro;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 import com.geopetro.regional.adapter.out.persistence.entity.RegionalEntity;
 import com.geopetro.regional.adapter.out.persistence.repository.RegionalJpaRepository;
 import com.geopetro.setor.adapter.in.web.request.SetorRequest;
@@ -19,10 +21,13 @@ public class SetorService {
 
 	private final SetorJpaRepository repository;
 	private final RegionalJpaRepository regionalRepository;
+	private final GuardaDeExclusao guarda;
 
-	public SetorService(SetorJpaRepository repository, RegionalJpaRepository regionalRepository) {
+	public SetorService(SetorJpaRepository repository, RegionalJpaRepository regionalRepository,
+			GuardaDeExclusao guarda) {
 		this.repository = repository;
 		this.regionalRepository = regionalRepository;
+		this.guarda = guarda;
 	}
 
 	@Transactional(readOnly = true)
@@ -66,7 +71,9 @@ public class SetorService {
 
 	@Transactional
 	public void excluir(Long id) {
-		repository.delete(buscar(id));
+		SetorEntity setor = buscar(id);
+		guarda.garantirSemVinculo(Cadastro.SETOR, id, "o setor");
+		repository.delete(setor);
 	}
 
 	private SetorEntity aplicar(SetorEntity setor, SetorRequest request) {

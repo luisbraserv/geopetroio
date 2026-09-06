@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.braservpetroleo.telemetria.geopetroio.adapter.in.web.dto.ExistenciaSerieDTO;
 import com.braservpetroleo.telemetria.geopetroio.adapter.in.web.dto.MonitoramentoSerieDTO;
+import com.braservpetroleo.telemetria.geopetroio.application.service.ConsultaExistenciaService;
 import com.braservpetroleo.telemetria.geopetroio.application.service.ConsultaSerieService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,9 +35,11 @@ import jakarta.validation.constraints.NotBlank;
 public class MonitoramentoController {
 
 	private final ConsultaSerieService service;
+	private final ConsultaExistenciaService existenciaService;
 
-	public MonitoramentoController(ConsultaSerieService service) {
+	public MonitoramentoController(ConsultaSerieService service, ConsultaExistenciaService existenciaService) {
 		this.service = service;
+		this.existenciaService = existenciaService;
 	}
 
 	@GetMapping("/sondas/{idSondaUnidade}/series")
@@ -56,5 +60,17 @@ public class MonitoramentoController {
 			@RequestParam Instant fim) {
 
 		return ResponseEntity.ok(service.consultar(idSondaUnidade, dispositivoId, inicio, fim));
+	}
+
+	@GetMapping("/sondas/{idSondaUnidade}/existe")
+	@Operation(summary = "Informa se a sonda possui serie gravada",
+			description = "Responde a exclusao de cadastro no Backend-Sonda (RN-072): historico de "
+					+ "telemetria conta como vinculo. Devolve tambem o primeiro e o ultimo ponto, "
+					+ "para a recusa dizer de quando ate quando ha telemetria. Consulta os extremos "
+					+ "da serie, nao varredura.")
+	public ResponseEntity<ExistenciaSerieDTO> consultarExistencia(
+			@PathVariable @NotBlank String idSondaUnidade) {
+
+		return ResponseEntity.ok(existenciaService.consultar(idSondaUnidade));
 	}
 }

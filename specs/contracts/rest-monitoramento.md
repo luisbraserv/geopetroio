@@ -174,7 +174,7 @@ exibição, e a média preserva a forma da curva.
 
 ## 7. Verificação de existência de série
 
-> **[DECIDIDO 2026-09-05]** · **A implementar** — não existe hoje.
+> **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-06] Implementado** no working tree, dos dois lados.
 
 **Por que passou a ser necessário:** a exclusão de cadastros passa a ser **bloqueada quando houver
 vínculo** ([RN-063](../business-rules.md#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros)),
@@ -184,7 +184,9 @@ e o **histórico de telemetria conta como vínculo**
 O Backend-Sonda não tem como saber disso sozinho: o vínculo que ele enxerga é relacional, e a série vive
 no InfluxDB, em outro serviço. Precisa **perguntar**.
 
-### Endpoint proposto
+### Endpoint
+
+**[FATO 2026-09-06]** Implementado exatamente como proposto:
 
 ```
 GET /api/monitoramentos/sondas/{idSondaUnidade}/existe
@@ -204,6 +206,13 @@ telemetria de 01/03/2026 a 05/09/2026"* — em vez de um "existe vínculo" que n
 
 **Custo no InfluxDB:** consulta de primeiro e último ponto da sonda, não varredura de série.
 
+**[FATO 2026-09-06]** `InfluxTelemetriaRepository.consultarIntervalo` roda duas consultas Flux com
+`first()` e `last()` sobre `range(start: 0)`, filtrando `_field == "valor"` para não contar o field
+`nome` como ponto separado. Ambas são empurradas para o mecanismo de armazenamento.
+
+⚠️ **As datas saem em UTC**, como todo o resto deste contrato. O consumidor formata para exibição —
+e o faz **também em UTC**, para a mensagem de recusa não mudar conforme o fuso do servidor.
+
 ### Comportamento na indisponibilidade
 
 ⚠️ **[DECIDIDO 2026-09-05]** Se o serviço de Telemetria estiver fora, a exclusão é **recusada**.
@@ -211,3 +220,11 @@ telemetria de 01/03/2026 a 05/09/2026"* — em vez de um "existe vínculo" que n
 Isto **inverte** a degradação graciosa do §3, deliberadamente: em consulta de série, falhar devolvendo
 vazio custa uma tela sem gráfico; em exclusão, assumir "não tem histórico" porque ninguém respondeu
 apaga um cadastro que não podia ser apagado. Só um dos dois erros tem volta.
+
+**[FATO 2026-09-06]** `MonitoramentoClient.consultarExistencia` devolve `Optional.empty()` quando não
+consegue perguntar, e `TelemetriaVinculoAdapter` traduz isso em **impedimento**, com a mensagem
+*"não foi possível confirmar o histórico de telemetria (serviço indisponível); tente novamente"*.
+
+⚠️ **O `Optional.empty()` significa coisas opostas nos dois métodos do mesmo cliente** — em
+`consultarSerie` é "sem dados", aqui é "não perguntei". Está documentado no javadoc de ambos, porque
+confundi-los apagaria cadastro com histórico.

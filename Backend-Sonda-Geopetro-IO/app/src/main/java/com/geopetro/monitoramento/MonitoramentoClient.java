@@ -1,5 +1,6 @@
 package com.geopetro.monitoramento;
 
+import com.geopetro.monitoramento.dto.ExistenciaSerieDTO;
 import com.geopetro.monitoramento.dto.MonitoramentoSerieDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,39 @@ public class MonitoramentoClient {
             return Optional.empty();
         } catch (Exception e) {
             log.error("Aplicacao Monitoramento indisponivel: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Pergunta se a sonda possui serie gravada — RN-072.
+     *
+     * <p><b>O vazio aqui significa outra coisa que em {@link #consultarSerie}.</b> La, falhar
+     * devolvendo vazio custa uma tela sem grafico, e a degradacao graciosa e desejavel. Aqui a
+     * resposta decide se um cadastro e apagado: {@code Optional.empty()} quer dizer
+     * <b>"nao consegui perguntar"</b>, nunca "nao tem historico". Quem chama precisa recusar a
+     * exclusao nesse caso — assumir que nao ha historico porque ninguem respondeu apaga um cadastro
+     * que nao podia ser apagado, e so um dos dois erros tem volta.
+     *
+     * @return a resposta da Telemetria, ou vazio quando o servico nao pode ser consultado
+     */
+    public Optional<ExistenciaSerieDTO> consultarExistencia(String idSondaUnidade) {
+        try {
+            ExistenciaSerieDTO resultado = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/monitoramentos/sondas/{idSondaUnidade}/existe")
+                            .build(idSondaUnidade))
+                    .retrieve()
+                    .bodyToMono(ExistenciaSerieDTO.class)
+                    .block();
+            return Optional.ofNullable(resultado);
+        } catch (WebClientResponseException e) {
+            log.error("Erro HTTP ao verificar historico da sonda {}: {} {}",
+                    idSondaUnidade, e.getStatusCode(), e.getMessage());
+            return Optional.empty();
+        } catch (Exception e) {
+            log.error("Aplicacao Monitoramento indisponivel ao verificar historico da sonda {}: {}",
+                    idSondaUnidade, e.getMessage());
             return Optional.empty();
         }
     }

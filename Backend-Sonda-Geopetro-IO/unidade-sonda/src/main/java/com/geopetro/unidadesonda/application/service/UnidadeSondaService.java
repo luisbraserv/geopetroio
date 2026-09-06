@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.geopetro.core.exception.BusinessException;
 import com.geopetro.core.exception.ResourceNotFoundException;
+import com.geopetro.core.port.VinculoCadastroPort.Cadastro;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 import com.geopetro.setor.adapter.out.persistence.entity.SetorEntity;
 import com.geopetro.setor.adapter.out.persistence.repository.SetorJpaRepository;
 import com.geopetro.unidadesonda.adapter.in.web.request.UnidadeSondaRequest;
@@ -21,10 +23,13 @@ public class UnidadeSondaService {
 
 	private final UnidadeSondaJpaRepository repository;
 	private final SetorJpaRepository setorRepository;
+	private final GuardaDeExclusao guarda;
 
-	public UnidadeSondaService(UnidadeSondaJpaRepository repository, SetorJpaRepository setorRepository) {
+	public UnidadeSondaService(UnidadeSondaJpaRepository repository, SetorJpaRepository setorRepository,
+			GuardaDeExclusao guarda) {
 		this.repository = repository;
 		this.setorRepository = setorRepository;
+		this.guarda = guarda;
 	}
 
 	@Transactional(readOnly = true)
@@ -74,7 +79,9 @@ public class UnidadeSondaService {
 
 	@Transactional
 	public void excluir(Long id) {
-		repository.delete(buscar(id));
+		UnidadeSondaEntity unidade = buscar(id);
+		guarda.garantirSemVinculo(Cadastro.UNIDADE_SONDA, id, "a unidade/sonda");
+		repository.delete(unidade);
 	}
 
 	private UnidadeSondaEntity aplicar(UnidadeSondaEntity unidade, UnidadeSondaRequest request) {

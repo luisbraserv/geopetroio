@@ -10,7 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.geopetro.core.exception.BusinessException;
 import com.geopetro.core.exception.ResourceNotFoundException;
-import com.geopetro.core.port.RegionalConsultaPort;
+import com.geopetro.core.port.VinculoCadastroPort.Cadastro;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 import com.geopetro.regional.adapter.in.web.request.RegionalRequest;
 import com.geopetro.regional.adapter.out.persistence.entity.RegionalEntity;
 import com.geopetro.regional.adapter.out.persistence.repository.RegionalJpaRepository;
@@ -19,11 +20,11 @@ import com.geopetro.regional.adapter.out.persistence.repository.RegionalJpaRepos
 public class RegionalService {
 
 	private final RegionalJpaRepository repository;
-	private final List<RegionalConsultaPort> vinculoConsultas;
+	private final GuardaDeExclusao guarda;
 
-	public RegionalService(RegionalJpaRepository repository, List<RegionalConsultaPort> vinculoConsultas) {
+	public RegionalService(RegionalJpaRepository repository, GuardaDeExclusao guarda) {
 		this.repository = repository;
-		this.vinculoConsultas = vinculoConsultas;
+		this.guarda = guarda;
 	}
 
 	@Transactional(readOnly = true)
@@ -64,12 +65,7 @@ public class RegionalService {
 	@Transactional
 	public void excluir(Long id) {
 		buscar(id);
-		boolean possuiVinculos = vinculoConsultas.stream().anyMatch(c -> c.existeVinculoParaRegional(id));
-		if (possuiVinculos) {
-			throw new BusinessException(
-					"Nao e possivel excluir a regional pois existem setores ou unidades/sondas vinculados.",
-					HttpStatus.CONFLICT);
-		}
+		guarda.garantirSemVinculo(Cadastro.REGIONAL, id, "a regional");
 		repository.deleteById(id);
 	}
 

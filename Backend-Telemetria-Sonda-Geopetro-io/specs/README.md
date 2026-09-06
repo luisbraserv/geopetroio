@@ -29,10 +29,12 @@ participa do MQTT — apenas consulta séries já processadas.
 | R-02 | Normalizar os dois formatos de payload | `TelemetriaPayloadParser` | idem, §9 |
 | R-03 | Persistir séries no InfluxDB | `infrastructure/influx` | ver §Esquema |
 | R-04 | Expor API REST de consulta | `adapter/in/web` | [`rest-monitoramento.md`](../../specs/contracts/rest-monitoramento.md) |
+| R-05 | Responder se uma sonda tem série gravada | `ConsultaExistenciaService` | idem, §7 — **[FATO 2026-09-06]** |
 
 ### Fora de escopo — deliberadamente
 
 - **Autorização de usuário.** O Backend-Sonda valida o vínculo usuário↔sonda antes de chamar. Este serviço não conhece usuários nem regionais.
+- **Decidir sobre cadastro.** R-05 responde *se existe série*, não *se pode excluir*. A regra de exclusão é do Backend-Sonda, que também é quem trata a indisponibilidade deste serviço como impedimento ([RN-072](../../specs/business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
 - **Cálculo de grandezas.** A conversão 4-20mA acontece no Desktop-Sonda. Aqui chegam valores já convertidos — e opcionalmente o bruto, para permitir reprocessamento.
 
 ## Estrutura
@@ -187,13 +189,21 @@ testados. **Decisão revisável** se houver preferência por uniformidade de sta
 
 ## Testes
 
-**[FATO]** 24 testes, todos passando.
+**[FATO 2026-09-06]** 27 testes, todos passando.
+
+⚠️ **Eles não passavam antes de 2026-09-06.** Este projeto está no Spring Boot **3.4.5**, que traz
+Mockito 5.14.2 com Byte Buddy 1.15.11 — incapaz de ler o bytecode do **Java 25** instalado. Toda
+mockagem de classe falhava, derrubando **10 dos 24 testes**. Corrigido fixando `mockito.version` e
+`byte-buddy.version` no `pom.xml`, nas mesmas versões que o Backend-Sonda já resolve pelo Boot 4.
+A divergência de versão de Boot entre os dois serviços permanece —
+[DT-016](../../specs/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
 
 | Classe | Cobre |
 |---|---|
 | `TelemetriaPayloadParserTest` (13) | Os dois formatos, conversão de fuso, precedência do tópico, colisão do campo `unidade`, leitura inválida, dispositivo desconhecido, payloads malformados |
 | `MqttTelemetriaSubscriberTest` (4) | Extração da unidade do tópico, encaminhamento, **e que exceções não propagam** |
 | `ConsultaSerieServiceTest` (3) | Mapeamento de pontos, série vazia, repasse do teto configurado |
+| `ConsultaExistenciaServiceTest` (3) | Sonda com série devolvendo os extremos, sonda sem série, e ponto único com primeiro igual ao último |
 | `TelemetriaDevSeederTest` (3) | 28.800 pontos por variável no dia local, cinco séries da SPT-145, limpeza prévia, timestamps alinhados, valores positivos e lotes bloqueantes limitados |
 | `TelemetriaGeopetroioApplicationTests` (1) | Smoke: contexto sobe com a fiação real |
 

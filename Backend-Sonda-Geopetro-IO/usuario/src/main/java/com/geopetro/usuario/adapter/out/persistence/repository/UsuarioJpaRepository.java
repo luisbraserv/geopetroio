@@ -23,6 +23,14 @@ public interface UsuarioJpaRepository extends JpaRepository<UsuarioEntity, Strin
 	@Query("select u.status from UsuarioEntity u where u.username = :username")
 	Optional<StatusUsuario> findStatusByUsername(@Param("username") String username);
 
+	/** Clientes com a unidade/sonda concedida — RN-063 e RN-048. */
+	@Query("select count(u) from UsuarioClienteEntity u join u.unidadesSondas s where s.id = :unidadeSondaId")
+	long countClientesComUnidadeSonda(@Param("unidadeSondaId") Long unidadeSondaId);
+
+	/** Usuarios de uma empresa — RN-063. */
+	@Query("select count(u) from UsuarioClienteEntity u where u.empresaRef.id = :empresaId")
+	long countByEmpresaId(@Param("empresaId") Long empresaId);
+
 	Page<UsuarioEntity> findByUsernameContainingIgnoreCaseOrNomeContainingIgnoreCaseOrEmailContainingIgnoreCase(
 			String username, String nome, String email, Pageable pageable);
 }

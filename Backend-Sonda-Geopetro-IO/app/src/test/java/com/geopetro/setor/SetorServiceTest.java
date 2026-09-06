@@ -21,6 +21,7 @@ import com.geopetro.regional.adapter.out.persistence.repository.RegionalJpaRepos
 import com.geopetro.setor.adapter.in.web.request.SetorRequest;
 import com.geopetro.setor.adapter.out.persistence.entity.SetorEntity;
 import com.geopetro.setor.adapter.out.persistence.repository.SetorJpaRepository;
+import com.geopetro.core.vinculo.GuardaDeExclusao;
 import com.geopetro.setor.application.service.SetorService;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,7 +37,7 @@ class SetorServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new SetorService(repository, regionalRepository);
+		service = new SetorService(repository, regionalRepository, new GuardaDeExclusao(java.util.List.of()));
 	}
 
 	@Test
