@@ -32,16 +32,21 @@ abrindo sem migração forçada. Os mesmos perfis do simulador acessam o cadastr
 
 ## Banco
 
-Migration manual em `db/migrations/2026-09-05-simulador-pocos.sql`; baseline de
-instalações novas em `../deploy/vm1-transacional/mysql-init/01-schema.sql`.
-Aplicar a migration em banco existente antes do deploy com `ddl-auto=validate`.
-Não extrai nem inventa poços a partir dos nomes livres dos cenários antigos.
+**[FATO 2026-09-06]** Virou a migration `V2026.09.05__simulador_pocos.sql` do Flyway, que roda no
+startup do backend — não há mais script para aplicar à mão. Não extrai nem inventa poços a partir dos
+nomes livres dos cenários antigos.
 
 **[FATO 2026-09-06]** Na primeira execução da suíte completa, o teste preexistente
-`BackendSondaGeopetroIoApplicationTests` iniciou o perfil dev com
-`ddl-auto=update`. O Hibernate criou `simulador_pocos`, adicionou `poco_id` e a FK
-`fk_cenario_poco` no **MySQL local**. Portanto, não reaplicar a migration como se
-esse banco ainda estivesse sem a estrutura. Não foi executado deploy em produção.
+`BackendSondaGeopetroIoApplicationTests` iniciou o perfil dev com `ddl-auto=update`. O Hibernate criou
+`simulador_pocos`, adicionou `poco_id` e a FK `fk_cenario_poco` no **MySQL local**, sem ninguém rodar
+migration nenhuma.
+
+**Isso deixou de ser um problema a administrar.** A migration é idempotente — guardas com
+`information_schema` — e o Flyway a aplica normalmente numa base que já tenha a estrutura.
+`MigracaoFlywayTest` cobre exatamente esse caso. E a causa raiz foi removida: `dev` passou de
+`update` para `validate`, então o Hibernate não cria mais nada em silêncio.
+
+Não foi executado deploy em produção.
 
 O teste de inicialização agora fixa URL e driver H2 em memória, credenciais de
 teste, dialeto H2 e `create-drop`, com falha imediata em erros de DDL. Também

@@ -133,48 +133,68 @@ docker compose exec backend curl -s localhost:8080/actuator/health/readiness
 
 ## O schema do banco
 
-⚠️ **Ponto crítico.** O projeto **não usa Flyway/Liquibase**, e em produção roda com
-`ddl-auto=validate` — o Hibernate **não cria tabelas**. Sem schema, a aplicação não sobe.
+**[FATO 2026-09-06]** O schema é do **Flyway**, e só dele. Antes conviviam três mecanismos —
+`ddl-auto`, scripts SQL rodados à mão e um initializer em runtime; a fila de scripts pendentes era
+conferida de memória, e esquecer um derrubava a subida da aplicação.
+
+### Como funciona agora
+
+As migrations vivem em `Backend-Sonda-Geopetro-IO/app/src/main/resources/db/migration/` e **rodam
+sozinhas no startup do backend**, antes de o Hibernate validar. Nada a executar à mão, em base nova
+ou existente.
+
+```
+V2026.09.04__baseline.sql                          schema anterior à entrevista de 2026-09-05
+V2026.09.05__simulador_pocos.sql                   RN-059 · RN-067
+V2026.09.06.1__unidade_sonda_tipo.sql              RN-065
+V2026.09.06.2__usuario_sem_vinculo_organizacional.sql   RN-064
+```
+
+`ddl-auto=validate` em **todos** os perfis, dev incluído. O Hibernate não cria nem altera nada; ele
+apenas confere se o schema bate com as entidades e recusa subir se não bater.
 
 ### Base nova
 
-`mysql-init/01-schema.sql` está montado em `/docker-entrypoint-initdb.d` e roda **automaticamente na
-primeira inicialização** do container MySQL (volume vazio).
-
-**[FATO]** Esse arquivo foi **gerado a partir das entidades JPA** — Hibernate `ddl-auto=create` contra
-um MySQL 8 real, exportado via `mysqldump`, e validado por replay em base limpa seguido de boot da
-aplicação com `validate`. Contém as 10 tabelas do escopo atual, com 10 FKs.
+Sobe vazia. O Flyway aplica o baseline e as migrations seguintes na ordem. **Não há mais
+`mysql-init/01-schema.sql`** — aquele arquivo virou o baseline `V2026.09.04`, e com ele foi embora a
+obrigação de regenerá-lo a cada mudança de entidade.
 
 ### Base existente
 
-**Não** use o `01-schema.sql`. A base já foi criada e evoluída pelos scripts manuais em
-`Backend-Sonda-Geopetro-IO/app/src/main/resources/db/migration/`, que devem continuar sendo aplicados
-na ordem documentada em [DT-002](../specs/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
+Também não exige nada. Na primeira subida o Flyway encontra um schema sem histórico, cria a tabela
+`flyway_schema_history` e **marca** `V2026.09.04` como aplicada sem executá-la — a estrutura daquela
+versão já está lá. A migração começa de fato em `V2026.09.05`.
+
+⚠️ **A `V2026.09.06.2` descarta dados**: as tabelas `usuario_interno_regionais` /
+`usuario_interno_setores` e a coluna `usuarios.regional_id`. Não há backup do MySQL
+([decisão de 2026-09-05](../specs/product-context.md#11-fechamentos-das-rodadas-3-a-6)). Para guardar
+os vínculos antes, os `SELECT` de exportação estão no cabeçalho do script.
+
+⚠️ **A `V2026.09.06.1` classifica toda a frota existente como `SONDA`.** Confira registro a registro
+na tela de cadastro depois do deploy — o campo é editável para isso.
 
 ⚠️ Uma base existente pode conter tabelas de módulos removidos (`projetos`, `processos`, `anotacoes`,
 `observacoes`, `quimicos`...). Elas **não quebram nada** — `validate` ignora tabelas extras — mas há
 scripts de limpeza em `Backend-Sonda-Geopetro-IO/db/cleanup/`, comentados e **não executados**.
 
-### Regenerar o schema após mudar entidades
+### Escrever uma migration nova
 
-```bash
-docker run -d --name schemagen -e MYSQL_ROOT_PASSWORD=x -e MYSQL_DATABASE=geopetro_io \
-  -p 13306:3306 mysql:8
-# aguarde o MySQL responder, então:
-cd Backend-Sonda-Geopetro-IO
-./mvnw -pl app -am -DskipTests package
-java -jar app/target/*.jar --spring.profiles.active=dev \
-  --spring.datasource.url="jdbc:mysql://127.0.0.1:13306/geopetro_io?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo" \
-  --spring.datasource.username=root --spring.datasource.password=x \
-  --spring.jpa.hibernate.ddl-auto=create --spring.sql.init.mode=never \
-  --security.jwt.secret=apenas-para-gerar-ddl-000000000000000000 --server.port=18080
-# interrompa após "Started", então:
-docker exec schemagen mysqldump -uroot -px --no-data --skip-comments \
-  --skip-add-drop-table --compact geopetro_io > /tmp/schema.sql
-docker rm -f schemagen
-```
+Crie `V<versão>__descricao.sql` na pasta acima, com versão maior que a última. Duas regras da casa:
 
-Depois, reaplique o cabeçalho de documentação do arquivo atual.
+1. **Idempotente**, no padrão `information_schema` + `PREPARE` que os scripts existentes usam. O
+   Flyway já não reexecuta o que aplicou, mas as guardas cobrem a base que recebeu a estrutura por
+   outro caminho — foi o que aconteceu com `simulador_pocos` no MySQL local.
+2. **Nunca edite um script já aplicado.** `validate-on-migrate` está ligado: mexer no conteúdo quebra
+   o startup em vez de divergir em silêncio. Corrija com um script novo.
+
+`MigracaoFlywayTest` verifica a cadeia inteira contra um MySQL real, numa base descartável — base
+vazia, base existente, e a base que já tinha estrutura criada pelo `ddl-auto`. Ele **pula** se não
+houver MySQL alcançável.
+
+### Scripts históricos
+
+`Backend-Sonda-Geopetro-IO/db/historico/` guarda os `V2026.06.*`, aplicados à mão antes do Flyway
+existir. **Não rodam mais** — seus efeitos estão dentro do baseline. Ficam como registro.
 
 ---
 

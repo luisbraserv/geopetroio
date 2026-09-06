@@ -115,8 +115,8 @@ F-01 a F-07, F-14, F-15 e F-20 pertencem a este repositório.
 
 | # | Restrição | Origem |
 |---|---|---|
-| 1 | **Não há Flyway/Liquibase.** Scripts em `db/migration/` são manuais e idempotentes | [DT-002](../../specs/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema) |
-| 2 | Produção usa `ddl-auto=validate` — schema divergente impede o startup | idem |
+| 1 | **Flyway é o dono do schema** desde 2026-09-06. Migration nova vai em `app/src/main/resources/db/migration/`, idempotente, e **script já aplicado nunca se edita** | [DT-002](../../specs/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema) |
+| 2 | `ddl-auto=validate` em **todos** os perfis — schema divergente impede o startup, inclusive em dev | idem |
 | 3 | `UnidadeSonda.nome` é chave de integração com telemetria — renomear quebra histórico | [RN-018](../../specs/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
 | 4 | `username` é PK — não é alterável sem quebrar FKs | [RN-001](../../specs/business-rules.md#rn-001--username-é-a-chave-de-negócio) |
 | 5 | Testes de `regional`/`setor`/`unidade-sonda` vivem em `app/src/test/` porque esses módulos não declaram `spring-boot-starter-test` | [DT-007](../../specs/technical-debt.md#dt-007--ausência-de-testes-em-áreas-críticas) |

@@ -9,7 +9,7 @@
 | ID | Item | Aplicação | Severidade | Estado |
 |---|---|---|---|---|
 | [DT-001](#dt-001--código-fonte-perdido-de-almoxarifado-e-compras) | Código-fonte perdido (almoxarifado/compras) | Backend | **Crítica** | Registro histórico |
-| [DT-002](#dt-002--estratégias-conflitantes-de-evolução-de-schema) | Estratégias conflitantes de schema | Backend | **Crítica** | Parcialmente resolvido |
+| [DT-002](#dt-002--estratégias-conflitantes-de-evolução-de-schema) | Estratégias conflitantes de schema | Backend | **Crítica** | ✅ **Resolvido 2026-09-06** — Flyway |
 | [DT-003](#dt-003--telemetria-capturada-mas-nunca-persistida) | Telemetria capturada e descartada | Sistema | **Crítica** | ✅ Resolvido |
 | [DT-004](#dt-004--risco-de-onedrive-sobre-repositórios-git) | OneDrive corrompendo repositórios Git | Todas | **Crítica** | Aberto |
 | [DT-005](#dt-005--módulos-de-backend-sem-interface) | Módulos de backend sem interface | Backend | Alta | ✅ Resolvido |
@@ -70,61 +70,88 @@ entrado no Git.
 
 ## DT-002 · Estratégias conflitantes de evolução de schema
 
-**Severidade: Crítica** · Backend-Sonda · **Parcialmente resolvido**
+**Severidade: Crítica** · Backend-Sonda · ✅ **Resolvido em 2026-09-06** com a adoção do Flyway
 
-**[FATO]** Conviviam **três** mecanismos. Um foi eliminado em 2026-08-26:
+### O problema, como foi encontrado — registro histórico
 
-| # | Mecanismo | Estado |
+**[FATO 2026-08-26]** Conviviam **três** mecanismos de evolução de schema:
+
+| # | Mecanismo | Estado à época |
 |---|---|---|
 | 1 | Hibernate `ddl-auto` (`update` em dev, `validate` em prod) | Ativo |
 | 2 | Scripts SQL manuais em `db/migration/V*.sql` | Ativo — **sem execução automática** |
-| 3 | ~~`ProcessoSchemaInitializer`~~ | ✅ **Removido** com o módulo `processo` |
+| 3 | `ProcessoSchemaInitializer` | Removido com o módulo `processo` |
 
-**[FATO] Não há Flyway nem Liquibase.** Os scripts imitam a convenção Flyway (`V<data>__desc.sql`) sem
-o mecanismo. O cabeçalho de `V2026.06.02` avisa: *"O projeto NAO usa Flyway/Liquibase... Rode
-manualmente em producao ANTES de subir a aplicacao"*.
-
-### O que melhorou
+**Não havia Flyway nem Liquibase.** Os scripts imitavam a convenção (`V<data>__desc.sql`) sem o
+mecanismo. O cabeçalho de `V2026.06.02` avisava: *"O projeto NAO usa Flyway/Liquibase... Rode
+manualmente em producao ANTES de subir a aplicacao"* — e era o operador que precisava lembrar da
+ordem e de quais faltavam.
 
 O mecanismo 3 era o pior dos três: um `ApplicationRunner` que executava `ALTER TABLE processos` a cada
 startup, com falhas engolidas em log `debug` — DDL em runtime num ambiente configurado para apenas
-validar. Saiu junto com o módulo.
+validar. Saiu junto com o módulo em 2026-08-26.
 
 ### ⚠️ Fila de mudanças manuais criada em 2026-09-05
 
-A entrevista de produto decidiu **cinco alterações de schema**. Sem Flyway e com `ddl-auto=validate` em
-produção, **todas exigem script manual executado antes do deploy** — e a aplicação não sobe se faltar
-uma:
+A entrevista de produto decidiu **cinco alterações de schema**. Enquanto não havia Flyway, todas
+exigiam script manual antes do deploy — e a aplicação não subia se faltasse uma.
 
-| # | Mudança | Origem |
+**[FATO 2026-09-06] Flyway adotado.** A fila manual deixou de existir: as migrations rodam sozinhas
+no startup do backend.
+
+| # | Mudança | Estado |
 |---|---|---|
-| 1 | ✅ **Script pronto 2026-09-06** — `ALTER TABLE unidades_sondas`, coluna `tipo` com backfill `SONDA` e depois NOT NULL. Não aplicado em produção | [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) · [`2026-09-06-unidade-sonda-tipo.sql`](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-06-unidade-sonda-tipo.sql) |
-| 2 | ✅ **Script pronto 2026-09-06** — `DROP` de `usuario_interno_regionais`, `usuario_interno_setores` e da coluna `regional_id`. ⚠️ Descarta dados sem volta. Não aplicado em produção | [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) · [`2026-09-06-usuario-sem-vinculo-organizacional.sql`](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-06-usuario-sem-vinculo-organizacional.sql) |
-| 3 | Tabelas de **limite** e **log de eventos** de alarme | [RN-071](business-rules.md#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico) · [RN-076](business-rules.md#rn-076--o-alarme-é-registrado-como-sequência-de-fatos) |
-| 4 | **Poço** com geometria e trajetória tipadas em JSON, mais `simulador_cenarios.poco_id`. Script pronto; estrutura criada no MySQL local, aplicação em produção pendente | [RN-059](business-rules.md#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário) · [migration](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-05-simulador-pocos.sql) · [registro de execução](../Backend-Sonda-Geopetro-IO/specs/simulador-pocos.md#banco) |
-| 5 | `DROP` das tabelas órfãs dos módulos removidos | [OQ-026](open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs) |
+| 1 | Coluna `tipo` em `unidades_sondas`, com backfill `SONDA` | ✅ `V2026.09.06.1` |
+| 2 | `DROP` de `usuario_interno_regionais`, `usuario_interno_setores` e `usuarios.regional_id` | ✅ `V2026.09.06.2` — ⚠️ descarta dados |
+| 3 | Tabelas de **limite** e **log de eventos** de alarme | ⏳ Não escrita — depende de [RN-071](business-rules.md#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico) · [RN-076](business-rules.md#rn-076--o-alarme-é-registrado-como-sequência-de-fatos) |
+| 4 | **Poço** com geometria tipada, mais `simulador_cenarios.poco_id` | ✅ `V2026.09.05` |
+| 5 | `DROP` das tabelas órfãs dos módulos removidos | ⏳ Não escrita — [OQ-026](open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs) |
 
-**Por que isto agrava DT-002:** até aqui a fila manual era histórica — scripts antigos já aplicados. A
-partir de hoje ela é **corrente**, com cinco itens acumulados de uma vez, numa operação conduzida por
-**uma pessoa** e **sem backup do MySQL** ([product-context §11](product-context.md#11-fechamentos-das-rodadas-3-a-6)).
-Um erro de ordem ou um script esquecido derruba a subida da aplicação.
+⚠️ **Nenhuma foi aplicada em produção ainda** — serão, no próximo deploy, sem intervenção humana.
 
-⚠️ O `deploy/mysql-init/01-schema.sql` também precisa ser regerado — ele é gerado a partir das
-entidades JPA, e todas as cinco mudanças alteram entidades.
+## ✅ Como ficou
 
-**[FATO 2026-09-06]** Os itens 1, 2 e 4 têm script escrito; o baseline foi ajustado à mão nas três
-frentes. **Nenhum foi aplicado em produção.** A ordem entre eles é livre — não há dependência —, mas
-os dois novos precisam rodar antes da subida da aplicação. Restam sem script os itens 3 (alarmes) e
-5 (tabelas órfãs).
+**[FATO 2026-09-06]** Dos três mecanismos conflitantes, **sobrou um**:
 
-### O que permanece
+| # | Mecanismo | Estado |
+|---|---|---|
+| 1 | Hibernate `ddl-auto` | **`validate` em todos os perfis**, dev incluído. Não cria nem altera nada |
+| 2 | Scripts SQL manuais | ✅ Viraram migrations do Flyway, aplicadas no startup |
+| 3 | ~~`ProcessoSchemaInitializer`~~ | ✅ Removido com o módulo `processo` em 2026-08-26 |
 
-- Em produção (`validate`), a aplicação **não sobe** se o DBA não executar manualmente, na ordem certa: `migration-regional.sql` → `V2026.06.02` → `V2026.06.03` → `V2026.06.04` → `V2026.06.15`.
-- **[FATO]** `migration-regional.sql` tem passos de limpeza **comentados** com instrução *"após validar os dados"*. Sem registro de execução — [OQ-015](open-questions.md#oq-015--as-colunas-legadas-ainda-existem-em-produção).
-- ⚠️ **Novo:** as migrations existentes referenciam tabelas de módulos removidos (`projetos`, `processos`, `usuario_interno_setores`). Elas continuam válidas historicamente, mas um ambiente novo criaria tabelas sem uso.
+**Estrutura:**
 
-**Recomendação:** adotar Flyway (os scripts já estão no formato e são idempotentes) e criar uma
-migration de baseline refletindo o escopo atual.
+```
+app/src/main/resources/db/migration/
+├── V2026.09.04__baseline.sql          ← era deploy/vm1-transacional/mysql-init/01-schema.sql
+├── V2026.09.05__simulador_pocos.sql
+├── V2026.09.06.1__unidade_sonda_tipo.sql
+└── V2026.09.06.2__usuario_sem_vinculo_organizacional.sql
+
+db/historico/                          ← V2026.06.*, aplicados à mão antes do Flyway. Não rodam mais
+```
+
+**Base existente:** `baseline-on-migrate` com `baseline-version=2026.09.04` faz o Flyway **marcar** o
+baseline como aplicado sem executá-lo — a estrutura já está lá — e começar em `V2026.09.05`.
+
+**Base nova:** sobe vazia e o baseline cria tudo. O `mysql-init/01-schema.sql` e o mount no
+`docker-compose` **deixaram de existir**, e com eles a obrigação de regenerar o arquivo a cada mudança
+de entidade — que era a ⚠️ registrada aqui antes.
+
+**`dev` saiu de `update` para `validate`.** Era o `update` que criava estrutura em silêncio no banco
+local: foi assim que `simulador_pocos` nasceu no MySQL de desenvolvimento sem ninguém rodar migration
+([registro](../Backend-Sonda-Geopetro-IO/specs/simulador-pocos.md#banco)). O preço daquilo é um
+ambiente que passa nos testes e uma produção que não sobe.
+
+**Verificação:** `MigracaoFlywayTest` roda a cadeia inteira contra um **MySQL real**, numa base
+descartável — base vazia, base existente sem histórico, e a base que já tinha estrutura criada pelo
+`ddl-auto`. Pula quando não há MySQL alcançável, em vez de quebrar a suíte.
+
+### O que permanece aberto
+
+- **[FATO]** `migration-regional.sql` tinha passos de limpeza **comentados** com instrução *"após validar os dados"*, sem registro de execução — [OQ-015](open-questions.md#oq-015--as-colunas-legadas-ainda-existem-em-produção). O baseline foi gerado das entidades, não do banco real: **se produção tiver colunas legadas a mais, `validate` as ignora**, e a pergunta continua sem resposta.
+- Os itens 3 e 5 da tabela acima ainda não têm migration escrita.
+- ⚠️ **Nunca editar um script já aplicado.** `validate-on-migrate` está ligado: mexer no conteúdo quebra o startup em vez de divergir em silêncio. Correção vem em script novo.
 
 ---
 

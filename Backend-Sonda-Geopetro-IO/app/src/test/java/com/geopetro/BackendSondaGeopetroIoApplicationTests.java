@@ -12,7 +12,11 @@ import org.springframework.boot.test.context.SpringBootTest;
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
         "spring.jpa.properties.hibernate.hbm2ddl.halt_on_error=true",
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.sql.init.mode=never"
+        "spring.sql.init.mode=never",
+        // As migrations do Flyway sao escritas em SQL de MySQL e nao rodam em H2.
+        // Aqui quem monta o schema e o Hibernate, so para o contexto subir; a
+        // verificacao das migrations acontece contra MySQL real, fora desta suite.
+        "spring.flyway.enabled=false"
 })
 class BackendSondaGeopetroIoApplicationTests {
 

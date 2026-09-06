@@ -132,9 +132,11 @@ cabeçalho de `V2026.06.02__base_regionais_setores.sql:6-10` diz literalmente: *
 Flyway/Liquibase. Esta migration e um script SQL IDEMPOTENTE... Rode manualmente em producao ANTES de
 subir a aplicacao"*.
 
-Em produção (`ddl-auto=validate`) a aplicação **não sobe** se o DBA não tiver executado manualmente,
-na ordem correta: `migration-regional.sql` → `V2026.06.02` → `V2026.06.03` → `V2026.06.04` →
-`V2026.06.15`. Ver risco em [`technical-debt.md`](technical-debt.md).
+✅ **[FATO 2026-09-06] Isso mudou: o projeto adotou Flyway.** As migrations rodam sozinhas no startup
+do backend, `ddl-auto=validate` passou a valer em **todos** os perfis, e os `V2026.06.*` foram
+arquivados em `db/historico/` — seus efeitos estão dentro do baseline `V2026.09.04`. O texto acima
+descreve o estado até 2026-09-05 e fica como registro. Ver
+[DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
 
 **[FATO]** Existia ainda uma terceira via — `ProcessoSchemaInitializer`, um `ApplicationRunner` que
 executava `ALTER TABLE processos` a cada startup com falhas engolidas em log `debug`. Foi **removido**

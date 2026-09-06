@@ -89,6 +89,19 @@
 			<artifactId>mysql-connector-j</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!--
+		  Flyway passa a ser o dono do schema (DT-002). flyway-mysql e obrigatorio
+		  alem do core: o suporte a MySQL vive num modulo separado desde o Flyway 9,
+		  e sem ele o startup falha com "Unsupported Database: MySQL".
+		-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-mysql</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

@@ -130,27 +130,29 @@ Enum fechado `TipoUnidadeSonda`: `SONDA` · `UNIDADE_BOMBEIO` · `SLICKLINE_WIRE
 
 ## Banco
 
-Duas migrations manuais em `db/migrations/`, ambas **obrigatórias antes do próximo deploy** —
-produção roda `ddl-auto=validate` e a aplicação não sobe sem elas:
+**[FATO 2026-09-06]** As duas mudanças viraram migrations do **Flyway**, que roda no startup do
+backend. Não há mais script para executar à mão — a fila manual de
+[DT-002](../../specs/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)
+deixou de existir.
 
-| Ordem | Script | O que faz |
-|---|---|---|
-| 1 | `2026-09-06-unidade-sonda-tipo.sql` | Adiciona `tipo` nula → backfill `SONDA` → torna NOT NULL |
-| 2 | `2026-09-06-usuario-sem-vinculo-organizacional.sql` | `DROP` das duas tabelas N:N e da coluna `regional_id` de `usuarios` |
+| Versão | O que faz |
+|---|---|
+| `V2026.09.06.1__unidade_sonda_tipo.sql` | Adiciona `tipo` nula → backfill `SONDA` → torna NOT NULL |
+| `V2026.09.06.2__usuario_sem_vinculo_organizacional.sql` | `DROP` das duas tabelas N:N e da coluna `regional_id` |
 
-⚠️ **O script 1 classifica todas as linhas existentes como `SONDA`.** É o padrão coerente com a
-frota atual, mas a classificação precisa ser conferida registro a registro na tela depois do deploy.
+⚠️ **A `.1` classifica todas as linhas existentes como `SONDA`.** É o padrão coerente com a frota
+atual, mas a classificação precisa ser conferida registro a registro na tela depois do deploy — o
+campo é editável para isso.
 
-⚠️ **O script 2 descarta dados sem volta**, e não há backup do MySQL
-([decisão de 2026-09-05](../../specs/product-context.md#11-fechamentos-das-rodadas-3-a-6)). O
-cabeçalho do script traz os `SELECT` de exportação, caso haja intenção de consultar os vínculos
-depois.
+⚠️ **A `.2` descarta dados sem volta**, e não há backup do MySQL
+([decisão de 2026-09-05](../../specs/product-context.md#11-fechamentos-das-rodadas-3-a-6)). O cabeçalho
+do script traz os `SELECT` de exportação, caso haja intenção de consultar os vínculos depois. A FK de
+`regional_id` é descoberta em tempo de execução: bases criadas em momentos diferentes receberam nomes
+gerados diferentes do Hibernate.
 
-O baseline `deploy/vm1-transacional/mysql-init/01-schema.sql` foi atualizado nas duas frentes.
-
-**[FATO 2026-09-06]** Nenhuma das duas migrations foi executada em produção. Diferente do caso de
-[poços](simulador-pocos.md#banco), o teste de inicialização já roda em H2 `create-drop` isolado, então
-o MySQL local **não** recebeu a estrutura por efeito colateral da suíte.
+**[FATO 2026-09-06]** Nenhuma foi aplicada em produção. Diferente do caso de
+[poços](simulador-pocos.md#banco), o MySQL local **não** recebeu a estrutura por efeito colateral —
+`dev` passou a usar `ddl-auto=validate` junto com esta entrega.
 
 ## Verificação
 

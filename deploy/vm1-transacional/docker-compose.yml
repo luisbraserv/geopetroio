@@ -30,10 +30,9 @@ services:
       - --default-time-zone=-03:00
     volumes:
       - mysql-data:/var/lib/mysql
-      # Roda APENAS na primeira inicializacao, com o volume vazio.
-      # Necessario porque em producao o Hibernate usa ddl-auto=validate e nao
-      # cria tabelas — sem isto, a aplicacao falha no startup. Ver README.
-      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+      # Sem mysql-init desde 2026-09-06: quem cria e evolui o schema e o Flyway,
+      # no startup do backend. O antigo 01-schema.sql virou o baseline
+      # V2026.09.04 em app/src/main/resources/db/migration. Ver README.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 20s
