@@ -4,11 +4,6 @@
       <p class="eyebrow">Meu usuário</p>
       <h1>{{ currentUser()?.nome }}</h1>
       <span>{{ currentUser()?.username }} · {{ rolesLabel() }}</span>
-      @if (currentUser()?.regionalNome) {
-        <span style="display:block;margin-top:4px;font-size:.82rem;color:var(--color-secondary);font-weight:700">
-          Regional: {{ currentUser()?.regionalNome }}
-        </span>
-      }
     </div>
   </header>
 

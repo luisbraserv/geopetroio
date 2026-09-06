@@ -1,21 +1,9 @@
 import { UserRole } from '../../auth/models/user.model';
 
-export interface RegionalVinculo {
-  id: number;
-  nome: string;
-}
-
 export interface UnidadeSondaVinculo {
   id: number;
   nome: string;
   apelido: string | null;
-}
-
-export interface SetorVinculo {
-  id: number;
-  nome: string;
-  regionalId: number | null;
-  regionalNome: string | null;
 }
 
 export interface UsuarioResponse {
@@ -39,10 +27,6 @@ export interface UsuarioResponse {
   empresaId?: number | null;
   empresaNome?: string | null;
   matricula?: number | null;
-  regionalId?: number | null;
-  regionalNome?: string | null;
-  regionais?: RegionalVinculo[] | null;
-  setores?: SetorVinculo[] | null;
   /** Unidades/Sondas que o CLIENTE pode visualizar no monitoramento. */
   unidadesSondas?: UnidadeSondaVinculo[] | null;
 }
@@ -86,9 +70,6 @@ export interface CriarUsuarioClientePayload extends UsuarioContatoPayload {
 
 export interface CriarUsuarioInternoPayload extends UsuarioContatoPayload {
   matricula: number;
-  regionalId: number;
-  regionalIds: number[];
-  setorIds: number[];
   username: string;
   password: string;
   roles: UserRole[];
@@ -100,9 +81,6 @@ export interface AtualizarUsuarioPayload extends UsuarioContatoPayload {
   empresa?: string;
   empresaId?: number;
   matricula?: number;
-  regionalId?: number;
-  regionalIds?: number[];
-  setorIds?: number[];
   /** Omitido = mantem o vinculo atual. Array vazio = revoga todas as sondas. */
   unidadeSondaIds?: number[];
 }

@@ -19,6 +19,14 @@ specs/
 └── monitoramento/      ← app: proxy REST autorizado para telemetria
 ```
 
+**[FATO 2026-09-06]** As duas primeiras specs de feature escritas atravessam mais de um módulo e por
+isso vivem na raiz de `specs/`, não numa das pastas acima:
+
+| Spec | Cobre | Módulos |
+|---|---|---|
+| [`simulador-pocos.md`](simulador-pocos.md) | Entidade Poço e cenários vinculados | `simulador` |
+| [`identidade-e-cadastro.md`](identidade-e-cadastro.md) | RN-061 · RN-062 · RN-064 · RN-065 | `usuario`, `security`, `unidade-sonda`, `core` |
+
 ## Escopo do backend
 
 **[DECIDIDO 2026-08-26]** O backend foi reduzido a **três responsabilidades**:

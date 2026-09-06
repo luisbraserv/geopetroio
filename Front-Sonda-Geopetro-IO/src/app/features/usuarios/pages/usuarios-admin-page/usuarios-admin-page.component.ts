@@ -9,10 +9,8 @@ import { SearchBoxComponent } from '../../../../shared/ui/search-box/search-box.
 import { CepService } from '../../../../shared/services/cep.service';
 import { ToastService } from '../../../../shared/toast/toast.service';
 import { UserRole } from '../../../auth/models/user.model';
-import { Empresa, Regional, Setor, UnidadeSonda } from '../../../cadastros/models/cadastros.model';
+import { Empresa, UnidadeSonda } from '../../../cadastros/models/cadastros.model';
 import { EmpresaService } from '../../../cadastros/services/empresa.service';
-import { RegionalService } from '../../../cadastros/services/regional.service';
-import { SetorService } from '../../../cadastros/services/setor.service';
 import { UnidadeSondaService } from '../../../cadastros/services/unidade-sonda.service';
 import {
   AtualizarUsuarioPayload,
@@ -33,8 +31,6 @@ type TipoUsuario = 'CLIENTE' | 'INTERNO';
 export class UsuariosAdminPageComponent {
   private readonly usuariosService = inject(UsuariosService);
   private readonly empresaService = inject(EmpresaService);
-  private readonly regionalService = inject(RegionalService);
-  private readonly setorService = inject(SetorService);
   private readonly unidadeSondaService = inject(UnidadeSondaService);
   private readonly cepService = inject(CepService);
   private readonly toast = inject(ToastService);
@@ -52,12 +48,7 @@ export class UsuariosAdminPageComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly editandoUsername = signal<string | null>(null);
   protected readonly empresas = signal<Empresa[]>([]);
-  protected readonly regionais = signal<Regional[]>([]);
-  protected readonly setores = signal<Setor[]>([]);
   protected readonly unidades = signal<UnidadeSonda[]>([]);
-  // Regional principal fica em form.regionalId; abaixo as N regionais e N setores vinculados
-  protected readonly regionaisSelecionadas = signal<number[]>([]);
-  protected readonly setoresSelecionados = signal<number[]>([]);
   // Unidades/Sondas concedidas ao CLIENTE
   protected readonly unidadesSelecionadas = signal<number[]>([]);
   protected readonly rolesSel = signal<UserRole[]>([]);
@@ -81,7 +72,6 @@ export class UsuariosAdminPageComponent {
     empresaId: 0,
     empresa: '',
     matricula: 100,
-    regionalId: 0,
     username: '',
     password: '',
     nome: '',
@@ -138,50 +128,6 @@ export class UsuariosAdminPageComponent {
       return;
     }
     this.rolesSel.update((roles) => roles.filter((item) => item !== role));
-  }
-
-  protected regionalSelecionada(id: number): boolean {
-    return this.regionaisSelecionadas().includes(id);
-  }
-
-  protected alternarRegional(id: number, checked: boolean): void {
-    if (checked) {
-      if (!this.regionaisSelecionadas().includes(id)) {
-        this.regionaisSelecionadas.update((ids) => [...ids, id]);
-      }
-      return;
-    }
-    // Ao desmarcar a regional, remove tambem seus setores selecionados
-    this.regionaisSelecionadas.update((ids) => ids.filter((item) => item !== id));
-    const setoresDaRegional = this.setores().filter((s) => s.regionalId === id).map((s) => s.id);
-    this.setoresSelecionados.update((ids) => ids.filter((item) => !setoresDaRegional.includes(item)));
-    // Se a principal era esta regional, limpa
-    if (Number(this.form.regionalId) === id) {
-      this.form.regionalId = 0;
-    }
-  }
-
-  protected setoresDaRegional(regionalId: number): Setor[] {
-    return this.setores().filter((s) => s.regionalId === regionalId);
-  }
-
-  protected setorSelecionado(id: number): boolean {
-    return this.setoresSelecionados().includes(id);
-  }
-
-  protected alternarSetor(id: number, checked: boolean): void {
-    if (checked) {
-      if (!this.setoresSelecionados().includes(id)) {
-        this.setoresSelecionados.update((ids) => [...ids, id]);
-      }
-      return;
-    }
-    this.setoresSelecionados.update((ids) => ids.filter((item) => item !== id));
-  }
-
-  // Regionais disponiveis para escolher a principal = as que estao marcadas
-  protected regionaisMarcadas(): Regional[] {
-    return this.regionais().filter((r) => this.regionaisSelecionadas().includes(r.id));
   }
 
   protected roleLabel(role: UserRole): string {
@@ -278,10 +224,6 @@ export class UsuariosAdminPageComponent {
 
     if (this.tipo() === 'INTERNO') {
       if (!this.form.matricula || Number(this.form.matricula) <= 0) return 'Matrícula deve ser maior que zero.';
-      if (this.regionaisSelecionadas().length === 0) return 'Selecione ao menos uma regional para o usuário interno.';
-      if (!this.form.regionalId || !this.regionaisSelecionadas().includes(Number(this.form.regionalId))) {
-        return 'Selecione a regional principal entre as regionais marcadas.';
-      }
     } else {
       if (!this.form.id || Number(this.form.id) <= 0) return 'Informe o ID do cliente.';
       if (!this.form.empresaId) return 'Selecione a empresa do cliente.';
@@ -353,7 +295,6 @@ export class UsuariosAdminPageComponent {
       empresaId: usuario.empresaId ?? 0,
       empresa: usuario.empresaNome ?? usuario.empresa ?? '',
       matricula: usuario.matricula ?? 100,
-      regionalId: usuario.regionalId ?? 0,
       username: usuario.username,
       password: '',
       nome: usuario.nome,
@@ -369,8 +310,6 @@ export class UsuariosAdminPageComponent {
     });
     this.rolesSel.set(usuario.roles.filter((role) => role !== 'CLIENTE' && role !== 'INTERNO'));
 
-    this.regionaisSelecionadas.set((usuario.regionais ?? []).map((r) => r.id));
-    this.setoresSelecionados.set((usuario.setores ?? []).map((s) => s.id));
     this.unidadesSelecionadas.set((usuario.unidadesSondas ?? []).map((u) => u.id));
     this.modalAberto.set(true);
   }
@@ -396,9 +335,6 @@ export class UsuariosAdminPageComponent {
     return {
       ...this.payloadComum(),
       matricula: Number(this.form.matricula),
-      regionalId: Number(this.form.regionalId),
-      regionalIds: this.regionaisSelecionadas(),
-      setorIds: this.setoresSelecionados(),
       username: this.form.username,
       password: this.form.password,
       roles: this.rolesSelecionadas(),
@@ -418,9 +354,6 @@ export class UsuariosAdminPageComponent {
           }
         : {
             matricula: Number(this.form.matricula),
-            regionalId: Number(this.form.regionalId),
-            regionalIds: this.regionaisSelecionadas(),
-            setorIds: this.setoresSelecionados(),
           }),
     };
   }
@@ -452,7 +385,6 @@ export class UsuariosAdminPageComponent {
       empresaId: 0,
       empresa: '',
       matricula: 100,
-      regionalId: 0,
       username: '',
       password: '',
       nome: '',
@@ -467,22 +399,12 @@ export class UsuariosAdminPageComponent {
       complemento: '',
     });
     this.rolesSel.set([]);
-    this.regionaisSelecionadas.set([]);
-    this.setoresSelecionados.set([]);
     this.unidadesSelecionadas.set([]);
   }
 
   private carregarRelacionamentos(): void {
     this.empresaService.listar().subscribe({
       next: (empresas) => this.empresas.set(empresas),
-      error: (error: Error) => this.notificarErro(error),
-    });
-    this.regionalService.listar().subscribe({
-      next: (regionais) => this.regionais.set(regionais),
-      error: (error: Error) => this.notificarErro(error),
-    });
-    this.setorService.listar().subscribe({
-      next: (setores) => this.setores.set(setores),
       error: (error: Error) => this.notificarErro(error),
     });
     // Necessário para conceder acesso ao monitoramento no cadastro de CLIENTE.

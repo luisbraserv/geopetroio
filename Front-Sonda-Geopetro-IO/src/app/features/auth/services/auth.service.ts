@@ -21,8 +21,6 @@ interface AuthResponse {
   numero?: string | null;
   complemento?: string | null;
   roles: UserRole[];
-  regionalId?: number | null;
-  regionalNome?: string | null;
 }
 
 export class AuthException extends Error {
@@ -47,8 +45,6 @@ export class AuthService {
           // concede acesso. 'USER' não existe no enum do backend.
           role: response.roles[0] ?? 'INTERNO',
           roles: response.roles ?? [],
-          regionalId: response.regionalId ?? null,
-          regionalNome: response.regionalNome ?? null,
         })),
         catchError((error) => throwError(() => new AuthException(parseApiError(error)))),
       );

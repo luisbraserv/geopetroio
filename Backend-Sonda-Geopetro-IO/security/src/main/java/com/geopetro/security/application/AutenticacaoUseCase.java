@@ -8,8 +8,8 @@ import com.geopetro.security.application.port.out.TokenPort;
 import com.geopetro.security.domain.AutenticacaoInvalidaException;
 import com.geopetro.usuario.application.port.out.PasswordEncoderPort;
 import com.geopetro.usuario.application.port.out.UsuarioRepositoryPort;
+import com.geopetro.usuario.domain.model.StatusUsuario;
 import com.geopetro.usuario.domain.model.Usuario;
-import com.geopetro.usuario.domain.model.UsuarioInterno;
 
 @Service
 public class AutenticacaoUseCase {
@@ -36,12 +36,14 @@ public class AutenticacaoUseCase {
 			throw new AutenticacaoInvalidaException();
 		}
 
+		// RN-062: sem esta guarda, o corte imediato no filtro seria contornado por um novo login.
+		if (usuario.getStatus() != StatusUsuario.ATIVO) {
+			throw AutenticacaoInvalidaException.contaDesativada();
+		}
+
 		String endereco = usuario.getEndereco() == null ? null : usuario.getEndereco().formatado();
-		Long regionalId = usuario instanceof UsuarioInterno interno ? interno.getRegionalId() : null;
-		String regionalNome = usuario instanceof UsuarioInterno interno ? interno.getRegionalNome() : null;
 
 		return new AutenticacaoResponse(tokenPort.gerar(usuario), usuario.getUsername(), usuario.getNome(),
-				usuario.getEmail().formatado(), endereco, usuario.getTelefone().formatado(), usuario.getRoles(),
-				regionalId, regionalNome);
+				usuario.getEmail().formatado(), endereco, usuario.getTelefone().formatado(), usuario.getRoles());
 	}
 }

@@ -8,6 +8,5 @@ import com.geopetro.usuario.domain.model.Role;
 import com.geopetro.usuario.domain.model.Telefone;
 
 public record AtualizarUsuarioCommand(String nome, Telefone telefone, Email email, Endereco endereco, Set<Role> roles,
-		Integer id, Long empresaId, String empresa, Integer matricula, Long regionalId, Set<Long> regionalIds,
-		Set<Long> setorIds, Set<Long> unidadeSondaIds) {
+		Integer id, Long empresaId, String empresa, Integer matricula, Set<Long> unidadeSondaIds) {
 }

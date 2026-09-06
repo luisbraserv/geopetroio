@@ -4,8 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.geopetro.core.port.EmpresaConsultaPort;
-import com.geopetro.core.port.RegionalBuscaPort;
-import com.geopetro.core.port.SetorConsultaPort;
 import com.geopetro.core.port.UnidadeSondaConsultaPort;
 import com.geopetro.usuario.adapter.out.persistence.mapper.UsuarioPersistenceMapper;
 import com.geopetro.usuario.application.port.out.PasswordEncoderPort;
@@ -28,10 +26,9 @@ public class UsuarioBeanConfig {
 	@Bean
 	CriarUsuarioUseCase criarUsuarioUseCase(UsuarioRepositoryPort usuarioRepositoryPort,
 			PasswordEncoderPort passwordEncoderPort, EmpresaConsultaPort empresaConsultaPort,
-			RegionalBuscaPort regionalBuscaPort, SetorConsultaPort setorConsultaPort,
 			UnidadeSondaConsultaPort unidadeSondaConsultaPort) {
 		return new CriarUsuarioUseCase(usuarioRepositoryPort, passwordEncoderPort, empresaConsultaPort,
-				regionalBuscaPort, setorConsultaPort, unidadeSondaConsultaPort);
+				unidadeSondaConsultaPort);
 	}
 
 	@Bean
@@ -46,10 +43,8 @@ public class UsuarioBeanConfig {
 
 	@Bean
 	AtualizarUsuarioUseCase atualizarUsuarioUseCase(UsuarioRepositoryPort usuarioRepositoryPort,
-			EmpresaConsultaPort empresaConsultaPort, RegionalBuscaPort regionalBuscaPort,
-			SetorConsultaPort setorConsultaPort, UnidadeSondaConsultaPort unidadeSondaConsultaPort) {
-		return new AtualizarUsuarioUseCase(usuarioRepositoryPort, empresaConsultaPort, regionalBuscaPort,
-				setorConsultaPort, unidadeSondaConsultaPort);
+			EmpresaConsultaPort empresaConsultaPort, UnidadeSondaConsultaPort unidadeSondaConsultaPort) {
+		return new AtualizarUsuarioUseCase(usuarioRepositoryPort, empresaConsultaPort, unidadeSondaConsultaPort);
 	}
 
 	@Bean

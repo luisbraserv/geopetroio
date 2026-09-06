@@ -1,6 +1,7 @@
 package com.geopetro.simulador;
 
 import com.geopetro.security.config.*;
+import com.geopetro.security.application.ContaAtivaVerificador;
 import com.geopetro.security.application.port.out.TokenPort;
 import com.geopetro.simulador.adapter.in.web.PocoController;
 import com.geopetro.simulador.application.service.PocoService;
@@ -23,7 +24,7 @@ class PocoSecurityTest {
     @Import({SecurityConfig.class, PocoController.class, com.geopetro.config.ApiExceptionHandler.class})
     static class Config {
         @Bean PocoService pocoService() { return mock(PocoService.class); }
-        @Bean JwtAuthenticationFilter jwtAuthenticationFilter() { return new JwtAuthenticationFilter(mock(TokenPort.class)); }
+        @Bean JwtAuthenticationFilter jwtAuthenticationFilter() { return new JwtAuthenticationFilter(mock(TokenPort.class), mock(ContaAtivaVerificador.class)); }
     }
     private AnnotationConfigWebApplicationContext context;
     private MockMvc mvc;

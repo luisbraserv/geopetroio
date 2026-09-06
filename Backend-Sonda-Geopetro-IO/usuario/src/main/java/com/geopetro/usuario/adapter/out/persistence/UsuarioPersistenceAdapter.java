@@ -12,6 +12,7 @@ import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioEntity;
 import com.geopetro.usuario.adapter.out.persistence.repository.UsuarioJpaRepository;
 import com.geopetro.usuario.application.dto.PaginaOutput;
 import com.geopetro.usuario.application.port.out.UsuarioRepositoryPort;
+import com.geopetro.usuario.domain.model.StatusUsuario;
 import com.geopetro.usuario.domain.model.Usuario;
 
 @Repository
@@ -44,6 +45,11 @@ public class UsuarioPersistenceAdapter implements UsuarioRepositoryPort {
 	@Override
 	public boolean existePorUsername(String username) {
 		return usuarioJpaRepository.existsById(username);
+	}
+
+	@Override
+	public Optional<StatusUsuario> buscarStatusPorUsername(String username) {
+		return usuarioJpaRepository.findStatusByUsername(username);
 	}
 
 	@Override

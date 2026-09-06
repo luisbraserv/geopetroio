@@ -1,7 +1,6 @@
 package com.geopetro.usuario.domain.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
@@ -22,38 +21,21 @@ class UsuarioTest {
 
 	@Test
 	void deveCriarUsuarioInternoValido() {
-		UsuarioInterno usuario = new UsuarioInterno(100, null, null, "Luis123", "Senha@123", "Luis",
+		UsuarioInterno usuario = new UsuarioInterno(100, "Luis123", "Senha@123", "Luis",
 				Telefone.comTratamento("11999999999"), Email.comTratamento("luis@braserv.com.br"), endereco(),
 				java.util.Set.of(Role.INTERNO));
 
 		assertEquals(Role.INTERNO, usuario.getRole());
 		assertEquals(100, usuario.getMatricula());
-		assertNull(usuario.getRegionalId());
 	}
 
+	/** RN-064 — o interno nao tem mais regional nem setor; so matricula o distingue do cliente. */
 	@Test
-	void deveCriarUsuarioInternoComRegional() {
-		UsuarioInterno usuario = new UsuarioInterno(100, 1L, "Bahia", "Luis123", "Senha@123", "Luis",
-				Telefone.comTratamento("11999999999"), Email.comTratamento("luis@braserv.com.br"), endereco(),
-				java.util.Set.of(Role.INTERNO));
-
-		assertEquals(1L, usuario.getRegionalId());
-		assertEquals("Bahia", usuario.getRegionalNome());
-	}
-
-	@Test
-	void deveCriarUsuarioInternoComMultiplasRegionaisESetores() {
-		UsuarioInterno usuario = new UsuarioInterno(100, 7L, "Brasil",
-				java.util.List.of(new UsuarioInterno.RegionalRef(7L, "Brasil"),
-						new UsuarioInterno.RegionalRef(2L, "Bahia")),
-				java.util.List.of(new UsuarioInterno.SetorRef(1L, "Cimentacao Onshore", 7L, "Brasil"),
-						new UsuarioInterno.SetorRef(2L, "Cimentacao Offshore", 7L, "Brasil")),
-				"Luis123", "Senha@123", "Luis", Telefone.comTratamento("11999999999"),
-				Email.comTratamento("luis@braserv.com.br"), endereco(), java.util.Set.of(Role.INTERNO));
-
-		assertEquals(7L, usuario.getRegionalId());
-		assertEquals(java.util.Set.of(7L, 2L), usuario.getRegionalIds());
-		assertEquals(java.util.Set.of(1L, 2L), usuario.getSetorIds());
+	void deveRejeitarMatriculaInvalida() {
+		assertThrows(UsuarioInvalidoException.class,
+				() -> new UsuarioInterno(0, "Luis123", "Senha@123", "Luis",
+						Telefone.comTratamento("11999999999"), Email.comTratamento("luis@braserv.com.br"),
+						endereco(), java.util.Set.of(Role.INTERNO)));
 	}
 
 	@Test
@@ -67,7 +49,7 @@ class UsuarioTest {
 	@Test
 	void deveRejeitarPasswordSemCaracterEspecial() {
 		assertThrows(UsuarioInvalidoException.class,
-				() -> new UsuarioInterno(100, null, null, "Luis123", "Senha123", "Luis",
+				() -> new UsuarioInterno(100, "Luis123", "Senha123", "Luis",
 						Telefone.comTratamento("11999999999"), Email.comTratamento("luis@braserv.com.br"),
 						endereco(), java.util.Set.of(Role.INTERNO)));
 	}

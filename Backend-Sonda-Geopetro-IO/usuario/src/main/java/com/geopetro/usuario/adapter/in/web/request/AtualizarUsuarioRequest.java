@@ -10,13 +10,11 @@ import com.geopetro.usuario.domain.model.Telefone;
 
 public record AtualizarUsuarioRequest(String nome, String telefone, String email, String cep, String logradouro,
 		String bairro, String cidade, String estado, String numero, String complemento, Set<Role> roles, Integer id,
-		Long empresaId, String empresa, Integer matricula, Long regionalId, Set<Long> regionalIds, Set<Long> setorIds,
-		Set<Long> unidadeSondaIds) {
+		Long empresaId, String empresa, Integer matricula, Set<Long> unidadeSondaIds) {
 
 	public AtualizarUsuarioCommand toCommand() {
 		return new AtualizarUsuarioCommand(nome, Telefone.comTratamento(telefone), Email.comTratamento(email),
-				criarEndereco(), roles, id, empresaId, empresa, matricula, regionalId, regionalIds, setorIds,
-				unidadeSondaIds);
+				criarEndereco(), roles, id, empresaId, empresa, matricula, unidadeSondaIds);
 	}
 
 	private Endereco criarEndereco() {

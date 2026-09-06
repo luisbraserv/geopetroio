@@ -22,6 +22,7 @@ import com.geopetro.setor.adapter.out.persistence.repository.SetorJpaRepository;
 import com.geopetro.unidadesonda.adapter.in.web.request.UnidadeSondaRequest;
 import com.geopetro.unidadesonda.adapter.out.persistence.entity.UnidadeSondaEntity;
 import com.geopetro.unidadesonda.application.service.UnidadeSondaService;
+import com.geopetro.unidadesonda.domain.TipoUnidadeSonda;
 import com.geopetro.unidadesonda.repository.UnidadeSondaJpaRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -104,17 +105,49 @@ class UnidadeSondaServiceTest {
 		when(setorRepository.findById(5L)).thenReturn(Optional.of(setor));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		UnidadeSondaEntity resultado = service.criar(new UnidadeSondaRequest("Sonda-01", "S01", 5L));
+		UnidadeSondaEntity resultado = service.criar(new UnidadeSondaRequest("Sonda-01", "S01", TipoUnidadeSonda.SONDA, 5L));
 
 		assertThat(resultado.getNome()).isEqualTo("Sonda-01");
 		assertThat(resultado.getSetor().getId()).isEqualTo(5L);
+		assertThat(resultado.getTipo()).isEqualTo(TipoUnidadeSonda.SONDA);
+	}
+
+	/** RN-065 — o cadastro abriga equipamentos que nao sao sonda de perfuracao. */
+	@Test
+	void deveGravarTipoDiferenteDeSonda() {
+		SetorEntity setor = setor(5L, "Operações");
+		when(repository.existsByNome("UCAQ-03")).thenReturn(false);
+		when(setorRepository.findById(5L)).thenReturn(Optional.of(setor));
+		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+		UnidadeSondaEntity resultado = service
+				.criar(new UnidadeSondaRequest("UCAQ-03", null, TipoUnidadeSonda.UCAQ, 5L));
+
+		assertThat(resultado.getTipo()).isEqualTo(TipoUnidadeSonda.UCAQ);
+	}
+
+	/** O tipo e editavel: uma classificacao errada no backfill da migration precisa ter conserto. */
+	@Test
+	void deveAtualizarOTipoDeUmaUnidadeExistente() {
+		UnidadeSondaEntity existente = unidade(1L, "Bombeio-07");
+		existente.setTipo(TipoUnidadeSonda.SONDA);
+		SetorEntity setor = setor(5L, "Operações");
+		when(repository.existsByNomeAndIdNot("Bombeio-07", 1L)).thenReturn(false);
+		when(repository.findById(1L)).thenReturn(Optional.of(existente));
+		when(setorRepository.findById(5L)).thenReturn(Optional.of(setor));
+		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+		UnidadeSondaEntity resultado = service.atualizar(1L,
+				new UnidadeSondaRequest("Bombeio-07", null, TipoUnidadeSonda.UNIDADE_BOMBEIO, 5L));
+
+		assertThat(resultado.getTipo()).isEqualTo(TipoUnidadeSonda.UNIDADE_BOMBEIO);
 	}
 
 	@Test
 	void deveLancarExcecaoAoCriarComNomeDuplicado() {
 		when(repository.existsByNome("Sonda-01")).thenReturn(true);
 
-		assertThatThrownBy(() -> service.criar(new UnidadeSondaRequest("Sonda-01", null, 5L)))
+		assertThatThrownBy(() -> service.criar(new UnidadeSondaRequest("Sonda-01", null, TipoUnidadeSonda.SONDA, 5L)))
 				.isInstanceOf(BusinessException.class)
 				.hasMessageContaining("Ja existe uma unidade/sonda com esse nome");
 	}
@@ -124,7 +157,7 @@ class UnidadeSondaServiceTest {
 		when(repository.existsByNome("Sonda-01")).thenReturn(false);
 		when(setorRepository.findById(99L)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.criar(new UnidadeSondaRequest("Sonda-01", null, 99L)))
+		assertThatThrownBy(() -> service.criar(new UnidadeSondaRequest("Sonda-01", null, TipoUnidadeSonda.SONDA, 99L)))
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("Setor nao encontrado");
 	}
@@ -138,7 +171,7 @@ class UnidadeSondaServiceTest {
 		when(setorRepository.findById(5L)).thenReturn(Optional.of(setor));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		UnidadeSondaEntity resultado = service.atualizar(1L, new UnidadeSondaRequest("Sonda-01-v2", "S1", 5L));
+		UnidadeSondaEntity resultado = service.atualizar(1L, new UnidadeSondaRequest("Sonda-01-v2", "S1", TipoUnidadeSonda.SONDA, 5L));
 
 		assertThat(resultado.getNome()).isEqualTo("Sonda-01-v2");
 	}
@@ -147,7 +180,7 @@ class UnidadeSondaServiceTest {
 	void deveLancarExcecaoAoAtualizarComNomeDuplicado() {
 		when(repository.existsByNomeAndIdNot("Sonda-02", 1L)).thenReturn(true);
 
-		assertThatThrownBy(() -> service.atualizar(1L, new UnidadeSondaRequest("Sonda-02", null, 5L)))
+		assertThatThrownBy(() -> service.atualizar(1L, new UnidadeSondaRequest("Sonda-02", null, TipoUnidadeSonda.SONDA, 5L)))
 				.isInstanceOf(BusinessException.class);
 	}
 

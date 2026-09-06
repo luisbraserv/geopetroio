@@ -5,7 +5,14 @@ import { ModalComponent } from '../../../../shared/ui/modal/modal.component';
 import { PaginatorComponent } from '../../../../shared/ui/paginator/paginator.component';
 import { SearchBoxComponent } from '../../../../shared/ui/search-box/search-box.component';
 import { ToastService } from '../../../../shared/toast/toast.service';
-import { Setor, UnidadeSonda, UnidadeSondaPayload } from '../../models/cadastros.model';
+import {
+  ROTULO_TIPO_UNIDADE_SONDA,
+  Setor,
+  TIPOS_UNIDADE_SONDA,
+  TipoUnidadeSonda,
+  UnidadeSonda,
+  UnidadeSondaPayload,
+} from '../../models/cadastros.model';
 import { SetorService } from '../../services/setor.service';
 import { UnidadeSondaService } from '../../services/unidade-sonda.service';
 
@@ -27,6 +34,13 @@ import { UnidadeSondaService } from '../../services/unidade-sonda.service';
         <form id="form-unidade" class="form" (ngSubmit)="salvar()">
           <label>Nome <input name="nome" [(ngModel)]="form.nome" required /></label>
           <label>Apelido <input name="apelido" [(ngModel)]="form.apelido" /></label>
+          <label>Tipo
+            <select name="tipo" [(ngModel)]="form.tipo" required>
+              @for (tipo of tipos; track tipo) {
+                <option [ngValue]="tipo">{{ rotuloTipo[tipo] }}</option>
+              }
+            </select>
+          </label>
           <label>Setor
             <select name="setorId" [(ngModel)]="form.setorId" required>
               <option [ngValue]="0">Selecione</option>
@@ -44,13 +58,14 @@ import { UnidadeSondaService } from '../../services/unidade-sonda.service';
 
       <table>
         <thead>
-          <tr><th>Nome</th><th>Apelido</th><th>Setor</th><th>Regional</th><th>Acoes</th></tr>
+          <tr><th>Nome</th><th>Apelido</th><th>Tipo</th><th>Setor</th><th>Regional</th><th>Acoes</th></tr>
         </thead>
         <tbody>
           @for (unidade of unidades(); track unidade.id) {
             <tr>
               <td>{{ unidade.nome }}</td>
               <td>{{ unidade.apelido || '-' }}</td>
+              <td>{{ rotuloTipo[unidade.tipo] }}</td>
               <td>{{ unidade.setorNome }}</td>
               <td>{{ unidade.regionalNome }}</td>
               <td class="row-actions">
@@ -59,7 +74,7 @@ import { UnidadeSondaService } from '../../services/unidade-sonda.service';
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="5" class="empty">Nenhuma unidade/sonda cadastrada.</td></tr>
+            <tr><td colspan="6" class="empty">Nenhuma unidade/sonda cadastrada.</td></tr>
           }
         </tbody>
       </table>
@@ -99,7 +114,9 @@ export class UnidadesSondasPageComponent {
   protected readonly totalPaginas = signal(0);
   protected readonly totalElementos = signal(0);
   private busca = '';
-  protected form: UnidadeSondaPayload = { nome: '', apelido: '', setorId: 0 };
+  protected readonly tipos = TIPOS_UNIDADE_SONDA;
+  protected readonly rotuloTipo = ROTULO_TIPO_UNIDADE_SONDA;
+  protected form: UnidadeSondaPayload = this.formVazio();
 
   constructor() {
     this.carregar();
@@ -126,7 +143,12 @@ export class UnidadesSondasPageComponent {
 
   protected editar(unidade: UnidadeSonda): void {
     this.editandoId.set(unidade.id);
-    this.form = { nome: unidade.nome, apelido: unidade.apelido ?? '', setorId: unidade.setorId };
+    this.form = {
+      nome: unidade.nome,
+      apelido: unidade.apelido ?? '',
+      tipo: unidade.tipo,
+      setorId: unidade.setorId,
+    };
     this.error.set(null);
     this.modalAberto.set(true);
   }
@@ -141,8 +163,13 @@ export class UnidadesSondasPageComponent {
 
   protected novo(): void {
     this.editandoId.set(null);
-    this.form = { nome: '', apelido: '', setorId: 0 };
+    this.form = this.formVazio();
     this.error.set(null);
+  }
+
+  /** SONDA e o padrao do formulario: e o tipo da maior parte da frota. */
+  private formVazio(): UnidadeSondaPayload {
+    return { nome: '', apelido: '', tipo: 'SONDA' as TipoUnidadeSonda, setorId: 0 };
   }
 
   private carregar(): void {

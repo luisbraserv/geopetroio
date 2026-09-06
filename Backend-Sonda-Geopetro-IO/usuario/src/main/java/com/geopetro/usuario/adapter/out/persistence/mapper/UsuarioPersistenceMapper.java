@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.geopetro.empresa.adapter.out.persistence.entity.EmpresaEntity;
-import com.geopetro.regional.adapter.out.persistence.entity.RegionalEntity;
-import com.geopetro.setor.adapter.out.persistence.entity.SetorEntity;
 import com.geopetro.unidadesonda.adapter.out.persistence.entity.UnidadeSondaEntity;
 import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioClienteEntity;
 import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioEntity;
@@ -18,8 +16,6 @@ import com.geopetro.usuario.domain.model.Telefone;
 import com.geopetro.usuario.domain.model.Usuario;
 import com.geopetro.usuario.domain.model.UsuarioCliente;
 import com.geopetro.usuario.domain.model.UsuarioInterno;
-import com.geopetro.usuario.domain.model.UsuarioInterno.RegionalRef;
-import com.geopetro.usuario.domain.model.UsuarioInterno.SetorRef;
 
 public class UsuarioPersistenceMapper {
 
@@ -77,15 +73,6 @@ public class UsuarioPersistenceMapper {
 		if (usuario instanceof UsuarioInterno interno) {
 			UsuarioInternoEntity entity = new UsuarioInternoEntity();
 			entity.setMatricula(interno.getMatricula());
-			if (interno.getRegionalId() != null) {
-				entity.setRegional(referenciaRegional(interno.getRegionalId()));
-			}
-			entity.setRegionais(interno.getRegionalIds().stream()
-					.map(this::referenciaRegional)
-					.collect(Collectors.toCollection(java.util.LinkedHashSet::new)));
-			entity.setSetores(interno.getSetorIds().stream()
-					.map(this::referenciaSetor)
-					.collect(Collectors.toCollection(java.util.LinkedHashSet::new)));
 			return entity;
 		}
 
@@ -104,34 +91,11 @@ public class UsuarioPersistenceMapper {
 		}
 
 		if (entity.getRoles().contains(Role.INTERNO) && entity instanceof UsuarioInternoEntity interno) {
-			Long regionalId = interno.getRegional() == null ? null : interno.getRegional().getId();
-			String regionalNome = interno.getRegional() == null ? null : interno.getRegional().getNome();
-			List<RegionalRef> regionais = interno.getRegionais().stream()
-					.map(r -> new RegionalRef(r.getId(), r.getNome()))
-					.toList();
-			List<SetorRef> setores = interno.getSetores().stream()
-					.map(s -> new SetorRef(s.getId(), s.getNome(),
-							s.getRegional() == null ? null : s.getRegional().getId(),
-							s.getRegional() == null ? null : s.getRegional().getNome()))
-					.toList();
-			return new UsuarioInterno(interno.getMatricula(), regionalId, regionalNome, regionais, setores,
-					entity.getUsername(), entity.getPassword(), entity.getNome(), telefone, email, endereco,
-					entity.getRoles());
+			return new UsuarioInterno(interno.getMatricula(), entity.getUsername(), entity.getPassword(),
+					entity.getNome(), telefone, email, endereco, entity.getRoles());
 		}
 
 		throw new UsuarioInvalidoException("Tipo de usuario invalido.");
-	}
-
-	private RegionalEntity referenciaRegional(Long id) {
-		RegionalEntity regional = new RegionalEntity();
-		regional.setId(id);
-		return regional;
-	}
-
-	private SetorEntity referenciaSetor(Long id) {
-		SetorEntity setor = new SetorEntity();
-		setor.setId(id);
-		return setor;
 	}
 
 	private UnidadeSondaEntity referenciaUnidadeSonda(Long id) {

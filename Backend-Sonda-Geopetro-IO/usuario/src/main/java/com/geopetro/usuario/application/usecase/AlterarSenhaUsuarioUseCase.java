@@ -5,6 +5,7 @@ import com.geopetro.usuario.application.dto.UsuarioOutput;
 import com.geopetro.usuario.application.port.out.PasswordEncoderPort;
 import com.geopetro.usuario.application.port.out.UsuarioRepositoryPort;
 import com.geopetro.usuario.domain.exception.UsuarioInvalidoException;
+import com.geopetro.usuario.domain.model.PoliticaSenha;
 
 public class AlterarSenhaUsuarioUseCase {
 
@@ -36,6 +37,8 @@ public class AlterarSenhaUsuarioUseCase {
 		if (command.novaSenha() == null || !command.novaSenha().equals(command.confirmacaoSenha())) {
 			throw new UsuarioInvalidoException("Nova senha e confirmacao nao conferem.");
 		}
+
+		PoliticaSenha.validar(command.novaSenha());
 
 		if (passwordEncoderPort.matches(command.novaSenha(), usuario.getPassword())) {
 			throw new UsuarioInvalidoException("A nova senha deve ser diferente da senha atual.");

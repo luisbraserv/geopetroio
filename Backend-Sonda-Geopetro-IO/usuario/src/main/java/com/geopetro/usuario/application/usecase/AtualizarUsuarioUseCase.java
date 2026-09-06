@@ -1,6 +1,5 @@
 package com.geopetro.usuario.application.usecase;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -8,10 +7,6 @@ import java.util.stream.Collectors;
 
 import com.geopetro.core.port.EmpresaConsultaPort;
 import com.geopetro.core.port.EmpresaConsultaPort.EmpresaResumo;
-import com.geopetro.core.port.RegionalBuscaPort;
-import com.geopetro.core.port.RegionalBuscaPort.RegionalResumo;
-import com.geopetro.core.port.SetorConsultaPort;
-import com.geopetro.core.port.SetorConsultaPort.SetorResumo;
 import com.geopetro.core.port.UnidadeSondaConsultaPort;
 import com.geopetro.core.port.UnidadeSondaConsultaPort.UnidadeSondaResumo;
 import com.geopetro.usuario.application.command.AtualizarUsuarioCommand;
@@ -27,17 +22,12 @@ public class AtualizarUsuarioUseCase {
 
 	private final UsuarioRepositoryPort usuarioRepositoryPort;
 	private final EmpresaConsultaPort empresaConsultaPort;
-	private final RegionalBuscaPort regionalBuscaPort;
-	private final SetorConsultaPort setorConsultaPort;
 	private final UnidadeSondaConsultaPort unidadeSondaConsultaPort;
 
 	public AtualizarUsuarioUseCase(UsuarioRepositoryPort usuarioRepositoryPort,
-			EmpresaConsultaPort empresaConsultaPort, RegionalBuscaPort regionalBuscaPort,
-			SetorConsultaPort setorConsultaPort, UnidadeSondaConsultaPort unidadeSondaConsultaPort) {
+			EmpresaConsultaPort empresaConsultaPort, UnidadeSondaConsultaPort unidadeSondaConsultaPort) {
 		this.usuarioRepositoryPort = usuarioRepositoryPort;
 		this.empresaConsultaPort = empresaConsultaPort;
-		this.regionalBuscaPort = regionalBuscaPort;
-		this.setorConsultaPort = setorConsultaPort;
 		this.unidadeSondaConsultaPort = unidadeSondaConsultaPort;
 	}
 
@@ -59,22 +49,8 @@ public class AtualizarUsuarioUseCase {
 	}
 
 	private void atualizarDadosEspecificos(Usuario usuario, AtualizarUsuarioCommand command) {
-		if (usuario instanceof UsuarioInterno interno) {
-			if (command.matricula() != null) {
-				interno.setMatricula(command.matricula());
-			}
-			if (command.regionalId() != null && command.regionalId() > 0) {
-				RegionalResumo regional = regionalBuscaPort.buscarPorId(command.regionalId())
-						.orElseThrow(() -> new UsuarioInvalidoException("Regional informada nao existe."));
-				interno.setRegionalId(regional.id());
-				interno.setRegionalNome(regional.nome());
-			}
-			if (command.regionalIds() != null) {
-				interno.setRegionais(resolverRegionais(command.regionalIds(), interno.getRegionalId()));
-			}
-			if (command.setorIds() != null) {
-				interno.setSetores(resolverSetores(command.setorIds()));
-			}
+		if (usuario instanceof UsuarioInterno interno && command.matricula() != null) {
+			interno.setMatricula(command.matricula());
 		}
 
 		if (usuario instanceof UsuarioCliente cliente) {
@@ -117,34 +93,5 @@ public class AtualizarUsuarioUseCase {
 		if (usuario instanceof UsuarioInterno) rolesTratadas.add(Role.INTERNO);
 		if (usuario instanceof UsuarioCliente) rolesTratadas.add(Role.CLIENTE);
 		return rolesTratadas;
-	}
-
-	// A regional principal sempre faz parte das regionais do usuario.
-	private List<UsuarioInterno.RegionalRef> resolverRegionais(Set<Long> ids, Long principalId) {
-		Set<Long> todos = new LinkedHashSet<>();
-		if (principalId != null && principalId > 0) todos.add(principalId);
-		if (ids != null) ids.stream().filter(id -> id != null && id > 0).forEach(todos::add);
-
-		List<UsuarioInterno.RegionalRef> refs = new ArrayList<>();
-		for (Long id : todos) {
-			RegionalResumo r = regionalBuscaPort.buscarPorId(id)
-					.orElseThrow(() -> new UsuarioInvalidoException("Regional informada nao existe."));
-			refs.add(new UsuarioInterno.RegionalRef(r.id(), r.nome()));
-		}
-		return refs;
-	}
-
-	private List<UsuarioInterno.SetorRef> resolverSetores(Set<Long> ids) {
-		Set<Long> filtrados = ids.stream().filter(id -> id != null && id > 0)
-				.collect(Collectors.toCollection(LinkedHashSet::new));
-		if (filtrados.isEmpty()) return List.of();
-
-		List<SetorResumo> encontrados = setorConsultaPort.buscarPorIds(filtrados);
-		if (encontrados.size() != filtrados.size()) {
-			throw new UsuarioInvalidoException("Um ou mais setores informados nao existem.");
-		}
-		return encontrados.stream()
-				.map(s -> new UsuarioInterno.SetorRef(s.id(), s.nome(), s.regionalId(), s.regionalNome()))
-				.toList();
 	}
 }

@@ -8,12 +8,12 @@ import com.geopetro.usuario.domain.model.Endereco;
 import com.geopetro.usuario.domain.model.Role;
 import com.geopetro.usuario.domain.model.Telefone;
 
-public record CriarUsuarioInternoRequest(Integer matricula, Long regionalId, Set<Long> regionalIds, Set<Long> setorIds,
-		String username, String password, String nome, String telefone, String email, String cep, String logradouro,
-		String bairro, String cidade, String estado, String numero, String complemento, Set<Role> roles) {
+public record CriarUsuarioInternoRequest(Integer matricula, String username, String password, String nome,
+		String telefone, String email, String cep, String logradouro, String bairro, String cidade, String estado,
+		String numero, String complemento, Set<Role> roles) {
 
 	public CriarUsuarioInternoCommand toCommand() {
-		return new CriarUsuarioInternoCommand(matricula, regionalId, regionalIds, setorIds, username, password, nome,
+		return new CriarUsuarioInternoCommand(matricula, username, password, nome,
 				Telefone.comTratamento(telefone), Email.comTratamento(email),
 				Endereco.comTratamento(cep, logradouro, bairro, cidade, estado, numero, complemento), roles);
 	}

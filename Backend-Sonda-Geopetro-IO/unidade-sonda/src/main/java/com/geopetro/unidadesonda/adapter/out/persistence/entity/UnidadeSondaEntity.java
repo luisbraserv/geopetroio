@@ -1,9 +1,12 @@
 package com.geopetro.unidadesonda.adapter.out.persistence.entity;
 
 import com.geopetro.setor.adapter.out.persistence.entity.SetorEntity;
+import com.geopetro.unidadesonda.domain.TipoUnidadeSonda;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,6 +28,11 @@ public class UnidadeSondaEntity {
 
 	private String apelido;
 
+	/** RN-065 — classificacao do equipamento. Nao altera o que e monitorado (RN-074). */
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private TipoUnidadeSonda tipo;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "setor_id", nullable = false)
 	private SetorEntity setor;
@@ -35,6 +43,8 @@ public class UnidadeSondaEntity {
 	public void setNome(String nome) { this.nome = nome; }
 	public String getApelido() { return apelido; }
 	public void setApelido(String apelido) { this.apelido = apelido; }
+	public TipoUnidadeSonda getTipo() { return tipo; }
+	public void setTipo(TipoUnidadeSonda tipo) { this.tipo = tipo; }
 	public SetorEntity getSetor() { return setor; }
 	public void setSetor(SetorEntity setor) { this.setor = setor; }
 }

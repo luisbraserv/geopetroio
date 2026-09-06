@@ -82,6 +82,7 @@ public class UnidadeSondaService {
 				.orElseThrow(() -> new ResourceNotFoundException("Setor nao encontrado."));
 		unidade.setNome(request.nome());
 		unidade.setApelido(request.apelido());
+		unidade.setTipo(request.tipo());
 		unidade.setSetor(setor);
 		return unidade;
 	}

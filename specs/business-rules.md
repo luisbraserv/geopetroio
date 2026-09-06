@@ -537,7 +537,9 @@ aproximação por fase.
 
 ## Regras da rodada 2 — 2026-09-05
 
-> **[DECIDIDO 2026-09-05]** Também sem implementação hoje.
+> **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-06]** RN-061, RN-062, RN-064 e RN-065 estão
+> **implementadas** no working tree. Contrato e verificação em [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
+> RN-063 continua sem implementação.
 
 ### RN-061 · Política de senha unificada
 **[DECIDIDO 2026-09-05]** **8 a 20 caracteres**, com minúscula, maiúscula, dígito e caractere especial.
@@ -550,6 +552,9 @@ hoje só confere se os dois campos batem.
 a validação incide sobre a **definição** de senha, não sobre a verificação. Forçar adequação exigiria
 troca compulsória, que não foi decidida.
 
+**[FATO 2026-09-06]** Implementada em `PoliticaSenha`, aplicada nos três caminhos que definem senha.
+14 testes. Espaço em branco não conta como caractere especial. Ver [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
+
 ### RN-062 · Desativar usuário corta o acesso na hora
 **[DECIDIDO 2026-09-05]** Supera parte de [RN-045](#rn-045--sessão-expira-em-1-hora-sem-renovação):
 `PATCH /usuarios/{username}/desativar` passa a ter **efeito imediato**, sem esperar o token expirar.
@@ -559,6 +564,11 @@ segundos evita uma consulta por requisição sem tornar o corte perceptivelmente
 
 ⚠️ **O que continua valendo:** não há revogação de **token individual**. Um token vazado de usuário
 ativo segue válido até expirar.
+
+**[FATO 2026-09-06]** Implementada em `ContaAtivaVerificador`, consultada pelo `JwtAuthenticationFilter`
+com cache de 10s (`security.cache-status-segundos`) — o cache é a janela do corte. **O login também
+passou a checar o status**, que antes não era verificado em nenhum ponto: sem isso, o corte seria
+contornado por um novo login. Ver [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
 
 ### RN-063 · Exclusão bloqueada por vínculo, em todos os cadastros
 **[DECIDIDO 2026-09-05]** A regra que só a Regional aplica passa a valer para **Setor, Unidade/Sonda e
@@ -586,6 +596,11 @@ Ambas **inalteradas**.
 implementado só por `setor` e `unidade-sonda`. A remoção **elimina** um modo de falha: hoje, excluir uma
 Regional com usuários vinculados e sem setores passa pela validação e quebra em FK.
 
+**[FATO 2026-09-06]** Removida ponta a ponta: domínio, entidade, request, command, response, front e as
+duas tabelas. `regionalId`/`regionalNome` saíram também do `AutenticacaoResponse` e do `AuthState`.
+**Arrastou código morto junto:** `RegionalBuscaPort` e `SetorConsultaPort` ficaram sem chamador e foram
+removidos com seus adaptadores; `RegionalConsultaPort` permanece. Ver [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
+
 ### RN-065 · Unidade/Sonda tem tipo
 **[DECIDIDO 2026-09-05]** `UnidadeSonda` ganha o campo **`tipo`**, de vocabulário fechado:
 
@@ -611,6 +626,11 @@ Sem isso, cada unidade nova exige preencher 30 campos de alarme do zero.
 
 ⚠️ **Migração:** as unidades já cadastradas precisam de um valor. `SONDA` é o padrão coerente com a
 frota atual, mas isso deve ser conferido registro a registro antes de tornar o campo obrigatório.
+
+**[FATO 2026-09-06]** Implementado como enum fechado no backend e select no cadastro, com o tipo
+editável para corrigir o backfill. A migration adiciona a coluna nula, faz o backfill e só então a
+torna obrigatória. **Sem perfil de alarme por tipo** — a proposta foi recusada em
+[RN-078](#rn-078--sem-perfil-padrão-de-alarme-o-limite-vale-até-alguém-trocar). Ver [identidade-e-cadastro.md](../Backend-Sonda-Geopetro-IO/specs/identidade-e-cadastro.md).
 
 ### RN-066 · Mínima curvatura, e profundidade gravada em metros
 **[DECIDIDO 2026-09-05]** A trajetória é calculada por **mínima curvatura** — padrão da indústria, e o

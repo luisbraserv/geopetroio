@@ -85,6 +85,7 @@ CREATE TABLE `unidades_sondas` (
   `setor_id` bigint NOT NULL,
   `apelido` varchar(255) DEFAULT NULL,
   `nome` varchar(255) NOT NULL,
+  `tipo` varchar(32) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UKln8rnjb60cn2frjnoob74q110` (`nome`),
   KEY `FKay59q47mja5hq9l9cw8rdkvmh` (`setor_id`),
@@ -98,22 +99,6 @@ CREATE TABLE `usuario_cliente_unidades` (
   CONSTRAINT `FK3fh8el8mvqf0e92hjgw6dkjiq` FOREIGN KEY (`unidade_sonda_id`) REFERENCES `unidades_sondas` (`id`),
   CONSTRAINT `FK60eg0254huo3mc1m5tyt9tn00` FOREIGN KEY (`usuario_username`) REFERENCES `usuarios` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE `usuario_interno_regionais` (
-  `regional_id` bigint NOT NULL,
-  `usuario_username` varchar(255) NOT NULL,
-  PRIMARY KEY (`regional_id`,`usuario_username`),
-  KEY `FK5uivg6n17tijk2ggnmne48i3p` (`usuario_username`),
-  CONSTRAINT `FK5uivg6n17tijk2ggnmne48i3p` FOREIGN KEY (`usuario_username`) REFERENCES `usuarios` (`username`),
-  CONSTRAINT `FK6r4eixlvodr5ve7l365l0fqos` FOREIGN KEY (`regional_id`) REFERENCES `regionais` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE `usuario_interno_setores` (
-  `setor_id` bigint NOT NULL,
-  `usuario_username` varchar(255) NOT NULL,
-  PRIMARY KEY (`setor_id`,`usuario_username`),
-  KEY `FKjqhh98l3nbsj8cpkgx9osa2id` (`usuario_username`),
-  CONSTRAINT `FKjqhh98l3nbsj8cpkgx9osa2id` FOREIGN KEY (`usuario_username`) REFERENCES `usuarios` (`username`),
-  CONSTRAINT `FKmn746bda31mi20s4okd9ya1eu` FOREIGN KEY (`setor_id`) REFERENCES `setores` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE TABLE `usuario_roles` (
   `username` varchar(255) NOT NULL,
   `role` enum('ADMIN','CIMENTACAO','CLIENTE','DIRETORIA','GERENCIA','INTERNO','SONDA') NOT NULL,
@@ -124,7 +109,6 @@ CREATE TABLE `usuarios` (
   `cliente_id` int DEFAULT NULL,
   `matricula` int DEFAULT NULL,
   `empresa_id` bigint DEFAULT NULL,
-  `regional_id` bigint DEFAULT NULL,
   `tipo_usuario` varchar(31) NOT NULL,
   `bairro` varchar(255) DEFAULT NULL,
   `cep` varchar(255) DEFAULT NULL,
@@ -142,9 +126,7 @@ CREATE TABLE `usuarios` (
   `status` enum('ATIVO','INATIVO') NOT NULL,
   PRIMARY KEY (`username`),
   KEY `FK9v93lqnass5yqhhsyprr9fdv2` (`empresa_id`),
-  KEY `FKa7afr4nsg9pwqh3chxe44pw6w` (`regional_id`),
   CONSTRAINT `FK9v93lqnass5yqhhsyprr9fdv2` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
-  CONSTRAINT `FKa7afr4nsg9pwqh3chxe44pw6w` FOREIGN KEY (`regional_id`) REFERENCES `regionais` (`id`),
   CONSTRAINT `usuarios_chk_1` CHECK ((`tipo_usuario` in (_utf8mb4'CLIENTE',_utf8mb4'INTERNO')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

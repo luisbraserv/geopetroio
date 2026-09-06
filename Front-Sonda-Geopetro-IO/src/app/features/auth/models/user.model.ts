@@ -101,6 +101,4 @@ export interface AuthenticatedUser {
   estado?: string | null;
   numero?: string | null;
   complemento?: string | null;
-  regionalId?: number | null;
-  regionalNome?: string | null;
 }

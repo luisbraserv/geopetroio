@@ -98,8 +98,8 @@ uma:
 
 | # | Mudança | Origem |
 |---|---|---|
-| 1 | `ALTER TABLE unidades_sondas` — coluna `tipo`, com valor para as linhas existentes | [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) |
-| 2 | `DROP` de `usuario_interno_regionais`, `usuario_interno_setores` e da coluna de regional principal | [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) |
+| 1 | ✅ **Script pronto 2026-09-06** — `ALTER TABLE unidades_sondas`, coluna `tipo` com backfill `SONDA` e depois NOT NULL. Não aplicado em produção | [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) · [`2026-09-06-unidade-sonda-tipo.sql`](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-06-unidade-sonda-tipo.sql) |
+| 2 | ✅ **Script pronto 2026-09-06** — `DROP` de `usuario_interno_regionais`, `usuario_interno_setores` e da coluna `regional_id`. ⚠️ Descarta dados sem volta. Não aplicado em produção | [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) · [`2026-09-06-usuario-sem-vinculo-organizacional.sql`](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-06-usuario-sem-vinculo-organizacional.sql) |
 | 3 | Tabelas de **limite** e **log de eventos** de alarme | [RN-071](business-rules.md#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico) · [RN-076](business-rules.md#rn-076--o-alarme-é-registrado-como-sequência-de-fatos) |
 | 4 | **Poço** com geometria e trajetória tipadas em JSON, mais `simulador_cenarios.poco_id`. Script pronto; estrutura criada no MySQL local, aplicação em produção pendente | [RN-059](business-rules.md#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário) · [migration](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-05-simulador-pocos.sql) · [registro de execução](../Backend-Sonda-Geopetro-IO/specs/simulador-pocos.md#banco) |
 | 5 | `DROP` das tabelas órfãs dos módulos removidos | [OQ-026](open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs) |
@@ -111,6 +111,11 @@ Um erro de ordem ou um script esquecido derruba a subida da aplicação.
 
 ⚠️ O `deploy/mysql-init/01-schema.sql` também precisa ser regerado — ele é gerado a partir das
 entidades JPA, e todas as cinco mudanças alteram entidades.
+
+**[FATO 2026-09-06]** Os itens 1, 2 e 4 têm script escrito; o baseline foi ajustado à mão nas três
+frentes. **Nenhum foi aplicado em produção.** A ordem entre eles é livre — não há dependência —, mas
+os dois novos precisam rodar antes da subida da aplicação. Restam sem script os itens 3 (alarmes) e
+5 (tabelas órfãs).
 
 ### O que permanece
 
@@ -274,13 +279,20 @@ adotar um domínio, não um passo opcional.
 
 **Severidade: Alta** · Backend-Sonda · Aberto
 
-**[FATO]** Cobertura atual: **43 testes**, todos unitários, em 7 classes.
+**[FATO]** Cobertura no levantamento: **43 testes**, todos unitários, em 7 classes.
 
-**Zero cobertura:**
-- **Nenhum teste de controller / HTTP** em todo o repositório
-- **Nenhum `@DataJpaTest`**
-- Módulo `security` inteiro — autenticação, geração e validação de JWT
-- Módulos `simulador`, `empresa`, `monitoramento`
+**[FATO 2026-09-06]** Hoje são **96**. Duas lacunas fecharam parcialmente:
+
+| Antes | Agora |
+|---|---|
+| Nenhum teste de controller / HTTP | `PocoSecurityTest` exercita `SecurityConfig` sobre `/api/simulador/pocos` |
+| Nenhum `@DataJpaTest` | `PocoPersistenceTest` usa H2 real, incluindo a restrição de FK |
+| Módulo `security` sem cobertura | `ContaAtivaVerificadorTest` e `JwtAuthenticationFilterTest` cobrem o corte de acesso |
+
+⚠️ **O que continua descoberto, e é o que mais importa:** `/auth/login` e `/usuarios/**` não têm
+**nenhum** teste HTTP — e é exatamente a superfície que [RN-079](business-rules.md#rn-079--a-api-padroniza-o-prefixo-api)
+vai mover para `/api`. A geração e validação de JWT (`JwtTokenAdapter`) também segue sem teste, assim
+como os módulos `empresa` e `monitoramento`.
 
 **Consequência direta [FATO]:** nenhuma das falhas corrigidas em
 [`security-findings.md`](security-findings.md) seria detectada por regressão hoje.
@@ -425,6 +437,7 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 
 ### Backend-Sonda [FATO]
 - ✅ **Resolvido:** `ProcessoSchemaInitializer`, pacote `com.geopetro.telemetria`, dependência Paho, propriedades `mqtt.*`, `@EnableScheduling`, `data-quimicos.sql` — todos removidos em 2026-08-26
+- ✅ **Resolvido 2026-09-06:** `RegionalBuscaPort`, `SetorConsultaPort` e seus adaptadores — ficaram sem chamador quando [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) tirou o vínculo organizacional, e saíram junto em vez de virar porta órfã
 - ⏳ **Lombok** declarado em `app/pom.xml` e **nunca usado** — zero anotações
 - ⏳ `src/main/java` e `src/test/java` na **raiz** (fora dos módulos), vazios, nunca commitados — scaffold do Spring Initializr
 - ⏳ **[FATO]** Nenhum `TODO`/`FIXME`/`@Deprecated` em todo o código — a dívida real não está sinalizada

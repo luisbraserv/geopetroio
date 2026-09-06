@@ -16,7 +16,7 @@
 | [SEC-005](#sec-005--senha-smtp-em-texto-puro) | Senha SMTP em texto puro no banco | Média | ✅ **Eliminado** — módulo removido |
 | [SEC-006](#sec-006--credencial-mysql-no-histórico-do-git) | Credencial MySQL no histórico do Git | **Alta** | ⏳ **Aberto — ação humana** |
 | [SEC-007](#sec-007--senha-de-banco-em-texto-plano-versionada) | Senha de banco dev versionada | Média | ⏳ Aberto |
-| [SEC-008](#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário) | Token não revogável | Média | ✅ **Decidido 2026-09-05** — corte imediato · ⏳ implementação pendente |
+| [SEC-008](#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário) | Token não revogável | Média | ✅ **Corte imediato implementado 2026-09-06** · ⏳ revogação de token individual segue inexistente |
 | [SEC-011](#sec-011--credencial-única-de-frota-nas-sondas) | Credencial única de frota nas sondas | Média | ⏳ **Risco aceito 2026-09-05** |
 | [SEC-009](#sec-009--broker-mqtt-sem-autenticação) | Broker MQTT sem autenticação | Média | ⏳ Antes do novo serviço |
 | [SEC-010](#sec-010--observações-sem-controle-de-acesso) | Observações sem controle de acesso | Média | ✅ **Eliminado** — módulo removido |

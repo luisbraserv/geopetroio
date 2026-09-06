@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.geopetro.security.application.ContaAtivaVerificador;
 import com.geopetro.security.application.port.out.TokenPort;
 
 import jakarta.servlet.FilterChain;
@@ -19,9 +20,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final TokenPort tokenPort;
+	private final ContaAtivaVerificador contaAtivaVerificador;
 
-	public JwtAuthenticationFilter(TokenPort tokenPort) {
+	public JwtAuthenticationFilter(TokenPort tokenPort, ContaAtivaVerificador contaAtivaVerificador) {
 		this.tokenPort = tokenPort;
+		this.contaAtivaVerificador = contaAtivaVerificador;
 	}
 
 	@Override
@@ -39,7 +42,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			String username = tokenPort.extrairUsername(token);
 
 			if (username != null && tokenPort.tokenValido(token)
-					&& SecurityContextHolder.getContext().getAuthentication() == null) {
+					&& SecurityContextHolder.getContext().getAuthentication() == null
+					&& contaAtivaVerificador.ativa(username)) {
 				var authorities = tokenPort.extrairRoles(token).stream()
 						.map(role -> new SimpleGrantedAuthority("ROLE_" + role))
 						.toList();

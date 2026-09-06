@@ -287,80 +287,15 @@ td button {
   }
 }
 
-/* ===== Vínculos: regionais (cards) + setores (chips) ===== */
+/* ===== Vinculos: unidades/sondas concedidas ao cliente ===== */
 .vinculos-field {
   display: grid;
   gap: 0.6rem;
-}
-.regionais-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.7rem;
-}
-.regional-card {
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-xl);
-  padding: 0.5rem;
-  background: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-}
-.regional-card--active {
-  border-color: rgba(30, 90, 150, 0.45);
-  background: #f8fbff;
-  box-shadow: 0 6px 18px rgba(0, 12, 75, 0.1);
-}
-.regional-card__toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.45rem 0.5rem;
-  border: 0 !important;
-  background: transparent !important;
-  color: #1e293b !important;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  font: inherit;
-}
-.regional-card__name {
-  font-weight: 700;
-  color: #1e293b;
-  font-size: 0.9rem;
-}
-.check {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
-  border: 2px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #fff;
-  transition: background 0.15s, border-color 0.15s;
-}
-.check--on {
-  background: var(--brand-blue-600);
-  border-color: var(--brand-blue-600);
-}
-.setores-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.55rem;
-  padding: 0.55rem 0.5rem 0.3rem;
-  border-top: 1px dashed #e2e8f0;
 }
 .setores-chips__empty {
   font-size: 0.78rem;
   font-weight: 500;
   color: #94a3b8;
-}
-
-@media (max-width: 640px) {
-  .regionais-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Seleção de Unidades/Sondas concedidas ao cliente */
