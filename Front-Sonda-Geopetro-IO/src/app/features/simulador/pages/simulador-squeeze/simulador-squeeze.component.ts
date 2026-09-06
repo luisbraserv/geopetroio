@@ -1,3 +1,6 @@
+import { Well3dComponent } from '../../components/well/well-3d.component';
+import { PocoApi } from '../../models/poco.model';
+import { PocoSelectorComponent } from '../../components/well/poco-selector.component';
 ﻿import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormGroup, FormArray } from '@angular/forms';
@@ -28,18 +31,26 @@ import { ConformidadeOperacionalReportService, FatorConformidade, VarreduraOverr
 import { SimuladorBaseComponent } from '../simulador-base.component';
 
 import { SqueezeGeometry, SqueezeInputs, Perfuracao, SqueezeHydraulicSimulation } from '../../models/squeeze.model';
+import { WellStructureFormComponent } from '../../components/well/well-structure-form.component';
+import { DepthInputDirective } from '../../components/well/depth-input.directive';
+import { WellTrajectoryFormComponent } from '../../components/well/well-trajectory-form.component';
+import { createTrajectoryForm, trajectoryFromForm } from '../../models/well-trajectory.form';
+import { WellSchematicComponent, WellSchematicState } from '../../components/well/well-schematic.component';
+import { IntervalDescription, WellGeometryService } from '../../services/well-geometry.service';
+import { OperationInterval, PerforationInterval, WellGeometry, WellGeometryIssue, WellOverlay } from '../../models/well-geometry.model';
+import { WellPhaseFormValue, buildWellGeometry, emptyPhaseForm, geometryNumber, wellGeometryToForms } from '../../models/well-geometry.form';
 import { Diagnostic } from '../../models/pasta.model';
 import { ThickeningResult, UCAResult } from '../../models/reologia.model';
 import { ADITIVOS_CATALOGO, AditivoCatalogo, Aditivo, hydrateAditivosFromCatalog } from '../../models/aditivo.model';
 import { CEMENT_CLASSES } from '../../models/constantes';
 import { API_CASING_SIZES, API_TUBING_SIZES, ApiTubular } from '../../models/api-tubulares';
 
-type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'simulations' | 'schematic';
+type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'simulations' | 'schematic' | 'wellView';
 
 @Component({
   selector: 'app-simulador-squeeze',
   standalone: true,
-  imports: [
+  imports: [Well3dComponent, PocoSelectorComponent, 
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
@@ -49,6 +60,10 @@ type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'simulations' | 'schematic
     OpsChartComponent,
     SqueezeSchematicsComponent,
     SqueezeOperationChartsComponent,
+    WellStructureFormComponent,
+    DepthInputDirective,
+    WellTrajectoryFormComponent,
+    WellSchematicComponent,
     AditivoModalComponent,
     SimuladorStateModalComponent,
     RelatorioCapaModalComponent,
@@ -71,6 +86,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     { id: 'rheology', label: '3. Reologia' },
     { id: 'simulations', label: '4. Simulações' },
     { id: 'schematic', label: '5. Esquemático' },
+    { id: 'wellView', label: '6. Visualização do poço' },
   ];
 
   readonly cimentoClasses = Object.entries(CEMENT_CLASSES).map(([k, v]) => ({ value: k, label: v.label }));
@@ -93,6 +109,20 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   freeWater = 0;
   geoFormula = '';
   opsPhases: OpsPhase[] = [];
+
+  // ── Estrutura do poço (fonte da verdade da geometria) ──
+  wellGeometry: WellGeometry | null = null;
+  wellIssues: WellGeometryIssue[] = [];
+  operationIssues: WellGeometryIssue[] = [];
+  perforationIssues: WellGeometryIssue[] = [];
+  intervalDescription: IntervalDescription | null = null;
+  /** Overlays do squeeze — posições JÁ calculadas pelos services, só para desenho. */
+  wellOverlays: WellOverlay[] = [];
+  wellSchematicState: 'antes' | 'depois' = 'antes';
+  readonly wellSchematicStates: WellSchematicState[] = [
+    { id: 'antes', label: 'Antes do squeeze' },
+    { id: 'depois', label: 'Depois do squeeze' },
+  ];
 
   relatorioVisivel = false;
   relatorioTitulo = '';
@@ -120,6 +150,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   sec8Open = false;
   sec10Open = false;
   secPocoOpen = false;
+  secEstruturaOpen = false;
   secTampaoOpen = false;
   secSimuladorOpen = false;
 
@@ -157,6 +188,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     private relatorioBuilder: RelatorioBuilderService,
     private retiradaReport: RetiradaTubosReportService,
     private conformidadeReport: ConformidadeOperacionalReportService,
+    private wellGeo: WellGeometryService,
     private cdr: ChangeDetectorRef,
   ) { super(); }
 
@@ -166,7 +198,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     this.buildForm();
     // Snapshot dos padrões do formulário: ao carregar um cenário salvo antes de
     // novos campos existirem, os ausentes voltam ao padrão (reprodução exata).
-    const { additivos: _a, perforacoes: _p, ...defaults } = this.form.getRawValue();
+    const { additivos: _a, perforacoes: _p, fases: _f, ...defaults } = this.form.getRawValue();
     this.formDefaults = defaults;
     this.defaultManualVolumeBbl = this.manualVolumeBbl;
     this.restoreAditivos();
@@ -183,8 +215,57 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
 
   get perforacoes(): FormArray { return this.form.get('perforacoes') as FormArray; }
 
+  // ── Estrutura do poço: fases ──────────────────────────────────────────
+
+  get fases(): FormArray { return this.form.get('fases') as FormArray; }
+  get trajectoryForm(): FormGroup { return this.form.get('trajectory') as FormGroup; }
+
+  private phaseGroup(row: WellPhaseFormValue): FormGroup {
+    return this.fb.group({
+      id: [row.id], name: [row.name], type: [row.type],
+      topMD: [row.topMD], bottomMD: [row.bottomMD],
+      topTVD: [row.topTVD], bottomTVD: [row.bottomTVD],
+      holeDiameterIn: [row.holeDiameterIn],
+      casingOD: [row.casingOD], casingID: [row.casingID],
+      shoeMD: [row.shoeMD], shoeTVD: [row.shoeTVD],
+    });
+  }
+
+  /** Poço padrão: uma fase revestida de diâmetro único — comportamento anterior. */
+  private defaultPhaseRows(): WellPhaseFormValue[] {
+    return [{
+      id: 'phase-1', name: 'Fase única', type: 'PRODUCTION',
+      topMD: 0, bottomMD: 1500, topTVD: 0, bottomTVD: 1500,
+      holeDiameterIn: 8.535,
+      casingOD: 5.5, casingID: 4.778, shoeMD: 1500, shoeTVD: 1500,
+    }];
+  }
+
+  addFase(): void {
+    const previous = this.fases.length ? this.fases.at(this.fases.length - 1).value as WellPhaseFormValue : undefined;
+    this.fases.push(this.phaseGroup(emptyPhaseForm(this.fases.length, previous)));
+  }
+
+  removeFase(index: number): void {
+    if (this.fases.length > 1) this.fases.removeAt(index);
+  }
+
+  private setFases(rows: WellPhaseFormValue[]): void {
+    while (this.fases.length) this.fases.removeAt(0);
+    (rows.length ? rows : this.defaultPhaseRows()).forEach(row => this.fases.push(this.phaseGroup(row)));
+  }
+
+  onWellSchematicState(id: string): void {
+    this.wellSchematicState = id === 'depois' ? 'depois' : 'antes';
+    this.wellOverlays = this.buildWellOverlays(this.schematicGeom);
+    this.cdr.markForCheck();
+  }
+
   private buildForm(): void {
     this.form = this.fb.group({
+      operacaoTopoMD: [1400], operacaoBaseMD: [1500],
+      fases: this.fb.array(this.defaultPhaseRows().map(row => this.phaseGroup(row))),
+      trajectory: createTrajectoryForm(this.fb),
       sectionStartMD: [1400], sectionEndMD: [1500],
       sectionStartTVD: [1400], sectionEndTVD: [1500],
       wellFinalMD: [1500], wellFinalTVD: [1500],
@@ -221,10 +302,115 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     });
   }
 
+  /**
+   * Projeta a estrutura cadastrada nos campos legados de seção/diâmetro. A
+   * geometria passou a ser a fonte da verdade: esses campos são DERIVADOS dela
+   * e do intervalo da operação, nunca mais digitados.
+   */
+  private syncWellGeometry(perfs: Perfuracao[]): { geometry: WellGeometry; interval: OperationInterval } | null {
+    const raw = this.form.getRawValue();
+    const geometry = this.wellGeo.deriveTrajectoryTvd({
+      ...buildWellGeometry(raw.wellFinalMD, raw.wellFinalTVD, (raw.fases ?? []) as WellPhaseFormValue[]),
+      trajectory: trajectoryFromForm(raw.trajectory),
+    });
+    const interval: OperationInterval = {
+      topMD: geometryNumber(raw.operacaoTopoMD),
+      bottomMD: geometryNumber(raw.operacaoBaseMD),
+    };
+    const perforations: PerforationInterval[] = perfs.map((p, i) => ({
+      id: `perf-${i + 1}`, topMD: p.top, bottomMD: p.base,
+    }));
+
+    this.wellGeometry = geometry;
+    this.wellIssues = this.wellGeo.validate(geometry);
+    this.operationIssues = this.wellGeo.validateInterval(geometry, interval, 'Squeeze');
+    if (!this.wellGeo.hasErrors(this.wellIssues)) this.operationIssues.push(...this.wellGeo.validateWorkString(
+      geometry, interval.bottomMD, geometryNumber(raw.tubingOD), geometryNumber(raw.tubingID),
+    ));
+    this.perforationIssues = this.wellGeo.validatePerforations(geometry, perforations);
+    this.intervalDescription = null;
+
+    if (this.wellGeo.hasErrors(this.wellIssues) || this.wellGeo.hasErrors(this.operationIssues) || this.wellGeo.hasErrors(this.perforationIssues)) return null;
+    this.intervalDescription = this.wellGeo.describeInterval(geometry, interval);
+
+    const baseSegment = this.intervalDescription.segments.at(-1);
+    this.form.patchValue({
+      sectionStartMD: interval.topMD,
+      sectionEndMD: interval.bottomMD,
+      sectionStartTVD: this.wellGeo.tryMdToTvd(geometry, interval.topMD) ?? interval.topMD,
+      sectionEndTVD: this.wellGeo.tryMdToTvd(geometry, interval.bottomMD) ?? interval.bottomMD,
+      ...(baseSegment ? {
+        caliper: baseSegment.holeDiameterIn,
+        ...(baseSegment.cased ? { casingOD: baseSegment.casingOdIn, casingID: baseSegment.casingIdIn } : {}),
+      } : {}),
+    }, { emitEvent: false });
+
+    return { geometry, interval };
+  }
+
+  /**
+   * Converte o resultado do cálculo em overlays. O desenho não recalcula nada:
+   * só representa os topos que o SqueezeCalculoService produziu.
+   */
+  private buildWellOverlays(geom: SqueezeGeometry | null): WellOverlay[] {
+    if (!geom) return [];
+    const depois = this.wellSchematicState === 'depois';
+    const topCement = depois ? geom.topCementAfterInjectionMD : geom.topCementImmersedMD;
+    const overlays: WellOverlay[] = [
+      ...(depois ? [] : [{
+        type: 'TUBING' as const, topMD: 0, bottomMD: geom.base,
+        label: 'Coluna de trabalho', zone: 'tubing' as const,
+      }]),
+      { type: 'CEMENT', topMD: topCement, bottomMD: geom.base, label: depois ? 'Cimento após injeção' : 'Cimento no poço', zone: 'full' },
+      ...(depois ? [{
+        type: 'SQUEEZE' as const, topMD: geom.shallowestPerf, bottomMD: geom.deepestPerf,
+        label: 'Intervalo squeezado', zone: 'full' as const,
+      }] : []),
+      ...geom.perfs.map((perf, i) => ({
+        type: 'PERFORATION' as const,
+        topMD: perf.top,
+        bottomMD: perf.base,
+        label: `Canhoneado ${i + 1}`,
+        zone: 'full' as const,
+      })),
+    ];
+    return overlays.filter(o => o.bottomMD > o.topMD);
+  }
+
+  private invalidateSimulation(): void {
+    this.clearCalculatedResults();
+    this.geom = null;
+    this.schematicGeom = null;
+    this.squeezeInputsSnapshot = null;
+    this.hydraulicSim = null;
+    this.reverseCirculation = null;
+    this.wellOverlays = [];
+    this.tt = null;
+    this.uca = null;
+    this.freeWater = 0;
+    this.geoFormula = '';
+    this.opsPhases = [];
+    this.recipeDiags = [];
+    this.rheoDiags = [];
+    this.relatorioVisivel = false;
+    this.relatorioConteudo = '';
+    this.capaModalOpen = false;
+    this.fracResult = null;
+    this.limiarInjetividadeSugerido = null;
+    this.form.patchValue({ bhst: null, bhct: null }, { emitEvent: false });
+    this.cdr.markForCheck();
+  }
+
   simulate(): void {
     try {
+      const raw = this.form.getRawValue();
+      const perfs: Perfuracao[] = (raw.perforacoes || []).map((p: any) => ({ top: geometryNumber(p.top), base: geometryNumber(p.base) }));
+      const well = this.syncWellGeometry(perfs);
+      if (!well) {
+        this.invalidateSimulation();
+        return;
+      }
       const v = this.form.getRawValue();
-      const perfs: Perfuracao[] = (v.perforacoes || []).map((p: any) => ({ top: +p.top, base: +p.base }));
 
       const autoBht = this.coreCalc.calcBHT(v.surfaceTemp, v.geoGradient, v.sectionEndTVD);
       this.temperatureResult = this.resolveTemperatureResult(v, autoBht.bhst);
@@ -250,12 +436,13 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       } as SqueezeInputs;
       this.squeezeInputsSnapshot = inputs;
       // Geometria base (volume do simulador) — sempre alimenta "1. Receita da Simulação" e a hidráulica
-      this.geom = this.squeezeCalc.calcVolumes(inputs, perfs);
+      this.geom = this.squeezeCalc.calcVolumes(inputs, perfs, null, well);
       this.simuladorVolumeBbl = this.geom.slurryPhysicalVolumeBbl;
       // Geometria SÓ do esquemático/relatório: segue a escolha do seletor, de forma independente
       this.schematicGeom = (this.cementVolumeSource === 'receita' && this.manualVolumeBbl > 0)
-        ? this.squeezeCalc.calcVolumes(inputs, perfs, this.manualVolumeBbl)
+        ? this.squeezeCalc.calcVolumes(inputs, perfs, this.manualVolumeBbl, well)
         : this.geom;
+      this.wellOverlays = this.buildWellOverlays(this.schematicGeom);
       this.reverseCirculation = this.buildReverseCirculationResult(v);
       const thetaReadings = this.buildThetaReadings(v);
       const aditivosRaw = hydrateAditivosFromCatalog((v.additivos || []) as Aditivo[]);
@@ -268,7 +455,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       this.uca = this.testsCalc.simulateUCA(this.slurry, this.tt);
       this.freeWater = this.testsCalc.estimateFreeWater(this.slurry);
       this.rheoDiags = this.testsCalc.rheoDiagnostics(this.slurry, this.tt, this.freeWater);
-      this.fracResult = this.squeezeCalc.calcFractureGradient(this.geom, inputs);
+      this.fracResult = this.squeezeCalc.calcFractureGradient(this.geom, inputs, well);
 
       this.rheologyResult = this.rheologyAdj.applyAdditiveRheologyEffects(BASE_SLURRY_RHEOLOGY, aditivosRaw, { thetaReadings });
       // Cada fluido é bombeado com a vazão informada em "Dados do Relatório"
@@ -278,7 +465,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
         vazaoPastaBpm: this.vazaoFluido('pastaBpm'),
         vazaoAguaAtrasBpm: this.vazaoFluido('fluidoAtrasBpm'),
         vazaoDeslocamentoBpm: this.vazaoFluido('deslocamentoBpm'),
-      }, perfs, aditivosRaw, { thetaReadings });
+      }, perfs, aditivosRaw, { thetaReadings }, well);
 
       // Limiar de injetividade sugerido p/ o cenário (arredondado a 2 algarismos
       // significativos p/ exibição/aplicação); null quando faltam volume/tempo.
@@ -293,6 +480,9 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       // esquemático) sem forçar CD síncrona — evitando reentrância no fluxo do modal.
       this.cdr.markForCheck();
     } catch (e) {
+      this.operationIssues.push({ level: 'error', code: 'SIMULATION_ERROR',
+        message: e instanceof Error ? e.message : 'Não foi possível calcular a simulação.' });
+      this.invalidateSimulation();
       console.error('[squeeze] simulate error:', e);
     }
   }
@@ -415,20 +605,18 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   setTab(tab: TabId): void { this.activeTab = tab; }
 
   gerarCalculoRetiradaTubos(): void {
-    if (!this.geom) this.simulate();
+    this.simulate();
+    if (!this.geom) return;
     const v = this.form.getRawValue();
-    const topoCimentoRetiradaM = this.geom
-      ? this.geom.deepestPerf - this.geom.cementHeightWithoutTubing
-      : v.sectionStartMD;
+    const topoCimentoRetiradaM = (this.schematicGeom ?? this.geom).topCementAfterPullMD;
     this.retiradaReport.abrirRetirada({ operacao: 'SQUEEZE', v, dadosRelatorio: this.dadosRelatorio, topoCimentoRetiradaM });
   }
 
   gerarCalculoCirculacaoReversa(): void {
-    if (!this.geom) this.simulate();
+    this.simulate();
+    if (!this.geom) return;
     const v = this.form.getRawValue();
-    const topoCimentoRetiradaM = this.geom
-      ? this.geom.deepestPerf - this.geom.cementHeightWithoutTubing
-      : v.sectionStartMD;
+    const topoCimentoRetiradaM = (this.schematicGeom ?? this.geom).topCementAfterPullMD;
     this.retiradaReport.abrirCirculacaoReversa({ operacao: 'SQUEEZE', v, dadosRelatorio: this.dadosRelatorio, topoCimentoRetiradaM, tubingIdIn: Number(v.tubingID) });
   }
 
@@ -455,6 +643,8 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   }
 
   gerarRelatorioConformidade(fator: FatorConformidade): void {
+    this.simulate();
+    if (!this.geom) return;
     if (!this.hydraulicSim || !this.geom) return;
     const geom = this.geom;
     this.conformidadeReport.abrir({
@@ -464,7 +654,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       dadosRelatorio: this.dadosRelatorio,
       v: this.form.getRawValue(),
       // Topo planejado da pasta = topo sem coluna antes da injeção (redistribuída
-      // no revestimento cheio) — cementPhysicalTopMD é o topo da seção, não da pasta.
+      // no poço cheio), calculado pelo serviço de geometria.
       placement: {
         cementTopMD: geom.topCementAfterPullMD,
         cementBaseMD: geom.base,
@@ -496,7 +686,10 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
         vazaoPastaBpm: this.vazaoFluido('pastaBpm') * f,
         vazaoAguaAtrasBpm: this.vazaoFluido('fluidoAtrasBpm') * f,
         vazaoDeslocamentoBpm: this.vazaoFluido('deslocamentoBpm') * f,
-      }, perfs, aditivosRaw, { thetaReadings });
+      }, perfs, aditivosRaw, { thetaReadings }, this.wellGeometry ? {
+        geometry: this.wellGeometry,
+        interval: { topMD: this.geom.top, bottomMD: this.geom.base },
+      } : null);
     } catch (e) {
       console.error('[squeeze] reSimulate error:', e);
       return null;
@@ -505,6 +698,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
 
   openStateModal(): void {
     this.stateModal?.setCurrentForm({
+      _poco: this.poco,
       ...this.form.getRawValue(),
       _dadosRelatorio: this.dadosRelatorio,
       _manualVolumeBbl: this.manualVolumeBbl,
@@ -523,9 +717,10 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   closeStateModal(): void { this.stateModalOpen = false; }
 
   onCarregarEstado(formValue: Record<string, unknown>): void {
+    this.poco = (formValue['_poco'] as PocoApi | null) ?? null;
     // Mantém casingOD/casingID/tubingOD/tubingID/caliper em `rest` para que a geometria
     // (revestimento/tubing/caliper) também seja restaurada ao carregar o cenário.
-    const { additivos, perforacoes,
+    const { additivos, perforacoes, fases,
             _dadosRelatorio, _manualVolumeBbl, _manualYieldFt3, _manualFacGpc, _manualFamGpc,
             _pastaParametrosSource, _manualBhstValue, _manualBhstUnit, _cementVolumeSource, _reportTemperatureMode,
             ...rest } = formValue as any;
@@ -535,6 +730,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     if (rest.displacementWeight == null && rest.completionWeight != null) rest.displacementWeight = rest.completionWeight;
     this.form.patchValue(this.formDefaults, { emitEvent: false });
     this.form.patchValue(rest, { emitEvent: false });
+    this.form.setControl('trajectory', createTrajectoryForm(this.fb, rest.trajectory), { emitEvent: false });
     if (_dadosRelatorio) {
       this.dadosRelatorio = _dadosRelatorio;
       this.ensureSequenciaDefaults();
@@ -559,14 +755,29 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     } else {
       this.perforacoes.push(this.fb.group({ top: [1420], base: [1440] }));
     }
+    // Cenário salvo antes das fases: a estrutura é migrada dos campos legados
+    // de seção (adapter), e o intervalo da operação herda o antigo squeeze.
+    this.setFases(Array.isArray(fases) && fases.length
+      ? fases as WellPhaseFormValue[]
+      : wellGeometryToForms(this.wellGeo.legacySectionToWellGeometry({
+        sectionStartMD: this.toNumber(rest.sectionStartMD),
+        sectionEndMD: this.toNumber(rest.sectionEndMD),
+        sectionStartTVD: this.toNumber(rest.sectionStartTVD),
+        sectionEndTVD: this.toNumber(rest.sectionEndTVD),
+        wellFinalMD: this.toNumber(rest.wellFinalMD),
+        wellFinalTVD: this.toNumber(rest.wellFinalTVD),
+        holeDiameterIn: this.toNumber(rest.caliper),
+        casingOD: this.toNumber(rest.casingOD),
+        casingID: this.toNumber(rest.casingID),
+      })));
+    if (rest.operacaoTopoMD == null || rest.operacaoBaseMD == null) {
+      this.form.patchValue({
+        operacaoTopoMD: this.toNumber(rest.sectionStartMD),
+        operacaoBaseMD: this.toNumber(rest.sectionEndMD),
+      }, { emitEvent: false });
+    }
+    if (this.poco) this.dadosRelatorio.poco = this.poco.nome;
     this.simulate();
-  }
-
-  onCasingSelect(idx: string): void {
-    if (idx === '') return;
-    const c = this.casingOptions[+idx];
-    if (!c) return;
-    this.form.patchValue({ casingOD: c.odIn, casingID: c.idIn });
   }
 
   onTubingSelect(idx: string): void {
@@ -577,6 +788,8 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   }
 
   openCapaModal(): void {
+    this.simulate();
+    if (!this.geom) return;
     const v = this.form.getRawValue();
     const tipoReceita = this.dadosRelatorio.tipoReceitaRelatorio ?? 'volume';
     const vazoesBombeio = this.mergeVazoesBombeio(this.dadosRelatorio.vazoesBombeio as RelatorioCapaData['vazoesBombeio']);
@@ -602,14 +815,14 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   }
 
   onCapaGerada(data: RelatorioCapaData): void {
+    this.simulate();
+    if (!this.geom) return;
     const v = this.form.getRawValue();
     const tipoReceita = data.tipoReceitaRelatorio ?? 'volume';
     const reportTemperature = this.getReportTemperature(v);
     const vazoesBombeio = this.mergeVazoesBombeio(data.vazoesBombeio);
     const tubingODFormatted = v.tubingOD ? this.fmtInches(v.tubingOD) : '';
-    const topoCimentoRetiradaM = this.geom
-      ? this.geom.deepestPerf - this.geom.cementHeightWithoutTubing
-      : v.sectionStartMD;
+    const topoCimentoRetiradaM = (this.schematicGeom ?? this.geom).topCementAfterPullMD;
     const reverseCircBbl = this.buildReverseCirculationAfterPullingResult(
       v,
       topoCimentoRetiradaM,
@@ -628,7 +841,10 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     };
     this.persistDadosRelatorioFromCapa(data, vazoesBombeio, sequenciaOperacional);
     this.saveDadosRelatorio();
+    const reportFormSnapshot = JSON.stringify(this.form.getRawValue());
     this.captureGraficosImages(data.graficosOperacionaisSelecionados ?? []).then(graficosImages => {
+      // A captura é assíncrona; mudanças no formulário invalidam este relatório.
+      if (!this.geom || JSON.stringify(this.form.getRawValue()) !== reportFormSnapshot) return;
       const reportGeom = this.schematicGeom ?? this.geom;
       const reportHtml = this.relatorioBuilder.buildCapa({
         ...data,

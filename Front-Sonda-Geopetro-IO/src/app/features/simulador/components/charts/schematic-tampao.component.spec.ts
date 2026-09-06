@@ -53,6 +53,18 @@ const plug: PlugGeometry = {
 };
 
 describe('createWithoutTubingSchematic', () => {
+  it('converts annotations to feet without changing physical or visual positions', () => {
+    const metres = createWithoutTubingSchematic(plug);
+    const feet = createWithoutTubingSchematic(plug, 'ft');
+    expect(feet.segments.find(s => s.key === 'cement')!.sub).toBe('23,22 bbl | 328,1 ft');
+    expect(feet.workZone.label).toContain('328 ft');
+    expect(feet.depthMarkers.find(m => m.key === 'plugBase')!.label).toContain('4.921 ft');
+    expect(feet.depthMarkers.map(({ label, ...position }) => position))
+      .toEqual(metres.depthMarkers.map(({ label, ...position }) => position));
+    expect(feet.segments.map(({ sub, ...segment }) => segment))
+      .toEqual(metres.segments.map(({ sub, ...segment }) => segment));
+  });
+
   it('does not draw tubing or annulus split in without tubing mode', () => {
     const model = createWithoutTubingSchematic(plug);
 

@@ -1,3 +1,4 @@
+import { DepthUnit } from '../../models/depth-unit';
 import {
   Component, Input, OnChanges, ViewChild, ElementRef, AfterViewInit,
 } from '@angular/core';
@@ -5,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { PressureProfile } from '../../models/tampao.model';
 import { ChartZoomModalComponent } from './chart-zoom-modal.component';
+import { DEPTH_PRESSURE_COLORS, DepthPressureSeries, buildPressureDepthConfig } from './pressure-depth-config';
 
 Chart.register(...registerables);
 
@@ -20,7 +22,7 @@ Chart.register(...registerables);
         <div class="p-chart-head">
           <div>
             <div class="p-chart-title">Envelope de Pressão</div>
-            <div class="p-chart-sub">Fratura, Poro, BHP coluna e BHP anular + ECD ao longo do poço</div>
+            <div class="p-chart-sub">Poro, fratura, pressão anular e na coluna (psi, eixo superior) e ECD (ppg, eixo inferior) ao longo do poço</div>
           </div>
           <button class="zoom-btn" type="button" (click)="openZoom()" title="Ampliar gráfico">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
@@ -103,6 +105,7 @@ Chart.register(...registerables);
   `],
 })
 export class PressureChartComponent implements AfterViewInit, OnChanges {
+  @Input() depthUnit: DepthUnit = 'm';
   @Input() data: PressureProfile | null = null;
   @ViewChild('cvEnvelope') cvEnvelope!: ElementRef<HTMLCanvasElement>;
 
@@ -139,60 +142,37 @@ export class PressureChartComponent implements AfterViewInit, OnChanges {
   private build(): void {
     if (!this.cvEnvelope) return;
     const pts = this.data?.points ?? [];
-    const labels = pts.map(p => p.tvd.toFixed(0));
+    // Pressão no eixo X superior, profundidade medida no eixo Y invertido:
+    // o poço é lido de cima para baixo, como no perfil de campo.
+    const series: DepthPressureSeries[] = [
+      {
+        label: 'Poro (psi)', color: DEPTH_PRESSURE_COLORS.poro, dashed: true,
+        points: pts.map(p => ({ x: p.porePsi, y: p.md })),
+      },
+      {
+        label: 'Fratura (psi)', color: DEPTH_PRESSURE_COLORS.fratura, dashed: true,
+        points: pts.map(p => ({ x: p.fracPsi, y: p.md })),
+      },
+      {
+        label: 'Pressão anular (psi)', color: DEPTH_PRESSURE_COLORS.anularMax,
+        points: pts.map(p => ({ x: p.bhpAnn, y: p.md })),
+      },
+      {
+        label: 'Pressão na coluna (psi)', color: DEPTH_PRESSURE_COLORS.coluna,
+        points: pts.map(p => ({ x: p.psiInside, y: p.md })),
+      },
+      {
+        label: 'ECD (ppg)', color: DEPTH_PRESSURE_COLORS.ecd, axis: 'x1',
+        points: pts.map(p => ({ x: p.ecdPpg, y: p.md })),
+      },
+    ];
 
-    this.envelopeConfig = {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Fratura (psi)', yAxisID: 'y',
-              data: pts.map(p => p.fracPsi),
-              borderColor: '#ef4444', backgroundColor: 'transparent',
-              tension: 0.2, pointRadius: 0, borderWidth: 2, borderDash: [6, 3],
-            },
-            {
-              label: 'Poro (psi)', yAxisID: 'y',
-              data: pts.map(p => p.porePsi),
-              borderColor: '#10b981', backgroundColor: 'transparent',
-              tension: 0.2, pointRadius: 0, borderWidth: 2, borderDash: [6, 3],
-            },
-            {
-              label: 'BHP coluna (psi)', yAxisID: 'y',
-              data: pts.map(p => p.psiInside),
-              borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.06)',
-              tension: 0.2, pointRadius: 0, borderWidth: 2,
-            },
-            {
-              label: 'BHP anular (psi)', yAxisID: 'y',
-              data: pts.map(p => p.bhpAnn),
-              borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.05)',
-              tension: 0.2, pointRadius: 0, borderWidth: 2,
-            },
-            {
-              label: 'ECD (ppg)', yAxisID: 'y1',
-              data: pts.map(p => p.ecdPpg),
-              borderColor: '#f59e0b', backgroundColor: 'transparent',
-              tension: 0.2, pointRadius: 0, borderWidth: 1.5,
-            },
-          ],
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
-          scales: {
-            x: { title: { display: true, text: 'TVD (m)' } },
-            y: { position: 'left', title: { display: true, text: 'Pressão (psi)' } },
-            y1: {
-              position: 'right',
-              title: { display: true, text: 'ECD (ppg)' },
-              grid: { drawOnChartArea: false },
-              min: 8, max: 20,
-            },
-          },
-        },
-    } as ChartConfiguration;
+    this.envelopeConfig = buildPressureDepthConfig(series, {
+      xTitle: 'psi',
+      x1Title: 'ECD (ppg)',
+      depthUnit: this.depthUnit,
+      maxDepth: pts.at(-1)?.md,
+    });
 
     this.chart = new Chart(this.cvEnvelope.nativeElement.getContext('2d')!, this.envelopeConfig);
   }

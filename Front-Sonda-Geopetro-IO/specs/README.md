@@ -18,6 +18,10 @@ specs/
 └── simulador/          ← squeeze, tampão, relatórios
 ```
 
+**[DECIDIDO 2026-09-05]** Primeira spec de feature escrita neste repositório:
+[`simulador/geometria-poco.md`](simulador/geometria-poco.md) — estrutura do poço, trajetória direcional
+e o vínculo com a nova entidade `Poço`. Cobre o trabalho que está **no working tree, sem commit**.
+
 **Nota [FATO]:** `almoxarifado/` e `compra/` existem em `src/app/features/` como pastas com
 subdiretórios nomeados e **zero arquivos**. Foram **descontinuados**
 ([DECIDIDO 2026-08-26](../../specs/technical-debt.md#dt-001--código-fonte-perdido-de-almoxarifado-e-compras)).

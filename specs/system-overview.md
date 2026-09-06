@@ -12,6 +12,11 @@ identidade e organização (usuários, empresas, regionais, setores, unidades/so
 **[DECIDIDO 2026-08-26]** O escopo foi reduzido: os domínios de Operação (projetos, processos,
 observações) e Suprimentos (químicos, almoxarifado, compras) foram removidos do sistema.
 
+**[DECIDIDO 2026-09-05]** *Para quem* o sistema existe e *quem usa cada superfície* estão em
+[`product-context.md`](product-context.md) — inclusive a decisão de que o público principal das telas
+web é **supervisão remota e cliente**, o que reposiciona o Desktop-Sonda como sensor do sistema, não
+como produto final.
+
 O nome "GeopetroIO" é a marca de usuário final. **[FATO]** "Horus" é codinome interno de
 desenvolvimento do módulo de Cimentação Desktop — o produto se apresenta como
 `"GeoPetro IO - Cimentação"` (`Braserv-Horus-Desktop/src/main/java/.../JavaFxApp.java:24`).

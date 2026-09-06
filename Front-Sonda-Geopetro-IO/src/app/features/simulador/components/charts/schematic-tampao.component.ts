@@ -1,3 +1,4 @@
+import { DepthUnit, formatDepth } from '../../models/depth-unit';
 ﻿import {
   AfterViewInit,
   ChangeDetectorRef,
@@ -11,7 +12,7 @@
 import { CommonModule } from '@angular/common';
 import { PlugGeometry, TampaoInputs } from '../../models/tampao.model';
 import { SlurryDesign, SlurryRecipe } from '../../models/pasta.model';
-import { ADJUSTED_SCHEMATIC_NOTE, computeVisualSegmentHeights, displaySubtitleForSegment, formatBbl, formatM, formatPpg, joinInfoParts, layoutDepthAnnotations, SchematicInfoSection, shouldShowSegmentLabel, visibleInfoRows, visualYForSegmentBoundary, VisualSegmentInput } from './visual-segments';
+import { ADJUSTED_SCHEMATIC_NOTE, computeVisualSegmentHeights, displaySubtitleForSegment, formatBbl, formatPpg, joinInfoParts, layoutDepthAnnotations, SchematicInfoSection, shouldShowSegmentLabel, visibleInfoRows, visualYForSegmentBoundary, VisualSegmentInput } from './visual-segments';
 import { SchematicWellboreComponent, WellboreSchematicConfig, WellboreSegment } from './schematic-wellbore.component';
 
 export interface SchematicSegment {
@@ -54,7 +55,7 @@ export interface WithoutTubingSchematic {
   workZone: SchematicBracket;
 }
 
-export function createWithoutTubingSchematic(plug: PlugGeometry): WithoutTubingSchematic {
+export function createWithoutTubingSchematic(plug: PlugGeometry, depthUnit: DepthUnit = 'm'): WithoutTubingSchematic {
   const base = Math.max(0, plug.pBase);
   const finalCapacity = Math.max(plug.capFinal || plug.capHole || plug.cementPhysicalCapacityBblM || 0, 0);
   const displacementHeight = finalCapacity > 0 ? Math.max(0, plug.volDisplacement || 0) / finalCapacity : 0;
@@ -82,7 +83,7 @@ export function createWithoutTubingSchematic(plug: PlugGeometry): WithoutTubingS
     {
       key: 'displacementFluid',
       name: 'Deslocamento',
-      sub: `${formatPt(displacementVolTotal)} bbl | ${formatPt(displacementHeightTotal, 0)} m`,
+      sub: `${formatPt(displacementVolTotal)} bbl | ${formatDepth(displacementHeightTotal, depthUnit, 0)}`,
       top: topDisplacement,
       bottom: topCement,
       color: '#93c5fd',
@@ -90,7 +91,7 @@ export function createWithoutTubingSchematic(plug: PlugGeometry): WithoutTubingS
     {
       key: 'cement',
       name: 'Cimento',
-      sub: `${formatPt(plug.volCementTotal)} bbl | ${formatPt(cementHeight, 1)} m`,
+      sub: `${formatPt(plug.volCementTotal)} bbl | ${formatDepth(cementHeight, depthUnit, 1)}`,
       top: topCement,
       bottom: base,
       color: '#fb923c',
@@ -113,12 +114,12 @@ export function createWithoutTubingSchematic(plug: PlugGeometry): WithoutTubingS
     ],
     segments,
     depthMarkers: distributeMarkerLabels([
-      { key: 'displacementTop', label: `Topo deslocamento\n${topDisplacement.toFixed(1)} m`, depth: topDisplacement },
-      { key: 'cementTop', label: `Topo cimento\n${topCement.toFixed(1)} m`, depth: topCement },
-      { key: 'plugBase', label: `Base tampão\n${base.toFixed(0)} m`, depth: base },
+      { key: 'displacementTop', label: `Topo deslocamento\n${formatDepth(topDisplacement, depthUnit, 1)}`, depth: topDisplacement },
+      { key: 'cementTop', label: `Topo cimento\n${formatDepth(topCement, depthUnit, 1)}`, depth: topCement },
+      { key: 'plugBase', label: `Base tampão\n${formatDepth(base, depthUnit, 0)}`, depth: base },
     ], totalDepth, 30),
     workZone: {
-      label: `ZONA DE TRABALHO\n${plug.plugHeight.toFixed(0)} m`,
+      label: `ZONA DE TRABALHO\n${formatDepth(plug.plugHeight, depthUnit, 0)}`,
       top: topCement,
       bottom: base,
     },
@@ -183,7 +184,7 @@ function formatPt(v: number | null | undefined, dec = 2): string {
         <canvas #cvNoTub class="schema-canvas"></canvas>
       </div>
       @if (wellboreConfig) {
-        <app-schematic-wellbore [config]="wellboreConfig"></app-schematic-wellbore>
+        <app-schematic-wellbore [depthUnit]="depthUnit" [config]="wellboreConfig"></app-schematic-wellbore>
       }
     </div>
   `,
@@ -199,6 +200,10 @@ function formatPt(v: number | null | undefined, dec = 2): string {
   `],
 })
 export class SchematicTampaoComponent implements AfterViewInit, OnChanges, OnDestroy {
+  private depth(value: number | null | undefined, digits = 1): string | null {
+    return value == null || !Number.isFinite(value) ? null : formatDepth(value, this.depthUnit, digits);
+  }
+  @Input() depthUnit: DepthUnit = 'm';
   @Input() plug: PlugGeometry | null = null;
   @Input() slurry: SlurryDesign | null = null;
   @Input() recipe: SlurryRecipe | null = null;
@@ -354,13 +359,13 @@ export class SchematicTampaoComponent implements AfterViewInit, OnChanges, OnDes
 
     const columnSegments = this.visualSegments([
       { key: 'displacementFluid', top: 0, bottom: topBack, label: 'Fl. Deslocamento', sub: `${this.f(p.volDisplacement)} bbl`, color: '#93c5fd' },
-      { key: 'backWater', top: topBack, bottom: topCem, label: 'Água Atrás', sub: `${this.f(p.volBackSpacer)} bbl | ${this.f(p.backPhysicalHeight, 0)} m`, color: '#d8b4fe' },
-      { key: 'cement', top: topCem, bottom: p.pBase, label: 'Cimento tubing', sub: `${this.f(p.volCementPipe)} bbl | ${this.f(p.cementHeightWithTubing, 1)} m`, color: '#fb923c' },
+      { key: 'backWater', top: topBack, bottom: topCem, label: 'Água Atrás', sub: `${this.f(p.volBackSpacer)} bbl | ${formatDepth(p.backPhysicalHeight, this.depthUnit, 0)}`, color: '#d8b4fe' },
+      { key: 'cement', top: topCem, bottom: p.pBase, label: 'Cimento tubing', sub: `${this.f(p.volCementPipe)} bbl | ${formatDepth(p.cementHeightWithTubing, this.depthUnit, 1)}`, color: '#fb923c' },
     ], yBase - yTop);
     const annularSegments = this.visualSegments([
       { key: 'completionFluid', top: 0, bottom: topFront, label: 'Fl. Completação', sub: '', color: '#bae6fd' },
-      { key: 'frontWater', top: topFront, bottom: topCem, label: 'Espaçador Frente', sub: `${this.f(p.volWashTotal)} bbl | ${this.f(p.frontPhysicalHeight, 0)} m`, color: '#d8b4fe' },
-      { key: 'cement', top: topCem, bottom: p.pBase, label: 'Cimento anular', sub: `${this.f(p.volCementAnn)} bbl | ${this.f(p.cementHeightWithTubing, 1)} m`, color: '#fb923c' },
+      { key: 'frontWater', top: topFront, bottom: topCem, label: 'Espaçador Frente', sub: `${this.f(p.volWashTotal)} bbl | ${formatDepth(p.frontPhysicalHeight, this.depthUnit, 0)}`, color: '#d8b4fe' },
+      { key: 'cement', top: topCem, bottom: p.pBase, label: 'Cimento anular', sub: `${this.f(p.volCementAnn)} bbl | ${formatDepth(p.cementHeightWithTubing, this.depthUnit, 1)}`, color: '#fb923c' },
     ], yBase - yTop);
     columnSegments.forEach(segment => this.fillRect(cx, colX, yTop + segment.visualTop, colW, segment.visualHeight, segment.color!, segment.label!, displaySubtitleForSegment(segment)));
     annularSegments.forEach(segment => this.fillRect(cx, annX, yTop + segment.visualTop, annW, segment.visualHeight, segment.color!, segment.label!, displaySubtitleForSegment(segment)));
@@ -371,10 +376,10 @@ export class SchematicTampaoComponent implements AfterViewInit, OnChanges, OnDes
     cx.strokeRect(annX, toY(0), annW, toY(p.pBase) - toY(0));
 
     this.drawDepthAnnotations(cx, [
-      { id: 'front', label: `Topo água frente\n${topFront.toFixed(1)} m`, depthReal: topFront, yReal: visualYForSegmentBoundary(annularSegments, 'frontWater', 'top', yTop) ?? toY(topFront) },
-      { id: 'back', label: `Topo água atrás\n${topBack.toFixed(1)} m`, depthReal: topBack, yReal: visualYForSegmentBoundary(columnSegments, 'backWater', 'top', yTop) ?? toY(topBack) },
-      { id: 'cement', label: `Topo cimento\n${topCem.toFixed(1)} m`, depthReal: topCem, yReal: visualYForSegmentBoundary(annularSegments, 'cement', 'top', yTop) ?? toY(topCem) },
-      { id: 'base', label: `Base tampão\n${p.pBase.toFixed(0)} m`, depthReal: p.pBase, yReal: visualYForSegmentBoundary(annularSegments, 'cement', 'bottom', yTop) ?? toY(p.pBase) },
+      { id: 'front', label: `Topo água frente\n${formatDepth(topFront, this.depthUnit, 1)}`, depthReal: topFront, yReal: visualYForSegmentBoundary(annularSegments, 'frontWater', 'top', yTop) ?? toY(topFront) },
+      { id: 'back', label: `Topo água atrás\n${formatDepth(topBack, this.depthUnit, 1)}`, depthReal: topBack, yReal: visualYForSegmentBoundary(columnSegments, 'backWater', 'top', yTop) ?? toY(topBack) },
+      { id: 'cement', label: `Topo cimento\n${formatDepth(topCem, this.depthUnit, 1)}`, depthReal: topCem, yReal: visualYForSegmentBoundary(annularSegments, 'cement', 'top', yTop) ?? toY(topCem) },
+      { id: 'base', label: `Base tampão\n${formatDepth(p.pBase, this.depthUnit, 0)}`, depthReal: p.pBase, yReal: visualYForSegmentBoundary(annularSegments, 'cement', 'bottom', yTop) ?? toY(p.pBase) },
     ], PAD_L - 8, annX + annW + 6, PAD_L - 12, PAD_T + 8, H - PAD_B - 8);
 
     const legendBottom = this.drawLegend(cx, legX, PAD_T, [
@@ -390,7 +395,7 @@ export class SchematicTampaoComponent implements AfterViewInit, OnChanges, OnDes
 
   private drawWithoutTubing(): void {
     const p = this.plug!, rec = this.recipe!;
-    const model = createWithoutTubingSchematic(p);
+    const model = createWithoutTubingSchematic(p, this.depthUnit);
     const cv = this.cvNoTub.nativeElement;
     const { cx, W, H } = this.prepareCanvas(cv);
     const totalDepth = Math.max(p.pBase, 1);
@@ -463,7 +468,7 @@ export class SchematicTampaoComponent implements AfterViewInit, OnChanges, OnDes
     const zm = (zTop + zBot) / 2;
     cx.fillText('ZONA DE', bX + 16, zm - 8);
     cx.fillText('TRABALHO', bX + 16, zm + 4);
-    cx.fillText(`${p.plugHeight.toFixed(0)} m`, bX + 16, zm + 16);
+    cx.fillText(`${formatDepth(p.plugHeight, this.depthUnit, 0)}`, bX + 16, zm + 16);
 
     this.drawDepthAnnotations(cx, model.depthMarkers.map(marker => ({
       id: marker.key,
@@ -648,20 +653,20 @@ export class SchematicTampaoComponent implements AfterViewInit, OnChanges, OnDes
       visibleInfoRows({
         title: 'Dados do esquemático',
         rows: [
-          { label: 'Zona trabalho', value: formatM(p.plugHeight, 0) },
+          { label: 'Zona trabalho', value: this.depth(p.plugHeight, 0) },
           { label: 'Cimento', value: formatBbl(p.volCementTotal) },
           { label: 'Água de Deslocamento', value: joinInfoParts(formatBbl(p.volDisplacement), formatPpg(this.inputs?.displacementWeight ?? this.inputs?.completionWeight)) },
-          { label: 'Água frente', value: joinInfoParts(formatM(p.frontPhysicalHeight, 0), formatBbl(p.volWashTotal)) },
-          { label: 'Água trás', value: joinInfoParts(formatM(p.backPhysicalHeight, 0), formatBbl(p.volBackSpacer)) },
+          { label: 'Água frente', value: joinInfoParts(this.depth(p.frontPhysicalHeight, 0), formatBbl(p.volWashTotal)) },
+          { label: 'Água trás', value: joinInfoParts(this.depth(p.backPhysicalHeight, 0), formatBbl(p.volBackSpacer)) },
         ],
       }),
       visibleInfoRows({
         title: 'Profundidade da pasta',
         rows: [
           { label: 'Volume total de pasta', value: formatBbl(p.volCementTotal) },
-          { label: 'Altura com coluna', value: formatM(p.cementHeightWithTubing) },
-          { label: 'Altura sem coluna', value: formatM(p.cementHeightWithoutTubing) },
-          { label: 'Topo antes da injeção', value: formatM(topCement) },
+          { label: 'Altura com coluna', value: this.depth(p.cementHeightWithTubing) },
+          { label: 'Altura sem coluna', value: this.depth(p.cementHeightWithoutTubing) },
+          { label: 'Topo antes da injeção', value: this.depth(topCement) },
           { label: 'Volume a ser injetado', value: null },
           { label: 'Topo após injeção', value: null },
         ],

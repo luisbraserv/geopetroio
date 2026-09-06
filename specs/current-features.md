@@ -216,6 +216,25 @@ quebra o histórico de telemetria**, e nada no sistema impede ou avisa. Ver
 
 **Regras [FATO]** · nome duplicado → `409` · ⚠️ **exclusão sem guarda de vínculo**
 
+### Decidido em 2026-09-05 — ainda não implementado
+
+**[DECIDIDO 2026-09-05]** Dois acréscimos ao cadastro:
+
+| Mudança | Detalhe |
+|---|---|
+| **Campo `tipo`** | `SONDA` · `UNIDADE_BOMBEIO` · `SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ` — [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) |
+| **Guarda de exclusão** | Passa a **bloquear** quando houver vínculo, em vez do `500` de FK — [RN-063](business-rules.md#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros) |
+
+⚠️ **O `tipo` exige migração manual.** Sem Flyway e com `ddl-auto=validate` em produção, a coluna precisa
+ser criada por script **antes** do deploy, e as unidades existentes precisam de valor — `SONDA` é o
+padrão coerente com a frota atual, mas convém conferir registro a registro
+([DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)). O
+`deploy/mysql-init/01-schema.sql` também precisa ser regerado.
+
+⚠️ **O `tipo` não muda a telemetria por si.** As telas de Monitoramento e Tempo Real continuam pedindo
+as mesmas cinco variáveis de sonda para qualquer unidade — ver
+[OQ-041](open-questions.md#oq-041--o-tipo-da-unidade-define-quais-variáveis-são-monitoradas).
+
 ---
 
 ## F-08 a F-11 · Projetos, Processos, Anotações e Observações — REMOVIDOS

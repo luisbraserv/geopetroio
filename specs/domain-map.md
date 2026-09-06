@@ -52,6 +52,16 @@ Empresa (empresas)   cnpj UNIQUE (mas nullable)
 **[FATO]** Com a saída de `projeto`, a Regional passou a ter apenas dois tipos de dependente: setores
 e usuários internos.
 
+✅ **[DECIDIDO 2026-09-05]** Com a remoção do vínculo organizacional do usuário
+([RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional)), a Regional passa a
+ter **um único dependente: o Setor**. A hierarquia fica puramente estrutural — Regional → Setor →
+Unidade/Sonda — sem nenhum ramo apontando para pessoas.
+
+**[DECIDIDO 2026-09-05] `UnidadeSonda` ganha `tipo`:** `SONDA` · `UNIDADE_BOMBEIO` ·
+`SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ`. O cadastro sempre abrigou mais que sondas — é o que o
+próprio nome do módulo indica. Ver [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) e, para o
+efeito na telemetria, [OQ-041](open-questions.md#oq-041--o-tipo-da-unidade-define-quais-variáveis-são-monitoradas).
+
 ### Usuário — modelo de herança
 
 **[FATO]** `SINGLE_TABLE` em `usuarios`, discriminador `tipo_usuario`, **PK é o `username`** (String,
@@ -71,9 +81,10 @@ cliente é pequeno.
 ⚠️ **[FATO]** `UsuarioClienteEntity` guarda a empresa **duas vezes**: `empresa` (String denormalizada)
 e `empresaRef` (FK). Fonte potencial de divergência.
 
-⚠️ **[FATO]** O vínculo N:N com regionais e setores existe desde `V2026.06.03`, **mas o controle de
-acesso ignora essas listas** e usa apenas a regional principal —
-[RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização).
+✅ **[DECIDIDO 2026-09-05] O vínculo N:N com regionais e setores é removido.** Existia desde
+`V2026.06.03` e, desde 2026-08-27, **não influenciava nenhuma decisão** — nem no backend nem no front.
+Saem a regional principal, as duas listas N:N e as tabelas `usuario_interno_regionais` e
+`usuario_interno_setores`. Ver [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional).
 
 ## 3. Domínio de Telemetria
 
@@ -155,6 +166,33 @@ aceita conscientemente ([DT-010](technical-debt.md#dt-010--duplicação-entre-os
 **[FATO]** Com as remoções, `simulador` é hoje **o único módulo de domínio de negócio próprio** que
 resta no backend, além de identidade e organização.
 
+### Poço — entidade decidida em 2026-09-05
+
+**[DECIDIDO 2026-09-05]** `Poço` passa a ser **entidade do sistema**. Ainda **não existe em código**.
+
+A motivação é operacional: o mesmo poço volta em vários cenários (squeeze, tampão, revisões), e
+redigitar a geometria a cada vez produz divergência entre cenários que descrevem a mesma realidade
+física.
+
+```
+Poço  (novo)
+ ├── geometria: fases · revestimentos · sapatas
+ ├── trajetória: estações de survey (MD · inclinação · azimute)
+ └── 1:N  CenarioSimulador  (referencia o poço)
+```
+
+⚠️ **É a primeira vez que o backend do simulador conhece o domínio.** Hoje ele é **agnóstico** —
+persiste `formValue` como `LONGTEXT` opaco e `operacao` como VARCHAR livre (§4 acima). Tirar a
+geometria de dentro do blob muda essa premissa arquitetural, não apenas o schema.
+
+**Relação com a telemetria [PENDENTE]:** a telemetria segue indexada por **sonda e tempo**, sem
+segmentação por poço. Com `Poço` existindo, a ponte entre os dois eixos do sistema deixa de ser
+hipotética — mas **não foi decidida**. Ver
+[OQ-027](open-questions.md#oq-027--o-simulador-deve-ganhar-um-consumidor-de-telemetria).
+
+Detalhe em [`../Front-Sonda-Geopetro-IO/specs/simulador/geometria-poco.md`](../Front-Sonda-Geopetro-IO/specs/simulador/geometria-poco.md)
+e [RN-059](business-rules.md#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário).
+
 ## 5. Domínios fora de escopo
 
 **[DECIDIDO 2026-08-26]**
@@ -225,5 +263,9 @@ perfis operacionais passando a ver a frota inteira, essa restrição **deixou de
 monitoramento — e com ela, a limitação descrita em
 [RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização) perdeu objeto.
 
-O vínculo N:N usuário↔regional/setor continua no modelo, mas hoje **não influencia nenhuma decisão de
-autorização**. Ver [OQ-002](open-questions.md#oq-002--múltiplas-regionais-por-usuário-devem-valer-para-autorização).
+O vínculo N:N usuário↔regional/setor continuava no modelo sem influenciar nenhuma decisão de
+autorização. ✅ **[DECIDIDO 2026-09-05] Foi removido** — ver
+[OQ-002](open-questions.md#oq-002--o-vínculo-regionalsetor-ainda-serve-para-alguma-coisa).
+
+**[DECIDIDO 2026-09-05]** A seleção de sondas por usuário **continua exclusiva do `CLIENTE`**. Perfis
+internos seguem enxergando a frota inteira: RN-047 e RN-048 permanecem exatamente como estão.

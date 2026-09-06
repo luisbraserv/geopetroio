@@ -34,8 +34,9 @@ impede isso — mas é proteção acidental, não declarada.
 **[FATO]** Exceção: se o valor já for hash BCrypt (regex `^\$2[aby]\$\d{2}\$.{53}$`), a validação é
 pulada — permite reusar o mesmo setter para senha crua (criação) e hash (reconstrução do banco).
 **[FATO] Inconsistência:** a troca via `/usuarios/me/senha` **não aplica** essa política no frontend.
-**[DECIDIDO 2026-08-26]** A política **não está definida formalmente**. Ver
-[OQ-004](open-questions.md#oq-004--qual-é-a-política-de-senha).
+✅ **[DECIDIDO 2026-09-05]** A política passa a ser **esta mesma**, aplicada no **backend** em todos os
+caminhos — inclusive na troca pelo próprio usuário, que hoje não a aplica. Ver
+[RN-061](#rn-061--política-de-senha-unificada) e [OQ-004](open-questions.md#oq-004--qual-é-a-política-de-senha).
 
 ### RN-005 · Nova senha deve diferir da atual
 **[FATO]** `AlterarSenhaUsuarioUseCase.alterar` exige senha atual válida, nova = confirmação, e nova ≠ atual.
@@ -44,9 +45,13 @@ pulada — permite reusar o mesmo setter para senha crua (criação) e hash (rec
 **[FATO]** `criarCliente` sempre inclui `CLIENTE`; `criarInterno` sempre inclui `INTERNO`, além das
 roles informadas.
 
-### RN-007 · Regional principal entra automaticamente na lista de regionais
-**[FATO]** `CriarUsuarioUseCase.resolverRegionais` — se uma regional principal for informada, ela
-**sempre** é adicionada ao conjunto de regionais do usuário interno.
+### RN-007 · ~~Regional principal entra automaticamente na lista de regionais~~ — REVOGADA
+**[DECIDIDO 2026-09-05]** O vínculo usuário↔regional/setor **sai do sistema** — a regra perde objeto
+junto com os campos. Ver [OQ-002](open-questions.md#oq-002--o-vínculo-regionalsetor-ainda-serve-para-alguma-coisa)
+e [RN-064](#rn-064--o-usuário-não-tem-mais-vínculo-organizacional).
+
+**O que dizia [FATO]:** `CriarUsuarioUseCase.resolverRegionais` — se uma regional principal fosse
+informada, ela **sempre** era adicionada ao conjunto de regionais do usuário interno.
 
 ### RN-008 · Value objects autovalidados
 **[FATO]** `Email` (precisa de `@` e `.` no domínio; normaliza trim+lowercase) · `Telefone`
@@ -136,7 +141,13 @@ novo domínio com escopo por setor nascer, **o filtro de acesso deve estar na sp
 ### RN-015 · ⚠️ Cenários do simulador não têm dono
 **[FATO]** `simulador` grava `criadoPor` como String simples, sem FK, e **nunca compara** com o
 usuário logado. Qualquer `CIMENTACAO`/`ADMIN` edita ou exclui cenários e pastas de outro usuário.
-**[PENDENTE]** Ver [OQ-005](open-questions.md#oq-005--cenários-do-simulador-têm-dono).
+✅ **[DECIDIDO 2026-09-05]** Fica **como está**, por escolha: equipe pequena e de confiança, o custo de
+controlar posse não compensa. Deixa de ser dívida e passa a ser decisão registrada — encerra
+[OQ-005](open-questions.md#oq-005--cenários-do-simulador-têm-dono).
+
+⚠️ **O que se aceita junto:** o relatório é **entregue ao cliente** e **não é congelado**. Um cenário
+que originou um relatório entregue pode ser alterado depois por outra pessoa, sem registro de quem nem
+de quando.
 
 ---
 
@@ -167,9 +178,13 @@ foram corrigidos; **a causa raiz não**.
 | Empresa | ⚠️ Nenhuma |
 | Pasta do simulador | Cascade `ALL` + `orphanRemoval` sobre os cenários |
 
-**⚠️ IMPLÍCITA:** não existe política declarada de integridade referencial. Cada módulo decidiu
-isoladamente. Só `Regional` tem guarda completa. Ver
+✅ **[DECIDIDO 2026-09-05]** Passa a existir política declarada: **bloquear quando houver vínculo**, em
+todos os cadastros, com mensagem dizendo o que impede. Ver
+[RN-063](#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros) e
 [OQ-007](open-questions.md#oq-007--qual-é-a-política-de-exclusão-do-sistema).
+
+**O que era [FATO]:** não existia política declarada de integridade referencial. Cada módulo decidiu
+isoladamente, e só `Regional` tinha guarda completa.
 
 **Nota histórica:** o módulo `quimico` (removido) tinha **duas políticas opostas dentro de si** —
 excluir `OperacaoSonda` era bloqueado se houvesse movimentações, mas excluir `Quimico` apagava todo o
@@ -180,6 +195,12 @@ histórico em cascata, com perda irreversível de auditoria.
 nas consultas de série temporal. Confirmado pela migration `V2026.06.15`.
 **⚠️ IMPLÍCITA e crítica:** renomear uma unidade **quebra o histórico de telemetria**, e nada no
 sistema impede ou avisa sobre isso.
+
+⚠️ **[DECIDIDO 2026-09-05] Agravada pela retenção de 5 anos.** Quanto mais histórico acumula, mais caro
+fica o dia em que alguém renomear uma sonda para corrigir um erro de digitação. É o risco de maior
+custo da base, e cresce sozinho. Mitigações possíveis, nenhuma decidida: bloquear o rename quando
+houver histórico, migrar a chave do InfluxDB para o id numérico (como o tempo real já faz), ou manter
+um mapa de nomes anteriores.
 
 ---
 
@@ -384,6 +405,11 @@ revogação.** O frontend derruba a sessão em qualquer `401`.
 acessando até o token expirar — o filtro lê as roles do token sem reconsultar o banco.
 Ver [SEC-008](security-findings.md#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário).
 
+⚠️ **[DECIDIDO 2026-09-05] Parcialmente superada.** Desativar um usuário passa a **cortar o acesso na
+hora** ([RN-062](#rn-062--desativar-usuário-corta-o-acesso-na-hora)). O que **permanece verdadeiro**: um
+token vazado de usuário **ativo** continua válido até expirar — não há revogação de token individual,
+apenas verificação do estado do usuário.
+
 ### RN-046 · CORS permite túneis de desenvolvimento
 **[FATO]** O padrão default inclui `https://*.trycloudflare.com`. Aceitável em dev; **[PENDENTE]**
 confirmar que não vale em produção.
@@ -435,3 +461,318 @@ congelariam sem aviso.
 
 A tela alerta após **5 segundos** sem leitura nova. **⚠️ IMPLÍCITA:** o limite de 5s foi escolhido
 como ~5× o ciclo de 1s; nunca foi validado com a operação.
+
+---
+
+## Regras decididas em 2026-09-05 — ainda não implementadas
+
+> **[DECIDIDO 2026-09-05]** Vieram da entrevista de produto, não do código. Nenhuma tem implementação
+> hoje. Estão aqui porque, pela regra do repositório, **a mudança de comportamento começa pela spec**.
+> Contexto em [`product-context.md`](product-context.md) · detalhe em [`features/alarmes.md`](features/alarmes.md).
+
+### RN-054 · O escopo do alarme é a sonda, e o limite muda na hora
+**[DECIDIDO 2026-09-05]** O limite é definido **por Unidade/Sonda e por grandeza**, ajustável pela
+supervisão **na própria tela de monitoramento**, sem passar pelo cadastro.
+
+⚠️ **Consequência aceita:** sem entidade que delimite a operação, o limite ajustado para o trabalho de
+hoje continua valendo semana que vem, para outro trabalho, até alguém lembrar de trocar. Não há "fim do
+trabalho" que o sistema reconheça.
+
+### RN-055 · Os dois lados avaliam, só o servidor registra
+**[DECIDIDO 2026-09-05]** O Desktop avalia e **sinaliza localmente** (funciona sem rede); o servidor
+avalia e é o **único produtor do histórico de eventos**.
+
+**Por quê:** dois produtores do mesmo evento exigiriam deduplicação por janela, com relógios diferentes
+nos dois lados. **Custo aceito:** excursão ocorrida com a sonda offline alerta o operador local e **não
+entra no histórico**.
+
+### RN-056 · Um evento por excursão, não por leitura
+**[DECIDIDO 2026-09-05]** O evento tem início, fim e valor extremo. A 1 leitura/s, registrar por leitura
+produziria 600 linhas para 10 minutos fora da faixa.
+
+**[PENDENTE]** Histerese e tempo mínimo fora/dentro — sem isso, um valor oscilando na fronteira abre e
+fecha dezenas de eventos por minuto.
+
+### RN-057 · A configuração desce pelo canal de tempo real, e a sonda pede ao reconectar
+**[DECIDIDO 2026-09-05]** O que o servidor precisa mandar para a sonda (limites hoje, versão de
+atualização depois) desce pela **conexão WebSocket/STOMP que já existe** — não por MQTT, que reverteria
+a decisão de um produtor e um consumidor no broker.
+
+**Regra obrigatória:** ao conectar e ao **reconectar**, o Desktop pede a configuração vigente. Sem isso,
+um limite alterado enquanto a sonda estava fora nunca chegaria, e ela operaria com valor velho sem que
+ninguém percebesse.
+
+### RN-058 · Telemetria remota não pode ter lacuna
+**[DECIDIDO 2026-09-05]** Supera [RN-039](#rn-039--perda-de-telemetria-em-falha-de-publicação): a perda
+de ciclo em falha de publicação **deixa de ser aceitável**. O Desktop passa a acumular e reenviar.
+
+⚠️ **Abre:** telemetria fora de ordem no consumidor ([OQ-031](open-questions.md#oq-031--o-consumidor-tolera-telemetria-fora-de-ordem))
+e dependência de auto-update para chegar à frota ([OQ-035](open-questions.md#oq-035--como-o-desktop-sonda-se-atualiza-em-campo)).
+
+### RN-059 · A geometria pertence ao poço, não ao cenário
+**[DECIDIDO 2026-09-05]** `Poço` vira entidade. Geometria e trajetória saem de dentro do `formValue`
+opaco do cenário e passam a pertencer ao poço, que o cenário referencia.
+
+**[FATO]** Antes desta entrega, o backend do simulador persistia o formulário como
+`LONGTEXT` opaco. O cadastro de poços introduz geometria tipada e validação de domínio no backend.
+
+**[DECIDIDO 2026-09-05]** Referência por id — [RN-067](#rn-067--o-cenário-referencia-o-poço).
+
+**[FATO 2026-09-06]** Cadastro e vínculo implementados no working tree. O poço
+guarda geometria tipada em metros, validada pelo backend; o cenário vinculado
+carrega a geometria atual. Cenários legados continuam sem vínculo. Contrato e
+migration em [simulador-pocos.md](../Backend-Sonda-Geopetro-IO/specs/simulador-pocos.md).
+
+### RN-060 · TVD é derivado da trajetória, não digitado
+**[DECIDIDO 2026-09-05]** Com o survey (estações de MD, inclinação e azimute), o TVD passa a ser
+**calculado**. Hoje é entrada digitada por fase, com interpolação linear dentro do trecho.
+
+⚠️ **Manter os dois caminhos convida a divergência** entre o TVD que o engenheiro digitou e o que a
+trajetória calcula. Sem trajetória informada, o comportamento atual continua valendo — poço vertical ou
+aproximação por fase.
+
+✅ **[DECIDIDO 2026-09-05]** Método: **mínima curvatura** — ver [RN-066](#rn-066--mínima-curvatura-e-profundidade-gravada-em-metros).
+
+---
+
+## Regras da rodada 2 — 2026-09-05
+
+> **[DECIDIDO 2026-09-05]** Também sem implementação hoje.
+
+### RN-061 · Política de senha unificada
+**[DECIDIDO 2026-09-05]** **8 a 20 caracteres**, com minúscula, maiúscula, dígito e caractere especial.
+Vale em **todos** os caminhos, validada **no backend** — inclusive em `PATCH /usuarios/me/senha`, que
+hoje só confere se os dois campos batem.
+
+**Não entram:** expiração periódica, histórico de senhas anteriores e bloqueio por tentativas.
+
+⚠️ **Efeito na base atual:** senhas existentes que não atendam à regra continuam funcionando no login —
+a validação incide sobre a **definição** de senha, não sobre a verificação. Forçar adequação exigiria
+troca compulsória, que não foi decidida.
+
+### RN-062 · Desativar usuário corta o acesso na hora
+**[DECIDIDO 2026-09-05]** Supera parte de [RN-045](#rn-045--sessão-expira-em-1-hora-sem-renovação):
+`PATCH /usuarios/{username}/desativar` passa a ter **efeito imediato**, sem esperar o token expirar.
+
+**Implementação esperada:** o `JwtAuthenticationFilter` consulta o estado do usuário; um cache de poucos
+segundos evita uma consulta por requisição sem tornar o corte perceptivelmente mais lento.
+
+⚠️ **O que continua valendo:** não há revogação de **token individual**. Um token vazado de usuário
+ativo segue válido até expirar.
+
+### RN-063 · Exclusão bloqueada por vínculo, em todos os cadastros
+**[DECIDIDO 2026-09-05]** A regra que só a Regional aplica passa a valer para **Setor, Unidade/Sonda e
+Empresa**: havendo vínculo, a exclusão é recusada com mensagem dizendo **o que** impede — em vez do
+`500` genérico de violação de FK de hoje.
+
+**Sem exclusão lógica.** Nada de `ativo=false` como substituto de apagar.
+
+⚠️ **Não cobre o histórico:** o vínculo verificado é relacional, e a telemetria vive no InfluxDB sem FK.
+Ver [OQ-039](open-questions.md#oq-039--excluir-sonda-com-histórico-de-telemetria).
+
+### RN-064 · O usuário não tem mais vínculo organizacional
+**[DECIDIDO 2026-09-05]** Saem do sistema: `regional` principal, a lista N:N de regionais e a lista N:N
+de setores do usuário interno — entidade, formulário, payload e as tabelas `usuario_interno_regionais`
+e `usuario_interno_setores`.
+
+**Motivo:** desde 2026-08-27 esses campos não influenciam nenhuma decisão. Campo preenchido que não faz
+nada é dívida silenciosa — alguém assume que restringe acesso.
+
+**O que decide visibilidade continua sendo:** a **role** ([RN-047](#rn-047--escopo-de-sondas-por-perfil))
+e, para o cliente, a **concessão explícita de unidades** ([RN-048](#rn-048--concessão-de-sondas-ao-cliente-é-explícita)).
+Ambas **inalteradas**.
+
+**[FATO verificado 2026-09-05]** Nenhuma guarda depende desses vínculos — `RegionalConsultaPort` é
+implementado só por `setor` e `unidade-sonda`. A remoção **elimina** um modo de falha: hoje, excluir uma
+Regional com usuários vinculados e sem setores passa pela validação e quebra em FK.
+
+### RN-065 · Unidade/Sonda tem tipo
+**[DECIDIDO 2026-09-05]** `UnidadeSonda` ganha o campo **`tipo`**, de vocabulário fechado:
+
+| Valor | Equipamento |
+|---|---|
+| `SONDA` | Sonda de perfuração / workover |
+| `UNIDADE_BOMBEIO` | Unidade de bombeio |
+| `SLICKLINE_WIRELINE` | Slickline / wireline |
+| `CIMENTACAO` | Unidade de cimentação |
+| `UCAQ` | Unidade de cimentação e acidificação |
+
+**Por que importa além do cadastro:** o nome do módulo é `unidade-sonda` justamente porque a entidade
+sempre foi mais ampla que "sonda". O tipo torna isso explícito e passa a permitir que a interface trate
+equipamentos diferentes de forma diferente.
+
+✅ **[DECIDIDO 2026-09-05] O tipo não altera a telemetria** — ver
+[RN-074](#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora). A tela continua consultando os mesmos
+cinco dispositivos, e unidades que não são sonda ficam sem monitoramento.
+
+**[PROPOSTA 2026-09-05] A função concreta do tipo hoje é outra:** carregar um **perfil de limites de
+alarme padrão**, aplicado no cadastro da unidade — ver [RN-071](#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico).
+Sem isso, cada unidade nova exige preencher 30 campos de alarme do zero.
+
+⚠️ **Migração:** as unidades já cadastradas precisam de um valor. `SONDA` é o padrão coerente com a
+frota atual, mas isso deve ser conferido registro a registro antes de tornar o campo obrigatório.
+
+### RN-066 · Mínima curvatura, e profundidade gravada em metros
+**[DECIDIDO 2026-09-05]** A trajetória é calculada por **mínima curvatura** — padrão da indústria, e o
+método que se espera declarado num relatório entregue ao cliente.
+
+**Unidade:** a tela oferece **metros e pés**; o armazenamento é **sempre em metros**, com conversão na
+exibição.
+
+**Por quê:** é a mesma decisão que o Horus tomou para PSI e kgf/cm² em 2026-08-28
+([F-19](current-features.md#f-19--carta-de-operação-cimentação)). Se a unidade escolhida chegasse ao
+arquivo, o mesmo campo passaria a significar coisas diferentes conforme a configuração vigente no dia.
+
+### RN-067 · O cenário referencia o poço
+**[DECIDIDO 2026-09-05]** O cenário guarda o **id do poço**, não uma cópia da geometria.
+
+**Consequência aceita:** corrigir a geometria do poço corrige **todos** os cenários dele de uma vez —
+inclusive os que já geraram relatório entregue. É coerente com a decisão de o relatório **não** ser
+congelado ([product-context §6](product-context.md#6-simulador--o-relatório-é-entregável-ao-cliente)):
+o sistema sempre mostra a realidade como se sabe hoje, não como se sabia na entrega.
+
+### RN-068 · Alarme abre e fecha por tempo mínimo
+**[DECIDIDO 2026-09-05]** O evento só abre após o valor ficar **N segundos consecutivos fora** da faixa,
+e só fecha após **N segundos dentro**. Sem isso, a 1 leitura/s, um valor tremendo na fronteira abriria e
+fecharia dezenas de eventos por minuto.
+
+✅ **[DECIDIDO 2026-09-05]** Os tempos são **configuráveis por sonda**, junto do limite e na mesma tela —
+não são constantes do sistema. Ver [RN-071](#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico).
+
+### RN-069 · Quem vê a sonda vê e ajusta o alarme dela
+**[DECIDIDO 2026-09-05]** Sem role própria para alarme: **todo usuário que enxerga a sonda** vê o estado
+atual, vê o histórico de eventos e **ajusta o limite** — inclusive o `CLIENTE`, nas sondas concedidas.
+
+⚠️ **Mitigação obrigatória:** o limite guarda **quem alterou e quando**. Sem esse registro, um limite
+mudado no meio de uma operação é indistinguível de um limite que sempre foi aquele.
+
+### RN-070 · Ausência de dado não é alarme
+**[DECIDIDO 2026-09-05]** Sonda que para de publicar **não** gera evento de alarme. Permanece apenas o
+aviso visual da tela após 5 segundos sem leitura nova ([RN-053](#rn-053--estar-online-não-significa-dado-fresco)).
+
+**Por quê:** com a conectividade variando muito entre sondas, alarmar silêncio produziria ruído
+constante — e o alarme que toca sempre deixa de ser lido.
+
+---
+
+## Regras das rodadas 3 a 6 — 2026-09-05
+
+### RN-071 · O alarme tem dois níveis: atenção e crítico
+**[DECIDIDO 2026-09-05]** Cada grandeza tem **faixa de atenção** e **faixa crítica**. A de atenção
+existe para dar tempo de reagir **antes** do limite duro.
+
+⚠️ **A superfície de configuração cresce rápido.** Por sonda e por grandeza: mínimo e máximo de atenção,
+mínimo e máximo crítico, tempo mínimo fora e tempo mínimo dentro — **seis parâmetros**. Com cinco
+grandezas, são **30 campos por sonda**, e mais de 10 sondas na frota.
+
+**[PROPOSTA 2026-09-05] O `tipo` da Unidade/Sonda carrega um perfil de limites padrão**, aplicado no
+cadastro da unidade. É a função concreta que o tipo ganha enquanto a telemetria segue exclusiva de sonda
+([RN-074](#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora)). Sem algo assim, ninguém preenche 30
+campos por equipamento — e alarme mal configurado é pior que alarme nenhum, porque ensina a ignorar.
+
+### RN-072 · Histórico de telemetria conta como vínculo
+**[DECIDIDO 2026-09-05]** Uma Unidade/Sonda com série gravada **não pode ser excluída**. O histórico
+entra na mesma guarda de [RN-063](#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros).
+
+⚠️ **Exige contrato novo:** o vínculo verificado hoje é relacional, e a telemetria vive no InfluxDB, em
+outro serviço. O Backend-Sonda precisa **perguntar** à Telemetria se existe série para aquela sonda —
+endpoint que não existe. Ver [`contracts/rest-monitoramento.md`](contracts/rest-monitoramento.md#7-verificação-de-existência-de-série).
+
+**Comportamento na indisponibilidade:** se a Telemetria estiver fora, a resposta segura é **recusar a
+exclusão** — apagar um cadastro por não conseguir confirmar que ele tem histórico é o erro irreversível.
+
+### RN-073 · Atualização automática só com o CLP desconectado
+**[DECIDIDO 2026-09-05]** O Desktop-Sonda baixa e instala sozinho, mas **só** quando não há leitura
+acontecendo. Sem conexão ao CLP, não há operação em curso — o app sabe disso sem depender de agenda nem
+de gente.
+
+⚠️ **Risco de nunca atualizar:** uma sonda conectada 24/7 jamais encontraria a janela. Na prática ela
+existe — falha de leitura já desconecta o cliente S7 e exige reconexão manual
+([F-16](current-features.md#f-16--captura-de-telemetria-na-sonda)) — mas convém prever prazo máximo ou
+um comando explícito de atualizar agora.
+
+⚠️ **A primeira distribuição é presencial de qualquer forma:** o mecanismo de auto-update precisa chegar
+às máquinas que ainda não o têm. Ver [OQ-023](open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção).
+
+### RN-074 · O tipo não altera o que é monitorado, por ora
+**[DECIDIDO 2026-09-05]** `UnidadeSonda.tipo` ([RN-065](#rn-065--unidadesonda-tem-tipo)) é **classificação
+de cadastro**. A telemetria continua exclusiva de sonda de perfuração, com as mesmas cinco variáveis.
+
+**Consequência aceita:** uma unidade de bombeio, slickline, cimentação ou UCAQ existe no cadastro **sem
+monitoramento**. A tela dela não tem dado para mostrar.
+
+**Caminho de saída já identificado:** [OQ-043](open-questions.md#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp)
+— com o mapeamento card→endereço configurável, instrumentar outro equipamento vira configuração, não
+desenvolvimento.
+
+### RN-075 · O simulador não consome telemetria
+**[DECIDIDO 2026-09-05]** Simulador e telemetria são **sistemas separados, sem correlação**. Não há
+sobreposição de curva prevista com curva medida, e a telemetria **não** é segmentada por poço.
+
+**O `Poço` existe apenas no domínio do simulador** ([RN-059](#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário)),
+como dono da geometria e da trajetória. Encerra [OQ-027](open-questions.md#oq-027--o-simulador-deve-ganhar-um-consumidor-de-telemetria).
+
+---
+
+## Regras da rodada final — 2026-09-05
+
+### RN-076 · O alarme é registrado como sequência de fatos
+**[DECIDIDO 2026-09-05]** A ocorrência de alarme é gravada como **log append-only** (*event sourcing*),
+com quatro fatos: `ABRIU` · `ESCALOU` · `REDUZIU` · `FECHOU`. Uma excursão que atravessa a atenção e
+chega à crítica é **um episódio que escala**, não dois registros nem um campo sobrescrito.
+
+A tela de alarmes ativos é uma **projeção**, reconstruível a partir do log.
+
+**Escopo, e só ele [DECIDIDO 2026-09-05]:**
+
+| Fica dentro | Fica fora |
+|---|---|
+| Ocorrências de alarme | Os **limites** — configuração é CRUD com autoria |
+| — | Cadastros, usuários, simulador — seguem CRUD com JPA |
+
+⚠️ **[FATO verificado 2026-09-05] Não existe event sourcing no sistema hoje.** Nenhuma ocorrência de
+`DomainEvent`, `EventStore`, `Aggregate`, `Projection` ou `ApplicationEventPublisher` nos dois backends.
+As classes `*Command` do módulo `usuario` são **objetos de entrada de caso de uso** — nomenclatura de
+arquitetura hexagonal, não CQRS. Esta regra cria a primeira fatia orientada a eventos do sistema.
+
+### RN-077 · CQRS existe na telemetria, e só nela
+**[FATO 2026-09-05]** O Backend-Telemetria **separa modelo de escrita e de leitura**, e é o único
+componente que o faz:
+
+| Caminho | Modelo | Onde |
+|---|---|---|
+| Escrita | `TelemetriaBatch` → `LeituraTelemetria` → ponto no InfluxDB | `IngestaoTelemetriaService` |
+| Leitura | série agregada por janela → `MonitoramentoSerieDTO` | `ConsultaSerieService` |
+
+Os dois nunca se cruzam, e o modelo de leitura é **agregado**, com teto de pontos — não é o de escrita.
+
+⚠️ **A separação não vem do MQTT.** Produtor e consumidor via broker é **mensageria**, não CQRS: seria
+CQRS igualmente se a ingestão fosse por HTTP. A distinção importa para ninguém concluir que o sistema
+inteiro é CQRS — o Backend-Sonda é CRUD com JPA, mesma entidade para ler e gravar.
+
+### RN-078 · Sem perfil padrão de alarme; o limite vale até alguém trocar
+**[DECIDIDO 2026-09-05]** **Cada sonda é configurada individualmente.** Os limites nascem vazios, e a
+proposta de perfil padrão por `tipo` foi **recusada**.
+
+| Situação | Comportamento |
+|---|---|
+| Sonda sem limite configurado | **Não alarma.** É estado normal — o sistema não sinaliza a ausência |
+| Limite ajustado no meio de um trabalho | Vale **até alguém trocar**. Não expira, não volta a padrão |
+
+⚠️ **O que isso concentra no registro de autoria:** sem perfil padrão e sem expiração, o valor vigente
+de um limite não tem nenhuma referência externa que o explique. `atualizadoPor`/`atualizadoEm`
+([RN-069](#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)) passa a ser a única forma de entender,
+meses depois, por que o limite era aquele. Deixa de ser mitigação e vira parte do funcionamento.
+
+### RN-079 · A API padroniza o prefixo `/api`
+**[DECIDIDO 2026-09-05]** `/auth/login` e `/usuarios/**` passam para `/api`, uniformizando a superfície
+da API. Encerra [OQ-013](open-questions.md#oq-013--endpoints-fora-do-padrão-api-são-deliberados).
+
+⚠️ **Ordem de execução importa mais que a mudança.** A migração mexe em `SecurityConfig`, no front e no
+`nginx.conf` ao mesmo tempo — e a **ordem dos `requestMatchers` é exatamente onde SEC-001, SEC-002 e
+SEC-003 nasceram**, sem nenhum teste HTTP para detectar regressão
+([DT-007](technical-debt.md#dt-007--ausência-de-testes-em-áreas-críticas)).
+
+**Escrever os testes de `SecurityConfig` antes de mover as rotas** — eles já estão especificados em
+[security-findings](security-findings.md#próximo-passo-recomendado) e passariam a valer como rede de
+proteção justamente na mudança que mais precisa de uma.

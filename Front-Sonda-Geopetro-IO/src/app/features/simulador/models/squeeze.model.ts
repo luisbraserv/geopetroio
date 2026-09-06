@@ -110,6 +110,11 @@ export interface SqueezeGeometry {
   annulusVolume: number;
   workVolumeBbl: number;
   cementHeightWithTubing: number;
+  /** Volumes integrados por trecho, com a coluna imersa. */
+  cementVolumeTubingBbl?: number;
+  cementVolumeAnnulusBbl?: number;
+  /** Topo do conjunto deslocamento + espaçadores após retirar a coluna. */
+  topDisplacementAfterPullMD?: number;
   cementHeightWithoutTubing: number;
   topCementImmersedMD: number;
   topCementAfterPullMD: number;
@@ -201,8 +206,34 @@ export interface SqueezeHydraulicSummary {
   equipmentAlerts: string[];
 }
 
+/**
+ * Ponto do perfil de pressão × profundidade do anular. Poro e fratura só
+ * existem dentro da seção de interesse (abaixo do topo da seção) — acima
+ * disso vêm null e a curva não é desenhada ali.
+ */
+export interface AnnularPressureDepthPoint {
+  md: number;
+  tvd: number;
+  porePsi: number | null;
+  fracPsi: number | null;
+  /** Maior pressão anular vista naquela profundidade durante toda a operação. */
+  maxAnnularPsi: number;
+  /** Menor pressão anular vista naquela profundidade durante toda a operação. */
+  minAnnularPsi: number;
+}
+
+export interface AnnularPressureProfile {
+  points: AnnularPressureDepthPoint[];
+  /** MD a partir do qual poro e fratura são plotados (topo da seção). */
+  windowTopMD: number;
+  /** MD da profundidade de referência (base do perfil). */
+  bottomMD: number;
+}
+
 export interface SqueezeHydraulicSimulation {
   summary: SqueezeHydraulicSummary;
   points: SqueezeHydraulicPoint[];
   categories: string[];
+  /** Envelope de pressão anular ao longo da profundidade (poro/fratura/anular máx e mín). */
+  annularProfile: AnnularPressureProfile;
 }

@@ -1,8 +1,9 @@
+import { scenarioPayload, scenarioForm } from '../../models/poco.model';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, OnDestroy, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SimuladorStateApiService, PastaApi, CenarioApi } from '../../services/simulador-state-api.service';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { ToastService } from '../../../../shared/toast/toast.service';
 
 type View = 'list' | 'nova-pasta' | 'novo-cenario';
@@ -305,7 +306,7 @@ type View = 'list' | 'nova-pasta' | 'novo-cenario';
     @keyframes sm-spin { to { transform: rotate(360deg); } }
   `],
 })
-export class SimuladorStateModalComponent implements OnChanges {
+export class SimuladorStateModalComponent implements OnChanges, OnDestroy {
   @Input() open = false;
   @Input() operacao: 'tampao' | 'squeeze' = 'tampao';
   @Output() closed = new EventEmitter<void>();
@@ -329,6 +330,7 @@ export class SimuladorStateModalComponent implements OnChanges {
   erro = '';
 
   private pendingFormValue: Record<string, unknown> = {};
+  private pendingLoad?: Subscription;
 
   get savePlaceholder(): string {
     return this.pastaAtiva ? `Salvar em "${this.pastaAtiva.nome}"...` : 'Nome do cenário...';
@@ -341,6 +343,7 @@ export class SimuladorStateModalComponent implements OnChanges {
   ) {}
 
   ngOnChanges(): void {
+    if (!this.open) this.cancelLoad();
     if (this.open) {
       this.novoCenarioNome = '';
       this.novaPastaNome = '';
@@ -465,16 +468,18 @@ export class SimuladorStateModalComponent implements OnChanges {
 
   // ── Cenários ──
   salvarCenario(): void {
-    if (!this.novoCenarioNome.trim()) return;
+    if (!this.novoCenarioNome.trim() || this.loading) return;
+    const payload = this.preparePayload();
+    if (!payload) return;
     this.loading = true;
     this.api.criarCenario({
       nome: this.novoCenarioNome.trim(),
       operacao: this.operacao,
       pastaId: this.pastaAtiva?.id ?? null,
-      formValue: JSON.stringify(this.pendingFormValue),
+      ...payload,
       dadosRelatorio: null,
     }).pipe(finalize(() => this.loading = false)).subscribe({
-      error: (e) => { this.setErro(`Erro ao salvar cenário (${e?.status ?? 'sem conexão'})`); this.cdr.detectChanges(); },
+      error: (e) => { this.setErro(e.error?.message ?? `Erro ao salvar cenário (${e?.status ?? 'sem conexão'})`); this.cdr.detectChanges(); },
       next: cenario => {
         this.cenarios = [cenario, ...this.cenarios];
         this.novoCenarioNome = '';
@@ -491,18 +496,30 @@ export class SimuladorStateModalComponent implements OnChanges {
     });
   }
 
+  private preparePayload(): ReturnType<typeof scenarioPayload> | null {
+    try { return scenarioPayload(this.pendingFormValue); }
+    catch (e) { this.setErro((e as Error).message); return null; }
+  }
+
   carregar(c: CenarioApi): void {
-    try {
-      const formValue = JSON.parse(c.formValue) as Record<string, unknown>;
-      this.carregar$.emit(formValue);
-      this.toast.success('Cenário carregado com sucesso.');
-      this.fechar();
-    } catch {
-      this.setErro('Não foi possível carregar o cenário selecionado.');
-    }
+    if (this.busyId != null) return;
+    this.busyId = c.id;
+    this.pendingLoad = this.api.buscarCenario(c.id).pipe(finalize(() => { this.busyId = null; this.cdr.markForCheck(); })).subscribe({
+      next: current => {
+        try {
+          this.carregar$.emit(scenarioForm(current));
+          this.toast.success('Cenário carregado com sucesso.');
+          this.fechar();
+        } catch { this.setErro('Não foi possível carregar o cenário selecionado.'); }
+      },
+      error: e => this.setErro(e.error?.message ?? 'Erro ao carregar o cenário.'),
+    });
   }
 
   atualizarCenario(c: CenarioApi): void {
+    if (this.busyId != null) return;
+    const payload = this.preparePayload();
+    if (!payload) return;
     if (!confirm(`Atualizar o cenário "${c.nome}" com os dados atuais? Os dados salvos serão substituídos.`)) return;
     this.busyId = c.id;
     this.cdr.detectChanges();
@@ -510,7 +527,7 @@ export class SimuladorStateModalComponent implements OnChanges {
       nome: c.nome,
       operacao: this.operacao,
       pastaId: c.pastaId,
-      formValue: JSON.stringify(this.pendingFormValue),
+      ...payload,
       dadosRelatorio: c.dadosRelatorio,
     }).pipe(finalize(() => { this.busyId = null; this.cdr.detectChanges(); })).subscribe({
       next: updated => {
@@ -518,7 +535,7 @@ export class SimuladorStateModalComponent implements OnChanges {
         this.toast.success('Cenário atualizado com sucesso.');
         this.cdr.detectChanges();
       },
-      error: (e) => { this.setErro(`Erro ao atualizar cenário (${e?.status ?? 'sem conexão'})`); this.cdr.detectChanges(); },
+      error: (e) => { this.setErro(e.error?.message ?? `Erro ao atualizar cenário (${e?.status ?? 'sem conexão'})`); this.cdr.detectChanges(); },
     });
   }
 
@@ -542,7 +559,9 @@ export class SimuladorStateModalComponent implements OnChanges {
     });
   }
 
-  fechar(): void { this.closed.emit(); }
+  private cancelLoad(): void { this.pendingLoad?.unsubscribe(); this.pendingLoad = undefined; }
+  ngOnDestroy(): void { this.cancelLoad(); }
+  fechar(): void { this.cancelLoad(); this.closed.emit(); }
 
   formatDate(iso: string): string {
     try {

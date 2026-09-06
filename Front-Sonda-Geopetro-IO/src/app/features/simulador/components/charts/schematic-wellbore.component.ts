@@ -1,3 +1,4 @@
+import { DepthUnit, formatDepth } from '../../models/depth-unit';
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { computeVisualSegmentHeights, displaySubtitleForSegment, layoutDepthAnnotations, shouldShowSegmentLabel, visualYForSegmentBoundary, VisualSegmentInput } from './visual-segments';
@@ -38,10 +39,6 @@ function fmtIn(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '-';
   return v.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
-function fmtNum(v: number | null | undefined, dec = 2): string {
-  if (v == null || !Number.isFinite(v)) return '-';
-  return v.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
 
 @Component({
   selector: 'app-schematic-wellbore',
@@ -74,6 +71,7 @@ function fmtNum(v: number | null | undefined, dec = 2): string {
   `],
 })
 export class SchematicWellboreComponent implements AfterViewInit, OnChanges, OnDestroy {
+  @Input() depthUnit: DepthUnit = 'm';
   @Input() config: WellboreSchematicConfig | null = null;
   @ViewChild('cv') cv!: ElementRef<HTMLCanvasElement>;
 
@@ -266,11 +264,11 @@ export class SchematicWellboreComponent implements AfterViewInit, OnChanges, OnD
     const fmtOD = (v: number) => Number.isFinite(v) ? v.toFixed(3) : '-';
 
     drawBox(
-      [`${fmtOD(cfg.casingOD)} in  Csg`, `${fmtNum(cfg.casingDepthM, 0)} m`],
+      [`${fmtOD(cfg.casingOD)} in  Csg`, `${formatDepth(cfg.casingDepthM, this.depthUnit, 0)}`],
       csgLX - 4, yCsgMid, csgLX, yCsgMid,
     );
     drawBox(
-      [`${fmtOD(cfg.tubingOD)} in  Tbg`, `${fmtNum(cfg.tubingDepthM, 0)} m`],
+      [`${fmtOD(cfg.tubingOD)} in  Tbg`, `${formatDepth(cfg.tubingDepthM, this.depthUnit, 0)}`],
       tbgLX - 4, yTbgMid, tbgLX, yTbgMid,
     );
 

@@ -11,6 +11,7 @@ public record CenarioResponse(
         String pastaNome,
         String formValue,
         String dadosRelatorio,
+        PocoResponse poco,
         String criadoPor,
         LocalDateTime criadoEm,
         LocalDateTime atualizadoEm
@@ -24,6 +25,7 @@ public record CenarioResponse(
                 e.getPasta() != null ? e.getPasta().getNome() : null,
                 e.getFormValue(),
                 e.getDadosRelatorio(),
+                e.getPoco() == null ? null : PocoResponse.de(e.getPoco()),
                 e.getCriadoPor(),
                 e.getCriadoEm(),
                 e.getAtualizadoEm()

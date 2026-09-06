@@ -50,6 +50,44 @@ describe('SqueezeHydraulicSimulationService', () => {
     expect(point.ecdPpg).toBeCloseTo(point.bhpPsi / (0.1706 * sim.summary.referenceTVD), 6);
   });
 
+  it('builds the annular pressure profile from surface down to the reference depth', () => {
+    const sim = service.simulate(geom, slurry, inputs, geom.perfs);
+    const profile = sim.annularProfile;
+    expect(profile.points.length).toBeGreaterThan(1);
+    expect(profile.windowTopMD).toBe(1400);
+    expect(profile.bottomMD).toBeCloseTo(sim.summary.referenceMD, 6);
+    expect(profile.points[0].md).toBe(0);
+    expect(profile.points[0].maxAnnularPsi).toBe(0);
+    expect(profile.points.at(-1)!.md).toBeCloseTo(sim.summary.referenceMD, 6);
+    // a envoltória é consistente e cresce com a profundidade
+    for (const point of profile.points) {
+      expect(point.maxAnnularPsi).toBeGreaterThanOrEqual(point.minAnnularPsi);
+    }
+    for (let i = 1; i < profile.points.length; i += 1) {
+      expect(profile.points[i].minAnnularPsi).toBeGreaterThanOrEqual(profile.points[i - 1].minAnnularPsi);
+    }
+  });
+
+  it('plots pore and fracture only from the top of the section downwards', () => {
+    const sim = service.simulate(geom, slurry, inputs, geom.perfs);
+    const profile = sim.annularProfile;
+    const above = profile.points.filter(p => p.md < profile.windowTopMD);
+    expect(above.length).toBeGreaterThan(0);
+    expect(above.every(p => p.porePsi === null && p.fracPsi === null)).toBe(true);
+    const bottom = profile.points.at(-1)!;
+    expect(bottom.porePsi).toBeCloseTo(sim.summary.porePsi, 6);
+    expect(bottom.fracPsi).toBeCloseTo(sim.summary.fracturePsi, 6);
+  });
+
+  it('keeps the minimum annular pressure at the well fluid hydrostatic', () => {
+    const sim = service.simulate(geom, slurry, inputs, geom.perfs);
+    const bottom = sim.annularProfile.points.at(-1)!;
+    // antes de qualquer retorno o anular está cheio do fluido de completação
+    expect(bottom.minAnnularPsi).toBeCloseTo(0.1706 * inputs.completionWeight * sim.summary.referenceTVD, 6);
+    // com a pasta chegando ao anular a pressão máxima é maior que essa
+    expect(bottom.maxAnnularPsi).toBeGreaterThan(bottom.minAnnularPsi);
+  });
+
   it('zeros friction and keeps volume unchanged during pauses', () => {
     const sim = service.simulate(geom, slurry, { ...inputs, tempoPausaMin: 5 }, geom.perfs);
     const pause = sim.points.find(p => p.programmedRateBpm === 0 && p.phase === 'Pasta de cimento')!;

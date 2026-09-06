@@ -25,6 +25,7 @@ essa realidade:
 
 | Documento | Conteúdo |
 |---|---|
+| [`product-context.md`](product-context.md) | **Para quem o sistema existe, quem usa cada superfície, realidade de campo** — a camada que não vem do código |
 | [`system-overview.md`](system-overview.md) | Arquitetura, aplicações, infraestrutura, deploy |
 | [`domain-map.md`](domain-map.md) | Domínios, módulos e relacionamentos |
 | [`current-features.md`](current-features.md) | Inventário de funcionalidades existentes |
@@ -33,6 +34,7 @@ essa realidade:
 | [`technical-debt.md`](technical-debt.md) | Inconsistências, duplicação, código morto |
 | [`open-questions.md`](open-questions.md) | Dúvidas pendentes de confirmação |
 | [`contracts/`](contracts/) | Contratos de integração entre aplicações — MQTT, REST e **WebSocket tempo real** |
+| [`features/`](features/) | Specs de feature que **atravessam aplicações** e por isso não cabem em um repositório só |
 
 ---
 
@@ -105,3 +107,84 @@ novamente, agora cobrindo autorização de sondas e do canal WebSocket.
 | Perda aceitável | Não | **Sim, por desenho** |
 
 Contratos em [`contracts/`](contracts/).
+
+---
+
+## Entrevista de produto — 2026-09-05
+
+**[DECIDIDO 2026-09-05]** Primeira rodada de perguntas cuja resposta **não estava no código**. Até
+aqui, toda a base respondia *"o que o sistema faz"*. Faltava *"para quem, para decidir o quê, e com que
+operação por trás"* — e é isso que decide o que vale construir.
+
+Registro completo em [`product-context.md`](product-context.md); decisões item a item em
+[`open-questions.md`](open-questions.md#entrevista-de-produto--2026-09-05).
+
+| Tema | Decisão |
+|---|---|
+| Público das telas web | **Supervisão remota e cliente** — o operador na sonda não é usuário da web |
+| **Alarmes por limite** | **Essenciais.** Borda e servidor · por sonda, ajustável na hora · tela + Desktop · evento com histórico |
+| **Poço** | **Vira entidade** — nasceu da necessidade de reaproveitar geometria entre cenários |
+| Relatório do simulador | **Entregável ao cliente** — eleva a validação de entrada a crítica |
+| Trajetória do poço | **Survey digitado** — o modelo em curso não comporta |
+| Perda de telemetria | **Inaceitável** — buffer de contingência entra na spec |
+| Retenção | **5 anos** |
+| Auto-update do Desktop | **Necessário** — não existe, e bloqueia quase tudo que é novo na borda |
+
+### O que mudou de lugar
+
+| Antes | Agora |
+|---|---|
+| O Desktop-Sonda era o produto na sonda | É **o sensor do sistema**; o valor aparece na web |
+| Alarme não existia como conceito | É requisito essencial, com spec própria em [`features/alarmes.md`](features/alarmes.md) |
+| Perda de telemetria era pergunta aberta | Não é aceitável — a conectividade varia demais entre sondas |
+| Simulador era cálculo interno | Produz **documento que sai da empresa** |
+
+### Rodada 2 — mesma data
+
+| Tema | Decisão |
+|---|---|
+| Senha · revogação · recuperação | Regra única no backend · **corte imediato** ao desativar · **autoatendimento por e-mail** (traz SMTP de volta) |
+| Exclusão | **Bloquear quando houver vínculo**, em todos os cadastros |
+| Vínculo usuário↔regional/setor | **Removido** — não influenciava nada desde 2026-08-27 |
+| **Tipo da Unidade/Sonda** | `SONDA` · `UNIDADE_BOMBEIO` · `SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ` |
+| Simulador | **Mínima curvatura** · cenário **referencia** o poço · metros e pés na tela, **metros gravados** |
+| Alarmes | **Tempo mínimo** fora/dentro · quem vê a sonda **ajusta** o limite · silêncio da sonda **não** alarma |
+| Retenção | **1 segundo durante os 5 anos**, sem agregação |
+| Infra e campo | Auto-update **automático** · **um** usuário de serviço para a frota · firewall basta entre VMs · rack/slot iguais na frota |
+
+### Rodadas 3 a 6 — fechamentos
+
+| Tema | Decisão |
+|---|---|
+| Alarme | **Atenção e crítico** · tempos **por sonda** · limite guarda quem alterou |
+| Exclusão de sonda | **Histórico conta como vínculo** — exige endpoint novo na Telemetria |
+| Auto-update | **Só com o CLP desconectado** |
+| Tipo da unidade | **Classificação apenas** — telemetria segue exclusiva de sonda |
+| Simulador × telemetria | **Sem correlação** — encerra OQ-027 |
+| Faixas do simulador | Equipe fornece — [tabela pronta](../Front-Sonda-Geopetro-IO/specs/simulador/faixas-validacao.md) |
+| Broker · CLP · OneDrive · backup | Autenticação **depois** do auto-update · modelo **varia por sonda** · repos **ficam** no OneDrive · MySQL **sem backup**, InfluxDB **adiado** |
+
+### Rodada final — arquitetura
+
+| Tema | Decisão |
+|---|---|
+| **Event sourcing** | **Só nos alarmes** — log de `ABRIU`/`ESCALOU`/`REDUZIU`/`FECHOU` com projeção. Nada mais migra |
+| **CQRS** | **Já existe no Backend-Telemetria** (escrita ≠ leitura) e **só lá**. MQTT é mensageria, não CQRS |
+| **Escalada de alarme** | **Um episódio que escala**, não dois eventos |
+| **Limites de alarme** | Sem perfil padrão · sonda sem limite **não alarma** · limite vale **até alguém trocar** |
+| **API** | **Padronizar tudo em `/api`** — testes de `SecurityConfig` **antes** de mover as rotas |
+| Kubernetes · rotas legadas · fora de ordem | Sem objeto (deploy é Compose) · migram · vira teste |
+
+⚠️ **Saldo operacional da entrevista:** **cinco alterações de schema** decididas, todas manuais e
+obrigatórias antes do próximo deploy — [DT-002](technical-debt.md#️-fila-de-mudanças-manuais-criada-em-2026-09-05).
+
+### Duas decisões que se corrigiram dentro da própria entrevista
+
+**[DECIDIDO 2026-09-05]** Registradas porque a segunda resposta contradiz a primeira, e isso é
+informação, não erro:
+
+1. **Poço** começou como "texto livre" (pergunta feita pelo ângulo da telemetria) e terminou como
+   **entidade** (pergunta feita pelo ângulo do simulador). Prevalece a segunda — é a que exige estrutura.
+2. **Limite de alarme ajustável na web + avaliação na borda** exigem um caminho servidor → sonda que
+   **não existia**: o Desktop só publicava, nunca recebia. A capacidade nova foi descoberta pela
+   combinação de duas respostas, não por nenhuma delas isolada.

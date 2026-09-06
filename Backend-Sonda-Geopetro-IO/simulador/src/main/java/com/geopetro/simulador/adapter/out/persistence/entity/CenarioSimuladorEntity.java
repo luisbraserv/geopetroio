@@ -21,6 +21,13 @@ public class CenarioSimuladorEntity {
     @JoinColumn(name = "pasta_id")
     private PastaSimuladorEntity pasta;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "poco_id", foreignKey = @ForeignKey(name = "fk_cenario_poco"))
+    private PocoEntity poco;
+
+    public PocoEntity getPoco() { return poco; }
+    public void setPoco(PocoEntity poco) { this.poco = poco; }
+
     @Column(name = "form_value", nullable = false, columnDefinition = "LONGTEXT")
     private String formValue;
 

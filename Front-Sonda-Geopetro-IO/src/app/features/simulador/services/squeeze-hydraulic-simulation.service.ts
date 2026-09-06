@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import {
+  AnnularPressureProfile,
   Perfuracao,
   SqueezeGeometry,
   SqueezeHydraulicPoint,
@@ -7,13 +8,33 @@ import {
   SqueezeInputs,
 } from '../models/squeeze.model';
 import { SlurryDesign } from '../models/pasta.model';
-import { CoreCalculoService } from './core-calculo.service';
+import { CoreCalculoService, SectionGeo } from './core-calculo.service';
 import { Aditivo } from '../models/aditivo.model';
 import { RheologyAdjustmentOptions, RheologyAdjustmentService } from './rheology-adjustment.service';
+import { WellGeometry, OperationInterval } from '../models/well-geometry.model';
+import { WellGeometryService } from './well-geometry.service';
+import { distributeFluids, FluidSlice, pumpedParcels } from './well-fluid-distribution';
+
+export interface HydraulicWellContext {
+  geometry: WellGeometry;
+  interval: OperationInterval;
+}
+
+interface GeometryHydraulicState {
+  annulus: FluidSlice[];
+  friction: Array<{ topMD: number; bottomMD: number; psi: number }>;
+}
 
 interface PowerLawRheo {
   n: number;
   k: number; // lbf·s^n/ft²
+}
+
+/** Camada de fluido do anular, de `from` a `to` em TVD (m). */
+interface FluidLayer {
+  from: number;
+  to: number;
+  den: number;
 }
 
 interface PhaseDef {
@@ -58,9 +79,10 @@ export class SqueezeHydraulicSimulationService {
   constructor(
     private core: CoreCalculoService,
     private rheologyAdj: RheologyAdjustmentService = new RheologyAdjustmentService(),
+    private wellGeo: WellGeometryService = new WellGeometryService(),
   ) {}
 
-  simulate(geom: SqueezeGeometry, slurry: SlurryDesign, inputs: SqueezeInputs, perfs: Perfuracao[], additives?: Aditivo[], rheologyOptions: RheologyAdjustmentOptions = {}): SqueezeHydraulicSimulation {
+  simulate(geom: SqueezeGeometry, slurry: SlurryDesign, inputs: SqueezeInputs, perfs: Perfuracao[], additives?: Aditivo[], rheologyOptions: RheologyAdjustmentOptions = {}, well?: HydraulicWellContext | null): SqueezeHydraulicSimulation {
     const rheologyResult = this.rheologyAdj.applyAdditiveRheologyEffects({}, additives || [], rheologyOptions);
     const rheologyPressureFactor = rheologyResult.rheologyPressureFactor;
     // Modelo de potência da pasta a partir das leituras Fann ajustadas (Petroguia F-41)
@@ -77,10 +99,11 @@ export class SqueezeHydraulicSimulationService {
     );
     const topPerfMD = inputs.topoCanhoneadoMD ?? Math.min(...perfs.map(p => p.top));
     const basePerfMD = inputs.baseCanhoneadoMD ?? Math.max(...perfs.map(p => p.base));
-    const topPerfTVD = inputs.topoCanhoneadoTVD ?? section.tvdAt(topPerfMD);
-    const basePerfTVD = inputs.baseCanhoneadoTVD ?? section.tvdAt(basePerfMD);
+    const topPerfTVD = well ? this.wellGeo.mdToTvd(well.geometry, topPerfMD) : inputs.topoCanhoneadoTVD ?? section.tvdAt(topPerfMD);
+    const basePerfTVD = well ? this.wellGeo.mdToTvd(well.geometry, basePerfMD) : inputs.baseCanhoneadoTVD ?? section.tvdAt(basePerfMD);
     const referenceMD = inputs.profundidadeReferenciaSqueezeMD ?? (topPerfMD + basePerfMD) / 2;
-    const referenceTVD = inputs.profundidadeReferenciaSqueezeTVD ?? (topPerfTVD + basePerfTVD) / 2;
+    const referenceTVD = well ? this.wellGeo.mdToTvd(well.geometry, referenceMD)
+      : inputs.profundidadeReferenciaSqueezeTVD ?? (topPerfTVD + basePerfTVD) / 2;
     // Pressão de operação: aplicada na superfície SÓ na fase de injeção/pressurização
     // final. Durante o bombeio com retorno aberto a pressão aplicada é 0.
     const pressaoOperacao = Math.max(0, inputs.pressaoOperacao ?? 0);
@@ -141,9 +164,27 @@ export class SqueezeHydraulicSimulationService {
     const pumpSequence = phases.filter(p => p.volumeBbl > 0);
     const tubingCap = geom.tubingID_m || 0.03;
     const annulusCap = geom.annulusCasing_m || 0.03;
-    const tubingVolumeBbl = tubingCap * referenceTVD;
+    const openEndMD = well?.interval.bottomMD ?? referenceMD;
+    const segments = well ? this.wellGeo.getGeometrySegments(well.geometry, 0, openEndMD) : [];
+    const pipeCapacity = this.wellGeo.capacityResolver({ kind: 'pipe', pipeID: geom.tID });
+    const annularCapacity = this.wellGeo.capacityResolver({ kind: 'annulus', pipeOD: geom.tOD });
+    if (well) {
+      const issues = this.wellGeo.validateWorkString(well.geometry, openEndMD, geom.tOD, geom.tID);
+      if (this.wellGeo.hasErrors(issues)) throw new Error(issues.map(i => i.message).join(' '));
+    }
+    if (well && (referenceMD < 0 || referenceMD > openEndMD ||
+      Math.abs(segments.reduce((sum, s) => sum + s.lengthMD, 0) - openEndMD) > 1e-6)) {
+      throw new Error('A hidráulica exige geometria contínua da superfície até a extremidade da coluna e referência dentro desse intervalo.');
+    }
+    const tubingVolumeBbl = well
+      ? segments.reduce((sum, s) => sum + pipeCapacity(s) * s.lengthMD, 0)
+      : tubingCap * referenceTVD;
+    const background = { densityPpg: completion, rheo: waterRheo };
+    const geometryStates: GeometryHydraulicState[] = [];
 
     const points: SqueezeHydraulicPoint[] = [];
+    // Estado do anular em cada passo — alimenta o envelope pressão × profundidade
+    const annulusStates: Array<{ pumpedVolume: number; annularFrictionPsi: number }> = [];
     let timeMin = 0;
     let pumpedVolume = 0;    // volume que permaneceu no poço (bombeado nas fases de circulação)
     let injectedVolume = 0;  // volume squeezado para a formação (fase de injeção)
@@ -162,28 +203,49 @@ export class SqueezeHydraulicSimulationService {
         const pumping = elapsed <= pumpDuration && phase.rateBpm > 0;
         const dt = i === 0 ? 0 : totalDuration / steps;
         const programmedRate = pumping ? phase.rateBpm : 0;
-        if (pumping && i > 0) {
-          if (isInjection) injectedVolume += programmedRate * dt;  // perda para a formação
-          else pumpedVolume += programmedRate * dt;                // permanece no poço
+        if (i > 0) {
+          // Inclui a fração bombeada do passo que atravessa o início da pausa.
+          const deltaVolume = phase.rateBpm * Math.max(0,
+            Math.min(elapsed, pumpDuration) - Math.min(elapsed - dt, pumpDuration));
+          if (isInjection) injectedVolume += deltaVolume;
+          else pumpedVolume += deltaVolume;
         }
         const volumeNoPocoBbl = Math.max(0, pumpedVolume - injectedVolume);
-        const hydrostaticPsi = this.tubingHydrostaticPsi(referenceTVD, tubingCap, pumpSequence, pumpedVolume, completion);
-        const annularHydrostaticPsi = this.annulusHydrostaticPsi(referenceTVD, annulusCap, tubingVolumeBbl, pumpSequence, pumpedVolume, completion);
+        const tubing = well ? distributeFluids(segments, pipeCapacity,
+          pumpedParcels(pumpSequence, pumpedVolume), background, 'down', md => this.wellGeo.mdToTvd(well.geometry, md)) : [];
+        const annulus = well ? distributeFluids(segments, annularCapacity,
+          pumpedParcels(pumpSequence, Math.max(0, pumpedVolume - tubingVolumeBbl)), background, 'up', md => this.wellGeo.mdToTvd(well.geometry, md)) : [];
+        const hydrostaticPsi = well ? this.sliceHydrostatic(referenceMD, tubing, well.geometry)
+          : this.tubingHydrostaticPsi(referenceTVD, tubingCap, pumpSequence, pumpedVolume, completion);
+        const annularHydrostaticPsi = well ? this.sliceHydrostatic(referenceMD, annulus, well.geometry)
+          : this.annulusHydrostaticPsi(referenceTVD, annulusCap, tubingVolumeBbl, pumpSequence, pumpedVolume, completion);
         const drivePsi = Math.max(0, hydrostaticPsi - annularHydrostaticPsi);
-        const frictionPsi = programmedRate > 0 ? this.calculateFrictionLoss(programmedRate, referenceMD, phase.densityPpg, geom.tID, phase.rheo, rheologyPressureFactor, roughnessFactor) : 0;
+        const tubingLoss = (q: number, md: number) => this.sliceFriction(tubing, md, (s, length) =>
+          this.calculateFrictionLoss(q, length, s.fluid.densityPpg, geom.tID, s.fluid.rheo, rheologyPressureFactor, roughnessFactor));
+        const annularLoss = (q: number, md: number) => this.sliceFriction(annulus, md, (s, length) =>
+          this.calculateAnnularFrictionLoss(q, length, s.fluid.densityPpg, s.innerDiameterIn, geom.tOD, s.fluid.rheo, rheologyPressureFactor, roughnessFactor, standoffPct));
+        const frictionPsi = well ? tubingLoss(programmedRate, referenceMD)
+          : programmedRate > 0 ? this.calculateFrictionLoss(programmedRate, referenceMD, phase.densityPpg, geom.tID, phase.rheo, rheologyPressureFactor, roughnessFactor) : 0;
         const appliedSurfacePsi = Math.max(0, phase.appliedSurfacePsi ?? 0);
         // Poço fechado (pressão aplicada na superfície): o fluido só avança pela
         // vazão injetada na formação — não há retorno pelo anular nem queda livre,
         // pois o tubo em U exige caminho aberto para a coluna cair.
-        const openWell = appliedSurfacePsi <= 0;
+        const openWell = appliedSurfacePsi <= 0 && (!well || !isInjection);
         // Fricção do retorno pelo anular: só existe bombeando com o poço aberto.
         // Na injeção (pressão aplicada) o fluido vai para a formação — anular estático.
         const hasAnnularReturn = programmedRate > 0 && openWell;
         const annularFrictionPsi = hasAnnularReturn
-          ? this.calculateAnnularFrictionLoss(programmedRate, referenceMD, phase.densityPpg, geom.cID, geom.tOD, phase.rheo, rheologyPressureFactor, roughnessFactor, standoffPct)
+          ? well ? annularLoss(programmedRate, referenceMD)
+            : this.calculateAnnularFrictionLoss(programmedRate, referenceMD, phase.densityPpg, geom.cID, geom.tOD, phase.rheo, rheologyPressureFactor, roughnessFactor, standoffPct)
           : 0;
+        const fullBalancePsi = well
+          ? this.sliceHydrostatic(openEndMD, tubing, well.geometry) - this.sliceHydrostatic(openEndMD, annulus, well.geometry)
+          : drivePsi;
+        const fullDrivePsi = Math.max(0, fullBalancePsi);
         const naturalRate = openWell
-          ? this.solveFreeFallRate(drivePsi, programmedRate || rate, referenceMD, phase.densityPpg, geom.tID, phase.rheo, rheologyPressureFactor, roughnessFactor, freeFallMaxFactor)
+          ? well ? this.solveRateForLoss(fullDrivePsi, programmedRate || rate, freeFallMaxFactor,
+              q => tubingLoss(q, openEndMD) + annularLoss(q, openEndMD))
+            : this.solveFreeFallRate(drivePsi, programmedRate || rate, referenceMD, phase.densityPpg, geom.tID, phase.rheo, rheologyPressureFactor, roughnessFactor, freeFallMaxFactor)
           : 0;
         const realRate = Math.max(programmedRate, naturalRate);
         const freeFallExtraRate = Math.max(0, realRate - programmedRate);
@@ -191,8 +253,21 @@ export class SqueezeHydraulicSimulationService {
         // A fricção do retorno represa pressão no fundo (contrapressão) — soma ao BHP/ECD
         const bhpPsi = appliedSurfacePsi + hydrostaticPsi - frictionPsi + annularFrictionPsi;
         const ecdPpg = referenceTVD > 0 ? bhpPsi / (this.hydroK * referenceTVD) : null;
-        const pumpPressurePsi = Math.max(appliedSurfacePsi, frictionPsi + annularFrictionPsi - drivePsi);
+        const pumpPressurePsi = well && openWell
+          ? Math.max(0, tubingLoss(programmedRate, openEndMD) + (hasAnnularReturn ? annularLoss(programmedRate, openEndMD) : 0) - fullBalancePsi)
+          : Math.max(appliedSurfacePsi, frictionPsi + annularFrictionPsi - drivePsi);
         lastBhp = bhpPsi;
+        annulusStates.push({ pumpedVolume, annularFrictionPsi });
+        if (well) geometryStates.push({
+          annulus,
+          friction: annulus.map(s => ({
+            topMD: s.topMD, bottomMD: s.bottomMD,
+            psi: hasAnnularReturn ? this.calculateAnnularFrictionLoss(
+              programmedRate, s.bottomMD - s.topMD, s.fluid.densityPpg,
+              s.innerDiameterIn, geom.tOD, s.fluid.rheo, rheologyPressureFactor, roughnessFactor, standoffPct,
+            ) : 0,
+          })),
+        });
         points.push({
           timeMin: timeMin + elapsed,
           phase: phase.label,
@@ -218,6 +293,18 @@ export class SqueezeHydraulicSimulationService {
       }
       timeMin += totalDuration;
     }
+
+    const annularProfile = well ? this.buildGeometryAnnularProfile(well, referenceMD, geometryStates, poreGrad, fracGrad) : this.buildAnnularProfile({
+      section,
+      referenceTVD,
+      annulusCap,
+      tubingVolumeBbl,
+      sequence: pumpSequence,
+      completionPpg: completion,
+      states: annulusStates,
+      poreGrad,
+      fracGrad,
+    });
 
     const bhps = points.map(p => p.bhpPsi);
     const ecds = points.map(p => p.ecdPpg).filter((v): v is number => v !== null && Number.isFinite(v));
@@ -255,6 +342,7 @@ export class SqueezeHydraulicSimulationService {
     return {
       categories: this.categories,
       points,
+      annularProfile,
       summary: {
         referenceMD,
         referenceTVD,
@@ -282,6 +370,64 @@ export class SqueezeHydraulicSimulationService {
         equipmentAlerts,
       },
     };
+  }
+
+  private sliceHydrostatic(md: number, slices: FluidSlice[], geometry: WellGeometry): number {
+    return slices.reduce((psi, s) => {
+      if (md <= s.topMD) return psi;
+      const bottomTVD = md >= s.bottomMD ? s.bottomTVD : this.wellGeo.mdToTvd(geometry, md);
+      return psi + this.hydroK * s.fluid.densityPpg * (bottomTVD - s.topTVD);
+    }, 0);
+  }
+
+  private sliceFriction(slices: FluidSlice[], md: number, loss: (s: FluidSlice, length: number) => number): number {
+    return slices.reduce((psi, s) => psi + loss(s, Math.max(0, Math.min(md, s.bottomMD) - s.topMD)), 0);
+  }
+
+  private solveRateForLoss(drive: number, rate: number, maxFactor: number, loss: (q: number) => number): number {
+    if (!(drive > 0)) return 0;
+    let lo = 0;
+    let hi = Math.max(0.25, rate || 1) * Math.max(1, maxFactor);
+    const maxLoss = loss(hi);
+    if (!Number.isFinite(maxLoss) || maxLoss <= 1e-6) return 0;
+    if (maxLoss <= drive) return hi;
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      if (loss(mid) < drive) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  private buildGeometryAnnularProfile(
+    well: HydraulicWellContext, referenceMD: number, states: GeometryHydraulicState[],
+    poreGrad: number, fracGrad: number,
+  ): AnnularPressureProfile {
+    const windowTopMD = well.interval.topMD;
+    const depths = new Set<number>([0, windowTopMD, referenceMD]);
+    for (let i = 0; i <= 40; i++) depths.add(referenceMD * i / 40);
+    // Inclui interfaces de geometria e fluidos, inclusive em trechos horizontais.
+    for (const state of states) for (const s of state.annulus) {
+      depths.add(s.topMD);
+      depths.add(s.bottomMD);
+    }
+    const points = [...depths].filter(md => md >= 0 && md <= referenceMD).sort((a, b) => a - b).map(md => {
+      const tvd = this.wellGeo.mdToTvd(well.geometry, md);
+      let minAnnularPsi = Infinity;
+      let maxAnnularPsi = -Infinity;
+      for (const state of states) {
+        const friction = state.friction.reduce((sum, s) => sum + s.psi *
+          this.core.clamp((md - s.topMD) / (s.bottomMD - s.topMD), 0, 1), 0);
+        const psi = this.sliceHydrostatic(md, state.annulus, well.geometry) + friction;
+        minAnnularPsi = Math.min(minAnnularPsi, psi);
+        maxAnnularPsi = Math.max(maxAnnularPsi, psi);
+      }
+      return {
+        md, tvd, minAnnularPsi, maxAnnularPsi,
+        porePsi: md >= windowTopMD ? this.hydroK * poreGrad * tvd : null,
+        fracPsi: md >= windowTopMD ? this.hydroK * fracGrad * tvd : null,
+      };
+    });
+    return { points, windowTopMD, bottomMD: referenceMD };
   }
 
   /**
@@ -332,7 +478,26 @@ export class SqueezeHydraulicSimulationService {
     completionPpg: number,
   ): number {
     if (tvdRef <= 0) return 0;
-    if (annulusCap <= 0) return this.hydroK * completionPpg * tvdRef;
+    const layers = this.annulusLayers(tvdRef, annulusCap, tubingVolumeBbl, sequence, pumpedVolume, completionPpg);
+    return this.stackPsi(tvdRef, layers);
+  }
+
+  /**
+   * Empilhamento de fluidos do anular, da superfície (0) até `tvdTotal`.
+   * O que já saiu pela extremidade da coluna sobe pelo anular: o fluido que
+   * saiu por último fica junto à extremidade (embaixo), o que saiu primeiro
+   * fica acima; o topo restante continua com o fluido original do poço.
+   */
+  private annulusLayers(
+    tvdTotal: number,
+    annulusCap: number,
+    tubingVolumeBbl: number,
+    sequence: PhaseDef[],
+    pumpedVolume: number,
+    completionPpg: number,
+  ): FluidLayer[] {
+    if (tvdTotal <= 0) return [];
+    if (annulusCap <= 0) return [{ from: 0, to: tvdTotal, den: completionPpg }];
     const exitedTotal = Math.max(0, pumpedVolume - tubingVolumeBbl);
     let before = 0;
     const exitedOf = sequence.map(p => {
@@ -340,16 +505,102 @@ export class SqueezeHydraulicSimulationService {
       before += p.volumeBbl;
       return v;
     });
-    let remainingHeight = tvdRef;
-    let psi = 0;
     // da extremidade para cima: fases na ordem inversa de saída
+    const bottomUp: Array<{ h: number; den: number }> = [];
+    let remainingHeight = tvdTotal;
     for (let i = sequence.length - 1; i >= 0 && remainingHeight > 0; i -= 1) {
       const h = Math.min(exitedOf[i] / annulusCap, remainingHeight);
-      psi += this.hydroK * sequence[i].densityPpg * h;
+      if (h > 0) bottomUp.push({ h, den: sequence[i].densityPpg });
       remainingHeight -= h;
     }
-    psi += this.hydroK * completionPpg * Math.max(0, remainingHeight);
+    if (remainingHeight > 0) bottomUp.push({ h: remainingHeight, den: completionPpg });
+    // inverte para a ordem topo → fundo, acumulando as fronteiras em TVD
+    const layers: FluidLayer[] = [];
+    let from = 0;
+    for (let i = bottomUp.length - 1; i >= 0; i -= 1) {
+      const to = from + bottomUp[i].h;
+      layers.push({ from, to, den: bottomUp[i].den });
+      from = to;
+    }
+    return layers;
+  }
+
+  /** Integra a hidrostática de uma pilha de camadas da superfície até `tvd`. */
+  private stackPsi(tvd: number, layers: FluidLayer[]): number {
+    let psi = 0;
+    for (const layer of layers) {
+      const h = Math.max(0, Math.min(tvd, layer.to) - layer.from);
+      if (h > 0) psi += this.hydroK * layer.den * h;
+    }
     return psi;
+  }
+
+  /**
+   * Envelope de pressão × profundidade do anular: para cada profundidade, a
+   * maior e a menor pressão anular vistas ao longo de toda a operação —
+   * hidrostática do empilhamento de fluidos naquele instante mais a parcela
+   * da fricção de retorno correspondente ao trecho acima da profundidade.
+   *
+   * Poro e fratura só são plotados a partir do topo da seção de interesse:
+   * acima disso não há formação exposta e a curva não faz sentido.
+   */
+  private buildAnnularProfile(args: {
+    section: SectionGeo;
+    referenceTVD: number;
+    annulusCap: number;
+    tubingVolumeBbl: number;
+    sequence: PhaseDef[];
+    completionPpg: number;
+    states: Array<{ pumpedVolume: number; annularFrictionPsi: number }>;
+    poreGrad: number;
+    fracGrad: number;
+  }): AnnularPressureProfile {
+    const {
+      section, referenceTVD, annulusCap, tubingVolumeBbl,
+      sequence, completionPpg, states, poreGrad, fracGrad,
+    } = args;
+    const bottomTVD = Math.max(0, referenceTVD);
+    // MD ← TVD: linear até o início da seção, razão da seção dali em diante
+    const ratioAbove = section.startMD > 0 && section.startTVD > 0 ? section.startTVD / section.startMD : 1;
+    const ratioSection = section.mdToTvdRatio > 0 ? section.mdToTvdRatio : 1;
+    const mdAt = (tvd: number): number => tvd <= section.startTVD
+      ? (ratioAbove > 0 ? tvd / ratioAbove : tvd)
+      : section.startMD + (tvd - section.startTVD) / ratioSection;
+
+    const windowTopMD = Math.max(0, section.startMD);
+    const bottomMD = mdAt(bottomTVD);
+    if (bottomTVD <= 0 || states.length === 0) {
+      return { points: [], windowTopMD, bottomMD };
+    }
+
+    const layerSets = states.map(s =>
+      this.annulusLayers(bottomTVD, annulusCap, tubingVolumeBbl, sequence, s.pumpedVolume, completionPpg));
+
+    const steps = 40;
+    const points: AnnularPressureProfile['points'] = [];
+    for (let i = 0; i <= steps; i += 1) {
+      const tvd = bottomTVD * i / steps;
+      const md = mdAt(tvd);
+      let maxAnnularPsi = Number.NEGATIVE_INFINITY;
+      let minAnnularPsi = Number.POSITIVE_INFINITY;
+      for (let s = 0; s < layerSets.length; s += 1) {
+        // a fricção do retorno atua sobre o trecho de anular acima da profundidade
+        const friction = states[s].annularFrictionPsi * (tvd / bottomTVD);
+        const psi = this.stackPsi(tvd, layerSets[s]) + friction;
+        if (psi > maxAnnularPsi) maxAnnularPsi = psi;
+        if (psi < minAnnularPsi) minAnnularPsi = psi;
+      }
+      const inWindow = md >= windowTopMD;
+      points.push({
+        md,
+        tvd,
+        porePsi: inWindow ? this.hydroK * poreGrad * tvd : null,
+        fracPsi: inWindow ? this.hydroK * fracGrad * tvd : null,
+        maxAnnularPsi,
+        minAnnularPsi,
+      });
+    }
+    return { points, windowTopMD, bottomMD };
   }
 
   /**

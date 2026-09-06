@@ -1,8 +1,9 @@
+import { DepthUnit, formatDepth } from '../../models/depth-unit';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, OnChanges, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SqueezeGeometry, SqueezeHydraulicSimulation, SqueezeInputs } from '../../models/squeeze.model';
 import { SlurryDesign, SlurryRecipe } from '../../models/pasta.model';
-import { ADJUSTED_SCHEMATIC_NOTE, computeVisualSegmentHeights, displaySubtitleForSegment, formatBbl, formatM, formatPpg, formatPsi, joinInfoParts, layoutDepthAnnotations, SchematicInfoSection, shouldShowSegmentLabel, visibleInfoRows, visualYForDepth, visualYForSegmentBoundary, VisualSegment, VisualSegmentInput } from './visual-segments';
+import { ADJUSTED_SCHEMATIC_NOTE, computeVisualSegmentHeights, displaySubtitleForSegment, formatBbl, formatPpg, formatPsi, joinInfoParts, layoutDepthAnnotations, SchematicInfoSection, shouldShowSegmentLabel, visibleInfoRows, visualYForDepth, visualYForSegmentBoundary, VisualSegment, VisualSegmentInput } from './visual-segments';
 import { SchematicWellboreComponent, WellboreSchematicConfig } from './schematic-wellbore.component';
 
 type SqueezeSegmentKey = 'completionFluid' | 'displacementFluid' | 'frontWater' | 'backWater' | 'cement' | 'cementTubing' | 'cementAnnulus';
@@ -35,9 +36,10 @@ export function createSqueezeSchematicModel(
   mode: 'withTubing' | 'withoutTubing',
   geom: SqueezeGeometry,
   simulation: SqueezeHydraulicSimulation,
+  depthUnit: DepthUnit = 'm',
 ): SqueezeSchematicModel {
-  const withoutTubingSegments = createWithoutTubingSegments(geom);
-  const withTubing = createWithTubingSegments(geom, simulation);
+  const withoutTubingSegments = createWithoutTubingSegments(geom, depthUnit);
+  const withTubing = createWithTubingSegments(geom, simulation, depthUnit);
 
   return {
     mode,
@@ -60,17 +62,17 @@ export function createSqueezeSchematicModel(
   };
 }
 
-function createWithoutTubingSegments(geom: SqueezeGeometry): SqueezeSegment[] {
+function createWithoutTubingSegments(geom: SqueezeGeometry, depthUnit: DepthUnit): SqueezeSegment[] {
   const base = Math.max(0, geom.base || geom.cementPhysicalBaseMD || 0);
   const finalCapacity = Math.max(geom.finalCapacity_m || geom.cementPhysicalCapacityBblM || 0, 0.0001);
   const displacementHeight = Math.max(0, geom.operationalDisplacementVolumeBbl || geom.displacementVolume || 0) / finalCapacity;
   const cementHeight = Math.max(0, geom.cementHeightWithoutTubing || geom.cementPhysicalHeight || 0);
   const backHeight = Math.max(0, geom.backPhysicalHeight || geom.backOperationalHeight || 0);
   const frontHeight = Math.max(0, geom.frontPhysicalHeight || geom.frontOperationalHeight || 0);
-  const topCement = Math.max(0, base - cementHeight);
+  const topCement = geom.topCementAfterPullMD ?? Math.max(0, base - cementHeight);
   const topBack = Math.max(0, topCement - backHeight);
   const topFront = Math.max(0, topBack - frontHeight);
-  const topDisplacement = Math.max(0, topFront - displacementHeight);
+  const topDisplacement = geom.topDisplacementAfterPullMD ?? Math.max(0, topFront - displacementHeight);
 
   // Deslocamento = fluido de deslocamento + espaçador frente + espaçador trás
   // apresentados como um único fluido (volume e altura = soma dos três).
@@ -82,13 +84,13 @@ function createWithoutTubingSegments(geom: SqueezeGeometry): SqueezeSegment[] {
 
   const segments: SqueezeSegment[] = [
     { key: 'completionFluid', name: 'Fluido de Completação do poço', sub: 'Fluido do poço', top: 0, bottom: topDisplacement, color: '#bae6fd' },
-    { key: 'displacementFluid', name: 'Deslocamento', sub: `${fmt(displacementVolTotal)} bbl | ${fmt(displacementHeightTotal, 0)} m`, top: topDisplacement, bottom: topCement, color: '#93c5fd' },
-    { key: 'cement', name: 'Cimento', sub: `${fmt(geom.slurryPhysicalVolumeBbl || geom.slurryTotal)} bbl | ${fmt(cementHeight, 1)} m`, top: topCement, bottom: base, color: '#fb923c' },
+    { key: 'displacementFluid', name: 'Deslocamento', sub: `${fmt(displacementVolTotal)} bbl | ${formatDepth(displacementHeightTotal, depthUnit, 0)}`, top: topDisplacement, bottom: topCement, color: '#93c5fd' },
+    { key: 'cement', name: 'Cimento', sub: `${fmt(geom.slurryPhysicalVolumeBbl || geom.slurryTotal)} bbl | ${formatDepth(cementHeight, depthUnit, 1)}`, top: topCement, bottom: base, color: '#fb923c' },
   ];
   return segments.filter(segment => segment.bottom > segment.top);
 }
 
-function createWithTubingSegments(geom: SqueezeGeometry, simulation: SqueezeHydraulicSimulation): { tubingSegments: SqueezeSegment[]; annulusSegments: SqueezeSegment[] } {
+function createWithTubingSegments(geom: SqueezeGeometry, simulation: SqueezeHydraulicSimulation, depthUnit: DepthUnit): { tubingSegments: SqueezeSegment[]; annulusSegments: SqueezeSegment[] } {
   // Mesma lógica do tampão: usar os valores já calculados pelo serviço, não recalcular dividindo por capacidade.
   const base = Math.max(0, geom.base || geom.cementPhysicalBaseMD || simulation.summary.basePerfMD || 0);
 
@@ -98,19 +100,19 @@ function createWithTubingSegments(geom: SqueezeGeometry, simulation: SqueezeHydr
   const capWithTubing = tubeCap + annCap;
 
   // ── Altura do cimento com a coluna imersa: pasta no anular + interior da coluna ──
-  const cementTubeHeight = Math.max(0, (geom.slurryPhysicalVolumeBbl || 0) / capWithTubing);
+  const cementTubeHeight = Math.max(0, geom.cementHeightWithTubing ?? (geom.slurryPhysicalVolumeBbl || 0) / capWithTubing);
 
   // Volume proporcional à capacidade de cada coluna
   const slurryPhysical  = geom.slurryPhysicalVolumeBbl || 0;
-  const cementVolTubing = slurryPhysical * (tubeCap / capWithTubing);
-  const cementVolAnn    = slurryPhysical * (annCap  / capWithTubing);
+  const cementVolTubing = geom.cementVolumeTubingBbl ?? slurryPhysical * (tubeCap / capWithTubing);
+  const cementVolAnn    = geom.cementVolumeAnnulusBbl ?? slurryPhysical * (annCap / capWithTubing);
 
   // Coluna: água trás e deslocamento em altura dentro do tubing
   const backHeight         = Math.max(0, geom.backPhysicalHeight || geom.backOperationalHeight || 0);
   const displacementVol    = geom.operationalDisplacementVolumeBbl || geom.displacementVolume || 0;
   const displacementHeight = Math.max(0, displacementVol / tubeCap);
 
-  const cementTubeTop   = Math.max(0, base - cementTubeHeight);
+  const cementTubeTop   = geom.topCementImmersedMD ?? Math.max(0, base - cementTubeHeight);
   const backTop         = Math.max(0, cementTubeTop - backHeight);
   const displacementTop = Math.max(0, backTop - displacementHeight);
 
@@ -119,15 +121,15 @@ function createWithTubingSegments(geom: SqueezeGeometry, simulation: SqueezeHydr
   const frontTop    = Math.max(0, cementTubeTop - frontHeight);
 
   const tubingAll: SqueezeSegment[] = [
-    { key: 'displacementFluid', name: 'Fluido de Deslocamento', sub: `${fmt(displacementVol)} bbl | ${fmt(displacementHeight, 0)} m`, top: displacementTop, bottom: backTop, color: '#93c5fd' },
-    { key: 'backWater',         name: 'Espaçador Trás',               sub: `${fmt(geom.volBackSpacer || geom.backPhysicalVolumeBbl)} bbl | ${fmt(backHeight, 0)} m`, top: backTop, bottom: cementTubeTop, color: '#d8b4fe' },
-    { key: 'cementTubing',      name: 'Cimento tubing',          sub: `${fmt(cementVolTubing)} bbl | ${fmt(cementTubeHeight, 1)} m`, top: cementTubeTop, bottom: base, color: '#fb923c' },
+    { key: 'displacementFluid', name: 'Fluido de Deslocamento', sub: `${fmt(displacementVol)} bbl | ${formatDepth(displacementHeight, depthUnit, 0)}`, top: displacementTop, bottom: backTop, color: '#93c5fd' },
+    { key: 'backWater',         name: 'Espaçador Trás',               sub: `${fmt(geom.volBackSpacer || geom.backPhysicalVolumeBbl)} bbl | ${formatDepth(backHeight, depthUnit, 0)}`, top: backTop, bottom: cementTubeTop, color: '#d8b4fe' },
+    { key: 'cementTubing',      name: 'Cimento tubing',          sub: `${fmt(cementVolTubing)} bbl | ${formatDepth(cementTubeHeight, depthUnit, 1)}`, top: cementTubeTop, bottom: base, color: '#fb923c' },
   ];
 
   const annulusAll: SqueezeSegment[] = [
     { key: 'completionFluid', name: 'Fluido de Completação', sub: 'Fluido do poço', top: 0, bottom: frontTop, color: '#bae6fd' },
-    { key: 'frontWater',      name: 'Espaçador Frente',           sub: `${fmt(geom.frontPhysicalVolumeBbl || geom.washVolFront)} bbl | ${fmt(frontHeight, 0)} m`, top: frontTop, bottom: cementTubeTop, color: '#d8b4fe' },
-    { key: 'cementAnnulus',   name: 'Cimento anular',        sub: `${fmt(cementVolAnn)} bbl | ${fmt(cementTubeHeight, 1)} m`, top: cementTubeTop, bottom: base, color: '#fb923c' },
+    { key: 'frontWater',      name: 'Espaçador Frente',           sub: `${fmt(geom.frontPhysicalVolumeBbl || geom.washVolFront)} bbl | ${formatDepth(frontHeight, depthUnit, 0)}`, top: frontTop, bottom: cementTubeTop, color: '#d8b4fe' },
+    { key: 'cementAnnulus',   name: 'Cimento anular',        sub: `${fmt(cementVolAnn)} bbl | ${formatDepth(cementTubeHeight, depthUnit, 1)}`, top: cementTubeTop, bottom: base, color: '#fb923c' },
   ];
 
   return {
@@ -174,7 +176,7 @@ function fmt(v: number | null | undefined, dec = 2): string {
         <canvas #withoutTubing></canvas>
       </div>
       @if (wellboreConfig) {
-        <app-schematic-wellbore [config]="wellboreConfig"></app-schematic-wellbore>
+        <app-schematic-wellbore [depthUnit]="depthUnit" [config]="wellboreConfig"></app-schematic-wellbore>
       }
     </div>
   `,
@@ -190,6 +192,10 @@ function fmt(v: number | null | undefined, dec = 2): string {
   `],
 })
 export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnDestroy {
+  private depth(value: number | null | undefined, digits = 1): string | null {
+    return value == null || !Number.isFinite(value) ? null : formatDepth(value, this.depthUnit, digits);
+  }
+  @Input() depthUnit: DepthUnit = 'm';
   @Input() geom: SqueezeGeometry | null = null;
   @Input() slurry: SlurryDesign | null = null;
   @Input() recipe: SlurryRecipe | null = null;
@@ -247,8 +253,8 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
 
   private draw(): void {
     if (!this.geom || !this.simulation || !this.withTubing || !this.withoutTubing) return;
-    this.drawWithTubing(this.withTubing.nativeElement, createSqueezeSchematicModel('withTubing', this.geom, this.simulation));
-    this.drawWithoutTubing(this.withoutTubing.nativeElement, createSqueezeSchematicModel('withoutTubing', this.geom, this.simulation));
+    this.drawWithTubing(this.withTubing.nativeElement, createSqueezeSchematicModel('withTubing', this.geom, this.simulation, this.depthUnit));
+    this.drawWithoutTubing(this.withoutTubing.nativeElement, createSqueezeSchematicModel('withoutTubing', this.geom, this.simulation, this.depthUnit));
   }
 
   private buildWellboreConfig(): WellboreSchematicConfig | null {
@@ -256,7 +262,7 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
     const inp = this.squeezeInputs;
     if (!g || !this.simulation) return null;
 
-    const withTubingModel = createSqueezeSchematicModel('withTubing', g, this.simulation);
+    const withTubingModel = createSqueezeSchematicModel('withTubing', g, this.simulation, this.depthUnit);
     const tubSegs = withTubingModel.tubingSegments;
     const annSegs = withTubingModel.annulusSegments;
 
@@ -406,8 +412,8 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
       this.bracket(cx, structureRight + 8, yPerfTop, yPerfBase, multiplePerfs ? `CANH. ${i + 1}` : 'CANHONEADOS');
       const suffix = multiplePerfs ? ` ${i + 1}` : '';
       return [
-        { id: `topPerf-${i}`, label: `Topo canh.${suffix}\n${perf.top.toFixed(1)} m`, depthReal: perf.top, yReal: yPerfTop },
-        { id: `basePerf-${i}`, label: `Base canh.${suffix}\n${perf.base.toFixed(1)} m`, depthReal: perf.base, yReal: yPerfBase },
+        { id: `topPerf-${i}`, label: `Topo canh.${suffix}\n${formatDepth(perf.top, this.depthUnit, 1)}`, depthReal: perf.top, yReal: yPerfTop },
+        { id: `basePerf-${i}`, label: `Base canh.${suffix}\n${formatDepth(perf.base, this.depthUnit, 1)}`, depthReal: perf.base, yReal: yPerfBase },
       ];
     });
     this.drawDepthAnnotations(cx, [
@@ -615,11 +621,11 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
       visibleInfoRows({
         title: 'Dados do esquemático',
         rows: [
-          { label: 'Zona trabalho', value: formatM(p.len || (p.base - p.top), 0) },
+          { label: 'Zona trabalho', value: this.depth(p.len || (p.base - p.top), 0) },
           { label: 'Cimento', value: formatBbl(p.slurryPhysicalVolumeBbl || p.workVolumeBbl || p.slurryTotal) },
           { label: 'Água de Deslocamento', value: joinInfoParts(formatBbl(p.operationalDisplacementVolumeBbl || p.displacementVolume), formatPpg(this.squeezeInputs?.displacementWeight ?? this.squeezeInputs?.completionWeight)) },
-          { label: 'Água frente', value: joinInfoParts(formatM(p.frontPhysicalHeight || p.frontOperationalHeight, 0), formatBbl(p.frontPhysicalVolumeBbl || p.washVolFront)) },
-          { label: 'Água trás', value: joinInfoParts(formatM(p.backPhysicalHeight || p.backOperationalHeight, 0), formatBbl(p.backPhysicalVolumeBbl || p.volBackSpacer)) },
+          { label: 'Água frente', value: joinInfoParts(this.depth(p.frontPhysicalHeight || p.frontOperationalHeight, 0), formatBbl(p.frontPhysicalVolumeBbl || p.washVolFront)) },
+          { label: 'Água trás', value: joinInfoParts(this.depth(p.backPhysicalHeight || p.backOperationalHeight, 0), formatBbl(p.backPhysicalVolumeBbl || p.volBackSpacer)) },
           { label: 'Cimento na formação', value: formatBbl(injected) },
           { label: 'Janela', value: formatPsi(pressureWindow) },
         ],
@@ -627,21 +633,21 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
       visibleInfoRows({
         title: 'Profundidade da pasta',
         rows: [
-          { label: 'Base do cimento', value: formatM(baseMD) },
+          { label: 'Base do cimento', value: this.depth(baseMD) },
         ],
       }),
       visibleInfoRows({
         title: 'Antes de injetar o cimento',
         rows: [
-          { label: 'Topo do cimento c/ tubing', value: formatM(topImmersedBefore) },
-          { label: 'Topo do cimento s/ tubing', value: formatM(topFullBefore) },
+          { label: 'Topo do cimento c/ tubing', value: this.depth(topImmersedBefore) },
+          { label: 'Topo do cimento s/ tubing', value: this.depth(topFullBefore) },
         ],
       }),
       visibleInfoRows({
         title: 'Depois de injetar o cimento',
         rows: [
-          { label: 'Topo do cimento c/ tubing', value: formatM(topImmersedAfter) },
-          { label: 'Topo do cimento s/ tubing', value: formatM(topFullAfter) },
+          { label: 'Topo do cimento c/ tubing', value: this.depth(topImmersedAfter) },
+          { label: 'Topo do cimento s/ tubing', value: this.depth(topFullAfter) },
         ],
       }),
     ];
@@ -692,7 +698,7 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
         const yReal = visualYForSegmentBoundary(visualSegments, visualKey, boundary, yTop) ?? visualYForDepth(visualSegments, depthReal, yTop);
         return {
           id: `${prefix}-${key}-${boundary}`,
-          label: `${label}\n${depthReal.toFixed(1)} m`,
+          label: `${label}\n${formatDepth(depthReal, this.depthUnit, 1)}`,
           depthReal,
           yReal,
         };

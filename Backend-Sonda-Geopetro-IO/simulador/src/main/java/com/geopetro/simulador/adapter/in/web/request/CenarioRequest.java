@@ -14,5 +14,8 @@ public record CenarioRequest(
         @NotBlank(message = "Dados do formulário são obrigatórios")
         String formValue,
 
+        Long pocoId,
+        Long pocoVersion,
+
         String dadosRelatorio
 ) {}

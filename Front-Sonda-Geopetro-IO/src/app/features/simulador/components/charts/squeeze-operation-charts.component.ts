@@ -1,8 +1,10 @@
+import { DepthUnit } from '../../models/depth-unit';
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SqueezeHydraulicSimulation } from '../../models/squeeze.model';
 import { ChartZoomModalComponent } from './chart-zoom-modal.component';
+import { DEPTH_PRESSURE_COLORS, DepthPressureSeries, buildPressureDepthConfig } from './pressure-depth-config';
 
 type ChartKey = 'envelope' | 'pressureTime' | 'bhpEcd' | 'freeFall' | 'hydroWindow';
 
@@ -19,7 +21,7 @@ Chart.register(...registerables);
           <div class="sq-block-head">
             <div>
               <div class="sq-title">Envelope de Pressão — {{ referenceTitle }}</div>
-              <div class="sq-sub">Pressões calculadas {{ referenceSub }}</div>
+              <div class="sq-sub">Poro, fratura e pressão anular máxima/mínima ao longo do poço, {{ referenceSub }}</div>
             </div>
             <div class="head-actions">
               <button class="save-btn" type="button" (click)="openZoom('envelope')" title="Ampliar gráfico">
@@ -139,6 +141,7 @@ Chart.register(...registerables);
   `],
 })
 export class SqueezeOperationChartsComponent implements AfterViewInit, OnChanges {
+  @Input() depthUnit: DepthUnit = 'm';
   @Input() data: SqueezeHydraulicSimulation | null = null;
   /** Ajusta títulos/legendas por operação — a engine de simulação é a mesma. */
   @Input() operation: 'squeeze' | 'tampao' = 'squeeze';
@@ -221,14 +224,7 @@ export class SqueezeOperationChartsComponent implements AfterViewInit, OnChanges
         : []),
     ];
     this.configs = {
-      envelope: this.lineConfig(labels, [
-        ['Poro', pts.map(p => p.porePsi), '#10b981'],
-        ['Fratura', pts.map(p => p.fracturePsi), '#ef4444'],
-        [bhpLabel, pts.map(p => p.bhpPsi), '#f97316'],
-        ['Pressão sup.', pts.map(p => p.surfacePressurePsi), '#577ca1'],
-        ['Hidrostática', pts.map(p => p.hydrostaticPsi), '#8b7857'],
-        ['Fricção', pts.map(p => p.frictionPsi), '#e0a541'],
-      ], 'Pressão (psi)', false, 'Tempo (min)'),
+      envelope: this.depthEnvelopeConfig(),
       pressureTime: this.lineConfig(labels, [
         ['Volume no poço (bbl)', pts.map(p => p.pumpedVolumeBbl), '#4291e1', 'y1'],
         ['Injetado na formação (bbl)', pts.map(p => p.injectedVolumeBbl ?? 0), '#9333ea', 'y1'],
@@ -263,6 +259,45 @@ export class SqueezeOperationChartsComponent implements AfterViewInit, OnChanges
       new Chart(this.freeFall.nativeElement.getContext('2d')!, this.configs.freeFall!),
       new Chart(this.hydroWindow.nativeElement.getContext('2d')!, this.configs.hydroWindow!),
     );
+  }
+
+  /**
+   * Envelope pressão × profundidade: psi no eixo superior, profundidade medida
+   * no eixo vertical invertido (0 no topo). Poro e fratura só aparecem a partir
+   * do topo da seção; o anular vem como par máximo/mínimo da operação inteira.
+   */
+  private depthEnvelopeConfig(): ChartConfiguration {
+    const profile = this.data?.annularProfile;
+    const pts = profile?.points ?? [];
+    const series: DepthPressureSeries[] = [
+      {
+        label: 'Poro (psi)',
+        color: DEPTH_PRESSURE_COLORS.poro,
+        dashed: true,
+        points: pts.filter(p => p.porePsi !== null).map(p => ({ x: p.porePsi as number, y: p.md })),
+      },
+      {
+        label: 'Fratura (psi)',
+        color: DEPTH_PRESSURE_COLORS.fratura,
+        dashed: true,
+        points: pts.filter(p => p.fracPsi !== null).map(p => ({ x: p.fracPsi as number, y: p.md })),
+      },
+      {
+        label: 'Pressão anular máx. (psi)',
+        color: DEPTH_PRESSURE_COLORS.anularMax,
+        points: pts.map(p => ({ x: p.maxAnnularPsi, y: p.md })),
+      },
+      {
+        label: 'Pressão anular mín. (psi)',
+        color: DEPTH_PRESSURE_COLORS.anularMin,
+        points: pts.map(p => ({ x: p.minAnnularPsi, y: p.md })),
+      },
+    ];
+    return buildPressureDepthConfig(series, {
+      xTitle: 'psi',
+      depthUnit: this.depthUnit,
+      maxDepth: profile?.bottomMD,
+    });
   }
 
   private lineConfig(

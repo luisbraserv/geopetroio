@@ -8,8 +8,21 @@
       <p class="subtitle">Cálculo de volumes, pasta, reologia e pressões para operação de squeeze.</p>
     </div>
     <div class="head-actions">
+      <label>Profundidades
+        <select aria-label="Unidade de profundidade" [value]="depthUnit" (change)="setDepthUnit($any($event.target).value)">
+          <option value="m">Metros (m)</option><option value="ft">Pés (ft)</option>
+        </select>
+      </label>
     </div>
   </header>
+
+  @if (wellIssues.length || operationIssues.length || perforationIssues.length) {
+    <div class="sim-validation" role="alert">
+      @for (issue of wellIssues.concat(operationIssues, perforationIssues); track $index) {
+        <p [class.sim-validation--warning]="issue.level === 'warning'">{{ issue.message }}</p>
+      }
+    </div>
+  }
 
   <!-- ── Tabs ── -->
   <div class="sim-tabs">
@@ -71,7 +84,7 @@
             <p class="acc-hint">⚙ Diâmetro/profundidade da coluna, "teste definido por" (Cliente) e pressão de teste (Pressão de operação + 1000 psi) são preenchidos automaticamente.</p>
             <div class="g2">
               <div><label>Tempo máx. pressurização</label><input type="text" [ngModel]="dadosRelatorio.sequenciaOperacional?.['tempoMaxPressurizacaoH']" [ngModelOptions]="{standalone:true}" (ngModelChange)="setSeqOp('tempoMaxPressurizacaoH', $event)" placeholder="01:00h"></div>
-              <div><label>Comprimento tubo (m)</label><input type="number" step="0.1" [ngModel]="dadosRelatorio.sequenciaOperacional?.['comprimentoTuboM']" [ngModelOptions]="{standalone:true}" (ngModelChange)="setSeqOp('comprimentoTuboM', $event)" placeholder="9.4"></div>
+              <div><label>Comprimento tubo ({{ depthUnit }})</label><input type="number" step="0.1" [appDepthInput]="depthUnit" [ngModel]="dadosRelatorio.sequenciaOperacional?.['comprimentoTuboM']" [ngModelOptions]="{standalone:true}" (ngModelChange)="setSeqOp('comprimentoTuboM', $event)" [placeholder]="fmtDepth(9.4)"></div>
               <div><label>Seções acima do topo</label><input type="number" [ngModel]="dadosRelatorio.sequenciaOperacional?.['secoesAcimaTopoCimento']" [ngModelOptions]="{standalone:true}" (ngModelChange)="setSeqOp('secoesAcimaTopoCimento', $event)" placeholder="2"></div>
               <div><label>Tubos por seção</label>
                 <select [ngModel]="dadosRelatorio.sequenciaOperacional?.['tubosPorSecao']" [ngModelOptions]="{standalone:true}" (ngModelChange)="setSeqOp('tubosPorSecao', $event)">
@@ -104,22 +117,29 @@
         <tui-expand [expanded]="secPocoOpen">
           <div class="acc-body">
             <div class="g2">
-              <div><label>Final poço (MD, m)</label><input type="number" step="1" formControlName="wellFinalMD"></div>
-              <div><label>TVD final (m)</label><input type="number" step="1" formControlName="wellFinalTVD"></div>
-              <div class="col-span-2"><label>Caliper (pol)</label><input type="number" step="0.001" formControlName="caliper"></div>
-              <div class="col-span-2">
-                <label>Revestimento (API)</label>
-                <select (change)="onCasingSelect($any($event.target).value)">
-                  <option value="">— selecione —</option>
-                  @for (c of casingOptions; track $index) {
-                    <option [value]="$index" [selected]="c.odIn === form.value.casingOD && c.idIn === form.value.casingID">
-                      {{ c.odIn }}" — {{ c.weightLbFt }} lb/ft &nbsp;(ID {{ c.idIn }}")
-                    </option>
-                  }
-                </select>
+              <div><label>Final poço (MD, {{ depthUnit }})</label><input type="number" step="1" formControlName="wellFinalMD" [appDepthInput]="depthUnit"></div>
+              <div><label>TVD final ({{ depthUnit }})</label>
+                @if (trajectoryForm.value.enabled) {
+                  <output>{{ fmtDepth(wellGeometry?.finalTVD, 2) }}</output>
+                } @else {
+                  <input type="number" step="1" formControlName="wellFinalTVD" [appDepthInput]="depthUnit">
+                }
               </div>
-              <div><label>OD revestimento (pol)</label><input type="number" step="0.001" formControlName="casingOD"></div>
-              <div><label>ID revestimento (pol)</label><input type="number" step="0.001" formControlName="casingID"></div>
+              <div class="col-span-2">
+                <label>Caliper (pol)</label>
+                <input type="number" step="0.001" formControlName="caliper" class="field-readonly" readonly
+                  title="Derivado da fase em que a base da operação está — cadastre em Estrutura do Poço">
+              </div>
+              <div>
+                <label>OD revestimento (pol)</label>
+                <input type="number" step="0.001" formControlName="casingOD" class="field-readonly" readonly
+                  title="Derivado da fase em que a base da operação está — cadastre em Estrutura do Poço">
+              </div>
+              <div>
+                <label>ID revestimento (pol)</label>
+                <input type="number" step="0.001" formControlName="casingID" class="field-readonly" readonly
+                  title="Derivado da fase em que a base da operação está — cadastre em Estrutura do Poço">
+              </div>
               <div class="col-span-2">
                 <label>Tubing (API)</label>
                 <select (change)="onTubingSelect($any($event.target).value)">
@@ -137,16 +157,22 @@
           </div>
         </tui-expand>
 
-        <!-- 3.2 Geometria da Seção -->
-        <button tuiAccordion type="button" [(tuiAccordion)]="sec1Open" class="acc-sub">
-          <tui-icon icon="@tui.ruler"></tui-icon> 3.2 Geometria da Seção
+        <!-- 3.2 Estrutura do Poço -->
+        <button tuiAccordion type="button" [(tuiAccordion)]="secEstruturaOpen" class="acc-sub">
+          <tui-icon icon="@tui.layers-2"></tui-icon> 3.2 Estrutura do Poço
         </button>
-        <tui-expand [expanded]="sec1Open">
+        <tui-expand [expanded]="secEstruturaOpen">
           <div class="acc-body">
-            <div class="g2">
-              <div><label>TVD início (m)</label><input type="number" step="1" formControlName="sectionStartTVD"></div>
-              <div><label>TVD fim (m)</label><input type="number" step="1" formControlName="sectionEndTVD"></div>
-            </div>
+            <app-poco-selector [geometry]="pocoGeometry" [poco]="poco" (changed)="applyPoco($event)"></app-poco-selector>
+            <app-well-structure-form [depthUnit]="depthUnit"
+              [derivedGeometry]="trajectoryForm.value.enabled ? wellGeometry : null"
+              [phases]="fases"
+              [issues]="wellIssues"
+              [casingOptions]="casingOptions"
+              (add)="addFase()"
+              (remove)="removeFase($event)">
+            </app-well-structure-form>
+            <app-well-trajectory-form [depthUnit]="depthUnit" [form]="trajectoryForm"></app-well-trajectory-form>
           </div>
         </tui-expand>
 
@@ -156,11 +182,41 @@
         </button>
         <tui-expand [expanded]="secTampaoOpen">
           <div class="acc-body">
-            <p class="acc-hint">Intervalo do tampão que será feito para trabalhar o squeeze.</p>
+            <p class="acc-hint">
+              Intervalo do tampão de squeeze, posicionado dentro da estrutura do poço.
+              A base do intervalo é a âncora do cálculo.
+            </p>
             <div class="g2">
-              <div><label>Início seção (MD, m)</label><input type="number" step="1" formControlName="sectionStartMD"></div>
-              <div><label>Fim seção (MD, m)</label><input type="number" step="1" formControlName="sectionEndMD"></div>
+              <div><label>Topo da operação (MD, {{ depthUnit }})</label><input type="number" step="1" formControlName="operacaoTopoMD" [appDepthInput]="depthUnit"></div>
+              <div><label>Base da operação (MD, {{ depthUnit }})</label><input type="number" step="1" formControlName="operacaoBaseMD" [appDepthInput]="depthUnit"></div>
             </div>
+
+            @if (operationIssues.length) {
+              <div class="op-issues">
+                @for (issue of operationIssues; track issue.code + issue.message) {
+                  <div class="op-issue" [class.op-issue--warn]="issue.level === 'warning'">{{ issue.message }}</div>
+                }
+              </div>
+            }
+
+            @if (intervalDescription; as desc) {
+              @if (desc.primaryPhase) {
+                <div class="op-phase">
+                  <div class="op-phase-row"><span>Fase da operação</span><strong>{{ desc.primaryPhase.name }}</strong></div>
+                  <div class="op-phase-row"><span>Revestimento</span><strong>{{ desc.casingLabel || 'Poço aberto' }}</strong></div>
+                  <div class="op-phase-row">
+                    <span>Intervalo</span>
+                    <strong>{{ fmtDepth(form.value.operacaoTopoMD, 0) }} – {{ fmtDepth(form.value.operacaoBaseMD, 0) }} {{ depthUnit }} MD</strong>
+                  </div>
+                  <div class="op-phase-row"><span>TVD da base</span><strong>{{ fmtDepth(desc.bottomTVD, 1) }} {{ depthUnit }}</strong></div>
+                  @if (desc.crossesPhases) {
+                    <div class="op-phase-note">
+                      Atravessa {{ desc.phases.length }} fases — o volume é calculado trecho a trecho.
+                    </div>
+                  }
+                </div>
+              }
+            }
             <label class="calc-mode-label">Cálculo do tampão por</label>
             <div class="vol-source vol-source--stack">
               <label class="vol-source-opt" [class.active]="cementVolumeSource === 'simulador'">
@@ -195,7 +251,7 @@
         <tui-expand [expanded]="secAlturaOpen">
           <div class="acc-body">
             <div class="g2">
-              <div class="col-span-2"><label>Altura água atrás (m)</label><input type="number" step="0.1" formControlName="backSpacerHeight"></div>
+              <div class="col-span-2"><label>Altura água atrás ({{ depthUnit }})</label><input type="number" step="0.1" formControlName="backSpacerHeight" [appDepthInput]="depthUnit"></div>
             </div>
           </div>
         </tui-expand>
@@ -209,13 +265,20 @@
             <div formArrayName="perforacoes" class="perfs-list">
               @for (perf of perforacoes.controls; track perf; let i = $index) {
                 <div [formGroupName]="i" class="perf-row">
-                  <div><label>Topo (MD, m)</label><input type="number" step="0.5" formControlName="top"></div>
-                  <div><label>Base (MD, m)</label><input type="number" step="0.5" formControlName="base"></div>
+                  <div><label>Topo (MD, {{ depthUnit }})</label><input type="number" step="0.5" formControlName="top" [appDepthInput]="depthUnit"></div>
+                  <div><label>Base (MD, {{ depthUnit }})</label><input type="number" step="0.5" formControlName="base" [appDepthInput]="depthUnit"></div>
                   <button tuiButton type="button" class="btn-rm" (click)="removePerfuracao(i)"
                     [disabled]="perforacoes.length <= 1">✕</button>
                 </div>
               }
             </div>
+            @if (perforationIssues.length) {
+              <div class="op-issues">
+                @for (issue of perforationIssues; track issue.code + issue.message) {
+                  <div class="op-issue" [class.op-issue--warn]="issue.level === 'warning'">{{ issue.message }}</div>
+                }
+              </div>
+            }
             <button tuiButton type="button" class="btn btn--ghost btn--sm" (click)="addPerfuracao()" style="margin-top:6px">
               + Intervalo
             </button>
@@ -514,8 +577,8 @@
           <div class="metric"><span>Vol. físico pasta</span><strong>{{ fmt(geom?.slurryPhysicalVolumeBbl) }} bbl</strong></div>
           <div class="metric"><span>Total bombeado</span><strong>{{ fmt(geom?.slurryTotal) }} bbl</strong></div>
           <div class="metric"><span>Sacos</span><strong>{{ recipe?.sacks ?? '-' }} sk</strong></div>
-          <div class="metric"><span>Alt. cem. c/ tubing</span><strong>{{ fmt(geom?.cementHeightWithTubing, 1) }} m</strong></div>
-          <div class="metric"><span>Alt. cem. s/ tubing</span><strong>{{ fmt(geom?.cementHeightWithoutTubing, 1) }} m</strong></div>
+          <div class="metric"><span>Alt. cem. c/ tubing</span><strong>{{ fmtDepth(geom?.cementHeightWithTubing, 1) }} {{ depthUnit }}</strong></div>
+          <div class="metric"><span>Alt. cem. s/ tubing</span><strong>{{ fmtDepth(geom?.cementHeightWithoutTubing, 1) }} {{ depthUnit }}</strong></div>
           <div class="metric"><span>Água Frente</span><strong>{{ fmt(geom?.frontPhysicalVolumeBbl) }} bbl</strong></div>
           <div class="metric"><span>Água Atrás</span><strong>{{ fmt(geom?.volBackSpacer) }} bbl</strong></div>
           <div class="metric"><span>Deslocamento</span><strong>{{ fmt(geom?.operationalDisplacementVolumeBbl) }} bbl</strong></div>
@@ -584,8 +647,8 @@
             </p>
             <section class="metrics" style="margin-bottom:0">
               <div class="metric"><span>ID do tubing usado</span><strong>{{ fmt(form.value.tubingID, 3) }} in</strong></div>
-              <div class="metric"><span>Profundidade da extremidade aberta</span><strong>{{ fmt(form.value.sectionEndMD, 1) }} m</strong></div>
-              <div class="metric"><span>Capacidade interna do tubing</span><strong>{{ fmt(reverseCirculation.tubingCapacityBblPerM, 4) }} bbl/m</strong></div>
+              <div class="metric"><span>Profundidade da extremidade aberta</span><strong>{{ fmtDepth(form.value.sectionEndMD, 1) }} {{ depthUnit }}</strong></div>
+              <div class="metric"><span>Capacidade interna do tubing</span><strong>{{ fmtCapacity(reverseCirculation.tubingCapacityBblPerM, 4) }} bbl/{{ depthUnit }}</strong></div>
               <div class="metric"><span>Volume interno da coluna</span><strong>{{ fmt(reverseCirculation.internalTubingVolumeBbl) }} bbl</strong></div>
               <div class="metric"><span>Fator de segurança aplicado</span><strong>{{ fmt(reverseCirculation.safetyFactor, 2) }}×</strong></div>
               <div class="metric"><span>Volume mínimo recomendado</span><strong>{{ fmt(reverseCirculation.reverseCirculationVolumeBbl) }} bbl</strong></div>
@@ -751,11 +814,11 @@
         <section class="card">
           <div class="card-head"><h3>Canhoneados</h3><span>Intervalos configurados</span></div>
           <table>
-            <thead><tr><th>#</th><th>Topo (MD, m)</th><th>Base (MD, m)</th><th>Altura (m)</th></tr></thead>
+            <thead><tr><th>#</th><th>Topo (MD, {{ depthUnit }})</th><th>Base (MD, {{ depthUnit }})</th><th>Altura ({{ depthUnit }})</th></tr></thead>
             <tbody>
               @if (geom) {
                 @for (p of geom.perfs; track $index; let i = $index) {
-                  <tr><td>{{ i + 1 }}</td><td>{{ fmt(p.top, 1) }}</td><td>{{ fmt(p.base, 1) }}</td><td>{{ fmt(p.base - p.top, 1) }}</td></tr>
+                  <tr><td>{{ i + 1 }}</td><td>{{ fmtDepth(p.top, 1) }}</td><td>{{ fmtDepth(p.base, 1) }}</td><td>{{ fmtDepth(p.base - p.top, 1) }}</td></tr>
                 }
               }
             </tbody>
@@ -840,7 +903,7 @@
             }
           </div>
 
-          <app-squeeze-operation-charts [data]="hydraulicSim"></app-squeeze-operation-charts>
+          <app-squeeze-operation-charts [depthUnit]="depthUnit" [data]="hydraulicSim"></app-squeeze-operation-charts>
         }
       }
 
@@ -854,17 +917,17 @@
             <div class="fluido-card fluido-frente">
               <div class="fluido-label">Fluido à frente</div>
               <div class="fluido-vol">{{ fmt(schematicGeom?.frontPhysicalVolumeBbl) }} bbl</div>
-              <div class="fluido-h">{{ fmt(schematicGeom?.frontPhysicalHeight, 1) }} m</div>
+              <div class="fluido-h">{{ fmtDepth(schematicGeom?.frontPhysicalHeight, 1) }} {{ depthUnit }}</div>
             </div>
             <div class="fluido-card fluido-pasta">
               <div class="fluido-label">Pasta cimento</div>
               <div class="fluido-vol">{{ fmt(schematicGeom?.slurryPhysicalVolumeBbl) }} bbl</div>
-              <div class="fluido-h">{{ fmt(schematicGeom?.cementPhysicalHeight, 1) }} m</div>
+              <div class="fluido-h">{{ fmtDepth(schematicGeom?.cementPhysicalHeight, 1) }} {{ depthUnit }}</div>
             </div>
             <div class="fluido-card fluido-atras">
               <div class="fluido-label">Água atrás</div>
               <div class="fluido-vol">{{ fmt(schematicGeom?.volBackSpacer) }} bbl</div>
-              <div class="fluido-h">{{ fmt(schematicGeom?.backPhysicalHeight, 1) }} m</div>
+              <div class="fluido-h">{{ fmtDepth(schematicGeom?.backPhysicalHeight, 1) }} {{ depthUnit }}</div>
             </div>
             <div class="fluido-card fluido-desl">
               <div class="fluido-label">Deslocamento</div>
@@ -875,18 +938,18 @@
 
         <!-- Dados do esquemático -->
         <section class="metrics">
-          <div class="metric"><span>Cap. anular (bbl/m)</span><strong>{{ fmt(schematicGeom?.annulusCasing_m, 5) }}</strong></div>
-          <div class="metric"><span>Cap. tubing (bbl/m)</span><strong>{{ fmt(schematicGeom?.tubingID_m, 5) }}</strong></div>
+          <div class="metric"><span>Cap. anular (bbl/{{ depthUnit }})</span><strong>{{ fmtCapacity(schematicGeom?.annulusCasing_m, 5) }}</strong></div>
+          <div class="metric"><span>Cap. tubing (bbl/{{ depthUnit }})</span><strong>{{ fmtCapacity(schematicGeom?.tubingID_m, 5) }}</strong></div>
           <div class="metric"><span>Vol. físico pasta</span><strong>{{ fmt(schematicGeom?.slurryPhysicalVolumeBbl) }} bbl</strong></div>
-          <div class="metric"><span>Alt. cem. c/ tubing</span><strong>{{ fmt(schematicGeom?.cementHeightWithTubing, 1) }} m</strong></div>
-          <div class="metric"><span>Alt. cem. s/ tubing</span><strong>{{ fmt(schematicGeom?.cementHeightWithoutTubing, 1) }} m</strong></div>
-          <div class="metric"><span>Alt. cem. física</span><strong>{{ fmt(schematicGeom?.cementPhysicalHeight, 1) }} m</strong></div>
-          <div class="metric"><span>Topo físico (MD)</span><strong>{{ fmt(schematicGeom?.cementPhysicalTopMD, 1) }} m</strong></div>
-          <div class="metric"><span>Base física (MD)</span><strong>{{ fmt(schematicGeom?.cementPhysicalBaseMD, 1) }} m</strong></div>
+          <div class="metric"><span>Alt. cem. c/ tubing</span><strong>{{ fmtDepth(schematicGeom?.cementHeightWithTubing, 1) }} {{ depthUnit }}</strong></div>
+          <div class="metric"><span>Alt. cem. s/ tubing</span><strong>{{ fmtDepth(schematicGeom?.cementHeightWithoutTubing, 1) }} {{ depthUnit }}</strong></div>
+          <div class="metric"><span>Alt. cem. física</span><strong>{{ fmtDepth(schematicGeom?.cementPhysicalHeight, 1) }} {{ depthUnit }}</strong></div>
+          <div class="metric"><span>Topo físico (MD)</span><strong>{{ fmtDepth(schematicGeom?.cementPhysicalTopMD, 1) }} {{ depthUnit }}</strong></div>
+          <div class="metric"><span>Base física (MD)</span><strong>{{ fmtDepth(schematicGeom?.cementPhysicalBaseMD, 1) }} {{ depthUnit }}</strong></div>
         </section>
 
         @if (hydraulicSim) {
-          <app-squeeze-schematics
+          <app-squeeze-schematics [depthUnit]="depthUnit"
             [geom]="schematicGeom"
             [slurry]="slurry"
             [recipe]="recipe"
@@ -894,6 +957,30 @@
             [squeezeInputs]="squeezeInputsSnapshot">
           </app-squeeze-schematics>
         }
+      }
+
+      @if (activeTab === 'wellView') {
+        @if (wellGeometry) {
+          @defer (on immediate) {
+            <app-well-3d [geometry]="wellGeometry" [overlays]="wellOverlays" [depthUnit]="depthUnit"></app-well-3d>
+          } @placeholder {
+            <p role="status">Carregando visualização 3D...</p>
+          } @error {
+            <p role="status">Não foi possível carregar o 3D. O esquemático permanece disponível abaixo.</p>
+          }
+        }
+        @if (wellGeometry) {
+          <app-well-schematic [depthUnit]="depthUnit"
+            [geometry]="wellGeometry"
+            [overlays]="wellOverlays"
+            title="Estrutura do poço"
+            subtitle="Fases, revestimentos, sapatas, canhoneados e posição do squeeze"
+            [stateOptions]="wellSchematicStates"
+            [activeStateId]="wellSchematicState"
+            (stateChange)="onWellSchematicState($event)">
+          </app-well-schematic>
+        }
+        @if (!wellGeometry) { <p role="status">Cadastre uma geometria válida para visualizar o poço.</p> }
       }
 
     </main>

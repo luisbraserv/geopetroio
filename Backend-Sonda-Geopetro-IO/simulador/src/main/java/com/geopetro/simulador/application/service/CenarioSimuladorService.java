@@ -16,11 +16,14 @@ public class CenarioSimuladorService {
 
     private final CenarioSimuladorJpaRepository repository;
     private final PastaSimuladorJpaRepository pastaRepository;
+    private final PocoService pocos;
+    private static final tools.jackson.databind.json.JsonMapper JSON = tools.jackson.databind.json.JsonMapper.builder().build();
 
     public CenarioSimuladorService(CenarioSimuladorJpaRepository repository,
-            PastaSimuladorJpaRepository pastaRepository) {
+            PastaSimuladorJpaRepository pastaRepository, PocoService pocos) {
         this.repository = repository;
         this.pastaRepository = pastaRepository;
+        this.pocos = pocos;
     }
 
     @Transactional(readOnly = true)
@@ -47,7 +50,7 @@ public class CenarioSimuladorService {
         CenarioSimuladorEntity cenario = new CenarioSimuladorEntity();
         cenario.setNome(request.nome());
         cenario.setOperacao(request.operacao());
-        cenario.setFormValue(request.formValue());
+        aplicarGeometria(cenario, request);
         cenario.setDadosRelatorio(request.dadosRelatorio());
         cenario.setCriadoPor(username);
         if (request.pastaId() != null) {
@@ -62,7 +65,7 @@ public class CenarioSimuladorService {
     public CenarioSimuladorEntity atualizar(Long id, CenarioRequest request) {
         CenarioSimuladorEntity cenario = buscar(id);
         cenario.setNome(request.nome());
-        cenario.setFormValue(request.formValue());
+        aplicarGeometria(cenario, request);
         cenario.setDadosRelatorio(request.dadosRelatorio());
         if (request.pastaId() != null) {
             PastaSimuladorEntity pasta = pastaRepository.findById(request.pastaId())
@@ -72,6 +75,26 @@ public class CenarioSimuladorService {
             cenario.setPasta(null);
         }
         return repository.save(cenario);
+    }
+
+    private void aplicarGeometria(CenarioSimuladorEntity cenario, CenarioRequest request) {
+        if (request.pocoId() == null) {
+            cenario.setPoco(null);
+            cenario.setFormValue(request.formValue());
+            return;
+        }
+        var poco = pocos.paraVincular(request.pocoId(), request.pocoVersion());
+        try {
+            var node = JSON.readTree(request.formValue());
+            if (!(node instanceof tools.jackson.databind.node.ObjectNode object))
+                throw new IllegalArgumentException("formValue deve ser um objeto JSON.");
+            // Compatibilidade com clientes que ainda enviam estes campos: nunca persistir a copia.
+            for (String key : List.of("wellFinalMD", "wellFinalTVD", "fases", "trajectory", "_poco")) object.remove(key);
+            cenario.setPoco(poco);
+            cenario.setFormValue(JSON.writeValueAsString(object));
+        } catch (tools.jackson.core.JacksonException e) {
+            throw new IllegalArgumentException("formValue deve ser um objeto JSON valido.");
+        }
     }
 
     @Transactional

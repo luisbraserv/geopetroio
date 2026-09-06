@@ -1,4 +1,7 @@
+import { PocoApi, PocoGeometry, pocoGeometryFromForm } from '../models/poco.model';
+import { createTrajectoryForm } from '../models/well-trajectory.form';
 import { inject } from '@angular/core';
+import { DepthUnit, depthToMetres, formatDepthNumber } from '../models/depth-unit';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CementSlurryRecipeRow, SlurryDesign, SlurryRecipe, SlurryRecipeByVolume } from '../models/pasta.model';
 import { ADITIVOS_CATALOGO, AditivoCatalogo, Aditivo, unidadePadraoAditivo } from '../models/aditivo.model';
@@ -18,6 +21,29 @@ import { OpsPhase } from '../components/charts/ops-chart.component';
  * `form`, `operacaoKey`, `simulate()` e `buildManualRecipeOpsPhases()`.
  */
 export abstract class SimuladorBaseComponent {
+  poco: PocoApi | null = null;
+  get pocoGeometry(): PocoGeometry { return pocoGeometryFromForm(this.form.getRawValue()); }
+  applyPoco(poco: PocoApi | null): void {
+    this.poco = poco;
+    if (!poco) return;
+    const g = poco.geometria;
+    this.form.patchValue({ wellFinalMD: g.wellFinalMD, wellFinalTVD: g.wellFinalTVD }, { emitEvent: false });
+    this.form.setControl('fases', this.fb.array(g.fases.map(row => this.fb.group(row))), { emitEvent: false });
+    this.form.setControl('trajectory', createTrajectoryForm(this.fb, g.trajectory), { emitEvent: false });
+    this.dadosRelatorio.poco = poco.nome;
+    this.saveDadosRelatorio();
+    this.simulate();
+  }
+
+  depthUnit: DepthUnit = 'm';
+  setDepthUnit(unit: string): void { this.depthUnit = unit === 'ft' ? 'ft' : 'm'; }
+  fmtDepth(value: number | null | undefined, digits = 1): string {
+    return formatDepthNumber(value, this.depthUnit, digits);
+  }
+  fmtCapacity(value: number | null | undefined, digits = 4): string {
+    // Um pé contém 0,3048 metro: bbl/ft = bbl/m × 0,3048.
+    return this.fmt(value == null ? value : depthToMetres(value, this.depthUnit), digits);
+  }
   /** FormGroup principal do simulador (definido no componente concreto). */
   abstract form: FormGroup;
   /** Chave usada para persistir aditivos/estado por operação. */
@@ -60,6 +86,17 @@ export abstract class SimuladorBaseComponent {
   simuladorVolumeBbl = 0;
 
   dadosRelatorio: DadosRelatorio = {};
+
+  /** Uma entrada inválida não pode deixar resultados da simulação anterior na tela. */
+  protected clearCalculatedResults(): void {
+    this.slurry = null;
+    this.recipe = null;
+    this.manualRecipeResult = null;
+    this.temperatureResult = null;
+    this.rheologyResult = null;
+    this.manualRecipeOpsPhases = [];
+    this.simuladorVolumeBbl = 0;
+  }
 
   aditivosModalOpen = false;
 

@@ -1,3 +1,4 @@
+import { PocoApi } from '../models/poco.model';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -14,6 +15,7 @@ export interface PastaApi {
 }
 
 export interface CenarioApi {
+  poco?: PocoApi | null;
   id: number;
   nome: string;
   operacao: string;
@@ -60,10 +62,16 @@ export class SimuladorStateApiService {
     return this.http.get<CenarioApi[]>(`${this.base}/cenarios/sem-pasta`, { params: { operacao } });
   }
 
+  buscarCenario(id: number): Observable<CenarioApi> {
+    return this.http.get<CenarioApi>(`${this.base}/cenarios/${id}`);
+  }
+
   criarCenario(payload: {
     nome: string;
     operacao: string;
     pastaId?: number | null;
+    pocoId?: number | null;
+    pocoVersion?: number | null;
     formValue: string;
     dadosRelatorio?: string | null;
   }): Observable<CenarioApi> {
@@ -74,6 +82,8 @@ export class SimuladorStateApiService {
     nome: string;
     operacao: string;
     pastaId?: number | null;
+    pocoId?: number | null;
+    pocoVersion?: number | null;
     formValue: string;
     dadosRelatorio?: string | null;
   }): Observable<CenarioApi> {

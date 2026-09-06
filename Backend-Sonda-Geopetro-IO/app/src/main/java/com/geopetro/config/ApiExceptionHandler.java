@@ -16,6 +16,16 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    ResponseEntity<ApiErrorResponse> handleUnreadable(HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido.", request.getRequestURI(), List.of());
+    }
+
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    ResponseEntity<ApiErrorResponse> handleConcurrentChange(HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "O registro foi alterado. Recarregue antes de salvar.", request.getRequestURI(), List.of());
+    }
+
 	@ExceptionHandler(RegraNegocioException.class)
 	ResponseEntity<ApiErrorResponse> handleRegraNegocio(RegraNegocioException exception, HttpServletRequest request) {
 		return build(exception.getStatus(), exception.getMessage(), request.getRequestURI(), List.of());

@@ -169,3 +169,45 @@ leitura/s, produzir mais pontos que o teto, o serviço agrega por janela do tama
 Isso mantém o contrato inalterado — o cliente continua recebendo `{dataHora, valor}` — e evita que
 uma consulta de 6h derrube a resposta. Usa `mean` em vez de `min`/`max` porque a tela já suaviza para
 exibição, e a média preserva a forma da curva.
+
+---
+
+## 7. Verificação de existência de série
+
+> **[DECIDIDO 2026-09-05]** · **A implementar** — não existe hoje.
+
+**Por que passou a ser necessário:** a exclusão de cadastros passa a ser **bloqueada quando houver
+vínculo** ([RN-063](../business-rules.md#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros)),
+e o **histórico de telemetria conta como vínculo**
+([RN-072](../business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
+
+O Backend-Sonda não tem como saber disso sozinho: o vínculo que ele enxerga é relacional, e a série vive
+no InfluxDB, em outro serviço. Precisa **perguntar**.
+
+### Endpoint proposto
+
+```
+GET /api/monitoramentos/sondas/{idSondaUnidade}/existe
+```
+
+```json
+{
+  "idSondaUnidade": "SPT-144",
+  "possuiSerie": true,
+  "primeiroPonto": "2026-03-01T00:00:00Z",
+  "ultimoPonto": "2026-09-05T12:00:00Z"
+}
+```
+
+**Por que devolver as datas junto:** a mensagem de recusa fica útil — *"não é possível excluir: há
+telemetria de 01/03/2026 a 05/09/2026"* — em vez de um "existe vínculo" que não diz o quê.
+
+**Custo no InfluxDB:** consulta de primeiro e último ponto da sonda, não varredura de série.
+
+### Comportamento na indisponibilidade
+
+⚠️ **[DECIDIDO 2026-09-05]** Se o serviço de Telemetria estiver fora, a exclusão é **recusada**.
+
+Isto **inverte** a degradação graciosa do §3, deliberadamente: em consulta de série, falhar devolvendo
+vazio custa uma tela sem gráfico; em exclusão, assumir "não tem histórico" porque ninguém respondeu
+apaga um cadastro que não podia ser apagado. Só um dos dois erros tem volta.

@@ -35,6 +35,17 @@ const simulation = {
 } as SqueezeHydraulicSimulation;
 
 describe('createSqueezeSchematicModel', () => {
+  it('converts length labels without changing volumes or schematic geometry', () => {
+    const metres = createSqueezeSchematicModel('withTubing', geom, simulation);
+    const feet = createSqueezeSchematicModel('withTubing', geom, simulation, 'ft');
+    const cement = feet.segments.find(s => s.key === 'cement')!;
+    expect(cement.sub).toBe('6,00 bbl | 262,5 ft');
+    const positions = (segments: typeof feet.segments) => segments.map(({ sub, ...rest }) => rest);
+    expect(positions(feet.segments)).toEqual(positions(metres.segments));
+    expect(positions(feet.tubingSegments)).toEqual(positions(metres.tubingSegments));
+    expect(positions(feet.annulusSegments)).toEqual(positions(metres.annulusSegments));
+  });
+
   it('does not draw perforations in the with tubing schematic', () => {
     const model = createSqueezeSchematicModel('withTubing', geom, simulation);
     expect(model.topPerfMD).toBe(1420);
@@ -119,7 +130,8 @@ describe('createSqueezeSchematicModel', () => {
     expect(displacement.top).toBeLessThan(displacement.bottom);
     expect(backWater.top).toBe(displacement.bottom);
     expect(cement.top).toBe(backWater.bottom);
-    expect(cement.bottom).toBe(simulation.summary.referenceMD);
+    // A referência de pressão no canhoneado não é a base física do cimento.
+    expect(cement.bottom).toBe(geom.base);
   });
 
   it('gives cement 40 percent visual height independently in tubing and annulus', () => {

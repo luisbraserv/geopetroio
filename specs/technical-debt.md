@@ -90,6 +90,28 @@ O mecanismo 3 era o pior dos três: um `ApplicationRunner` que executava `ALTER 
 startup, com falhas engolidas em log `debug` — DDL em runtime num ambiente configurado para apenas
 validar. Saiu junto com o módulo.
 
+### ⚠️ Fila de mudanças manuais criada em 2026-09-05
+
+A entrevista de produto decidiu **cinco alterações de schema**. Sem Flyway e com `ddl-auto=validate` em
+produção, **todas exigem script manual executado antes do deploy** — e a aplicação não sobe se faltar
+uma:
+
+| # | Mudança | Origem |
+|---|---|---|
+| 1 | `ALTER TABLE unidades_sondas` — coluna `tipo`, com valor para as linhas existentes | [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) |
+| 2 | `DROP` de `usuario_interno_regionais`, `usuario_interno_setores` e da coluna de regional principal | [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) |
+| 3 | Tabelas de **limite** e **log de eventos** de alarme | [RN-071](business-rules.md#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico) · [RN-076](business-rules.md#rn-076--o-alarme-é-registrado-como-sequência-de-fatos) |
+| 4 | **Poço** com geometria e trajetória tipadas em JSON, mais `simulador_cenarios.poco_id`. Script pronto; estrutura criada no MySQL local, aplicação em produção pendente | [RN-059](business-rules.md#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário) · [migration](../Backend-Sonda-Geopetro-IO/db/migrations/2026-09-05-simulador-pocos.sql) · [registro de execução](../Backend-Sonda-Geopetro-IO/specs/simulador-pocos.md#banco) |
+| 5 | `DROP` das tabelas órfãs dos módulos removidos | [OQ-026](open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs) |
+
+**Por que isto agrava DT-002:** até aqui a fila manual era histórica — scripts antigos já aplicados. A
+partir de hoje ela é **corrente**, com cinco itens acumulados de uma vez, numa operação conduzida por
+**uma pessoa** e **sem backup do MySQL** ([product-context §11](product-context.md#11-fechamentos-das-rodadas-3-a-6)).
+Um erro de ordem ou um script esquecido derruba a subida da aplicação.
+
+⚠️ O `deploy/mysql-init/01-schema.sql` também precisa ser regerado — ele é gerado a partir das
+entidades JPA, e todas as cinco mudanças alteram entidades.
+
 ### O que permanece
 
 - Em produção (`validate`), a aplicação **não sobe** se o DBA não executar manualmente, na ordem certa: `migration-regional.sql` → `V2026.06.02` → `V2026.06.03` → `V2026.06.04` → `V2026.06.15`.
@@ -184,9 +206,24 @@ Três manifestações distintas, todas verificadas durante este levantamento:
 
 | Prazo | Ação |
 |---|---|
-| **Definitiva** | Mover os repositórios para fora da árvore sincronizada (ex.: `C:\dev\GeopetroIO\`). Resolve as três manifestações de uma vez |
+| **Definitiva** | ❌ **Recusada 2026-09-05** — mover os repositórios para fora da árvore sincronizada (ex.: `C:\dev\GeopetroIO\`) resolveria as três manifestações de uma vez |
 | Paliativa | `git config --global core.longpaths true` (não está definido hoje) — resolve apenas a manifestação 3 |
-| Paliativa | Excluir `target/`, `node_modules/` e `.git/` da sincronização do OneDrive |
+| Paliativa | ❌ **Recusada 2026-09-05** — excluir `target/`, `node_modules/` e `.git/` da sincronização do OneDrive |
+
+### ⏳ Risco aceito em 2026-09-05
+
+**[DECIDIDO 2026-09-05]** Os repositórios **ficam onde estão**, e nenhuma das mitigações será aplicada.
+Ver [OQ-025](open-questions.md#oq-025--os-repositórios-podem-sair-do-onedrive).
+
+⚠️ **[FATO observado 2026-09-05]** Durante a própria entrevista que registrou esta decisão, o OneDrive
+impediu leitura de arquivos **duas vezes**: `git status` falhou com `read error ... Invalid argument` e
+`mmap failed` em 16 arquivos do Backend-Telemetria, e um `grep` recebeu `Permission denied` em arquivos
+do simulador. O comportamento é corrente, não histórico.
+
+**O que segue exposto:** histórico Git dos cinco repositórios, e — de forma mais aguda — **trabalho não
+commitado**. Com backup de MySQL também recusado
+([product-context §11](product-context.md#11-fechamentos-das-rodadas-3-a-6)), commitar cedo e com
+frequência passa a ser a única rede de proteção do código.
 
 **É o risco de maior impacto potencial do levantamento: perda silenciosa de histórico e de código.**
 Ver [OQ-025](open-questions.md#oq-025--os-repositórios-podem-sair-do-onedrive).
