@@ -109,16 +109,16 @@ Saem a regional principal, as duas listas N:N e as tabelas `usuario_interno_regi
 **[DECIDIDO 2026-08-26]**
 
 ```
-Desktop-Sonda ──publish──► BROKER MQTT ──subscribe──► Backend-Telemetria
+Geopetro-Desktop ──publish──► BROKER MQTT ──subscribe──► Geopetro-Telemetria
   PRODUTOR                                              CONSUMIDOR
   (existe)                                              (implementado)
                                                               │ InfluxDB
                                                               ▼
-                            Front ◄──REST── Backend-Sonda ◄──REST──
+                            Front ◄──REST── Geopetro-Backend ◄──REST──
                                             (autoriza e faz proxy)
 ```
 
-**[FATO]** O Backend-Sonda **não consome MQTT** — o consumidor no-op foi removido em 2026-08-26. Seu
+**[FATO]** O Geopetro-Backend **não consome MQTT** — o consumidor no-op foi removido em 2026-08-26. Seu
 papel no histórico é **autorizar e consultar** séries já processadas.
 
 ### Tempo real, a partir de 2026-08-27
@@ -126,12 +126,12 @@ papel no histórico é **autorizar e consultar** séries já processadas.
 **[DECIDIDO 2026-08-27]** Um segundo caminho, independente do MQTT:
 
 ```
-Desktop-Sonda ──WebSocket/STOMP──► Backend-Sonda ──► Angular
+Geopetro-Desktop ──WebSocket/STOMP──► Geopetro-Backend ──► Angular
    (AtomicReference)                 retransmite      /topic/realtime/
    estado atual                      sem persistir    unidades-sondas/{id}
 ```
 
-**[FATO]** O Backend-Sonda **agora participa do WebSocket** — mas como retransmissor, não como
+**[FATO]** O Geopetro-Backend **agora participa do WebSocket** — mas como retransmissor, não como
 persistidor. Nada deste canal é gravado.
 
 **A distinção que organiza os dois caminhos:**
@@ -214,7 +214,7 @@ Registro histórico das regras descobertas em
 
 ## 6. Mapa de responsabilidade por aplicação
 
-| Domínio | Backend-Sonda | Front | Desktop-Sonda | Horus | Telemetria |
+| Domínio | Geopetro-Backend | Front | Geopetro-Desktop | Horus | Telemetria |
 |---|---|---|---|---|---|
 | Identidade / Autenticação | **Dono** | Consome | — | — | — |
 | Organização (Regional→Sonda) | **Dono** | CRUD | — | — | — |
@@ -224,7 +224,7 @@ Registro histórico das regras descobertas em
 | Cimentação — cálculo | Persiste cenários | **Dono** | — | — | — |
 | Cimentação — monitoramento | — | — | — | **Dono** | — |
 
-✅ **[FATO]** Com o Backend-Telemetria implementado em 2026-08-27, a cadeia de telemetria está
+✅ **[FATO]** Com o Geopetro-Telemetria implementado em 2026-08-27, a cadeia de telemetria está
 **fechada ponta a ponta**: captura no CLP → publicação MQTT → ingestão → InfluxDB → consulta
 autorizada → tela.
 

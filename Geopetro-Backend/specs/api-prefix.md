@@ -13,7 +13,7 @@
   ou `/me/desativar` pela regra genérica de username.
 - `/auth` e `/usuarios` deixam de mapear controllers. Não há alias nem redirecionamento
   de credenciais. Frontend, proxy local, Nginx, Postman e os dois logins do
-  Desktop-Sonda acompanham a mudança. `apiUrl`/URL do backend continuam sendo a
+  Geopetro-Desktop acompanham a mudança. `apiUrl`/URL do backend continuam sendo a
   raiz do servidor, sem acrescentar `/api` à configuração do ambiente.
 - WebSocket, probes e documentação OpenAPI mantêm suas rotas próprias.
 - Não há alteração de schema ou migration nesta entrega.
@@ -26,7 +26,7 @@ negação anônima, administração de usuários, autoatendimento por perfil, re
 de regionais/cadastros, bearer token com conta desativada, preflight CORS e falha
 de inicialização sem segredo JWT. Serviços de negócio são mocks; não há banco.
 
-A distribuição deve coordenar backend, frontend e Desktop-Sonda. Binários antigos
+A distribuição deve coordenar backend, frontend e Geopetro-Desktop. Binários antigos
 do Desktop usam `/auth/login` e precisam ser atualizados para voltar a autenticar.
 O auto-update ainda não existe. Esta entrega altera o código local, sem deploy
 ou instalação nas sondas.

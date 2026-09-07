@@ -191,7 +191,7 @@ configuração, um Desktop que reinicia sem rede **não sabe o que ler** e para 
 ```
 VT "plc-reader"   → lê o CLP a cada 1s
 VT "mqtt-worker"  → consome BlockingQueue → Broker
-VT "realtime-ws"  → lê AtomicReference   → Backend-Sonda
+VT "realtime-ws"  → lê AtomicReference   → Geopetro-Backend
 JavaFX Thread     → apenas interface
 ```
 

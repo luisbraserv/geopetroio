@@ -112,7 +112,8 @@ class IdentidadeHttpSecurityTest {
         verify(context.getBean(RecoveryService.class)).confirm("x".repeat(43), "NovaSenha1!", "NovaSenha1!");
     }
 
-    @Test void smtpSettingsAreRestrictedToAdminForEveryOperation() throws Exception {
+    /** RN-086: configuracao e de ADMIN e SUPORTE; os demais perfis nao entram. */
+    @Test void smtpSettingsAreRestrictedToAdminAndSuporteForEveryOperation() throws Exception {
         String path = "/api/configuracoes/email";
         String payload = """
             {"enabled":false,"host":"","port":587,"transport":"STARTTLS","auth":false,
@@ -127,11 +128,30 @@ class IdentidadeHttpSecurityTest {
             mvc.perform(post(path + "/teste").with(user("ana").roles(role))).andExpect(status().isForbidden());
         }
         verifyNoInteractions(context.getBean(SmtpSettingsService.class), context.getBean(SmtpTransport.class));
-        mvc.perform(get(path).with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
-        mvc.perform(put(path).with(user("admin").roles("ADMIN")).contentType("application/json").content(payload)).andExpect(status().isOk());
-        mvc.perform(post(path + "/teste").with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
-        verify(context.getBean(SmtpSettingsService.class)).save(any());
-        verify(context.getBean(SmtpTransport.class)).test(any());
+        for (String role : new String[]{"ADMIN", "SUPORTE"}) {
+            mvc.perform(get(path).with(user("u").roles(role))).andExpect(status().isOk());
+            mvc.perform(put(path).with(user("u").roles(role)).contentType("application/json").content(payload)).andExpect(status().isOk());
+            mvc.perform(post(path + "/teste").with(user("u").roles(role))).andExpect(status().isOk());
+        }
+        verify(context.getBean(SmtpSettingsService.class), times(2)).save(any());
+        verify(context.getBean(SmtpTransport.class), times(2)).test(any());
+    }
+
+    /**
+     * A fronteira que define o SUPORTE: ele configura o sistema, mas nao administra cadastro.
+     * Sem isto, acrescentar a role oitava viraria um segundo ADMIN por descuido.
+     */
+    @Test void suporteConfiguresButDoesNotReachRegistries() throws Exception {
+        mvc.perform(get("/api/configuracoes/email").with(user("sup").roles("SUPORTE")))
+            .andExpect(status().isOk());
+
+        for (String path : new String[]{USERS, "/api/empresas", "/api/regionais"}) {
+            mvc.perform(get(path).with(user("sup").roles("SUPORTE"))).andExpect(status().isForbidden());
+        }
+        mvc.perform(post(USERS + "/internos").with(user("sup").roles("SUPORTE"))
+            .contentType("application/json").content(CONTACT)).andExpect(status().isForbidden());
+
+        verifyNoInteractions(context.getBean(CriarUsuarioInputPort.class));
     }
 
     @Test void invalidSmtpPortIsRejectedBeforeSaving() throws Exception {

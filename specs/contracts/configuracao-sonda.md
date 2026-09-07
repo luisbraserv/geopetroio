@@ -1,6 +1,6 @@
 # Contrato de configuração remota da sonda
 
-> **[FATO 2026-09-07]** Etapa 1 de [alarmes](../features/alarmes.md), implementada no Backend-Sonda e no Desktop-Sonda. Motor, interfaces de limites/histórico e distribuição automática do Desktop continuam pendentes.
+> **[FATO 2026-09-07]** Etapa 1 de [alarmes](../features/alarmes.md), implementada no Geopetro-Backend e no Geopetro-Desktop. Motor, interfaces de limites/histórico e distribuição automática do Desktop continuam pendentes.
 
 ## 1. Transporte e acesso
 

@@ -73,7 +73,7 @@ class MigracaoFlywayTest {
 	void baseVaziaMigraDoZero() throws SQLException {
 		flyway().migrate();
 
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
         assertThat(existeTabela("recuperacao_senha")).isTrue();
         assertThat(existeTabela("configuracao_smtp")).isTrue();
@@ -86,6 +86,27 @@ class MigracaoFlywayTest {
 		assertThat(existeColuna("usuarios", "regional_id")).isFalse();
 		assertThat(existeTabela("usuario_interno_regionais")).isFalse();
 		assertThat(existeTabela("usuario_interno_setores")).isFalse();
+	}
+
+	/**
+	 * RN-086 — a coluna de role precisa aceitar SUPORTE nos dois ambientes.
+	 *
+	 * <p>Producao tem VARCHAR(255) desde V2026.06.04; uma base nova nascia com ENUM, porque o
+	 * baseline veio das entidades JPA. Gravar 'SUPORTE' no ENUM falharia com "Data truncated".
+	 */
+	@Test
+	@DisplayName("a coluna usuario_roles.role termina VARCHAR e aceita SUPORTE")
+	void colunaDeRoleAceitaSuporte() throws SQLException {
+		flyway().migrate();
+
+		assertThat(tipoDaColuna("usuario_roles", "role")).isEqualTo("varchar");
+
+		executarNoSchema("""
+			INSERT INTO usuarios (username, password, email, nome, telefone, status, tipo_usuario)
+			VALUES ('sup', 'hash', 'sup@example.test', 'Suporte', '1', 'ATIVO', 'INTERNO')""");
+		executarNoSchema("INSERT INTO usuario_roles (username, role) VALUES ('sup', 'SUPORTE')");
+
+		assertThat(contar("SELECT COUNT(*) FROM usuario_roles WHERE role = 'SUPORTE'")).isEqualTo(1L);
 	}
 
 	@Test
@@ -125,7 +146,7 @@ class MigracaoFlywayTest {
 
 		// Se o baseline tivesse sido executado, os CREATE TABLE teriam colidido e a migracao
 		// falharia. Ele entra so como registro.
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3");
 		assertThat(tipoDoRegistro("2026.09.04")).isEqualTo("BASELINE");
 		assertThat(tipoDoRegistro("2026.09.05")).isEqualTo("SQL");
 
@@ -283,6 +304,16 @@ class MigracaoFlywayTest {
 				Statement statement = conexao.createStatement();
 				ResultSet rs = statement.executeQuery(
 						"SELECT type FROM flyway_schema_history WHERE version = '" + versao + "'")) {
+			return rs.next() ? rs.getString(1) : null;
+		}
+	}
+
+	private static String tipoDaColuna(String tabela, String coluna) throws SQLException {
+		try (Connection conexao = DriverManager.getConnection(URL_SCHEMA, USUARIO, SENHA);
+				Statement statement = conexao.createStatement();
+				ResultSet rs = statement.executeQuery(
+						"SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '" + SCHEMA
+								+ "' AND TABLE_NAME = '" + tabela + "' AND COLUMN_NAME = '" + coluna + "'")) {
 			return rs.next() ? rs.getString(1) : null;
 		}
 	}

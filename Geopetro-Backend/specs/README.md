@@ -117,7 +117,7 @@ F-01 a F-07, F-14, F-15 e F-20 pertencem a este repositório.
 
 **[FATO 2026-09-06]** A padronização de login e usuários em `/api` está implementada.
 Contrato e testes de segurança antes/depois da migração em [`api-prefix.md`](api-prefix.md).
-O deploy precisa acompanhar a atualização dos clientes Desktop-Sonda que usam login.
+O deploy precisa acompanhar a atualização dos clientes Geopetro-Desktop que usam login.
 
 | # | Restrição | Origem |
 |---|---|---|
@@ -225,7 +225,7 @@ Seria necessário também restaurar as entradas de `pom.xml`, as rotas do `Secur
 **[FATO]** O backend ganhou um segundo papel na telemetria: **retransmissor de tempo real**.
 
 ```
-Desktop-Sonda ──WebSocket/STOMP──► /app/realtime/estado
+Geopetro-Desktop ──WebSocket/STOMP──► /app/realtime/estado
                                           │ RealtimeController
                                           ▼
 Angular ◄── /topic/realtime/unidades-sondas/{id}
@@ -240,7 +240,7 @@ Angular ◄── /topic/realtime/unidades-sondas/{id}
 
 ### Decisões
 
-**As amostras de estado atual não são persistidas.** O histórico tem outro caminho (MQTT → Backend-Telemetria → InfluxDB). A configuração por unidade tem persistência própria, descrita abaixo.
+**As amostras de estado atual não são persistidas.** O histórico tem outro caminho (MQTT → Geopetro-Telemetria → InfluxDB). A configuração por unidade tem persistência própria, descrita abaixo.
 
 **O backend continua sem MQTT.** A decisão de 2026-08-26 permanece — WebSocket não é reintrodução do
 broker, é canal distinto com outra responsabilidade.

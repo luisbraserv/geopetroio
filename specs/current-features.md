@@ -27,8 +27,8 @@
 | ~~F-13~~ | ~~Alertas de Químicos por E-mail~~ | — | **Removido 2026-08-26** |
 | [F-14](#f-14--simulador-de-cimentação) | Simulador de Cimentação | Front + Backend | Ativo |
 | [F-15](#f-15--monitoramento-de-sondas) | Monitoramento de Sondas | Front + Backend + Telemetria | Ativo |
-| [F-16](#f-16--captura-de-telemetria-na-sonda) | Captura de Telemetria na Sonda | Desktop-Sonda | Ativo |
-| [F-17](#f-17--carta-de-operação-sonda) | Carta de Operação (Sonda) | Desktop-Sonda | Ativo |
+| [F-16](#f-16--captura-de-telemetria-na-sonda) | Captura de Telemetria na Sonda | Geopetro-Desktop | Ativo |
+| [F-17](#f-17--carta-de-operação-sonda) | Carta de Operação (Sonda) | Geopetro-Desktop | Ativo |
 | [F-18](#f-18--monitoramento-de-cimentação) | Monitoramento de Cimentação | Horus | Ativo |
 | [F-19](#f-19--carta-de-operação-cimentação) | Carta de Operação (Cimentação) | Horus | Ativo |
 | [F-20](#f-20--tempo-real-de-sondas) | **Tempo Real de Sondas** | Front + Backend + Desktop | **Novo 2026-08-27** |
@@ -360,7 +360,7 @@ próprio** que resta no backend, além da identidade e da organização.
 ### ✅ Fonte de dados implementada em 2026-08-27
 
 O serviço em `monitoramento.base-url` (default `:8081`) é o
-[Backend-Telemetria](../Geopetro-Telemetria/specs/README.md), **implementado em
+[Geopetro-Telemetria](../Geopetro-Telemetria/specs/README.md), **implementado em
 2026-08-27**. A cadeia completa — captura no CLP, publicação MQTT, ingestão, InfluxDB, consulta REST,
 tela — existe agora ponta a ponta.
 
@@ -594,6 +594,6 @@ Com mais de uma réplica, é preciso broker externo ou afinidade de sessão.
 
 ## F-21 · Configuração remota da sonda
 
-**[FATO 2026-09-07]** Backend-Sonda persiste um documento de limites por unidade, com revisão e autoria, e o publica por STOMP após commit. GET/PUT `/api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda. O Desktop recebe o snapshot ao iniciar, ao reconectar e a cada 60 segundos, mesmo sem CLP conectado; rejeita revisões antigas e configurações de outra unidade.
+**[FATO 2026-09-07]** Geopetro-Backend persiste um documento de limites por unidade, com revisão e autoria, e o publica por STOMP após commit. GET/PUT `/api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda. O Desktop recebe o snapshot ao iniciar, ao reconectar e a cada 60 segundos, mesmo sem CLP conectado; rejeita revisões antigas e configurações de outra unidade.
 
 **[FATO]** Esta é a base de transporte e persistência. O motor de alarmes, a interface de limites, o histórico e a distribuição à frota continuam pendentes. Contrato, limitações e testes em [`configuracao-sonda.md`](contracts/configuracao-sonda.md).

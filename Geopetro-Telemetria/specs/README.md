@@ -11,14 +11,14 @@
 Fecha a cadeia de telemetria, que estava quebrada no meio:
 
 ```
-Desktop-Sonda ──MQTT──► Broker ──► ESTE SERVIÇO ──► InfluxDB
+Geopetro-Desktop ──MQTT──► Broker ──► ESTE SERVIÇO ──► InfluxDB
   PRODUTOR                          CONSUMIDOR          │
                                                         │ REST
-                              Front ◄── Backend-Sonda ◄─┘
+                              Front ◄── Geopetro-Backend ◄─┘
                                         (autoriza)
 ```
 
-**[DECIDIDO 2026-08-26]** Há **exatamente um produtor e um consumidor**. O Backend-Sonda não
+**[DECIDIDO 2026-08-26]** Há **exatamente um produtor e um consumidor**. O Geopetro-Backend não
 participa do MQTT — apenas consulta séries já processadas.
 
 ## Responsabilidades
@@ -33,9 +33,9 @@ participa do MQTT — apenas consulta séries já processadas.
 
 ### Fora de escopo — deliberadamente
 
-- **Autorização de usuário.** O Backend-Sonda valida o vínculo usuário↔sonda antes de chamar. Este serviço não conhece usuários nem regionais.
-- **Decidir sobre cadastro.** R-05 responde *se existe série*, não *se pode excluir*. A regra de exclusão é do Backend-Sonda, que também é quem trata a indisponibilidade deste serviço como impedimento ([RN-072](../../specs/business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
-- **Cálculo de grandezas.** A conversão 4-20mA acontece no Desktop-Sonda. Aqui chegam valores já convertidos — e opcionalmente o bruto, para permitir reprocessamento.
+- **Autorização de usuário.** O Geopetro-Backend valida o vínculo usuário↔sonda antes de chamar. Este serviço não conhece usuários nem regionais.
+- **Decidir sobre cadastro.** R-05 responde *se existe série*, não *se pode excluir*. A regra de exclusão é do Geopetro-Backend, que também é quem trata a indisponibilidade deste serviço como impedimento ([RN-072](../../specs/business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
+- **Cálculo de grandezas.** A conversão 4-20mA acontece no Geopetro-Desktop. Aqui chegam valores já convertidos — e opcionalmente o bruto, para permitir reprocessamento.
 
 ## Estrutura
 
@@ -82,7 +82,7 @@ série**. A idempotência é propriedade do esquema; não há deduplicação exp
 ## Seed sintético de desenvolvimento
 
 **[FATO 2026-08-27]** O ambiente local pode popular o InfluxDB com séries sintéticas da
-`SPT-145` para validar a cadeia InfluxDB → Telemetria → Backend-Sonda → Front sem depender do CLP.
+`SPT-145` para validar a cadeia InfluxDB → Telemetria → Geopetro-Backend → Front sem depender do CLP.
 
 O seed deve obedecer às seguintes guardas e regras:
 
@@ -98,7 +98,7 @@ O seed deve obedecer às seguintes guardas e regras:
 - grava pelo mesmo `InfluxTelemetriaRepository` da ingestão MQTT, preservando measurement, tags e fields;
 - usa lotes bloqueantes limitados durante o seed, de forma que o término da carga confirme a
   persistência de todos os 144.000 pontos sem descarte por pressão do buffer assíncrono;
-- a `SPT-145` deve existir no MySQL do Backend-Sonda pela migration idempotente
+- a `SPT-145` deve existir no MySQL do Geopetro-Backend pela migration idempotente
   `V2026.06.15__unidades_spt144_spt145.sql`; ela não é injetada estaticamente no frontend.
 
 Essa dupla guarda é obrigatória por causa da [DT-013](../../specs/technical-debt.md#dt-013--seed-de-dados-sintéticos-sem-guarda):
@@ -115,7 +115,7 @@ desenvolvimento, por ser uma carga finita e muito maior, usa `WriteApiBlocking` 
 geraria uma requisição HTTP por mensagem — com 20 sondas, 20 req/s só de telemetria.
 
 **Contrapartida aceita:** pontos em buffer se perdem se o processo cair. É aceitável porque o
-Desktop-Sonda mantém cópia local em H2 de toda leitura (F-16), então a fonte de verdade da sonda não
+Geopetro-Desktop mantém cópia local em H2 de toda leitura (F-16), então a fonte de verdade da sonda não
 depende deste buffer.
 
 No seed, a prioridade é concluir somente depois que cada bloco foi aceito pelo InfluxDB, evitando
@@ -139,7 +139,7 @@ da curva.
 |---|---|---|
 | MQTT (entrada) | Hora local sem offset | É o que o produtor publica hoje |
 | InfluxDB | UTC | Séries sem timezone ficam ambíguas nas transições de horário |
-| REST (saída) | UTC (`Instant`) | O `MonitoramentoClient` do Backend-Sonda já usa `Instant` |
+| REST (saída) | UTC (`Instant`) | O `MonitoramentoClient` do Geopetro-Backend já usa `Instant` |
 
 A conversão entrada→UTC usa `telemetria.zona-sonda` (default `America/Sao_Paulo`). Se um payload
 vier com offset explícito, ele é respeitado.
@@ -163,7 +163,7 @@ Tudo por variável de ambiente. Ver `src/main/resources/application.yml`.
 
 | Variável | Default | Observação |
 |---|---|---|
-| `SERVER_PORT` | `8081` | Porta esperada pelo `nginx.conf` e pelo Backend-Sonda |
+| `SERVER_PORT` | `8081` | Porta esperada pelo `nginx.conf` e pelo Geopetro-Backend |
 | `MQTT_BROKER_URL` | `tcp://localhost:1883` | |
 | `MQTT_TOPICO` | `telemetria/+/batch` | Mais restrito que o antigo `telemetria/+/+` |
 | `MQTT_USERNAME` / `MQTT_PASSWORD` | vazio | ⚠️ Ver [SEC-009](../../specs/security-findings.md#sec-009--broker-mqtt-sem-autenticação) |
@@ -183,7 +183,7 @@ Tudo por variável de ambiente. Ver `src/main/resources/application.yml`.
 docker build -t geopetro/telemetria .
 ```
 
-**[FATO]** Spring Boot **3.4.5**, não 4.0.5 como o Backend-Sonda. A comunicação entre os dois é só
+**[FATO]** Spring Boot **3.4.5**, não 4.0.5 como o Geopetro-Backend. A comunicação entre os dois é só
 HTTP, então a versão não precisa casar, e 3.4.5 tem Paho e o cliente InfluxDB comprovadamente
 testados. **Decisão revisável** se houver preferência por uniformidade de stack.
 
@@ -194,7 +194,7 @@ testados. **Decisão revisável** se houver preferência por uniformidade de sta
 ⚠️ **Eles não passavam antes de 2026-09-06.** Este projeto está no Spring Boot **3.4.5**, que traz
 Mockito 5.14.2 com Byte Buddy 1.15.11 — incapaz de ler o bytecode do **Java 25** instalado. Toda
 mockagem de classe falhava, derrubando **10 dos 24 testes**. Corrigido fixando `mockito.version` e
-`byte-buddy.version` no `pom.xml`, nas mesmas versões que o Backend-Sonda já resolve pelo Boot 4.
+`byte-buddy.version` no `pom.xml`, nas mesmas versões que o Geopetro-Backend já resolve pelo Boot 4.
 A divergência de versão de Boot entre os dois serviços permanece —
 [DT-016](../../specs/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
 
@@ -223,7 +223,7 @@ Testcontainer de InfluxDB fecharia essa lacuna e é a próxima adição recomend
 | # | Item | Referência |
 |---|---|---|
 | 1 | Broker de produção e **autenticação** | [SEC-009](../../specs/security-findings.md#sec-009--broker-mqtt-sem-autenticação) · [OQ-023](../../specs/open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção) |
-| 2 | Autenticação serviço-a-serviço na API REST | Hoje aberta; o `WebClient` do Backend-Sonda não envia credencial |
+| 2 | Autenticação serviço-a-serviço na API REST | Hoje aberta; o `WebClient` do Geopetro-Backend não envia credencial |
 | 3 | Política de retenção do InfluxDB | Não definida — afeta crescimento de armazenamento |
 | 4 | Buffer de contingência no produtor | [OQ-019](../../specs/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
 | 5 | Endpoint que aceite múltiplos `dispositivoId` numa chamada | Hoje a tela faz 5 requisições em paralelo |
@@ -235,5 +235,5 @@ Testcontainer de InfluxDB fecharia essa lacuna e é a próxima adição recomend
 |---|---|
 | **[FATO]** Broker sem autenticação — qualquer host da rede pode publicar telemetria forjada | Nenhuma. Ver ponto 1 acima |
 | **[FATO]** Renomear Unidade/Sonda quebra a continuidade do histórico | Nenhuma — [RN-018](../../specs/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
-| **[FATO]** Escala bruta 0–1000 do CLP não confirmada | `valorBruto` é persistido, permitindo reprocessar se a fórmula mudar — [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-01000-do-clp-foi-confirmada) |
+| **[FATO]** Escala bruta 0–1000 do CLP não confirmada | `valorBruto` é persistido, permitindo reprocessar se a fórmula mudar — [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
 | **[FATO]** OneDrive corrompeu o `.git` deste projeto uma vez | Nenhuma — [DT-004](../../specs/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git) |

@@ -38,7 +38,7 @@ for vendida a terceiros.
 | Superfície | Usuário real | Para quê |
 |---|---|---|
 | **Front web** — Monitoramento e Tempo Real | **Supervisão remota** e **cliente** | Acompanhar a distância o que a sonda está fazendo |
-| **Desktop-Sonda** | Operador em campo | Dashboard local imediato, independente de rede |
+| **Geopetro-Desktop** | Operador em campo | Dashboard local imediato, independente de rede |
 | **Horus / Cimentação** | Operador de cimentação | Monitorar a bomba e emitir a Carta de Operação |
 | **Simulador** | Engenharia de cimentação | Planejar a operação e **produzir o relatório entregue ao cliente** |
 
@@ -47,7 +47,7 @@ Desktop na frente.
 
 ### A inversão que isso provoca
 
-O Desktop-Sonda deixa de ser "o produto instalado na sonda" e passa a ser **o sensor do sistema**,
+O Geopetro-Desktop deixa de ser "o produto instalado na sonda" e passa a ser **o sensor do sistema**,
 mais um terminal local para quem está no equipamento. O valor que o cliente e a supervisão enxergam
 está na web.
 
@@ -200,8 +200,8 @@ por poço na web e a ponte com o simulador levantada em
 | 2 | **Trajetória direcional (survey)** no simulador | O modelo em curso não comporta — ver spec no Front |
 | 3 | **Alarmes** (limites, avaliação dupla, eventos) | Depende de 4 |
 | 4 | **Canal de configuração do servidor para a sonda** | **[FATO 2026-09-07] Implementado em código** pela conexão STOMP; [contrato](contracts/configuracao-sonda.md). Distribuição à frota pendente |
-| 5 | **Buffer de contingência** no Desktop-Sonda | Depende de 6 para chegar à frota |
-| 6 | **Auto-update do Desktop-Sonda** | Bloqueia 3, 5, formato MQTT-alvo e autenticação do broker |
+| 5 | **Buffer de contingência** no Geopetro-Desktop | Depende de 6 para chegar à frota |
+| 6 | **Auto-update do Geopetro-Desktop** | Bloqueia 3, 5, formato MQTT-alvo e autenticação do broker |
 | 7 | **Retenção em camadas + backup automatizado** | Nenhuma; é infraestrutura |
 | 8 | **Validação dos campos do simulador** | Elevada por §6 |
 
@@ -335,11 +335,11 @@ resposta só.
 
 | Padrão | Onde vale | Onde **não** vale |
 |---|---|---|
-| **CQRS** | Backend-Telemetria — escrita (`TelemetriaBatch` → InfluxDB) e leitura (série agregada) têm modelos distintos que nunca se cruzam | Backend-Sonda, que é CRUD com JPA: mesma entidade para ler e gravar |
+| **CQRS** | Geopetro-Telemetria — escrita (`TelemetriaBatch` → InfluxDB) e leitura (série agregada) têm modelos distintos que nunca se cruzam | Geopetro-Backend, que é CRUD com JPA: mesma entidade para ler e gravar |
 | **Event sourcing** | **Alarmes**, e só eles — log append-only de `ABRIU`/`ESCALOU`/`REDUZIU`/`FECHOU`, com projeção para a tela | Limites de alarme, cadastros, usuários, simulador |
 
 ⚠️ **Uma correção que vale registrar:** produtor e consumidor via MQTT é **mensageria**, não CQRS. A
-separação de modelos do Backend-Telemetria existiria igual se a ingestão fosse por HTTP. Sem essa
+separação de modelos do Geopetro-Telemetria existiria igual se a ingestão fosse por HTTP. Sem essa
 distinção, é fácil concluir que o sistema inteiro é CQRS — e ele não é.
 
 **[FATO verificado 2026-09-05]** Não há event sourcing em nenhum dos dois backends: zero ocorrências de

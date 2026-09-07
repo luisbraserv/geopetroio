@@ -71,7 +71,13 @@ public class SecurityConfig {
 						// Autoatendimento: precisa vir ANTES de /api/usuarios/** para nao herdar ADMIN.
 						.requestMatchers(HttpMethod.PATCH, "/api/usuarios/me", "/api/usuarios/me/senha")
 						.authenticated()
-						.requestMatchers("/api/empresas/**", "/api/usuarios/**", "/api/configuracoes/**")
+						// Configuracoes do sistema: ADMIN e SUPORTE (RN-086). Vem ANTES do
+						// bloco de cadastros para nao herdar a restricao a ADMIN.
+						.requestMatchers("/api/configuracoes/**")
+						.hasAnyRole("ADMIN", "SUPORTE")
+						// Cadastros seguem exclusivos de ADMIN: SUPORTE configura o sistema,
+						// nao administra usuario nem empresa.
+						.requestMatchers("/api/empresas/**", "/api/usuarios/**")
 						.hasRole("ADMIN")
 						.anyRequest()
 						.authenticated())

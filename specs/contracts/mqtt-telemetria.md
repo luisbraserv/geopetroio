@@ -17,12 +17,12 @@
 
 ```
 ┌──────────────────────┐  publish   ┌────────┐  subscribe  ┌────────────────────────┐
-│ Desktop-Sonda        │───────────►│ BROKER │────────────►│ Backend-Telemetria     │
+│ Geopetro-Desktop        │───────────►│ BROKER │────────────►│ Geopetro-Telemetria     │
 │ (agente na sonda)    │            │  MQTT  │             │ (a implementar)        │
 └──────────────────────┘            └────────┘             └───────────┬────────────┘
                                                                        │ InfluxDB
                                                            ┌───────────▼────────────┐
-                                                           │ Backend-Sonda          │
+                                                           │ Geopetro-Backend          │
                                                            │ consulta via REST      │
                                                            └────────────────────────┘
 ```
@@ -42,11 +42,11 @@ Duas propostas concorriam:
 
 | Proposta | Origem | Volume | Informação |
 |---|---|---|---|
-| Batch simples | Código atual do Desktop-Sonda | 1 msg/ciclo | Mínima (`dispositivo`, `valor`) |
+| Batch simples | Código atual do Geopetro-Desktop | 1 msg/ciclo | Mínima (`dispositivo`, `valor`) |
 | Por sensor | `docs/documentacao-sistema.html` | **5 msg/ciclo** | Rica |
 | **Batch rico** ← escolhido | Síntese | **1 msg/ciclo** | Rica |
 
-**Justificativa registrada:** o formato batch foi introduzido deliberadamente no Desktop-Sonda com
+**Justificativa registrada:** o formato batch foi introduzido deliberadamente no Geopetro-Desktop com
 justificativa de custo — comentário no código cita redução de ~5× no número de mensagens e cobrança
 por mensagem em brokers como AWS IoT Core. O formato por sensor traria a informação descritiva
 desejada, mas multiplicaria o volume por 5 em toda a frota (5 dispositivos × 1 msg/s × N sondas).
@@ -184,14 +184,14 @@ local). A documentação interna descreve um `telemetria-buffer.json` que **nunc
 Este contrato **não define** o comportamento de contingência até que
 [OQ-019](../open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) seja
 respondida. Se o negócio não tolerar lacunas no histórico remoto, uma fila de reenvio precisa entrar
-na spec do Desktop-Sonda — e o subscriber precisará tratar mensagens **fora de ordem** e
+na spec do Geopetro-Desktop — e o subscriber precisará tratar mensagens **fora de ordem** e
 **duplicadas** (QoS 1 já permite duplicata).
 
 ---
 
-## 6. Remoção do consumidor do Backend-Sonda
+## 6. Remoção do consumidor do Geopetro-Backend
 
-**[DECIDIDO 2026-08-26]** ✅ **Resolvido.** O Backend-Sonda **não é mais consumidor MQTT**.
+**[DECIDIDO 2026-08-26]** ✅ **Resolvido.** O Geopetro-Backend **não é mais consumidor MQTT**.
 
 **Estado anterior [FATO]:** assinava `telemetria/+/+` e o handler
 (`MonitoramentoTelemetriaService.processar`) apenas logava — nenhum dado era persistido. Com o novo
@@ -205,7 +205,7 @@ serviço de telemetria, haveria **dois consumidores no mesmo tópico**.
 | `org.eclipse.paho.client.mqttv3` | Dependência em `app/pom.xml` |
 | `mqtt.*` | 6 propriedades em `application.properties` |
 
-O Backend-Sonda mantém **apenas** o papel de cliente REST (`com.geopetro.monitoramento`), consultando
+O Geopetro-Backend mantém **apenas** o papel de cliente REST (`com.geopetro.monitoramento`), consultando
 séries já processadas. A separação de responsabilidades ficou limpa: **quem captura publica, quem
 persiste consome, quem autoriza consulta**.
 
@@ -249,7 +249,7 @@ de um fuso, será preciso derivar a zona da unidade. Hoje não há evidência di
 
 ## 9. Migração a partir do formato atual
 
-**[FATO]** Formato publicado hoje pelo Desktop-Sonda:
+**[FATO]** Formato publicado hoje pelo Geopetro-Desktop:
 
 ```json
 {
@@ -272,7 +272,7 @@ de um fuso, será preciso derivar a zona da unidade. Hoje não há evidência di
 | # | Passo | Estado |
 |---|---|---|
 | 1 | Consumidor aceita **ambos** os formatos (detecção pela presença de `idSondaUnidade`) | ✅ **Feito em 2026-08-27** |
-| 2 | Desktop-Sonda passa a publicar o formato alvo | ⏳ Pendente |
+| 2 | Geopetro-Desktop passa a publicar o formato alvo | ⏳ Pendente |
 | 3 | Após toda a frota atualizada, remover o suporte ao formato antigo | ⏳ Pendente |
 
 O passo 1 evita acoplar o cronograma de atualização da frota (instaladores `.exe` per-user em campo)

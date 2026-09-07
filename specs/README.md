@@ -72,19 +72,19 @@ Respostas dadas pela equipe em **2026-08-26**, durante a entrevista de levantame
 | Tema | Decisão |
 |---|---|
 | Layout de specs | Híbrido (sistema na raiz + feature por repo) |
-| Backend-Telemetria | ✅ **Implementado em 2026-08-27**, spec-first — primeiro componente do sistema a nascer sob SDD |
-| Acesso ao InfluxDB | **Via proxy**, não direto. O Backend-Telemetria é o único dono do schema; o Backend-Sonda só consome REST |
+| Geopetro-Telemetria | ✅ **Implementado em 2026-08-27**, spec-first — primeiro componente do sistema a nascer sob SDD |
+| Acesso ao InfluxDB | **Via proxy**, não direto. O Geopetro-Telemetria é o único dono do schema; o Geopetro-Backend só consome REST |
 | Contrato MQTT alvo | **Batch com payload rico** — 1 mensagem por ciclo, campos ricos no array de leituras |
-| **Papéis MQTT** | **Produtor: Desktop-Sonda · Consumidor: Backend-Telemetria.** Backend-Sonda não participa |
-| **Módulo Químicos** | **Removido** do Backend-Sonda |
-| **Módulos Projetos, Processos, Observações** | **Removidos** do Backend-Sonda e do Front |
+| **Papéis MQTT** | **Produtor: Geopetro-Desktop · Consumidor: Geopetro-Telemetria.** Geopetro-Backend não participa |
+| **Módulo Químicos** | **Removido** do Geopetro-Backend |
+| **Módulos Projetos, Processos, Observações** | **Removidos** do Geopetro-Backend e do Front |
 | Almoxarifado / Compra | **Descontinuados**. Não entram como escopo ativo |
 | Política de senha | **Sem política definida** — pendente de definição formal |
 | Roles não utilizadas | **Roadmap de módulos** — mantidas no modelo de autorização |
 | Desktops (Sonda / Cimentação) | **Permanecem separados** — produtos distintos, duplicação aceita |
 | Falhas de segurança | Documento priorizado + correção imediata |
 | **Escopo de sondas** | Perfis operacionais veem a **frota inteira**; `CLIENTE` só as **concedidas no cadastro** |
-| **Tempo real** | **WebSocket/STOMP** Desktop → Backend-Sonda → Angular, **sem persistência** |
+| **Tempo real** | **WebSocket/STOMP** Desktop → Geopetro-Backend → Angular, **sem persistência** |
 
 ### Escopo resultante
 
@@ -135,7 +135,7 @@ Registro completo em [`product-context.md`](product-context.md); decisões item 
 
 | Antes | Agora |
 |---|---|
-| O Desktop-Sonda era o produto na sonda | É **o sensor do sistema**; o valor aparece na web |
+| O Geopetro-Desktop era o produto na sonda | É **o sensor do sistema**; o valor aparece na web |
 | Alarme não existia como conceito | É requisito essencial, com spec própria em [`features/alarmes.md`](features/alarmes.md) |
 | Perda de telemetria era pergunta aberta | Não é aceitável — a conectividade varia demais entre sondas |
 | Simulador era cálculo interno | Produz **documento que sai da empresa** |
@@ -170,7 +170,7 @@ Registro completo em [`product-context.md`](product-context.md); decisões item 
 | Tema | Decisão |
 |---|---|
 | **Event sourcing** | **Só nos alarmes** — log de `ABRIU`/`ESCALOU`/`REDUZIU`/`FECHOU` com projeção. Nada mais migra |
-| **CQRS** | **Já existe no Backend-Telemetria** (escrita ≠ leitura) e **só lá**. MQTT é mensageria, não CQRS |
+| **CQRS** | **Já existe no Geopetro-Telemetria** (escrita ≠ leitura) e **só lá**. MQTT é mensageria, não CQRS |
 | **Escalada de alarme** | **Um episódio que escala**, não dois eventos |
 | **Limites de alarme** | Sem perfil padrão · sonda sem limite **não alarma** · limite vale **até alguém trocar** |
 | **API** | **Padronizar tudo em `/api`** — testes de `SecurityConfig` **antes** de mover as rotas |

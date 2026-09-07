@@ -2,7 +2,7 @@
 
 > **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-07] Canal de configuração implementado; motor e interfaces de alarmes pendentes.**
 >
-> Feature de nível de sistema: atravessa Desktop-Sonda, Backend-Sonda e Front. Por isso mora aqui, e
+> Feature de nível de sistema: atravessa Geopetro-Desktop, Geopetro-Backend e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
 >
 > Contexto de produto em [`../product-context.md`](../product-context.md#3-alarmes--o-que-faltava-para-o-produto-cumprir-o-papel).
@@ -62,7 +62,7 @@ fato. Ver [OQ-031](../open-questions.md#oq-031--o-consumidor-tolera-telemetria-f
 
 ### Limite
 
-**[FATO 2026-09-07]** Um documento por **Unidade/Sonda**, com até um limite por grandeza, no MySQL do Backend-Sonda. A lista é substituída integralmente e a autoria corresponde à última gravação do documento. A proposta original previa um registro por Unidade/Sonda × grandeza.
+**[FATO 2026-09-07]** Um documento por **Unidade/Sonda**, com até um limite por grandeza, no MySQL do Geopetro-Backend. A lista é substituída integralmente e a autoria corresponde à última gravação do documento. A proposta original previa um registro por Unidade/Sonda × grandeza.
 
 ```
 LimiteAlarme
@@ -96,9 +96,9 @@ estado normal, não pendência sinalizada. O sistema não avisa que uma sonda es
 nenhum. O valor definido para o trabalho de hoje continua valendo semana que vem, para outro trabalho —
 por isso o registro de autoria (§6) é o que permite entender depois por que o limite era aquele.
 
-**Por que no Backend-Sonda e não no serviço de Telemetria:** o limite é configuração de cadastro,
+**Por que no Geopetro-Backend e não no serviço de Telemetria:** o limite é configuração de cadastro,
 editada por gente autenticada, sujeita à mesma autorização por sonda. O serviço de Telemetria
-deliberadamente **não conhece usuários** ([spec do Backend-Telemetria](../../Geopetro-Telemetria/specs/README.md)).
+deliberadamente **não conhece usuários** ([spec do Geopetro-Telemetria](../../Geopetro-Telemetria/specs/README.md)).
 
 ### Evento
 
@@ -158,17 +158,17 @@ geraria 600 registros — e nenhuma tela de histórico sobrevive a isso.
 Supervisão ajusta o limite na tela
         │
         ▼
-Backend-Sonda grava e publica em /topic/config/unidades-sondas/{id}
+Geopetro-Backend grava e publica em /topic/config/unidades-sondas/{id}
         │
         ▼
-Desktop-Sonda (já assinante) aplica na hora
+Geopetro-Desktop (já assinante) aplica na hora
 ```
 
 **Regra obrigatória:** ao **conectar** e ao **reconectar**, o Desktop pede a configuração vigente. Sem
 isso, um limite alterado enquanto a sonda estava fora nunca chegaria — e a sonda operaria com um valor
 velho sem que ninguém percebesse.
 
-**Por que não um tópico MQTT de comando:** exigiria que o Backend-Sonda voltasse a falar MQTT, revertendo
+**Por que não um tópico MQTT de comando:** exigiria que o Geopetro-Backend voltasse a falar MQTT, revertendo
 a decisão de 2026-08-26 que deixou **um produtor e um consumidor** no broker
 ([`mqtt-telemetria.md §6`](../contracts/mqtt-telemetria.md#6-remoção-do-consumidor-do-geopetro-backend)).
 A retenção do broker entregaria a configuração após um período offline — vantagem real —, mas o pedido

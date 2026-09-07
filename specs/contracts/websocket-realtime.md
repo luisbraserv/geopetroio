@@ -8,9 +8,9 @@
 responsabilidades que não se sobrepõem:
 
 ```
-                        ┌── MQTT ──► Broker ──► Backend-Telemetria ──► InfluxDB
-CLP ──► Desktop-Sonda ──┤                              HISTÓRICO
-                        └── WebSocket ──► Backend-Sonda :8080 ──► Angular
+                        ┌── MQTT ──► Broker ──► Geopetro-Telemetria ──► InfluxDB
+CLP ──► Geopetro-Desktop ──┤                              HISTÓRICO
+                        └── WebSocket ──► Geopetro-Backend :8080 ──► Angular
                                                 TEMPO REAL
 ```
 
@@ -35,7 +35,7 @@ CLP. Cada um tem seu worker; a thread de leitura apenas entrega e segue.
 | **Retransmissor** | `Geopetro-Backend` | publica em `/topic/realtime/unidades-sondas/{id}` |
 | **Consumidor** | `Geopetro-Front` | assina o tópico da unidade escolhida |
 
-**[FATO]** O Backend-Sonda **não persiste as amostras de estado atual** e **não consome MQTT**. Desde 2026-09-07, a mesma conexão também transporta [configurações persistidas por unidade](configuracao-sonda.md), em destinos próprios.
+**[FATO]** O Geopetro-Backend **não persiste as amostras de estado atual** e **não consome MQTT**. Desde 2026-09-07, a mesma conexão também transporta [configurações persistidas por unidade](configuracao-sonda.md), em destinos próprios.
 
 ---
 
@@ -153,7 +153,7 @@ segundos** sem leitura nova.
 
 ---
 
-## 7. Configuração do Desktop-Sonda
+## 7. Configuração do Geopetro-Desktop
 
 **[FATO]** Campos novos na tela de Configurações:
 
@@ -183,10 +183,10 @@ publica no MQTT. O tempo real é um canal adicional, não um requisito de funcio
 
 | Contrato | Responsabilidade |
 |---|---|
-| [`mqtt-telemetria.md`](mqtt-telemetria.md) | Ingestão do histórico: Desktop → Broker → Backend-Telemetria |
-| [`rest-monitoramento.md`](rest-monitoramento.md) | Consulta do histórico: Backend-Sonda → Backend-Telemetria |
-| **Este** | Estado atual: Desktop → Backend-Sonda → Angular |
-| [`configuracao-sonda.md`](configuracao-sonda.md) | Configuração persistida: Backend-Sonda → Desktop, na mesma conexão STOMP |
+| [`mqtt-telemetria.md`](mqtt-telemetria.md) | Ingestão do histórico: Desktop → Broker → Geopetro-Telemetria |
+| [`rest-monitoramento.md`](rest-monitoramento.md) | Consulta do histórico: Geopetro-Backend → Geopetro-Telemetria |
+| **Este** | Estado atual: Desktop → Geopetro-Backend → Angular |
+| [`configuracao-sonda.md`](configuracao-sonda.md) | Configuração persistida: Geopetro-Backend → Desktop, na mesma conexão STOMP |
 
 **[FATO]** Os três são independentes. A tela de Monitoramento usa o histórico; a de Tempo Real usa
 este canal. Nenhuma depende da outra.

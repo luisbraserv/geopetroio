@@ -6,6 +6,7 @@ import { authGuard } from './features/auth/guards/auth.guard';
 import {
   normalizarRoles,
   ROLES_ADMINISTRACAO,
+  ROLES_CONFIGURACAO,
   ROLES_MONITORAMENTO,
   ROLES_SIMULADOR,
   rotaInicialPara,
@@ -105,7 +106,7 @@ export const routes: Routes = [
         path: 'configuracoes',
         loadComponent: () => import('./features/configuracoes/settings-page.component').then(m => m.SettingsPageComponent),
         canActivate: [authGuard],
-        data: { roles: ROLES_ADMINISTRACAO },
+        data: { roles: ROLES_CONFIGURACAO },
         children: [
           { path: '', redirectTo: 'email', pathMatch: 'full' },
           {

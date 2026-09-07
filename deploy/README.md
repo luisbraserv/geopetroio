@@ -109,7 +109,7 @@ openssl rand -base64 48
 ```
 
 ⚠️ A aplicação **falha no startup** se `JWT_SECRET` estiver vazio — deliberado
-([SEC-004](../specs/security-findings.md#sec-004--segredo-jwt-padrão-no-código)).
+([SEC-004](../specs/security-findings.md#sec-004--segredo-jwt-sem-valor-padrão)).
 
 ### 2. Apontar para a VM-2
 
@@ -218,7 +218,7 @@ do Braserv-Horus-Desktop, apontando para um banco `braservone`. Deve ser **rotac
 
 ## Configurar as sondas
 
-Cada instalação do Desktop-Sonda precisa apontar para o broker da VM-2, na tela de Configurações:
+Cada instalação do Geopetro-Desktop precisa apontar para o broker da VM-2, na tela de Configurações:
 
 | Campo | Valor |
 |---|---|
@@ -231,7 +231,7 @@ Cada instalação do Desktop-Sonda precisa apontar para o broker da VM-2, na tel
 ([RN-018](../specs/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)); renomear
 uma unidade depois quebra a continuidade do histórico.
 
-**[FATO 2026-08-27]** O suporte a credenciais MQTT foi **implementado no Desktop-Sonda** durante esta
+**[FATO 2026-08-27]** O suporte a credenciais MQTT foi **implementado no Geopetro-Desktop** durante esta
 preparação. Antes disso o produtor conectava apenas de forma anônima, o que tornaria impossível
 ativar a autenticação no broker sem derrubar a telemetria de toda a frota.
 
@@ -239,7 +239,7 @@ Se o usuário ficar vazio, o app conecta anonimamente e registra aviso no log �
 bancada, inviável em produção.
 
 ⚠️ **Ordem importa na frota:** ative a autenticação no broker **depois** de atualizar as instalações
-do Desktop-Sonda, ou as sondas com a versão antiga param de publicar.
+do Geopetro-Desktop, ou as sondas com a versão antiga param de publicar.
 
 ---
 
@@ -261,10 +261,10 @@ Os `docker-compose.yml` são a via recomendada para duas VMs. Se migrar para Kub
 
 | # | Item | Impacto |
 |---|---|---|
-| 1 | **Atualizar a frota antes de exigir autenticação no broker** | O suporte a credenciais já existe no Desktop-Sonda, mas instalações antigas em campo ainda conectam anonimamente |
+| 1 | **Atualizar a frota antes de exigir autenticação no broker** | O suporte a credenciais já existe no Geopetro-Desktop, mas instalações antigas em campo ainda conectam anonimamente |
 | 2 | **Sem TLS** — MQTT e HTTP em texto claro | Aceitável em rede privada; obrigatório se atravessar internet |
 | 3 | **Sem autenticação serviço-a-serviço** entre VM-1 e VM-2 | Mitigado por firewall ([OQ-029](../specs/open-questions.md#oq-029--a-api-de-telemetria-precisa-de-autenticação-serviço-a-serviço)) |
 | 4 | **Retenção do InfluxDB** default 90d | ~8,6 mi de pontos/dia com 20 sondas ([OQ-028](../specs/open-questions.md#oq-028--qual-é-a-política-de-retenção-do-influxdb)) |
 | 5 | **Sem backup automatizado** | MySQL e InfluxDB precisam de rotina de backup |
 | 6 | **Sem HTTPS no frontend** | O compose expõe `:80`. Coloque um proxy reverso com TLS à frente |
-| 7 | **Repositório Git do Backend-Telemetria não existe** | Criar — preferencialmente fora do OneDrive ([DT-004](../specs/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)) |
+| 7 | **Repositório Git do Geopetro-Telemetria não existe** | Criar — preferencialmente fora do OneDrive ([DT-004](../specs/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)) |

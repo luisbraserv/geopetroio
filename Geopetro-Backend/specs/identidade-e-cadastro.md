@@ -73,10 +73,10 @@ Fontes registradas hoje — acrescentar uma não exige tocar em configuração, 
 
 ### RN-072 · Histórico de telemetria conta como vínculo
 
-Uma Unidade/Sonda com série gravada não pode ser excluída — e o Backend-Sonda não sabia disso
+Uma Unidade/Sonda com série gravada não pode ser excluída — e o Geopetro-Backend não sabia disso
 sozinho, porque o vínculo que ele enxerga é relacional e a série vive no InfluxDB, em outro serviço.
 
-**Endpoint novo no Backend-Telemetria:** `GET /api/monitoramentos/sondas/{id}/existe`, devolvendo
+**Endpoint novo no Geopetro-Telemetria:** `GET /api/monitoramentos/sondas/{id}/existe`, devolvendo
 `possuiSerie` mais o primeiro e o último ponto. As datas vão junto para a recusa dizer *"telemetria de
 01/03/2026 a 05/09/2026"* em vez de um "existe vínculo" que não diz o quê. No InfluxDB é consulta de
 extremos (`first()`/`last()`), não varredura.
@@ -159,10 +159,10 @@ gerados diferentes do Hibernate.
 **[FATO 2026-09-06]** `mvnw.cmd -pl app -am test`: **110 testes aprovados**, sendo 26 no módulo
 `usuario` e 84 no `app`. Eram 70 no total antes desta entrega.
 
-No Backend-Telemetria, `mvnw.cmd test`: **27 aprovados**, contra 24 antes.
+No Geopetro-Telemetria, `mvnw.cmd test`: **27 aprovados**, contra 24 antes.
 
 ⚠️ **Uma correção de infraestrutura foi necessária para chegar até aqui.** A suíte do
-Backend-Telemetria estava com **10 dos 24 testes quebrados** por incompatibilidade entre o Byte Buddy
+Geopetro-Telemetria estava com **10 dos 24 testes quebrados** por incompatibilidade entre o Byte Buddy
 que o Spring Boot 3.4.5 traz e o Java 25 instalado — falha pré-existente, verificada na árvore sem
 estas alterações. Registrada em
 [DT-016](../../specs/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
@@ -199,4 +199,4 @@ arquivos — as mesmas de antes desta entrega, em arquivo não tocado por ela.
 | Recuperação de senha por autoatendimento (traz SMTP de volta) | [OQ-021](../../specs/open-questions.md#oq-021--recuperação-de-senha-é-planejada) |
 | Padronizar `/auth` e `/usuarios` em `/api` | ✅ Entregue posteriormente: [api-prefix.md](api-prefix.md) |
 | Revogação de token individual | RN-062 registra que continua não existindo |
-| Autenticação entre o Backend-Sonda e a Telemetria | Firewall é a única proteção — [product-context §10](../../specs/product-context.md#10-identidade-acesso-e-cadastro) |
+| Autenticação entre o Geopetro-Backend e a Telemetria | Firewall é a única proteção — [product-context §10](../../specs/product-context.md#10-identidade-acesso-e-cadastro) |

@@ -139,6 +139,7 @@ export class UsuariosAdminPageComponent {
       SONDA: 'Sonda',
       GERENCIA: 'Gerência',
       DIRETORIA: 'Diretoria',
+      SUPORTE: 'Suporte',
     };
     return labels[role] ?? role;
   }

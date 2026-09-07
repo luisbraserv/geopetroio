@@ -20,7 +20,7 @@
 | [DT-010](#dt-010--duplicação-entre-os-dois-desktops) | Duplicação entre os dois desktops | Desktops | Média | Aceita |
 | [DT-011](#dt-011--divergência-de-roles-backend--frontend) | Divergência de roles backend↔frontend | Backend/Front | Média | ✅ Resolvido |
 | [DT-012](#dt-012--dois-formatos-de-erro-na-api) | Dois formatos de erro na API | Backend | Média | Aberto |
-| [DT-013](#dt-013--seed-de-dados-sintéticos-sem-guarda) | Seed sintético sem guarda de ambiente | Desktop-Sonda | Média | Aberto |
+| [DT-013](#dt-013--seed-de-dados-sintéticos-sem-guarda) | Seed sintético sem guarda de ambiente | Geopetro-Desktop | Média | Aberto |
 | [DT-014](#dt-014--simulador-sem-validação-de-entrada) | Simulador sem validação de entrada | Front | Média | Aberto |
 | [DT-015](#dt-015--código-morto-inventário) | Código morto (inventário) | Todas | Baixa | Parcialmente resolvido |
 | [DT-016](#dt-016--inconsistências-de-organização-de-projeto) | Organização de projeto | Backend | Baixa | Aberto |
@@ -70,7 +70,7 @@ entrado no Git.
 
 ## DT-002 · Estratégias conflitantes de evolução de schema
 
-**Severidade: Crítica** · Backend-Sonda · ✅ **Resolvido em 2026-09-06** com a adoção do Flyway
+**Severidade: Crítica** · Geopetro-Backend · ✅ **Resolvido em 2026-09-06** com a adoção do Flyway
 
 ### O problema, como foi encontrado — registro histórico
 
@@ -161,11 +161,14 @@ gera, produção e uma instalação nova ficam **diferentes**. Um caso confirmad
 Ela rodou em produção, foi arquivada em `db/historico/`, e o baseline — vindo do Hibernate — trouxe o
 `ENUM` de volta.
 
-⚠️ **Consequência imediata:** [RN-086](business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)
-precisa de uma role `SUPORTE`. Numa base nova isso exige `ALTER TABLE ... MODIFY COLUMN role enum(...)`
-com o valor novo; em produção, o `VARCHAR` aceita sem alteração nenhuma. **A migration precisa
-funcionar nos dois**, e a forma segura é normalizar a coluna para `VARCHAR(255)` antes de acrescentar
-a role — o que também elimina a divergência.
+✅ **[FATO 2026-09-07] Corrigida.** `V2026.09.07.3__role_suporte.sql` normaliza a coluna para
+`VARCHAR(255)` **somente onde ainda é `ENUM`**, guardado por `information_schema.DATA_TYPE`. Produção
+não é tocada — nada de rewrite desnecessário, e a collation `utf8mb4_unicode_ci` de lá fica preservada.
+A divergência de tipo deixa de existir.
+
+⚠️ **A migration não foi verificada contra MySQL real**: a instância local estava parada quando a role
+entrou. `MigracaoFlywayTest.colunaDeRoleAceitaSuporte` cobre o caso — tipo final da coluna e um
+`INSERT` de `'SUPORTE'` — e roda assim que houver banco.
 
 ⚠️ **[INFERÊNCIA] Provavelmente não é o único caso.** As migrations manuais criaram FKs com nomes
 próprios (`fk_setores_regional`, `fk_uir_usuario`) e collation `utf8mb4_unicode_ci`, enquanto o
@@ -191,23 +194,23 @@ a seguir nas próximas.
 ### O problema
 
 ```
-Desktop-Sonda ──publica──► Broker MQTT ──►   ???   ──► Backend-Sonda ──► Front
+Geopetro-Desktop ──publica──► Broker MQTT ──►   ???   ──► Geopetro-Backend ──► Front
   (funcionava)            (funcionava)     (vazio)      (pronto)       (pronto)
 ```
 
-Os dois extremos funcionavam e o cliente REST do Backend-Sonda já estava implementado. **Faltava o
+Os dois extremos funcionavam e o cliente REST do Geopetro-Backend já estava implementado. **Faltava o
 meio.** Nenhum dado de telemetria era persistido, e a tela de Monitoramento sempre retornava `502`.
 Era a maior lacuna funcional do sistema.
 
 ### Como foi resolvido
 
-**[DECIDIDO 2026-08-26]** Papéis definidos: `Desktop-Sonda` é o **produtor**,
-`Geopetro-Telemetria` é o **consumidor**. O consumidor no-op do Backend-Sonda
+**[DECIDIDO 2026-08-26]** Papéis definidos: `Geopetro-Desktop` é o **produtor**,
+`Geopetro-Telemetria` é o **consumidor**. O consumidor no-op do Geopetro-Backend
 (`MonitoramentoTelemetriaService.processar`, que apenas logava) foi removido junto com a dependência
 Paho e as propriedades `mqtt.*` — não para resolver o problema, mas para **esclarecer de quem era a
 responsabilidade**.
 
-**[FATO 2026-08-27]** O Backend-Telemetria foi implementado: consumidor MQTT, persistência em
+**[FATO 2026-08-27]** O Geopetro-Telemetria foi implementado: consumidor MQTT, persistência em
 InfluxDB e API REST de consulta. 24 testes passando. Ver
 [`Geopetro-Telemetria/specs/`](../Geopetro-Telemetria/specs/).
 
@@ -283,7 +286,7 @@ Ver [OQ-025](open-questions.md#oq-025--os-repositórios-podem-sair-do-onedrive).
 
 ⚠️ **[FATO observado 2026-09-05]** Durante a própria entrevista que registrou esta decisão, o OneDrive
 impediu leitura de arquivos **duas vezes**: `git status` falhou com `read error ... Invalid argument` e
-`mmap failed` em 16 arquivos do Backend-Telemetria, e um `grep` recebeu `Permission denied` em arquivos
+`mmap failed` em 16 arquivos do Geopetro-Telemetria, e um `grep` recebeu `Permission denied` em arquivos
 do simulador. O comportamento é corrente, não histórico.
 
 **O que segue exposto:** histórico Git dos cinco repositórios, e — de forma mais aguda — **trabalho não
@@ -338,11 +341,11 @@ adotar um domínio, não um passo opcional.
 
 ## DT-007 · Ausência de testes em áreas críticas
 
-**Severidade: Alta** · Backend-Sonda · Aberto
+**Severidade: Alta** · Geopetro-Backend · Aberto
 
 **[FATO]** Cobertura no levantamento: **43 testes**, todos unitários, em 7 classes.
 
-**[FATO 2026-09-06]** Hoje são **110** no Backend-Sonda e **27** no Backend-Telemetria. Duas lacunas
+**[FATO 2026-09-06]** Hoje são **110** no Geopetro-Backend e **27** no Geopetro-Telemetria. Duas lacunas
 fecharam parcialmente:
 
 | Antes | Agora |
@@ -375,7 +378,7 @@ proporção** — os testes removidos cobriam justamente os módulos removidos.
 
 ## DT-008 · PATCH que não é parcial
 
-**Severidade: Alta** · Backend-Sonda · Aberto
+**Severidade: Alta** · Geopetro-Backend · Aberto
 
 **[FATO]** `AtualizarUsuarioRequest.toCommand()` chama `Telefone.comTratamento()` e
 `Email.comTratamento()` **incondicionalmente**. Omitir `telefone` ou `email` no corpo de um
@@ -390,9 +393,9 @@ alterados quebra.
 
 ## DT-009 · Documentação divergente do código
 
-**Severidade: Alta** · Desktop-Sonda e Horus · Aberto
+**Severidade: Alta** · Geopetro-Desktop e Horus · Aberto
 
-### Desktop-Sonda [FATO]
+### Geopetro-Desktop [FATO]
 
 `docs/documentacao-sistema.html` (datado "Maio 2026") descreve comportamento que **não existe**:
 
@@ -410,7 +413,7 @@ fluxo do CLP) é **correto e valioso** — foi usado e validado neste levantamen
 `StrokePorMinutoService` tem javadoc, comentários e nomes de método afirmando *"últimos 10 segundos"*,
 mas `JANELA_TEMPO_MS = 60000` (**60 segundos**).
 
-**[FATO]** Os READMEs de pacote do Desktop-Sonda descrevem uma arquitetura CRUD genérica que **não
+**[FATO]** Os READMEs de pacote do Geopetro-Desktop descrevem uma arquitetura CRUD genérica que **não
 corresponde a nenhuma classe real**, e referenciam três arquivos que **não existem**.
 
 ---
@@ -419,9 +422,9 @@ corresponde a nenhuma classe real**, e referenciam três arquivos que **não exi
 
 **Severidade: Média** · **[DECIDIDO 2026-08-26]** duplicação aceita — produtos distintos
 
-**[FATO]** Desktop-Sonda e Horus implementam independentemente o mesmo conjunto:
+**[FATO]** Geopetro-Desktop e Horus implementam independentemente o mesmo conjunto:
 
-| Capacidade | Desktop-Sonda | Horus |
+| Capacidade | Geopetro-Desktop | Horus |
 |---|---|---|
 | Leitura CLP S7 | Moka7, rack 0 slot **1** | Moka7, rack 0 slot **0** |
 | Conversão bar→psi | `14.5037738` | `14.5038` |
@@ -433,7 +436,7 @@ corresponde a nenhuma classe real**, e referenciam três arquivos que **não exi
 Documentado aqui para que a duplicação seja **consciente**, e para que correções de fórmula sejam
 aplicadas **nos dois lugares**.
 
-**[FATO]** Duplicação interna adicional no Desktop-Sonda: a suavização de curva está implementada
+**[FATO]** Duplicação interna adicional no Geopetro-Desktop: a suavização de curva está implementada
 **três vezes**, com os mesmos números mágicos (`5`, `0.045`, `17`).
 
 ---
@@ -449,6 +452,11 @@ aplicadas **nos dois lugares**.
 `CIMENTACAO`, `SONDA`, `GERENCIA`, `DIRETORIA`) e o frontend passou a espelhá-lo exatamente.
 **Todas as 7 têm efeito real** — nenhuma role decorativa restou.
 
+**[FATO 2026-09-07]** São **8**: entrou `SUPORTE`
+([RN-086](business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)), com
+efeito real desde o primeiro dia — alcança `/api/configuracoes/**` e não alcança cadastro. O princípio
+desta dívida foi respeitado: a role nasceu com uma fronteira testada, não reservada para uso futuro.
+
 **Melhoria estrutural [FATO]:** as roles por módulo deixaram de ser literais espalhados e passaram a
 constantes exportadas (`ROLES_MONITORAMENTO`, `ROLES_SIMULADOR`, `ROLES_ADMINISTRACAO`) em
 `user.model.ts`, usadas tanto pelos guards de rota quanto pelo menu. Antes, menu e guard podiam
@@ -458,7 +466,7 @@ divergir silenciosamente — um item aparecia e levava a "acesso negado".
 
 ## DT-012 · Dois formatos de erro na API
 
-**Severidade: Média** · Backend-Sonda · Aberto
+**Severidade: Média** · Geopetro-Backend · Aberto
 
 **[FATO]** `ApiExceptionHandler` padroniza erros de negócio como
 `ApiErrorResponse{timestamp, status, error, message, path, details}`.
@@ -473,7 +481,7 @@ autorização. **[FATO]** O `parseApiError` do frontend tem tratamento defensivo
 
 ## DT-013 · Seed de dados sintéticos sem guarda
 
-**Severidade: Média** · Desktop-Sonda · Aberto
+**Severidade: Média** · Geopetro-Desktop · Aberto
 
 **[FATO]** `SondaReadingSeeder` insere **1000 leituras sintéticas** (senoide + ruído, seed fixa `42`)
 sempre que o banco H2 estiver vazio — **sem `@Profile("dev")` nem qualquer guarda de ambiente**.
@@ -502,7 +510,7 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 
 **Severidade: Baixa** · Parcialmente resolvido
 
-### Backend-Sonda [FATO]
+### Geopetro-Backend [FATO]
 - ✅ **Resolvido:** `ProcessoSchemaInitializer`, pacote `com.geopetro.telemetria`, dependência Paho, propriedades `mqtt.*`, `@EnableScheduling`, `data-quimicos.sql` — todos removidos em 2026-08-26
 - ✅ **Resolvido 2026-09-06:** `RegionalBuscaPort`, `SetorConsultaPort` e seus adaptadores — ficaram sem chamador quando [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) tirou o vínculo organizacional, e saíram junto em vez de virar porta órfã
 - ⏳ **Lombok** declarado em `app/pom.xml` e **nunca usado** — zero anotações
@@ -523,7 +531,7 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 - ⏳ Branch morto em `ShellComponent.navEntries` para grupo `'Gerenciamento'` inexistente
 - ⏳ Checkbox "Lembrar acesso" sem binding; link "Esqueci minha senha" apontando para `/`
 
-### Desktop-Sonda [FATO]
+### Geopetro-Desktop [FATO]
 - `SondaData.calcularVazao()` — com TODO explícito, nunca usado
 - Getters de `SondaService` (`getPeso`, `getPressao01..03`, `getStatus`, `obterDadosAtuais`) — sem chamador
 - Comentários de campo em `SondaData.java:17-20` **incorretos** quanto ao mapeamento de sensores
@@ -554,4 +562,4 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 - **[FATO]** Higiene no Horus: `data/registros_operacao.json` (3,3 MB de telemetria real) e binários H2 versionados no Git
 - Build do front usa `--configuration k8s`, mas **não há manifesto Kubernetes** no workspace — [OQ-012](open-questions.md#oq-012--onde-vivem-os-manifestos-de-deploy)
 - `Braserv-Horus-Desktop` injeta um `JAVA_HOME` de fallback fixo no `build.gradle` — frágil entre máquinas
-- ✅ **Resolvido 2026-09-06:** o Backend-Telemetria roda Spring Boot **3.4.5** enquanto o Backend-Sonda já está no **4.0.5**. O Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que **não reconhece o bytecode do Java 25** instalado — *toda* mockagem de classe falhava com `Java 25 (69) is not supported`, derrubando **10 dos 24 testes** do serviço. Corrigido fixando `mockito.version` e `byte-buddy.version` no `pom.xml` para as mesmas versões que o Boot 4 já resolve. ⚠️ **A divergência de Boot entre os dois serviços permanece** — este é o primeiro sintoma dela, e não será o último
+- ✅ **Resolvido 2026-09-06:** o Geopetro-Telemetria roda Spring Boot **3.4.5** enquanto o Geopetro-Backend já está no **4.0.5**. O Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que **não reconhece o bytecode do Java 25** instalado — *toda* mockagem de classe falhava com `Java 25 (69) is not supported`, derrubando **10 dos 24 testes** do serviço. Corrigido fixando `mockito.version` e `byte-buddy.version` no `pom.xml` para as mesmas versões que o Boot 4 já resolve. ⚠️ **A divergência de Boot entre os dois serviços permanece** — este é o primeiro sintoma dela, e não será o último

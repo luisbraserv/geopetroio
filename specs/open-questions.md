@@ -14,12 +14,12 @@
 | Pergunta | Decisão |
 |---|---|
 | Onde ficam as specs? | Híbrido: sistema na raiz, feature por repositório |
-| Backend-Telemetria existe? | Não. Será criado como projeto novo, spec-first |
+| Geopetro-Telemetria existe? | Não. Será criado como projeto novo, spec-first |
 | Contrato MQTT alvo? | Batch com payload rico (1 msg/ciclo, campos descritivos no array) |
-| **Quem produz e quem consome MQTT?** | **Produtor: Desktop-Sonda. Consumidor: Backend-Telemetria.** Backend-Sonda não participa |
+| **Quem produz e quem consome MQTT?** | **Produtor: Geopetro-Desktop. Consumidor: Geopetro-Telemetria.** Geopetro-Backend não participa |
 | Almoxarifado / Compras? | Descontinuados |
-| **Módulo Químicos?** | **Removido do Backend-Sonda** |
-| **Módulos Projetos, Processos, Observações?** | **Removidos do Backend-Sonda e do Front** |
+| **Módulo Químicos?** | **Removido do Geopetro-Backend** |
+| **Módulos Projetos, Processos, Observações?** | **Removidos do Geopetro-Backend e do Front** |
 | Política de senha? | **Não definida** — ver [OQ-004](#oq-004--qual-é-a-política-de-senha) |
 | Roles não utilizadas? | Roadmap de módulos — mantidas no modelo |
 | Desktops (Sonda / Cimentação)? | Permanecem separados — duplicação aceita |
@@ -124,7 +124,7 @@ primeira rodada abriu.
 | OQ-003 | Observações devem ter controle de acesso por setor? | ✅ Módulo `observacao` removido |
 | OQ-006 | Estoque negativo é permitido? | ✅ Módulo `quimico` removido. **Lição preservada** em [RN-024](business-rules.md#estoque-de-químicos--removido) |
 | OQ-008 | Destinatários: campo configurado ou role CIMENTACAO? | ✅ Módulo `quimico` removido |
-| OQ-010 | Consumidor MQTT do Backend-Sonda: remover ou implementar? | ✅ **Removido** — papéis definidos |
+| OQ-010 | Consumidor MQTT do Geopetro-Backend: remover ou implementar? | ✅ **Removido** — papéis definidos |
 | OQ-011 | Existe outro cliente consumindo módulos sem interface? | ✅ Módulos removidos — a pergunta perdeu objeto |
 | OQ-024 | Rotas duplicadas sem `/api` têm consumidor legado? | ✅ Controllers removidos — não há mais rota duplicada |
 
@@ -356,11 +356,11 @@ denuncia.
 ### OQ-017 · Rack/slot do CLP valem para toda a frota?
 
 ✅ **RESPONDIDA 2026-09-05** · **[DECIDIDO 2026-09-05] Sim — toda a frota usa a mesma configuração.**
-`rack=0, slot=1` continuam constantes no código do Desktop-Sonda; só o IP segue configurável. Se uma
+`rack=0, slot=1` continuam constantes no código do Geopetro-Desktop; só o IP segue configurável. Se uma
 sonda futura divergir, isso vira campo de configuração — não é o caso hoje.
 
 **Contexto original:**
-**Contexto [FATO]:** `rack=0, slot=1` são **constantes fixas** no Desktop-Sonda (o Horus usa `slot=0`).
+**Contexto [FATO]:** `rack=0, slot=1` são **constantes fixas** no Geopetro-Desktop (o Horus usa `slot=0`).
 Apenas o IP é configurável pela interface.
 
 **O que precisamos:** todas as sondas usam a mesma configuração? Se alguma precisar de valores
@@ -374,7 +374,7 @@ diferentes, hoje não há como configurar sem recompilar.
 a documentação que chama tudo de "Siemens LOGO!" está incompleta e deve ser corrigida onde aparecer.
 
 ⚠️ **Tensão com [OQ-017](#oq-017--rackslot-do-clp-valem-para-toda-a-frota):** modelos diferentes
-costumam exigir rack/slot diferentes — o próprio sistema já mostra isso, com o Desktop-Sonda usando
+costumam exigir rack/slot diferentes — o próprio sistema já mostra isso, com o Geopetro-Desktop usando
 `slot=1` e o Horus, que lê um LOGO!, usando `slot=0`. **[DECIDIDO 2026-09-05]** As constantes ficam como
 estão **por ora**; a configuração por card ([OQ-043](#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp))
 é a saída planejada.
@@ -387,7 +387,7 @@ com leitura de Data Block por rack/slot — padrão mais típico de S7-300/1200/
 
 ✅ **RESPONDIDA 2026-09-05** · **[DECIDIDO 2026-09-05] Não é aceitável.** A conectividade **varia muito por sonda** e o histórico tem
 retenção de 5 anos como valor de produto — lacuna é perda, não inconveniente. O **buffer de
-contingência deixa de ser opcional** e entra na spec do Desktop-Sonda.
+contingência deixa de ser opcional** e entra na spec do Geopetro-Desktop.
 
 ⚠️ **Duas consequências que a resposta abre:**
 - O buffer só chega à frota com **auto-update**, que não existe ([product-context §4](product-context.md#4-realidade-de-campo)).
@@ -463,10 +463,10 @@ atuais não o têm. A primeira distribuição é presencial de qualquer forma. O
 payload e buffer de contingência — depois disso, tudo é remoto. Ver
 [SEC-009](security-findings.md#sec-009--broker-mqtt-sem-autenticação) e
 [OQ-035](#oq-035--como-o-geopetro-desktop-se-atualiza-em-campo).
-**Contexto [FATO]:** hoje o Desktop-Sonda conecta **sem autenticação**. A escolha afeta custo por
+**Contexto [FATO]:** hoje o Geopetro-Desktop conecta **sem autenticação**. A escolha afeta custo por
 mensagem — que foi a razão original do formato batch.
 
-**Urgência elevada [FATO 2026-08-27]:** o Backend-Telemetria já está implementado e pronto para
+**Urgência elevada [FATO 2026-08-27]:** o Geopetro-Telemetria já está implementado e pronto para
 consumir. O suporte a credenciais existe (`MQTT_USERNAME` / `MQTT_PASSWORD`) e o serviço loga um aviso
 quando conecta sem elas — mas **falta decidir e provisionar o broker**. É hoje o item que bloqueia a
 telemetria de entrar em operação. Ver [SEC-009](security-findings.md#sec-009--broker-mqtt-sem-autenticação).
@@ -500,7 +500,7 @@ Mitigação que já consta em [deploy/README.md](../deploy/README.md): restringi
 sondas e `8081` ao IP da VM-1.
 
 **Contexto original:**
-**Contexto [FATO]:** o `WebClient` do Backend-Sonda chama a telemetria **sem credencial**, e o serviço
+**Contexto [FATO]:** o `WebClient` do Geopetro-Backend chama a telemetria **sem credencial**, e o serviço
 aceita. Se os dois estiverem na mesma rede fechada (mesmo cluster/namespace), é aceitável; se não,
 qualquer host com acesso lê a telemetria de qualquer sonda, sem passar pela autorização por regional.
 
@@ -516,7 +516,7 @@ sincronização também foi recusado).
 
 ⚠️ **[FATO observado 2026-09-05]** Durante esta própria entrevista, o OneDrive impediu leitura de
 arquivos duas vezes: `git status` falhou com `read error ... Invalid argument` e `mmap failed` em 16
-arquivos do Backend-Telemetria, e um `grep` recebeu `Permission denied` em arquivos do simulador. Não é
+arquivos do Geopetro-Telemetria, e um `grep` recebeu `Permission denied` em arquivos do simulador. Não é
 risco teórico — é o comportamento corrente do ambiente.
 
 **Consequência registrada:** a perda de histórico Git pode se repetir, e trabalho não commitado é o mais
@@ -663,7 +663,7 @@ mas então **editar a geometria do poço muda relatórios antigos**, inclusive j
 
 ---
 
-### OQ-035 · Como o Desktop-Sonda se atualiza em campo?
+### OQ-035 · Como o Geopetro-Desktop se atualiza em campo?
 **Contexto [DECIDIDO 2026-09-05]:** auto-update é necessário e **não existe**. Hoje a única via é
 instalador `.exe` por instalação.
 
@@ -732,7 +732,7 @@ pela tela. Provável resposta: o histórico conta como vínculo.
 ---
 
 ### OQ-040 · Auto-update durante operação
-**Contexto [DECIDIDO 2026-09-05]:** o Desktop-Sonda **baixa e instala sozinho**.
+**Contexto [DECIDIDO 2026-09-05]:** o Geopetro-Desktop **baixa e instala sozinho**.
 
 **O que precisamos:** o que impede a atualização de reiniciar o app no meio de uma manobra? Opções a
 avaliar: janela horária, exigir o CLP desconectado, ou adiar enquanto houver leitura ativa. Sem alguma
@@ -758,7 +758,7 @@ tipo no cadastro e o conjunto de variáveis fixo, essas telas mostrariam cards p
 - O vocabulário de dispositivos cresce para cobrir os equipamentos novos?
 - Ou o tipo é, por ora, **apenas classificação de cadastro**, sem efeito na telemetria?
 
-⚠️ **Isto é maior do que parece:** hoje o Desktop-Sonda é escrito para o CLP **de sonda** — cinco
+⚠️ **Isto é maior do que parece:** hoje o Geopetro-Desktop é escrito para o CLP **de sonda** — cinco
 endereços fixos no DB1, com as conversões de peso de coluna e torque. Um equipamento de tipo diferente
 tem outro CLP, outros endereços e outras grandezas. O tipo no cadastro é barato; **capturar telemetria
 de equipamentos que não são sonda é um projeto**.
@@ -820,7 +820,7 @@ grandeza configurável. Peso e torque mantêm suas fórmulas e carregam sua geom
 do card.
 
 **Contexto original:**
-**[DECIDIDO 2026-09-05 — melhoria futura]** Cada card do Desktop-Sonda passaria a declarar **onde** ler
+**[DECIDIDO 2026-09-05 — melhoria futura]** Cada card do Geopetro-Desktop passaria a declarar **onde** ler
 seu valor: *"card 1 é pressão, está no rack X, slot Y, endereço Z"*.
 
 **Contexto [FATO]:** hoje o mapeamento é fixo no código — DB1, `DBD0` e `DBW4/6/8/10`, com `rack=0` e

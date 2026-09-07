@@ -12,7 +12,8 @@ export type UserRole =
   | 'CIMENTACAO'
   | 'SONDA'
   | 'GERENCIA'
-  | 'DIRETORIA';
+  | 'DIRETORIA'
+  | 'SUPORTE';
 
 /**
  * Perfis que acessam o Monitoramento de Sondas.
@@ -32,8 +33,16 @@ export const ROLES_MONITORAMENTO: readonly UserRole[] = [
 /** Perfis que acessam o Simulador de Cimentação. */
 export const ROLES_SIMULADOR: readonly UserRole[] = ['ADMIN', 'CIMENTACAO', 'GERENCIA', 'DIRETORIA'];
 
-/** Perfis que acessam os cadastros administrativos. */
+/** Perfis que acessam os cadastros administrativos — usuários, empresas, regionais, setores. */
 export const ROLES_ADMINISTRACAO: readonly UserRole[] = ['ADMIN'];
+
+/**
+ * Perfis que acessam as configurações do sistema — RN-086.
+ *
+ * Separado de `ROLES_ADMINISTRACAO` de propósito: `SUPORTE` **configura** o sistema, mas não
+ * administra cadastro. Juntar os dois faria a role oitava virar um segundo `ADMIN` por descuido.
+ */
+export const ROLES_CONFIGURACAO: readonly UserRole[] = ['ADMIN', 'SUPORTE'];
 
 /** Normaliza roles vindas do backend, removendo o prefixo `ROLE_` do Spring Security. */
 export function normalizarRoles(roles: readonly (string | undefined | null)[] | undefined): UserRole[] {
@@ -67,6 +76,8 @@ export function rotaInicialPara(rolesDoUsuario: readonly UserRole[]): string {
   if (possuiAlgumaRole(rolesDoUsuario, ROLES_ADMINISTRACAO)) return '/app/dashboard';
   if (possuiAlgumaRole(rolesDoUsuario, ROLES_SIMULADOR)) return '/app/simulador';
   if (possuiAlgumaRole(rolesDoUsuario, ROLES_MONITORAMENTO)) return '/app/monitoramento-sondas';
+  // SUPORTE sozinho não tem dashboard nem monitoramento: cai nas configurações, que é o que ele faz.
+  if (possuiAlgumaRole(rolesDoUsuario, ROLES_CONFIGURACAO)) return '/app/configuracoes';
   // Sem acesso a nenhum módulo: resta o autoatendimento do próprio perfil.
   if (rolesDoUsuario.includes('INTERNO')) return '/app/meu-usuario';
 

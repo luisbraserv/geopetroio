@@ -2,7 +2,7 @@
 
 > Contrato de integração entre aplicações · 2026-08-26
 >
-> Define como o Backend-Sonda consulta séries temporais no serviço de Telemetria.
+> Define como o Geopetro-Backend consulta séries temporais no serviço de Telemetria.
 
 ## Partes
 
@@ -13,7 +13,7 @@
 | Consumidor final | Geopetro-Front | **[FATO]** Implementado |
 
 **[FATO]** Este contrato foi derivado do `MonitoramentoClient` já existente — o serviço novo foi
-escrito para encaixar no cliente, sem alterar o Backend-Sonda.
+escrito para encaixar no cliente, sem alterar o Geopetro-Backend.
 
 ⚠️ **Correção de 2026-08-27:** a versão anterior deste documento afirmava que `dataHora` era uma
 string local no formato `yyyy-MM-dd'T'HH:mm:ss.SSS`. **Estava errado.** A leitura do código-fonte do
@@ -26,7 +26,7 @@ hora local sem offset.
 ## 1. Cadeia de chamada
 
 ```
-Front                    Backend-Sonda                    Telemetria :8081
+Front                    Geopetro-Backend                    Telemetria :8081
   │                            │                                 │
   │ GET /api/sondas/minhas     │                                 │
   ├───────────────────────────►│ (consulta o escopo no MySQL)  │
@@ -45,7 +45,7 @@ Front                    Backend-Sonda                    Telemetria :8081
 
 **[FATO]** O frontend **nunca** chama a telemetria diretamente. Comentário no código:
 *"O front não fala direto com o telemetria; sempre passa pelo backend para respeitar o vínculo do
-usuário às sondas"*. A autorização é responsabilidade do Backend-Sonda.
+usuário às sondas"*. A autorização é responsabilidade do Geopetro-Backend.
 
 ---
 
@@ -98,12 +98,12 @@ numérico; o cliente aceita ambos, mas o texto é legível em log e no Swagger.
 | Timeout | `monitoramento.timeout-ms` — default **5000ms** |
 | Tratamento de erro | Qualquer falha HTTP ou indisponibilidade → `Optional.empty()`, log de erro, **sem propagar exceção** |
 
-**Consequência [FATO]:** o Backend-Sonda **degrada graciosamente**. Uma indisponibilidade da
+**Consequência [FATO]:** o Geopetro-Backend **degrada graciosamente**. Uma indisponibilidade da
 telemetria vira `502` na API pública, não `500`.
 
 ---
 
-## 4. Endpoints expostos pelo Backend-Sonda
+## 4. Endpoints expostos pelo Geopetro-Backend
 
 **[FATO]** Já implementados. Roles: `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` e
 `CLIENTE`. O perfil `CLIENTE` tem escopo restrito às Unidades/Sondas concedidas no cadastro; os
@@ -181,7 +181,7 @@ vínculo** ([RN-063](../business-rules.md#rn-063--exclusão-bloqueada-por-víncu
 e o **histórico de telemetria conta como vínculo**
 ([RN-072](../business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
 
-O Backend-Sonda não tem como saber disso sozinho: o vínculo que ele enxerga é relacional, e a série vive
+O Geopetro-Backend não tem como saber disso sozinho: o vínculo que ele enxerga é relacional, e a série vive
 no InfluxDB, em outro serviço. Precisa **perguntar**.
 
 ### Endpoint

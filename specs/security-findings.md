@@ -143,7 +143,7 @@ ainda deve sair do projeto. A reescrita de histórico deixa de se justificar.
 
 ## SEC-007 · Senha de banco em texto plano versionada
 
-**Severidade: Média** · Backend-Sonda
+**Severidade: Média** · Geopetro-Backend
 
 **[FATO]** `application-dev.properties` traz `spring.datasource.password=${DB_PASSWORD:<literal>}` —
 um default em texto plano versionado.
@@ -159,7 +159,7 @@ o mesmo e o valor pode ter sido reutilizado.
 
 ## SEC-008 · Token não revogável e desacoplado do estado do usuário
 
-**Severidade: Média** · Backend-Sonda · ⏳ Requer decisão de negócio
+**Severidade: Média** · Geopetro-Backend · ⏳ Requer decisão de negócio
 
 **[FATO]**
 - Sem refresh token, sem endpoint de logout, sem blacklist. Token vazado vale até expirar (1h).
@@ -186,10 +186,10 @@ não decidido.
 
 ## SEC-009 · Broker MQTT sem autenticação
 
-**Severidade: Média** · Desktop-Sonda + futuro Backend-Telemetria
+**Severidade: Média** · Geopetro-Desktop + futuro Geopetro-Telemetria
 
-**[FATO]** O Desktop-Sonda conecta ao broker **sem credenciais**. As propriedades `mqtt.username` e
-`mqtt.password` do Backend-Sonda estavam vazias — e saíram junto com o consumidor removido.
+**[FATO]** O Geopetro-Desktop conecta ao broker **sem credenciais**. As propriedades `mqtt.username` e
+`mqtt.password` do Geopetro-Backend estavam vazias — e saíram junto com o consumidor removido.
 
 ### Impacto
 
@@ -197,11 +197,11 @@ Qualquer host com acesso de rede ao broker pode **publicar telemetria forjada** 
 `telemetria/{qualquer-unidade}/batch` ou **assinar e ler** toda a telemetria da frota.
 
 Hoje o impacto é contido porque **nada consome o broker** — o consumidor no-op foi removido e o
-Backend-Telemetria ainda não existe. **Isso muda no momento em que o novo serviço entrar em produção.**
+Geopetro-Telemetria ainda não existe. **Isso muda no momento em que o novo serviço entrar em produção.**
 
 ### Correção proposta
 
-Definir autenticação no broker **antes** de o Backend-Telemetria entrar em produção. É a janela ideal:
+Definir autenticação no broker **antes** de o Geopetro-Telemetria entrar em produção. É a janela ideal:
 o consumidor será escrito do zero e pode já nascer autenticado.
 
 ### ⏳ Decisão de 2026-09-05 — ativação adiada
@@ -228,9 +228,9 @@ Ver [`mqtt-telemetria.md`](contracts/mqtt-telemetria.md) e
 
 ## SEC-011 · Credencial única de frota nas sondas
 
-**Severidade: Média** · Desktop-Sonda + Backend-Sonda · ⏳ **Risco aceito em 2026-09-05**
+**Severidade: Média** · Geopetro-Desktop + Geopetro-Backend · ⏳ **Risco aceito em 2026-09-05**
 
-**[DECIDIDO 2026-09-05]** Todas as instalações do Desktop-Sonda autenticam com **um único usuário de
+**[DECIDIDO 2026-09-05]** Todas as instalações do Geopetro-Desktop autenticam com **um único usuário de
 serviço**, compartilhado pela frota ([OQ-036](open-questions.md#oq-036--qual-é-o-usuário-de-serviço-de-cada-sonda)).
 
 ### Impacto
@@ -271,7 +271,7 @@ assim que o auto-update existir, que é exatamente o que torna a alternativa bar
 | 2 | SEC-001, SEC-002, SEC-003, SEC-004 | ✅ Corrigidos em 2026-08-26 |
 | 3 | SEC-005, SEC-010 | ✅ Eliminados com a remoção dos módulos |
 | 4 | **Testes de `SecurityConfig`** | ✅ **2026-09-06** — 11 testes HTTP de identidade, além da cobertura de poços |
-| 5 | SEC-009 | ⏳ Antes de o Backend-Telemetria entrar em produção |
+| 5 | SEC-009 | ⏳ Antes de o Geopetro-Telemetria entrar em produção |
 | 6 | SEC-007, SEC-008 | ⏳ Requerem decisão |
 | 7 | Rotacionar senha SMTP se a conta ainda for usada | ⏳ Ver SEC-005 |
 

@@ -251,12 +251,12 @@ validação correta foi a que se perdeu. Se um novo domínio de estoque nascer, 
 
 ## Telemetria — conversão de sinal
 
-> Estas regras são **física/engenharia aplicada** e estão hoje implícitas no código do Desktop-Sonda.
+> Estas regras são **física/engenharia aplicada** e estão hoje implícitas no código do Geopetro-Desktop.
 > São candidatas prioritárias a spec formal — erro aqui produz dado operacional errado silenciosamente,
 > em toda a frota.
 
 ### RN-030 · Conversão do Ax do LOGO! → PSI
-**[FATO 2026-08-31]** `ConversaoPressao` (Desktop-Sonda) — ponto único de conversão.
+**[FATO 2026-08-31]** `ConversaoPressao` (Geopetro-Desktop) — ponto único de conversão.
 
 O bloco *Analog Amplifier* do LOGO! já reescalona o laço 4–20 mA para a faixa configurada em
 *Measurement Range*. Com `Minimum -50`, `Maximum 750`, `Gain 1,00` e `Offset -250`:
@@ -347,12 +347,12 @@ do CLP) e resetam os históricos de cálculo, evitando delta negativo.
 distintos. Intencional e documentado.
 
 ### RN-037 · ⚠️ Visibilidade de card controla publicação, não gravação
-**[FATO]** Desmarcar um card no Desktop-Sonda suprime a **publicação MQTT** daquela variável (e a
+**[FATO]** Desmarcar um card no Geopetro-Desktop suprime a **publicação MQTT** daquela variável (e a
 tabela `FlowRateReading`, no caso da Vazão), mas `SondaReading` continua sendo gravado no H2 para
 todas as variáveis. **O texto da UI afirma o contrário.**
 
 ### RN-038 · Sem publicação sem identificador de sonda
-**[FATO]** Se `sondaId` estiver vazio, o Desktop-Sonda **não publica nada** (apenas log debug).
+**[FATO]** Se `sondaId` estiver vazio, o Geopetro-Desktop **não publica nada** (apenas log debug).
 
 ### RN-039 · ⚠️ Perda de telemetria em falha de publicação
 **[FATO]** Se a publicação MQTT falhar, a leitura daquele ciclo é **perdida** para telemetria remota
@@ -379,7 +379,7 @@ Ver [OQ-009](open-questions.md#oq-009--quais-são-os-limites-físicos-aceitávei
 
 ### RN-042 · Suavização de curva
 **[FATO]** Média móvel de **2 passadas**, janela dinâmica `max(5, 4.5% do nº de amostras)`, limitada a
-17, sempre ímpar. Implementada **três vezes de forma independente** no Desktop-Sonda.
+17, sempre ímpar. Implementada **três vezes de forma independente** no Geopetro-Desktop.
 **[FATO]** No frontend a suavização é diferente: média móvel de **8 pontos fixos**.
 **⚠️ IMPLÍCITA:** duas definições distintas de "curva suavizada" no mesmo produto.
 
@@ -702,20 +702,20 @@ campos por equipamento — e alarme mal configurado é pior que alarme nenhum, p
 entra na mesma guarda de [RN-063](#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros).
 
 ⚠️ **Exige contrato novo:** o vínculo verificado hoje é relacional, e a telemetria vive no InfluxDB, em
-outro serviço. O Backend-Sonda precisa **perguntar** à Telemetria se existe série para aquela sonda —
+outro serviço. O Geopetro-Backend precisa **perguntar** à Telemetria se existe série para aquela sonda —
 endpoint que não existe. Ver [`contracts/rest-monitoramento.md`](contracts/rest-monitoramento.md#7-verificação-de-existência-de-série).
 
 **Comportamento na indisponibilidade:** se a Telemetria estiver fora, a resposta segura é **recusar a
 exclusão** — apagar um cadastro por não conseguir confirmar que ele tem histórico é o erro irreversível.
 
 **[FATO 2026-09-06]** Endpoint `GET /api/monitoramentos/sondas/{id}/existe` implementado no
-Backend-Telemetria; `TelemetriaVinculoAdapter` o consome pelo **nome** da sonda, que é a chave de
+Geopetro-Telemetria; `TelemetriaVinculoAdapter` o consome pelo **nome** da sonda, que é a chave de
 integração ([RN-018](#rn-018--nome-da-unidadesonda-é-chave-de-integração)). A indisponibilidade
 bloqueia, com mensagem própria. É o único implementador da guarda que não consulta o banco relacional.
 Contrato em [`rest-monitoramento.md §7`](contracts/rest-monitoramento.md#7-verificação-de-existência-de-série).
 
 ### RN-073 · Atualização automática só com o CLP desconectado
-**[DECIDIDO 2026-09-05]** O Desktop-Sonda baixa e instala sozinho, mas **só** quando não há leitura
+**[DECIDIDO 2026-09-05]** O Geopetro-Desktop baixa e instala sozinho, mas **só** quando não há leitura
 acontecendo. Sem conexão ao CLP, não há operação em curso — o app sabe disso sem depender de agenda nem
 de gente.
 
@@ -769,7 +769,7 @@ As classes `*Command` do módulo `usuario` são **objetos de entrada de caso de 
 arquitetura hexagonal, não CQRS. Esta regra cria a primeira fatia orientada a eventos do sistema.
 
 ### RN-077 · CQRS existe na telemetria, e só nela
-**[FATO 2026-09-05]** O Backend-Telemetria **separa modelo de escrita e de leitura**, e é o único
+**[FATO 2026-09-05]** O Geopetro-Telemetria **separa modelo de escrita e de leitura**, e é o único
 componente que o faz:
 
 | Caminho | Modelo | Onde |
@@ -781,7 +781,7 @@ Os dois nunca se cruzam, e o modelo de leitura é **agregado**, com teto de pont
 
 ⚠️ **A separação não vem do MQTT.** Produtor e consumidor via broker é **mensageria**, não CQRS: seria
 CQRS igualmente se a ingestão fosse por HTTP. A distinção importa para ninguém concluir que o sistema
-inteiro é CQRS — o Backend-Sonda é CRUD com JPA, mesma entidade para ler e gravar.
+inteiro é CQRS — o Geopetro-Backend é CRUD com JPA, mesma entidade para ler e gravar.
 
 ### RN-078 · Sem perfil padrão de alarme; o limite vale até alguém trocar
 **[DECIDIDO 2026-09-05]** **Cada sonda é configurada individualmente.** Os limites nascem vazios, e a
@@ -813,7 +813,7 @@ proteção justamente na mudança que mais precisa de uma.
 **[FATO 2026-09-06 — implementado]** Login em `POST /api/auth/login`; usuários em
 `/api/usuarios/**`. Os dois PATCH de autoatendimento vêm antes da restrição ADMIN
 e são as únicas exceções. Nove testes HTTP passaram nas rotas antigas antes da
-mudança; onze passaram após a migração. Frontend, Desktop-Sonda, proxies e Postman
+mudança; onze passaram após a migração. Frontend, Geopetro-Desktop, proxies e Postman
 foram atualizados juntos. Contrato, validação e distribuição em
 [`api-prefix.md`](../Geopetro-Backend/specs/api-prefix.md). Sem deploy.
 
@@ -918,10 +918,25 @@ Preserva a série `VAZAO_01` já gravada e mantém [RN-035](#telemetria--convers
 ### RN-086 · Configurar exige ADMIN ou SUPORTE, autenticado no backend
 **[DECIDIDO 2026-09-07]** Só `ADMIN` e `SUPORTE` alteram configuração — no Desktop e no Front.
 
-⚠️ **`SUPORTE` não existe.** O enum tem sete valores, e
-[DT-011](technical-debt.md#dt-011--divergência-de-roles-backend--frontend) registra que todas as sete
-têm efeito real. A oitava exige valor no enum, espelho no front **e migration**: `usuario_roles.role`
-é `ENUM` no baseline, então acrescentar valor é `ALTER TABLE`, não só código.
+**[FATO 2026-09-07 — implementada]** `SUPORTE` existe. São **oito** roles, e a oitava também tem
+efeito real, como [DT-011](technical-debt.md#dt-011--divergência-de-roles-backend--frontend) exige:
+
+| Alcança | Não alcança |
+|---|---|
+| `/api/configuracoes/**` — SMTP hoje, cards da unidade quando existirem | Usuários, empresas, regionais, setores — cadastro segue exclusivo de `ADMIN` |
+
+**A fronteira é a regra.** `SUPORTE` **configura** o sistema; não administra cadastro. No front isso
+virou `ROLES_CONFIGURACAO`, separada de `ROLES_ADMINISTRACAO` — juntá-las faria a role oitava virar um
+segundo `ADMIN` por descuido. `IdentidadeHttpSecurityTest.suporteConfiguresButDoesNotReachRegistries`
+guarda essa fronteira.
+
+**Um `SUPORTE` sem outra role cai em `/app/configuracoes` ao entrar** — não tem dashboard nem
+monitoramento, e cair em "acesso negado" seria absurdo para quem configura o sistema.
+
+⚠️ **A migration foi necessária por uma divergência, não pelo enum.** `usuario_roles.role` era
+`VARCHAR(255)` em produção e `ENUM` em base nova. `V2026.09.07.3` normaliza para `VARCHAR` **somente
+onde ainda é `ENUM`** — produção não é tocada, e a collation dela fica preservada. Ver
+[DT-002](technical-debt.md#-divergência-confirmada-entre-produção-e-base-nova).
 
 **Sem rede não se configura**, por desenho: não há validação local de credencial. O custo aceito é que
 a instalação inicial de uma unidade precisa de rede ao menos uma vez.

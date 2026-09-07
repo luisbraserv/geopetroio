@@ -331,15 +331,14 @@ O cache em disco passa de melhoria a **requisito de entrega desta feature**.
 **Por que só no Desktop:** acertar byte, rack e slot exige estar na unidade, com a documentação do CLP
 à mão e vendo o valor reagir. O Front **lê** a configuração para montar as telas, mas não a edita.
 
-⚠️ **`SUPORTE` não existe.** O enum tem sete valores — `CLIENTE`, `INTERNO`, `ADMIN`, `CIMENTACAO`,
-`SONDA`, `GERENCIA`, `DIRETORIA` — e [DT-011](../technical-debt.md#dt-011--divergência-de-roles-backend--frontend)
-registra que, depois da limpeza de agosto, **todas as sete têm efeito real**. Criar a oitava exige:
+✅ **[FATO 2026-09-07] `SUPORTE` já existe.** Entregue antes do resto da feature, porque nada de
+configuração funciona sem ela. São oito roles, e a oitava alcança `/api/configuracoes/**` hoje —
+não é decorativa, como [DT-011](../technical-debt.md#dt-011--divergência-de-roles-backend--frontend)
+exige.
 
-| Onde | O quê |
-|---|---|
-| `Role.java` | novo valor |
-| `user.model.ts` | espelho no front, e a constante de roles que o menu e os guards usam |
-| Migration | ⚠️ **A coluna tem tipo diferente em produção e em base nova**: `VARCHAR(255)` lá, `ENUM` aqui. A migration tem de funcionar nos dois — normalizar para `VARCHAR` primeiro é o caminho seguro, e ainda elimina a divergência. Ver [DT-002](../technical-debt.md#-divergência-confirmada-entre-produção-e-base-nova) |
+**Falta ligar os cards a ela:** quando o documento de cards ganhar endpoint, `SUPORTE` precisa entrar
+no `requestMatcher` dele. Hoje `/api/sondas/**` não inclui `SUPORTE`, de propósito — dar acesso a
+monitoramento seria mais do que "configurar".
 
 ### A sessão de configuração do Desktop
 

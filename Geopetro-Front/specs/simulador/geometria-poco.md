@@ -380,7 +380,7 @@ passaram (229 aprovações acumuladas, 12 testes novos nesta etapa).
 Build de produção aprovado, mantendo os avisos anteriores de bundle e CSS.
 
 **Banco:** contrato, migration e detalhe do banco local em
-[`Backend-Sonda/specs/simulador-pocos.md`](../../../Geopetro-Backend/specs/simulador-pocos.md).
+[`Geopetro-Backend/specs/simulador-pocos.md`](../../../Geopetro-Backend/specs/simulador-pocos.md).
 Não foi realizado deploy em produção. Permanecem pendentes as faixas de
 plausibilidade que dependem de confirmação técnica e a declaração do método no relatório.
 

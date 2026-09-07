@@ -129,7 +129,7 @@ usuário está sendo enviado para fora da infraestrutura da Braserv.
 | k8s | `''` (same-origin, nginx faz proxy reverso) |
 
 ⚠️ **[FATO]** `environment.telemetriaUrl` está declarado nos três ambientes e **nunca é consumido**.
-O frontend sempre passa pelo Backend-Sonda — ver
+O frontend sempre passa pelo Geopetro-Backend — ver
 [`rest-monitoramento.md`](../../specs/contracts/rest-monitoramento.md).
 
 ## Dívida técnica específica
@@ -146,7 +146,7 @@ Itens de maior impacto:
 | `RichTextEditorComponent` órfão | Remover ou usar |
 | `tests/hydraulics.spec.js` referencia arquivo inexistente | Remover (e o script `test:hydraulics`) |
 | Simulador sem `Validators` em ~40 campos críticos | [OQ-009](../../specs/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador) |
-| Roles divergentes do backend | ✅ Resolvido em 2026-08-27; ver [DT-011](../../specs/technical-debt.md#dt-011--divergência-de-roles-backend↔frontend) |
+| Roles divergentes do backend | ✅ Resolvido em 2026-08-27; ver [DT-011](../../specs/technical-debt.md#dt-011--divergência-de-roles-backend--frontend) |
 | Mojibake em `meu-usuario-page.component.html:43` | Corrigir encoding |
 
 ## Feature removida — Projetos
@@ -185,14 +185,14 @@ remoção dos módulos órfãos (Processos, Anotações, Observações e Químic
 | Simulador | `/app/simulador/*` |
 | Monitoramento de sondas | `/app/monitoramento-sondas` |
 
-✅ **[FATO]** `/app/monitoramento-sondas` está integrada ao Backend-Telemetria por meio do
-Backend-Sonda. O frontend continua sem acesso direto ao InfluxDB e ao serviço de telemetria.
+✅ **[FATO]** `/app/monitoramento-sondas` está integrada ao Geopetro-Telemetria por meio do
+Geopetro-Backend. O frontend continua sem acesso direto ao InfluxDB e ao serviço de telemetria.
 
 
 ### Desempenho do gráfico de histórico (2026-08-31)
 
 ⚠️ **[FATO] O travamento da aba Monitoramento era complexidade quadrática, não volume de dados.**
-O Backend-Telemetria já limita a **2000 pontos por série** (`maxPontosPorSerie`), agregando por
+O Geopetro-Telemetria já limita a **2000 pontos por série** (`maxPontosPorSerie`), agregando por
 janela acima disso — o payload nunca foi o problema.
 
 Em `GraficoMonitoramentoComponent`, `minV`/`maxV` eram *getters* que refaziam `.map()` sobre a série
@@ -294,7 +294,7 @@ seleciona e consulta automaticamente, exibindo um aviso de que os dados são sin
 - a sonda **não** é adicionada estaticamente à lista: ela precisa existir no MySQL e estar acessível
   ao usuário, preservando o contrato de autorização;
 - builds `prod` e `k8s` configuram esse identificador como `null`, sem seleção automática nem aviso;
-- as séries continuam sendo consultadas exclusivamente pelo Backend-Sonda.
+- as séries continuam sendo consultadas exclusivamente pelo Geopetro-Backend.
 
 ---
 

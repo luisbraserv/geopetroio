@@ -32,7 +32,7 @@ local na porta 102.
 **tecnicamente autônomo** — sem acoplamento algum em código, configuração ou runtime com o sistema
 Sonda.
 
-**[DECIDIDO 2026-08-26]** Permanece separado do Desktop-Sonda. A duplicação de capacidades
+**[DECIDIDO 2026-08-26]** Permanece separado do Geopetro-Desktop. A duplicação de capacidades
 ([DT-010](../../specs/technical-debt.md#dt-010--duplicação-entre-os-dois-desktops)) é aceita
 conscientemente — mas correções de fórmula precisam ser aplicadas **nos dois repositórios**.
 
@@ -49,7 +49,7 @@ specs/
 ## Mapeamento físico do CLP
 
 **[FATO]** CLP Siemens LOGO!, `ConnectTo(ip, rack=0, slot=0)` — note `slot=0`, diferente do
-Desktop-Sonda (`slot=1`).
+Geopetro-Desktop (`slot=1`).
 
 | Endereço | Tipo | Grandeza | Ciclo |
 |---|---|---|---|
@@ -112,7 +112,7 @@ justifique a separação.
 ## Design system compartilhado (2026-08-28)
 
 **[FATO]** As quatro telas (`carta.operacao`, `configuracao`, `gerar.pdf`, `carregar.csv`) passaram a
-usar `geopetro-design-system.css` — o mesmo arquivo do Desktop-Sonda, com um bloco adicional para as
+usar `geopetro-design-system.css` — o mesmo arquivo do Geopetro-Desktop, com um bloco adicional para as
 telas de bombeio (`card-grandeza`, `botao-icone`, `titulo-tela`, `rotulo-campo`, `progress-bar`).
 
 **[DECIDIDO]** As classes do Horus foram acrescentadas ao arquivo comum em vez de um CSS próprio:
@@ -120,16 +120,16 @@ duas cópias divergiriam na primeira alteração, e a razão de existir um desig
 não ter dois azuis institucionais ligeiramente diferentes.
 
 - Estilos inline saíram das telas: `carta.operacao` e `configuracao` ficaram sem nenhum `style=`
-- Ícone do app trocado para a marca GeoPetro (`icons/logo.png`), o mesmo do Desktop-Sonda
+- Ícone do app trocado para a marca GeoPetro (`icons/logo.png`), o mesmo do Geopetro-Desktop
 
 ⚠️ **[FATO]** `app.ico` precisa ser **regenerado** por `scripts/create-windows-icon.ps1` ao trocar o
 logo — o jpackage exige ICO real, com as 6 resoluções (256→16). **Nunca renomeie um PNG para `.ico`:**
-o `logo.ico` do Desktop-Sonda foi exatamente isso até 2026-08-31 (assinatura `89504e47`), e copiá-lo
+o `logo.ico` do Geopetro-Desktop foi exatamente isso até 2026-08-31 (assinatura `89504e47`), e copiá-lo
 produzia um instalador com ícone quebrado. Hoje os dois são ICO legítimos (`00000100`) — confira a
 assinatura antes de confiar na extensão.
 
 ⚠️ **[FATO]** `.label` do design system pinta `#051833` (text-primary). Em fundo escuro o texto some — use
-`texto-inverso`. Foi o que aconteceu no cabeçalho do Desktop-Sonda; o Horus não tem fundo escuro
+`texto-inverso`. Foi o que aconteceu no cabeçalho do Geopetro-Desktop; o Horus não tem fundo escuro
 hoje, mas a armadilha vale para telas futuras.
 
 ## Unidade de pressão (2026-08-28)
@@ -172,7 +172,7 @@ falha propagada, ouvinte opcional).
 
 ## Design system (revisão 2026-08-31)
 
-**[FATO]** `specs/index.html` é a **fonte normativa**. O `geopetro-design-system.css` (Desktop-Sonda
+**[FATO]** `specs/index.html` é a **fonte normativa**. O `geopetro-design-system.css` (Geopetro-Desktop
 e Horus, arquivo idêntico nos dois) transcreve aqueles tokens para JavaFX CSS — rem convertido para
 px na base 16, já que JavaFX não tem custom properties nem unidades relativas.
 
