@@ -1,6 +1,6 @@
 # Alarmes de Telemetria — Spec de Feature
 
-> **[DECIDIDO 2026-09-05]** · Spec-first · **Nada disto existe em código hoje**
+> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-07] Canal de configuração implementado; motor e interfaces de alarmes pendentes.**
 >
 > Feature de nível de sistema: atravessa Desktop-Sonda, Backend-Sonda e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
@@ -58,12 +58,11 @@ fato. Ver [OQ-031](../open-questions.md#oq-031--o-consumidor-tolera-telemetria-f
 
 ## 4. Modelo de dados proposto
 
-**[PENDENTE]** Proposta, não implementação.
+**[FATO 2026-09-07]** Configuração e limites já são persistidos por unidade; ver [contrato implementado](../contracts/configuracao-sonda.md). Eventos e avaliação abaixo continuam propostos.
 
 ### Limite
 
-Um registro por **Unidade/Sonda × grandeza**, no MySQL do Backend-Sonda — o mesmo banco do cadastro
-que já contém a unidade.
+**[FATO 2026-09-07]** Um documento por **Unidade/Sonda**, com até um limite por grandeza, no MySQL do Backend-Sonda. A lista é substituída integralmente e a autoria corresponde à última gravação do documento. A proposta original previa um registro por Unidade/Sonda × grandeza.
 
 ```
 LimiteAlarme
@@ -153,9 +152,7 @@ geraria 600 registros — e nenhuma tela de histórico sobrevive a isso.
 
 **[DECIDIDO 2026-09-05]** Pela **conexão WebSocket/STOMP que já existe**.
 
-**[FATO]** Hoje o dado só sobe: o Desktop publica em `/app/realtime/estado` e nunca recebe nada. Mas o
-canal já está aberto, já autentica com JWT de usuário de serviço, e já é autorizado por unidade
-([`websocket-realtime.md §4`](../contracts/websocket-realtime.md#4-autenticação-e-autorização)).
+**[FATO 2026-09-07]** O Desktop publica em `/app/realtime/estado` e agora recebe configurações na mesma conexão autenticada. Snapshot inicial, reconexão, revisão e permissões estão no [contrato de configuração](../contracts/configuracao-sonda.md). Ajuste pela tela e avaliação dos limites continuam pendentes; o fluxo abaixo é o desenho completo previsto.
 
 ```
 Supervisão ajusta o limite na tela
@@ -232,8 +229,8 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
 
 ## 8. Ordem de implementação sugerida
 
-1. **Canal de configuração** (§5) — sem ele, nada da borda funciona
-2. **Limite + avaliação no servidor + evento** — entrega alarme para supervisão e cliente sozinha
+1. **Canal de configuração** (§5) — **implementado em código em 2026-09-07**, incluindo persistência e transporte dos limites; distribuição à frota pendente
+2. **Interface de limites + avaliação no servidor + evento** — próxima etapa; entrega alarme para supervisão e cliente
 3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update
 4. **Histórico na tela**
 

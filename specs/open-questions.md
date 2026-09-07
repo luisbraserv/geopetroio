@@ -155,7 +155,7 @@ implementado apenas por `setor` e `unidade-sonda` — o módulo `usuario` nunca 
 uma Regional sem setores mas **com usuários vinculados** passa pela validação e quebra em violação de
 FK com `500` genérico. A remoção **elimina esse modo de falha**.
 
-⚠️ **Arrasta junto:** [RN-007](business-rules.md#rn-007--regional-principal-entra-automaticamente-na-lista-de-regionais)
+⚠️ **Arrasta junto:** [RN-007](business-rules.md#rn-007--regional-principal-entra-automaticamente-na-lista-de-regionais--revogada)
 deixa de existir; `regionalId`/`regionalNome` saem do `AutenticacaoResponse` e do `AuthState` do front,
 onde já eram guardados sem nenhum consumidor.
 
@@ -201,7 +201,7 @@ não controle). Definir: comprimento, classes exigidas, expiração, histórico,
 edita ou exclui cenário de qualquer outro. Equipe pequena e de confiança — o custo de controlar posse
 não compensa.
 
-Passa a ser **decisão consciente**, não lacuna. [RN-015](business-rules.md#rn-015--cenários-do-simulador-não-têm-dono)
+Passa a ser **decisão consciente**, não lacuna. [RN-015](business-rules.md#rn-015---cenários-do-simulador-não-têm-dono)
 deixa de ser dívida. O que se aceita junto: um relatório entregue ao cliente pode ter seu cenário
 alterado depois por outra pessoa, sem registro.
 
@@ -282,6 +282,11 @@ no workspace.
 ✅ **RESPONDIDA 2026-09-05** · **[DECIDIDO 2026-09-05] Padronizar tudo em `/api`.** `/auth/login` e
 `/usuarios/**` migram. Ver [RN-079](business-rules.md#rn-079--a-api-padroniza-o-prefixo-api).
 
+**[FATO 2026-09-06] Implementado no código local**, com testes HTTP antes/depois
+e atualização dos consumidores web/desktop. Contrato e validação em
+[`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md). Distribuição em
+produção ainda não realizada; o contexto abaixo registra a situação anterior.
+
 ⚠️ **A migração toca `SecurityConfig`, o front e o `nginx.conf` no mesmo deploy** — e a ordem dos
 `requestMatchers` é exatamente onde SEC-001, SEC-002 e SEC-003 nasceram, sem nenhum teste HTTP que
 detecte regressão. **Escrever os testes de `SecurityConfig` antes de mover as rotas.**
@@ -326,7 +331,9 @@ a aplicação de subir.
 
 ---
 
-### OQ-016 · A escala analógica do CLP foi confirmada? — ✅ **RESOLVIDA 2026-08-31**
+### OQ-016 · A escala analógica do CLP foi confirmada?
+
+✅ **RESOLVIDA 2026-08-31**
 
 **Era [FATO]:** comentário no próprio código dizia *"A escala 0..1000 é preservada até sua confirmação
 no PLC"* — a conversão inteira dependia de uma premissa que os desenvolvedores marcavam como não
@@ -419,6 +426,12 @@ para identidade, não para alarme.**
 
 **Contexto original [FATO]:** não existe fluxo. O link "Esqueci minha senha" aponta para `/`, e o
 checkbox "Lembrar acesso" não tem binding — ambos devem sair da tela até o fluxo existir.
+
+**[FATO 2026-09-06 — implementado]** O link agora abre `/recuperar-senha`;
+`/redefinir-senha` recebe o token temporário. Backend, persistência, limitação de
+envio e telas implementados. SMTP configurável por ambiente, desativado por padrão.
+Ativação e teste de entrega corporativa pendentes; sem deploy ou envio real.
+Detalhes em [recuperação de senha](../Backend-Sonda-Geopetro-IO/specs/recuperacao-senha.md).
 
 ---
 
@@ -770,7 +783,7 @@ inteiro.
 **[DECIDIDO 2026-09-05] Adiado** — será estruturado em outro momento.
 
 **Nota [FATO]:** existe uma cópia parcial de fato — cada Desktop mantém em H2 local o registro completo
-das leituras daquela sonda ([RN-039](business-rules.md#rn-039--perda-de-telemetria-em-falha-de-publicação)).
+das leituras daquela sonda ([RN-039](business-rules.md#rn-039---perda-de-telemetria-em-falha-de-publicação)).
 Não é backup utilizável: a restauração seria manual, sonda por sonda, e só alcança máquinas ainda
 instaladas e com disco íntegro. Serve como último recurso, não como plano.
 
@@ -781,6 +794,32 @@ relatórios entregues a clientes. Nada disso é reconstruível a partir de outro
 ---
 
 ### OQ-043 · Mapeamento configurável de card para endereço no CLP
+
+✅ **RESPONDIDA 2026-09-07 — vira entrega, não mais melhoria futura.** Spec em
+[`features/cards-configuraveis.md`](features/cards-configuraveis.md); regras em
+[RN-080 a RN-088](business-rules.md#regras-dos-cards-configuráveis--2026-09-07).
+
+As três perguntas que ela previa resolver foram resolvidas junto:
+
+| Pergunta | Resposta |
+|---|---|
+| [OQ-017](#oq-017--rackslot-do-clp-valem-para-toda-a-frota) rack/slot na frota | Deixam de ser premissa: entram na configuração da unidade |
+| [OQ-018](#oq-018--qual-é-o-modelo-real-de-clp) modelo do CLP | Deixa de importar globalmente — o endereçamento é por unidade |
+| [OQ-041](#oq-041--o-tipo-da-unidade-define-quais-variáveis-são-monitoradas) variáveis por tipo | Instrumentar outro equipamento vira **cadastro**, não desenvolvimento |
+
+**O que foi decidido, sobre os pontos que a própria questão listava:**
+
+| Ponto em aberto de 2026-09-05 | Decisão de 2026-09-07 |
+|---|---|
+| O que fica configurável | Endereço, rack, slot, DB, intervalo — **e** o tipo de card, com seus parâmetros de escala. A *fórmula* não: os tipos são vocabulário fechado |
+| Quem configura | `ADMIN` ou `SUPORTE`, autenticado no backend — [RN-086](business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend) |
+| Como chega à sonda | Pelo canal de [RN-057](business-rules.md#rn-057--a-configuração-desce-pelo-canal-de-tempo-real-e-a-sonda-pede-ao-reconectar), já implementado — schema 2 do snapshot |
+
+⚠️ **A ressalva "conversão não é endereço" foi acatada:** tornar o endereço configurável não tornou a
+grandeza configurável. Peso e torque mantêm suas fórmulas e carregam sua geometria e calibração dentro
+do card.
+
+**Contexto original:**
 **[DECIDIDO 2026-09-05 — melhoria futura]** Cada card do Desktop-Sonda passaria a declarar **onde** ler
 seu valor: *"card 1 é pressão, está no rack X, slot Y, endereço Z"*.
 
@@ -798,3 +837,82 @@ pelo mesmo canal do [RN-057](business-rules.md#rn-057--a-configuração-desce-pe
 ⚠️ **Conversão não é endereço.** Peso de coluna e torque têm fórmulas próprias, com geometria e
 calibração ([RN-030 a RN-034](business-rules.md#telemetria--conversão-de-sinal)). Tornar o endereço
 configurável **não** torna a grandeza configurável — é preciso decidir até onde a flexibilidade vai.
+
+
+---
+
+## Perguntas abertas pelos cards configuráveis — 2026-09-07
+
+**[PENDENTE 2026-09-07]** Levantadas pela spec de
+[`cards-configuraveis.md`](features/cards-configuraveis.md), sem resposta ainda.
+
+### OQ-044 · Um documento de configuração, duas autoridades
+
+✅ **RESPONDIDA 2026-09-07 — dois documentos separados.** Cada um com sua revisão e seu endpoint:
+cards só por `ADMIN`/`SUPORTE` no Desktop, limites por quem enxerga a sonda, pela web. O cliente que
+ajusta um limite **não toca** no documento de cards.
+Ver [RN-089](business-rules.md#rn-089--cards-e-limites-são-documentos-separados).
+
+**Contexto original:**
+Limites de alarme e cards convivem no mesmo snapshot e na mesma revisão, mas exigem perfis diferentes
+para gravar: qualquer um que enxerga a sonda ajusta um limite
+([RN-069](business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)), enquanto card exige
+`ADMIN`/`SUPORTE` ([RN-086](business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)).
+
+**Ou** o `PUT` valida campo a campo, **ou** os dois viram documentos separados com revisões próprias.
+
+**É a decisão de desenho mais imediata da feature** — ela define a forma do endpoint antes de qualquer
+código.
+
+### OQ-045 · Unidade do volume do tanque
+
+✅ **RESPONDIDA 2026-09-07 — `bbl`.** É a unidade do simulador, e é com o plano do simulador que o
+volume do tanque de cimentação se compara. Vale para todos os tanques, não por card.
+Ver [RN-084](business-rules.md#rn-084--o-sensor-de-nível-mede-distância-não-nível).
+
+**Contexto original:**
+m³ ou bbl? O sistema usa bbl no simulador e metros na geometria de poço. Declarar por card resolve a
+diferença entre operações, mas espalha a escolha e permite dois tanques da mesma unidade em unidades
+diferentes.
+
+### OQ-046 · O que acontece com a série de um card excluído
+
+✅ **RESPONDIDA 2026-09-07 — não há exclusão.** O card só se desativa: para de publicar, sai da tela,
+mantém a identidade, e o histórico continua consultável. O limite de alarme hiberna junto e volta se
+o card for reativado. Ver [RN-091](business-rules.md#rn-091--card-se-desativa-nunca-se-exclui).
+
+**Contexto original:**
+O card some da tela; a série **não some** do InfluxDB. Ela vira histórico órfão consultável, some da
+consulta, ou o card só pode ser desativado — nunca excluído?
+
+Vale decidir antes de existir volume: é a mesma classe de pergunta que
+[RN-072](business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo) respondeu para a
+unidade, onde histórico passou a impedir exclusão.
+
+### OQ-047 · Dois cards no mesmo endereço
+
+✅ **RESPONDIDA 2026-09-07 — permitido.** O caso real é a mesma leitura interpretada com escalas
+diferentes. ⚠️ Custo aceito: duas séries no histórico com o mesmo dado de origem, sem nada que indique
+serem a mesma coisa. Ver [RN-094](business-rules.md#rn-094--dois-cards-podem-ler-o-mesmo-endereço).
+
+**Contexto original:**
+Hoje `PRESSAO_01` alimenta dois indicadores da tela com o mesmo valor físico — duplicação de
+apresentação, um dado só. Com cards livres, nada impede dois cards lendo o mesmo byte, e isso
+produziria **duas séries idênticas** no histórico.
+
+Permitido, recusado na validação, ou resolvido por um card poder aparecer duas vezes na tela?
+
+### OQ-048 · Validação de endereço
+Nada impede apontar um card para fora do DB ou para o meio de outro valor. **O CLP não recusa** —
+devolve bytes, e a conversão devolve um número plausível.
+
+Dá para validar o alcance do DB lendo o CLP? Ou a proteção é só o valor bruto na tela, como já
+acontece hoje com o `Ax`?
+
+⚠️ **[DECIDIDO 2026-09-07] Ficou mais aguda, não menos.** A conferência ao vivo ao configurar foi
+**recusada** ([RN-093](business-rules.md#rn-093--a-configuração-não-é-conferida-ao-vivo)): salva-se e
+confere-se no dashboard. Com isso, **o valor bruto no card é a única proteção que resta** contra
+apontar para o byte errado.
+
+**Continua aberta:** validar o alcance do DB no momento de salvar seria a única barreira preventiva —
+e é barata, já que o Desktop está conectado ao CLP enquanto se configura.

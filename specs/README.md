@@ -35,6 +35,7 @@ essa realidade:
 | [`open-questions.md`](open-questions.md) | Dúvidas pendentes de confirmação |
 | [`contracts/`](contracts/) | Contratos de integração entre aplicações — MQTT, REST e **WebSocket tempo real** |
 | [`features/`](features/) | Specs de feature que **atravessam aplicações** e por isso não cabem em um repositório só |
+| [`renomeacao-projetos.md`](renomeacao-projetos.md) | Renomeação dos quatro projetos, e o que ela alcança |
 
 ---
 
@@ -176,7 +177,7 @@ Registro completo em [`product-context.md`](product-context.md); decisões item 
 | Kubernetes · rotas legadas · fora de ordem | Sem objeto (deploy é Compose) · migram · vira teste |
 
 ⚠️ **Saldo operacional da entrevista:** **cinco alterações de schema** decididas, todas manuais e
-obrigatórias antes do próximo deploy — [DT-002](technical-debt.md#️-fila-de-mudanças-manuais-criada-em-2026-09-05).
+obrigatórias antes do próximo deploy — [DT-002](technical-debt.md#-fila-de-mudanças-manuais-criada-em-2026-09-05).
 
 ### Duas decisões que se corrigiram dentro da própria entrevista
 

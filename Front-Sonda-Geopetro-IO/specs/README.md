@@ -4,6 +4,15 @@
 >
 > Specs de **sistema** em [`../../specs/`](../../specs/). Aqui ficam as specs de **feature**.
 
+**[FATO 2026-09-06]** Login inclui recuperação por e-mail. Rotas públicas
+`/recuperar-senha` e `/redefinir-senha`, com token em memória e retorno ao login.
+Contrato e configuração em
+[`recuperacao-senha.md`](../../Backend-Sonda-Geopetro-IO/specs/recuperacao-senha.md).
+
+**[FATO 2026-09-07]** Menu **Configurações**, aba horizontal **E-mail**, exclusiva
+para ADMIN. Configuração SMTP persistida, edição de credencial e teste de conexão.
+Contrato em [configuração SMTP](../../Backend-Sonda-Geopetro-IO/specs/configuracao-smtp.md).
+
 ## Organização por feature
 
 Espelha `src/app/features/`:
@@ -20,7 +29,16 @@ specs/
 
 **[DECIDIDO 2026-09-05]** Primeira spec de feature escrita neste repositório:
 [`simulador/geometria-poco.md`](simulador/geometria-poco.md) — estrutura do poço, trajetória direcional
-e o vínculo com a nova entidade `Poço`. Cobre o trabalho que está **no working tree, sem commit**.
+e o vínculo com a nova entidade `Poço`. As entregas estão registradas ao final do documento.
+
+**[FATO 2026-09-06]** [`simulador/receitas-pasta.md`](simulador/receitas-pasta.md)
+registra a correção da composição e escala das receitas, encerrando as quatro
+falhas conhecidas dos testes. Suíte completa do frontend: 280 testes aprovados.
+
+**[FATO 2026-09-06 — entrega seguinte]** As relações entre campos de
+[`simulador/faixas-validacao.md`](simulador/faixas-validacao.md) agora geram avisos
+nas duas operações; as faixas quantitativas ainda precisam ser preenchidas.
+Suíte completa atual: 299 testes aprovados em 32 arquivos.
 
 **Nota [FATO]:** `almoxarifado/` e `compra/` existem em `src/app/features/` como pastas com
 subdiretórios nomeados e **zero arquivos**. Foram **descontinuados**
@@ -78,8 +96,14 @@ reduziu o carregamento inicial sem alterar URLs, guards ou componentes standalon
 
 ## Autenticação
 
+**[FATO 2026-09-06]** Login e serviços de usuários usam `/api/auth/login` e
+`/api/usuarios/**`. Proxy local e Nginx foram atualizados; `environment.apiUrl`
+permanece a raiz do servidor. Seis testes HTTP novos cobrem os caminhos e payloads.
+Suíte completa atual: 305 testes aprovados. Contrato em
+[`api-prefix.md`](../../Backend-Sonda-Geopetro-IO/specs/api-prefix.md).
+
 **[FATO]**
-1. `LoginPageComponent` despacha `Login` (NGXS) → `POST {apiUrl}/auth/login`.
+1. `LoginPageComponent` despacha `Login` (NGXS) → `POST {apiUrl}/api/auth/login`.
 2. `AuthState` guarda `{user, token, isAuthenticated}`, persistido pelo storage plugin.
 3. `authTokenInterceptor` adiciona `Authorization: Bearer {token}` a **todas** as requisições.
 4. Qualquer `401` dispara `SessionExpired` → limpa o state → redireciona a `/login`.

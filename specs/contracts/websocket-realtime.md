@@ -35,8 +35,7 @@ CLP. Cada um tem seu worker; a thread de leitura apenas entrega e segue.
 | **Retransmissor** | `Backend-Sonda-Geopetro-IO` | publica em `/topic/realtime/unidades-sondas/{id}` |
 | **Consumidor** | `Front-Sonda-Geopetro-IO` | assina o tópico da unidade escolhida |
 
-**[FATO]** O Backend-Sonda **não persiste** nada deste canal e **não consome MQTT** — essa separação
-foi decidida em 2026-08-26 e permanece.
+**[FATO]** O Backend-Sonda **não persiste as amostras de estado atual** e **não consome MQTT**. Desde 2026-09-07, a mesma conexão também transporta [configurações persistidas por unidade](configuracao-sonda.md), em destinos próprios.
 
 ---
 
@@ -104,7 +103,7 @@ controle de acesso por esquecimento.
 
 ### O Desktop também é um usuário
 
-**[FATO]** O Desktop autentica em `/auth/login` com credenciais de um usuário de serviço e usa o JWT
+**[FATO]** O Desktop autentica em `/api/auth/login` com credenciais de um usuário de serviço e usa o JWT
 no CONNECT. Sujeito às mesmas regras: só publica na unidade a que tem acesso.
 
 **Por quê:** um token estático separado criaria um segundo mecanismo de autenticação para manter, com
@@ -174,7 +173,7 @@ publica no MQTT. O tempo real é um canal adicional, não um requisito de funcio
 | # | Limitação | Impacto |
 |---|---|---|
 | 1 | **Broker STOMP em memória** | Não propaga entre instâncias. Com mais de uma réplica do backend, um assinante na instância A não recebe o que o Desktop publicou na B. Resolver com RabbitMQ/ActiveMQ como broker externo, ou afinidade de sessão |
-| 2 | **Sem histórico no canal** | Quem conecta vê a partir da próxima mensagem (até 1s). Deliberado |
+| 2 | **Sem histórico de telemetria no canal** | Estado atual chega na próxima amostra. Configurações têm snapshot inicial persistido |
 | 3 | **Um Desktop por unidade** | Duas instalações com o mesmo `unidadeSondaId` sobrescrevem o estado uma da outra |
 | 4 | **`ws://` sem TLS** | Aceitável em rede privada; use `wss://` se atravessar internet |
 
@@ -187,6 +186,7 @@ publica no MQTT. O tempo real é um canal adicional, não um requisito de funcio
 | [`mqtt-telemetria.md`](mqtt-telemetria.md) | Ingestão do histórico: Desktop → Broker → Backend-Telemetria |
 | [`rest-monitoramento.md`](rest-monitoramento.md) | Consulta do histórico: Backend-Sonda → Backend-Telemetria |
 | **Este** | Estado atual: Desktop → Backend-Sonda → Angular |
+| [`configuracao-sonda.md`](configuracao-sonda.md) | Configuração persistida: Backend-Sonda → Desktop, na mesma conexão STOMP |
 
 **[FATO]** Os três são independentes. A tela de Monitoramento usa o histórico; a de Tempo Real usa
 este canal. Nenhuma depende da outra.

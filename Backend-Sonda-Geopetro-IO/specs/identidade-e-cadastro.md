@@ -197,6 +197,6 @@ arquivos — as mesmas de antes desta entrega, em arquivo não tocado por ela.
 | Fora de escopo | Onde está |
 |---|---|
 | Recuperação de senha por autoatendimento (traz SMTP de volta) | [OQ-021](../../specs/open-questions.md#oq-021--recuperação-de-senha-é-planejada) |
-| Padronizar `/auth` e `/usuarios` em `/api` | [RN-079](../../specs/business-rules.md#rn-079--a-api-padroniza-o-prefixo-api) |
+| Padronizar `/auth` e `/usuarios` em `/api` | ✅ Entregue posteriormente: [api-prefix.md](api-prefix.md) |
 | Revogação de token individual | RN-062 registra que continua não existindo |
 | Autenticação entre o Backend-Sonda e a Telemetria | Firewall é a única proteção — [product-context §10](../../specs/product-context.md#10-identidade-acesso-e-cadastro) |

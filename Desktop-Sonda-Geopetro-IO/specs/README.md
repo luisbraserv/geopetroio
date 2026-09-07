@@ -45,6 +45,14 @@ para evitar divergência entre telas.
 
 ## Mapeamento físico do CLP
 
+> ⚠️ **[DECIDIDO 2026-09-07] Isto vai deixar de ser fixo.** A tabela abaixo passa a ser o **conjunto
+> inicial** de cards da frota atual, não o mapeamento do sistema. Endereço, rack, slot, DB e intervalo
+> entram na configuração da unidade — [`cards-configuraveis.md`](../../specs/features/cards-configuraveis.md)
+> e [RN-080](../../specs/business-rules.md#rn-080--o-card-define-o-que-se-lê-do-clp).
+>
+> **O app também deixa de ser exclusivo de sonda**, e o projeto passa a se chamar `Geopetro-Desktop` —
+> [`renomeacao-projetos.md`](../../specs/renomeacao-projetos.md).
+
 **[FATO]** Data Block 1, conexão `ConnectTo(ip, rack=0, slot=1)` — rack/slot **fixos no código**.
 
 | Código | Endereço | Tipo | Grandeza | Dispositivo MQTT |
@@ -55,10 +63,15 @@ para evitar divergência entre telas.
 | B004 | `DBW8` | Word 4-20mA | Torque Ch. Flutuante | `TORQUE_02` |
 | B005 | `DBW10` | Word 4-20mA | Pressão Bomba **e** ESCP | `PRESSAO_01` |
 
-⚠️ **[PENDENTE]** A escala bruta 0–1000 tem comentário no próprio código: *"A escala 0..1000 é
-preservada até sua confirmação no PLC"* (`PlcConnectionService.java:181`). **Os próprios
-desenvolvedores marcam como não validado** — e toda a conversão depende disso.
-Ver [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-01000-do-clp-foi-confirmada).
+✅ **[CORRIGIDO 2026-09-07 — este texto estava obsoleto.]** Ele citava um comentário
+*"A escala 0..1000 é preservada até sua confirmação no PLC"* em `PlcConnectionService.java:181`.
+**Esse comentário não existe mais**, e a escala 0–1000 saiu do código em 2026-08-31: o
+*Measurement Range* real é **−50..750**, e a conversão foi reescrita conforme
+[RN-030](../../specs/business-rules.md#rn-030--conversão-do-ax-do-logo--psi).
+
+⚠️ **O que de fato continua aberto** é outra coisa: confirmar em campo, com calibrador de laço, que o
+amplificador de **cada canal** está com essa mesma configuração. A conversão assume −50..750 para
+todos. Ver [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada).
 
 ## Fórmulas de conversão
 
@@ -97,7 +110,7 @@ pasta do projeto. **Em desenvolvimento, a trava de instância única não olha o
 |---|---|
 | ⚠️ `SondaReadingSeeder` insere 1000 leituras sintéticas sem guarda de ambiente | [DT-013](../../specs/technical-debt.md#dt-013--seed-de-dados-sintéticos-sem-guarda) |
 | ⚠️ Documentação HTML descreve HTTP + buffer que não existem mais | [DT-009](../../specs/technical-debt.md#dt-009--documentação-divergente-do-código) |
-| ⚠️ Texto da UI sobre visibilidade de cards é impreciso | [RN-037](../../specs/business-rules.md#rn-037--visibilidade-de-card-controla-publicação-não-gravação) |
+| ⚠️ Texto da UI sobre visibilidade de cards é impreciso | [RN-037](../../specs/business-rules.md#rn-037---visibilidade-de-card-controla-publicação-não-gravação) |
 | Lógica de suavização duplicada **3 vezes** | [DT-010](../../specs/technical-debt.md#dt-010--duplicação-entre-os-dois-desktops) |
 | Dependências web mortas (`webmvc`, `h2console`) com `web-application-type=none` | [DT-015](../../specs/technical-debt.md#dt-015--código-morto-inventário) |
 | READMEs de pacote descrevem arquitetura inexistente | idem |
@@ -158,10 +171,14 @@ preenchidos.
 
 | # | Questão | Referência |
 |---|---|---|
-| 1 | Escala 0–1000 confirmada no CLP? | [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-01000-do-clp-foi-confirmada) |
-| 2 | Rack/slot valem para toda a frota? | [OQ-017](../../specs/open-questions.md#oq-017--rackslot-do-clp-valem-para-toda-a-frota) |
-| 3 | Modelo real do CLP (LOGO! vs S7-300/1200/1500)? | [OQ-018](../../specs/open-questions.md#oq-018--qual-é-o-modelo-real-de-clp) |
+| 1 | Escala 0–1000 confirmada no CLP? | [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
+| 2 | ~~Rack/slot valem para toda a frota?~~ | ✅ Encerrada em 2026-09-07: **entram na configuração** |
+| 3 | ~~Modelo real do CLP?~~ | ✅ Deixa de importar globalmente — endereçamento por unidade |
 | 4 | Perda de telemetria em falha de MQTT é aceitável? | [OQ-019](../../specs/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
+
+⚠️ **Aberto e agora crítico:** o cache de configuração é só em memória. Com os cards vindo da
+configuração, um Desktop que reinicia sem rede **não sabe o que ler** e para de publicar. Ver
+[RN-088](../../specs/business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
 
 ---
 
@@ -204,7 +221,7 @@ completo.
 |---|---|---|
 | `unidadeSondaId` + `sondaId` | **Sim** | Cada instalação pertence a **uma** Unidade/Sonda. Não são digitados: vêm juntos da escolha no seletor (ver "Um único campo de Unidade/Sonda") |
 | `backendUrl` | Sim | Ex.: `http://10.0.0.10:8080` |
-| `backendUsuario` / `backendSenha` | Sim | Usuário de serviço; autentica em `/auth/login` |
+| `backendUsuario` / `backendSenha` | Sim | Usuário de serviço; autentica em `/api/auth/login` |
 
 **[FATO]** Sem essa configuração, o Desktop **segue operando normalmente** — lê o CLP, grava local e
 publica no MQTT. O tempo real é canal adicional, não requisito.
@@ -249,3 +266,11 @@ identificadores no mesmo registro. Uma escolha grava os dois, coerentes por cons
 **Testes [FATO]** · `SettingsViewTest` carrega o FXML de verdade — um `fx:id` órfão ou um CSS
 inexistente compila sem reclamar e só estoura quando o usuário clica em "Configurações". Cobre
 também o colapso para uma coluna e a ausência dos dois campos antigos.
+
+### Recebimento de configuração remota (2026-09-07)
+
+**[FATO]** `CanalConfiguracaoLifecycle` inicia a sincronização no startup e ao salvar configurações locais, mesmo sem CLP conectado. `StompRealtimeClient` assina o tópico de configuração da unidade e solicita o snapshot no primeiro acesso, na reconexão e a cada 60 segundos.
+
+**[FATO]** `ConfiguracaoRemotaState` mantém o último snapshot válido em memória, com revisão crescente e isolamento por servidor, usuário, unidade e geração de conexão. Trocar servidor, usuário ou unidade invalida o cache. Schema desconhecido e payload inválido são recusados. Cache em disco, avaliação local e auto-update da frota continuam pendentes.
+
+Contrato e testes: [`configuracao-sonda.md`](../../specs/contracts/configuracao-sonda.md).

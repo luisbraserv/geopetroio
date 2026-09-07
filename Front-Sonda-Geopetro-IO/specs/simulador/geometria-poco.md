@@ -420,3 +420,29 @@ survey, rotação, zoom, troca m/ft sem alterar formulário, saída/retorno à a
 viewport de 390 px; nenhuma exceção JavaScript. Build de produção aprovado.
 O 3D ficou em chunk carregado sob demanda (~587 kB brutos); os avisos de tamanho
 do bundle inicial (~514 kB) e dos estilos das páginas permanecem.
+
+## 15. Correção das receitas de pasta
+
+**[FATO 2026-09-06]** Encerradas as quatro falhas conhecidas de receitas citadas
+nas verificações anteriores. A receita preserva a composição recebida do cálculo
+da pasta, soma os volumes para obter o rendimento e escala todos os componentes
+pelo volume solicitado. Conversões de galões/bbl/ft³ usam fatores sem arredondamento
+intermediário; bases inválidas deixam de gerar uma receita padrão.
+
+Contrato, limites desta entrega e testes em [`receitas-pasta.md`](receitas-pasta.md).
+Suíte completa do frontend: **280 testes aprovados em 31 arquivos**. Build aprovado
+com os mesmos avisos de tamanho. As faixas de plausibilidade e a declaração do
+método de trajetória no relatório continuam pendentes.
+
+## 16. Avisos de consistência entre campos
+
+**[FATO 2026-09-06]** Squeeze e tampão exibem avisos para gradientes de fratura/poro,
+ordem das leituras Fann e densidade da pasta em relação ao deslocamento. Squeeze
+também verifica se a referência hidráulica MD pertence a algum canhoneado.
+Os avisos não bloqueiam cálculo nem abertura do relatório, não alteram o formulário
+e são recalculados ao carregar um cenário. As regras geométricas impossíveis
+continuam bloqueantes.
+
+Contrato e cobertura em [`faixas-validacao.md`](faixas-validacao.md#entrega-de-relações-entre-campos--2026-09-06).
+Suíte completa: **299 testes aprovados em 32 arquivos**. Build aprovado com os
+avisos de tamanho existentes. As faixas quantitativas seguem aguardando a equipe.

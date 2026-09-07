@@ -120,7 +120,7 @@ telemetria**. Nada no sistema hoje impede ou avisa sobre isso. Ver [OQ-001](#8-p
 
 **`valorBruto` é a adição de maior valor operacional deste contrato:** permite reprocessar o
 histórico se uma fórmula de conversão ou uma calibração for corrigida — hoje impossível, porque só o
-valor convertido é transmitido. Dado o [OQ-016](../open-questions.md#oq-016--a-escala-analógica-01000-do-clp-foi-confirmada)
+valor convertido é transmitido. Dado o [OQ-016](../open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada)
 (escala 0–1000 não confirmada no CLP), isso é uma proteção concreta.
 
 ---
@@ -140,6 +140,29 @@ valor convertido é transmitido. Dado o [OQ-016](../open-questions.md#oq-016--a-
 **[FATO]** B005 alimenta dois indicadores na UI (Bomba de Lama e ESCP) com o mesmo valor físico.
 No contrato há **um único** `PRESSAO_01` — a duplicação é apresentação, não dado.
 
+### ⚠️ Este vocabulário deixa de ser fechado
+
+**[DECIDIDO 2026-09-07]** Com os [cards configuráveis](../features/cards-configuraveis.md), a tabela
+acima passa a descrever **o conjunto inicial da frota atual**, não o vocabulário do sistema.
+
+| Antes | Depois |
+|---|---|
+| Cinco `dispositivoId` fixos, iguais em toda a frota | Conjunto **por unidade**, declarado na configuração |
+| Endereço no DB1 é premissa global | Endereço, rack, slot e DB vêm da configuração |
+| Tipos: `VAZAO`, `PESO`, `TORQUE`, `PRESSAO` | Mais `TEMPERATURA` e `NIVEL_TANQUE` |
+
+**O que continua valendo, e é o que segura o esquema:** o `dispositivoId` segue **gerado pelo
+sistema** no formato `<TIPO>_<NN>` e **nunca muda** — [RN-081](../business-rules.md#rn-081--o-id-do-card-é-gerado-o-nome-é-rótulo).
+O nome que o usuário digita é rótulo de tela e **não entra no contrato**. Sem isso, a tag
+`dispositivoId` do InfluxDB ficaria sem limite de cardinalidade, com 5 anos de retenção.
+
+⚠️ **`CatalogoDispositivos` perde a fonte.** A classe tem os cinco fixos e serve para enriquecer
+mensagens no formato antigo com `nome`, `codigoOrigem`, `tipo` e `unidade`
+([§9](#9-migração-a-partir-do-formato-atual)). Com cards por unidade, o enriquecimento precisa de
+outra fonte — ou o produtor passa a publicar o formato-alvo, que já traz esses campos, e o problema
+desaparece junto com o formato antigo. Ver
+[`cards-configuraveis.md §10`](../features/cards-configuraveis.md#11-pontos-que-continuam-em-aberto), item 4.
+
 ---
 
 ## 5. Regras de publicação
@@ -147,7 +170,7 @@ No contrato há **um único** `PRESSAO_01` — a duplicação é apresentação,
 | # | Regra | Origem |
 |---|---|---|
 | P-01 | 1 mensagem por ciclo de leitura (**1 segundo**) | **[FATO]** comportamento atual |
-| P-02 | Publicar apenas dispositivos **habilitados** na configuração | **[FATO]** [RN-037](../business-rules.md#rn-037--visibilidade-de-card-controla-publicação-não-gravação) |
+| P-02 | Publicar apenas dispositivos **habilitados** na configuração | **[FATO]** [RN-037](../business-rules.md#rn-037---visibilidade-de-card-controla-publicação-não-gravação) |
 | P-03 | Se `idSondaUnidade` vazio, **não publicar** | **[FATO]** [RN-038](../business-rules.md#rn-038--sem-publicação-sem-identificador-de-sonda) |
 | P-04 | Persistir localmente **independente** do sucesso da publicação | **[FATO]** H2 local é a fonte de verdade da sonda |
 | P-05 | `automaticReconnect = true`, `cleanSession = true`, timeout 3s | **[FATO]** configuração atual |
@@ -219,7 +242,7 @@ de um fuso, será preciso derivar a zona da unidade. Hoje não há evidência di
 | Broker de produção e autenticação | [OQ-023](../open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção) · [SEC-009](../security-findings.md#sec-009--broker-mqtt-sem-autenticação) |
 | Buffer de contingência | [OQ-019](../open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
 | Fuso horário | [§7](#7-fuso-horário) |
-| Escala bruta do CLP não confirmada | [OQ-016](../open-questions.md#oq-016--a-escala-analógica-01000-do-clp-foi-confirmada) |
+| Escala bruta do CLP não confirmada | [OQ-016](../open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
 | Proteção contra rename de Unidade/Sonda | [RN-018](../business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
 
 ---

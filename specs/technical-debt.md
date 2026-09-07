@@ -147,9 +147,38 @@ ambiente que passa nos testes e uma produção que não sobe.
 descartável — base vazia, base existente sem histórico, e a base que já tinha estrutura criada pelo
 `ddl-auto`. Pula quando não há MySQL alcançável, em vez de quebrar a suíte.
 
+### ⚠️ Divergência confirmada entre produção e base nova
+
+**[FATO 2026-09-07 — encontrado em revisão]** O baseline `V2026.09.04` foi gerado a partir das
+**entidades JPA**, não do banco de produção. Onde as migrations manuais divergiram do que o Hibernate
+gera, produção e uma instalação nova ficam **diferentes**. Um caso confirmado:
+
+| | Produção | Base nova (baseline) |
+|---|---|---|
+| `usuario_roles.role` | `VARCHAR(255)` — `V2026.06.04` rodou lá | `enum('ADMIN','CIMENTACAO','CLIENTE','DIRETORIA','GERENCIA','INTERNO','SONDA')` |
+
+**Como isso passou:** `V2026.06.04` existia justamente para ampliar a coluna e permitir roles longas.
+Ela rodou em produção, foi arquivada em `db/historico/`, e o baseline — vindo do Hibernate — trouxe o
+`ENUM` de volta.
+
+⚠️ **Consequência imediata:** [RN-086](business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)
+precisa de uma role `SUPORTE`. Numa base nova isso exige `ALTER TABLE ... MODIFY COLUMN role enum(...)`
+com o valor novo; em produção, o `VARCHAR` aceita sem alteração nenhuma. **A migration precisa
+funcionar nos dois**, e a forma segura é normalizar a coluna para `VARCHAR(255)` antes de acrescentar
+a role — o que também elimina a divergência.
+
+⚠️ **[INFERÊNCIA] Provavelmente não é o único caso.** As migrations manuais criaram FKs com nomes
+próprios (`fk_setores_regional`, `fk_uir_usuario`) e collation `utf8mb4_unicode_ci`, enquanto o
+baseline traz nomes gerados (`FKdaoqxjeweusut60l4wlxhfalk`) e `utf8mb4_0900_ai_ci`. Nada disso quebra
+`validate`, mas qualquer migration futura que **derrube uma constraint pelo nome** falha num dos dois
+ambientes.
+
+✅ `V2026.09.06.2` já descobre o nome da FK em tempo de execução, e por isso não sofre disso — o padrão
+a seguir nas próximas.
+
 ### O que permanece aberto
 
-- **[FATO]** `migration-regional.sql` tinha passos de limpeza **comentados** com instrução *"após validar os dados"*, sem registro de execução — [OQ-015](open-questions.md#oq-015--as-colunas-legadas-ainda-existem-em-produção). O baseline foi gerado das entidades, não do banco real: **se produção tiver colunas legadas a mais, `validate` as ignora**, e a pergunta continua sem resposta.
+- **[FATO]** `migration-regional.sql` tinha passos de limpeza **comentados** com instrução *"após validar os dados"*, sem registro de execução — [OQ-015](open-questions.md#oq-015--as-colunas-legadas-ainda-existem-em-produção). A divergência acima **é OQ-015 se materializando**: o baseline não descreve produção, e ninguém comparou os dois.
 - Os itens 3 e 5 da tabela acima ainda não têm migration escrita.
 - ⚠️ **Nunca editar um script já aplicado.** `validate-on-migrate` está ligado: mexer no conteúdo quebra o startup em vez de divergir em silêncio. Correção vem em script novo.
 
@@ -318,13 +347,17 @@ fecharam parcialmente:
 | Módulo `security` sem cobertura | `ContaAtivaVerificadorTest` e `JwtAuthenticationFilterTest` cobrem o corte de acesso |
 | Exclusão sem teste | `GuardaDeExclusaoTest` e `TelemetriaVinculoAdapterTest` cobrem RN-063 e RN-072, incluindo o caso em que a Telemetria está fora |
 
-⚠️ **O que continua descoberto, e é o que mais importa:** `/auth/login` e `/usuarios/**` não têm
-**nenhum** teste HTTP — e é exatamente a superfície que [RN-079](business-rules.md#rn-079--a-api-padroniza-o-prefixo-api)
-vai mover para `/api`. A geração e validação de JWT (`JwtTokenAdapter`) também segue sem teste, assim
-como os módulos `empresa` e `monitoramento`.
+**[FATO 2026-09-06 — atualização]** A lacuna HTTP de login e usuários foi coberta
+em `IdentidadeHttpSecurityTest`: nove testes passaram nas URLs antigas antes de
+[RN-079](business-rules.md#rn-079--a-api-padroniza-o-prefixo-api), e onze passaram
+nas URLs `/api` após a migração. A ordem das regras de autoatendimento/administração,
+as restrições de regionais/cadastros e a ausência de segredo JWT têm regressões.
+Backend: 121 testes aprovados nesta execução, excluindo o teste de migrations MySQL.
+Contrato em [`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md).
 
-**Consequência direta [FATO]:** nenhuma das falhas corrigidas em
-[`security-findings.md`](security-findings.md) seria detectada por regressão hoje.
+**Ainda aberto:** geração, assinatura, expiração e validação criptográfica de JWT
+não são exercitadas pela nova suíte HTTP, que usa `TokenPort` mockado. Também
+permanecem lacunas nos módulos `empresa` e `monitoramento`.
 
 **[FATO] Causa raiz relacionada:** os testes de `regional`, `setor` e `unidade-sonda` vivem
 fisicamente em `app/src/test/`, não nos módulos que testam — porque **esses módulos não declaram

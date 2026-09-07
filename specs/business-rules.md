@@ -92,7 +92,7 @@ monitoramento, que era o último lugar onde essa limitação se manifestava.
 
 ⚠️ **Consequência a registrar:** o vínculo N:N usuário↔regional/setor continua no modelo e no
 cadastro, mas hoje **não influencia nenhuma decisão de autorização**. Ver
-[OQ-002](open-questions.md#oq-002--múltiplas-regionais-por-usuário-devem-valer-para-autorização).
+[OQ-002](open-questions.md#oq-002--o-vínculo-regionalsetor-ainda-serve-para-alguma-coisa).
 
 ### RN-047 · Escopo de sondas por perfil
 **[DECIDIDO 2026-08-27]** Regra central do monitoramento.
@@ -443,7 +443,7 @@ publica no MQTT. O tempo real é canal adicional, não requisito de funcionament
 processar. Já o histórico existe justamente para não ter buracos.
 
 **[FATO]** A fila MQTT cobre ~1 hora de broker fora. Mesmo descartando, o H2 local do Desktop mantém
-o registro completo ([RN-039](#rn-039--perda-de-telemetria-em-falha-de-publicação)).
+o registro completo ([RN-039](#rn-039---perda-de-telemetria-em-falha-de-publicação)).
 
 ### RN-052 · Autorização de tempo real acontece no SUBSCRIBE
 **[FATO]** Não basta autenticar na conexão: o destino carrega o id da unidade, e um usuário
@@ -503,7 +503,7 @@ um limite alterado enquanto a sonda estava fora nunca chegaria, e ela operaria c
 ninguém percebesse.
 
 ### RN-058 · Telemetria remota não pode ter lacuna
-**[DECIDIDO 2026-09-05]** Supera [RN-039](#rn-039--perda-de-telemetria-em-falha-de-publicação): a perda
+**[DECIDIDO 2026-09-05]** Supera [RN-039](#rn-039---perda-de-telemetria-em-falha-de-publicação): a perda
 de ciclo em falha de publicação **deixa de ser aceitável**. O Desktop passa a acumular e reenviar.
 
 ⚠️ **Abre:** telemetria fora de ordem no consumidor ([OQ-031](open-questions.md#oq-031--o-consumidor-tolera-telemetria-fora-de-ordem))
@@ -809,3 +809,252 @@ SEC-003 nasceram**, sem nenhum teste HTTP para detectar regressão
 **Escrever os testes de `SecurityConfig` antes de mover as rotas** — eles já estão especificados em
 [security-findings](security-findings.md#próximo-passo-recomendado) e passariam a valer como rede de
 proteção justamente na mudança que mais precisa de uma.
+
+**[FATO 2026-09-06 — implementado]** Login em `POST /api/auth/login`; usuários em
+`/api/usuarios/**`. Os dois PATCH de autoatendimento vêm antes da restrição ADMIN
+e são as únicas exceções. Nove testes HTTP passaram nas rotas antigas antes da
+mudança; onze passaram após a migração. Frontend, Desktop-Sonda, proxies e Postman
+foram atualizados juntos. Contrato, validação e distribuição em
+[`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md). Sem deploy.
+
+---
+
+## Regras dos cards configuráveis — 2026-09-07
+
+> **[DECIDIDO 2026-09-07]** · **Sem implementação hoje.** Contrato e consequências em
+> [`features/cards-configuraveis.md`](features/cards-configuraveis.md).
+
+### RN-080 · O card define o que se lê do CLP
+**[DECIDIDO 2026-09-07]** O mapeamento deixa de ser constante no código e passa a ser **configuração
+da unidade**: cada card declara tipo, nome, endereço e parâmetros de conversão. Rack, slot, número do
+DB e intervalo de leitura saem do código junto.
+
+**Supera [RN-074](#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora).** Aquela regra dizia que o
+`tipo` da Unidade/Sonda era classificação apenas e que a telemetria seguia exclusiva de sonda de
+perfuração — porque instrumentar outro equipamento era projeto próprio. Com o endereçamento
+configurável, **vira cadastro**. Encerra [OQ-043](open-questions.md#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp),
+e com ela [OQ-017](open-questions.md#oq-017--rackslot-do-clp-valem-para-toda-a-frota) e
+[OQ-018](open-questions.md#oq-018--qual-é-o-modelo-real-de-clp).
+
+⚠️ **Conversão não é endereço.** Os tipos são **vocabulário fechado** — `PESO`, `TORQUE`, `PRESSAO`,
+`TEMPERATURA`, `NIVEL_TANQUE`, `CONTADOR_STROKE`. O usuário escolhe qual regra aplicar e onde ler;
+não escreve regra nova. Tipo novo continua exigindo desenvolvimento.
+
+### RN-081 · O id do card é gerado; o nome é rótulo
+**[DECIDIDO 2026-09-07]** O card tem duas identidades. O `dispositivoId` é **gerado pelo sistema** no
+formato `<TIPO>_<NN>`, sequencial por tipo dentro da unidade, e **nunca muda**. O `nome` é livre,
+editável, e não sai da tela.
+
+**Por quê:** o `dispositivoId` é *tag* no InfluxDB, onde cardinalidade alta degrada o banco, e a
+retenção é de 5 anos. Com id livre, cada rebatismo criaria tag nova e **cortaria a série em duas**.
+
+⚠️ É a armadilha de [RN-018](#rn-018--nome-da-unidadesonda-é-chave-de-integração), onde o nome
+editável da unidade virou chave de integração — já registrado como o risco de maior custo da base.
+Repeti-lo por card multiplicaria por seis.
+
+**Número não se reaproveita:** excluir `TEMPERATURA_02` e criar outro produz `TEMPERATURA_03`.
+
+### RN-082 · A conversão analógica é linear sobre a fração 4-20 mA
+**[DECIDIDO 2026-09-07]** Todo card analógico converte em dois passos: posiciona o `Ax` na faixa do
+amplificador e aplica a escala do tipo.
+
+```
+fracao = (Ax − AX_MIN) / (AX_MAX − AX_MIN)      // (Ax + 50) / 800
+```
+
+**[FATO]** Vale [RN-030](#rn-030--conversão-do-ax-do-logo--psi) inteiro: `Ax` é lido **com sinal**, e a
+faixa −50..750 continua sendo [OQ-016](open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada),
+não confirmada no CLP desde agosto.
+
+### RN-083 · Temperatura é escala linear com mínimo e máximo
+**[DECIDIDO 2026-09-07]** `valor = minimoEscala + fracao × (maximoEscala − minimoEscala)`, com unidade
+`°C` ou `°F` declarada no card.
+
+**Por que mínimo e máximo, e não só fundo de escala:** transmissores de temperatura raramente começam
+em zero — `−50..+200 °C` é comum. Assumir base zero produziria erro proporcional em toda a faixa.
+
+⚠️ **A pressão é o caso particular com mínimo zero** — `fracao × range` equivale a
+`0 + fracao × (range − 0)`. **Não unificar as duas agora:** mexer na fórmula da pressão alteraria toda
+leitura já gravada, e a escala do CLP segue não confirmada (RN-082).
+
+### RN-084 · O sensor de nível mede distância, não nível
+**[DECIDIDO 2026-09-07]** O sensor fica **sempre no topo** do tanque. Logo, ele mede a **distância até
+a superfície do líquido**; o nível é o que sobra.
+
+```
+distancia = distanciaMinima + fracao × (distanciaMaxima − distanciaMinima)
+altura    = alturaUtil − distancia
+volume    = f(forma, dimensões, altura)
+```
+
+⚠️ **Ler o valor como se fosse o nível dá um tanque que enche quando esvazia.** É o erro mais provável
+desta regra, e o mais silencioso: os números continuam plausíveis.
+
+**Formas aceitas:** cilíndrico vertical (`π r² h`), cilíndrico horizontal (segmento circular) e
+retangular/cubo (`C × L × h`).
+
+**[DECIDIDO 2026-09-07 — entrevista]** A série gravada e alarmada é o **volume, em bbl**. O nível é
+passo intermediário. É o volume que denuncia ganho ou perda no tanque de lama, e é em bbl que o
+simulador planeja o que o tanque de cimentação vai receber. Encerra
+[OQ-045](open-questions.md#oq-045--unidade-do-volume-do-tanque).
+
+⚠️ **Isto põe a geometria do tanque dentro do dado, não só do desenho.** Forma e dimensões erradas
+gravam volume errado por cinco anos, e o número continua plausível. É o parâmetro de maior
+consequência da configuração.
+
+⚠️ **O cilindro horizontal não é proporcional à altura.** Metade da altura é metade do volume, mas um
+quarto da altura **não** é um quarto do volume. Tratá-lo como vertical erraria mais no começo e no fim
+do tanque — onde a leitura mais importa.
+
+### RN-085 · Vazão é derivada do contador de stroke
+**[DECIDIDO 2026-09-07]** A vazão **não é lida do CLP** e nunca foi: vem do contador de stroke e da
+constante da bomba.
+
+Preserva a série `VAZAO_01` já gravada e mantém [RN-035](#telemetria--conversão-de-sinal).
+
+**[DECIDIDO 2026-09-07 — entrevista]** Superada em alcance por
+[RN-090](#rn-090--um-contador-de-stroke-produz-três-séries): o card publica **três** séries, não duas.
+
+### RN-086 · Configurar exige ADMIN ou SUPORTE, autenticado no backend
+**[DECIDIDO 2026-09-07]** Só `ADMIN` e `SUPORTE` alteram configuração — no Desktop e no Front.
+
+⚠️ **`SUPORTE` não existe.** O enum tem sete valores, e
+[DT-011](technical-debt.md#dt-011--divergência-de-roles-backend--frontend) registra que todas as sete
+têm efeito real. A oitava exige valor no enum, espelho no front **e migration**: `usuario_roles.role`
+é `ENUM` no baseline, então acrescentar valor é `ALTER TABLE`, não só código.
+
+**Sem rede não se configura**, por desenho: não há validação local de credencial. O custo aceito é que
+a instalação inicial de uma unidade precisa de rede ao menos uma vez.
+
+### RN-087 · A sessão de configuração do Desktop morre com o app
+**[DECIDIDO 2026-09-07]** O Desktop pede login **ao abrir uma janela de configuração**, não ao
+iniciar. A sessão vale até o app fechar, **vive em memória e nunca é gravada em disco**.
+
+**Sem login o app funciona normalmente** — lê o CLP, publica, mostra os cards, gera a carta. Só a
+configuração fica restrita.
+
+**Por que não persistir:** [SEC-011](security-findings.md#sec-011--credencial-única-de-frota-nas-sondas)
+já registra uma credencial de serviço única para toda a frota como risco aceito. Um segundo segredo
+gravado na máquina da unidade ampliaria a superfície sem necessidade — configurar é ato raro e
+deliberado.
+
+### RN-088 · Sem configuração, a unidade não lê nada
+**[DECIDIDO 2026-09-07]** Uma unidade sem cards configurados **não produz telemetria**. Não há
+conjunto padrão: o que se lê é exatamente o que foi declarado.
+
+⚠️ **Isto promove um [PENDENTE] a requisito.** O contrato de configuração registra o *"cache
+persistente para reiniciar sem rede"* como melhoria futura. Hoje, um Desktop que reinicia sem rede
+perde só os limites de alarme e continua publicando. Com os cards vindo da configuração, ele **não
+sabe o que ler, e a telemetria da unidade para por inteiro**. O cache em disco passa a ser requisito
+de entrega — ver [`features/cards-configuraveis.md §8`](features/cards-configuraveis.md#-o-cache-persistente-deixa-de-ser-opcional).
+
+⚠️ **Consequência de migração:** a frota atual precisa **nascer** com os cards equivalentes ao
+mapeamento fixo de hoje, ou a telemetria para no dia do deploy. É migração de dados, não de schema.
+
+---
+
+## Regras da entrevista de 2026-09-07
+
+> **[DECIDIDO 2026-09-07]** Rodada de perguntas sobre o funcionamento do sistema. Registro completo em
+> [`features/cards-configuraveis.md §12`](features/cards-configuraveis.md#12-a-entrevista-de-2026-09-07).
+
+### RN-089 · Cards e limites são documentos separados
+**[DECIDIDO 2026-09-07]** A configuração da unidade vira **dois documentos**, cada um com sua revisão
+e seu endpoint:
+
+| Documento | Quem grava | Onde |
+|---|---|---|
+| **Cards** | `ADMIN` ou `SUPORTE` | Só no Geopetro-Desktop |
+| **Limites de alarme** | Quem enxerga a sonda, inclusive `CLIENTE` ([RN-069](#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)) | Web |
+
+**Por quê:** num documento só, o cliente que ajusta um limite devolve o documento inteiro — cards
+inclusive. O servidor teria de comparar campo a campo para saber se ele mexeu no que não devia, e a
+autorização ficaria escondida numa comparação. Separados, **não há como errar**.
+
+Encerra [OQ-044](open-questions.md#oq-044--um-documento-de-configuração-duas-autoridades).
+
+### RN-090 · Um contador de stroke produz três séries
+**[DECIDIDO 2026-09-07]** Cada card `CONTADOR_STROKE` publica:
+
+| Série | O que é |
+|---|---|
+| Stroke atual | Delta entre leituras do contador cumulativo |
+| Vazão (`bbl/min`) | Delta × constante da bomba, no intervalo |
+| Volume acumulado (`bbl`) | Contagem cumulativa × constante da bomba |
+
+**Uma unidade pode ter várias bombas** — vários cards de stroke, cada um com sua constante.
+
+⚠️ **[FATO verificado 2026-09-07] Quebra uma premissa do código atual.** `StrokeCalculatorService`
+guarda `lastCumulativeStroke` e `firstReading`; `FlowRateCalculatorService` guarda uma
+`Queue<ReadingData>` que é **janela móvel de 60 segundos**. Ambos foram escritos para uma bomba.
+
+Com duas bombas contra esse estado compartilhado, os deltas se trocam **e** a janela de um minuto soma
+strokes de bombas diferentes. As duas vazões sairiam plausíveis e erradas. Com N cards, o estado passa
+a ser **por card**.
+
+**[PENDENTE]** Vazão somada entre bombas não entra por ora. Se entrar, é derivada do conjunto de
+cards, sem quebrar o que existe.
+
+### RN-091 · Card se desativa, nunca se exclui
+**[DECIDIDO 2026-09-07]** Não há exclusão de card. Desativar tira da tela e para de publicar; a
+identidade permanece e o **histórico continua consultável**.
+
+Mesma postura de [RN-072](#rn-072--histórico-de-telemetria-conta-como-vínculo), onde o histórico
+passou a impedir a exclusão da unidade. Sem isso, uma série ficaria cinco anos no InfluxDB sem nada
+que explicasse o que ela é.
+
+**O limite de alarme hiberna junto:** para de avaliar e volta como estava se o card for reativado.
+Quem desativa por engano não perde a configuração de alarme junto.
+
+Encerra [OQ-046](open-questions.md#oq-046--o-que-acontece-com-a-série-de-um-card-excluído).
+
+### RN-092 · A unidade nasce sem cards, e se configura copiando outra
+**[DECIDIDO 2026-09-07]** As unidades existentes **não** recebem automaticamente os cards
+equivalentes ao mapeamento fixo de hoje. Cada uma é configurada individualmente, no Desktop.
+
+⚠️ **Custo aceito, registrado com o alerta dado:** por
+[RN-088](#rn-088--sem-configuração-a-unidade-não-lê-nada), unidade sem card não lê nada. Somado a
+"configuração só no Desktop" e a uma frota de mais de dez unidades, **a telemetria de cada unidade
+fica parada entre o deploy e a visita de quem for configurá-la**.
+
+✅ **Mitigação decidida:** ao configurar uma unidade vazia, é possível **copiar os cards de outra
+unidade já configurada** e ajustar o que difere. Unidades iguais têm o mesmo mapeamento.
+
+### RN-093 · A configuração não é conferida ao vivo
+**[DECIDIDO 2026-09-07]** A tela de configuração **não** lê o endereço em tempo real enquanto se
+digita. Salva-se e confere-se no dashboard.
+
+⚠️ **O CLP não recusa endereço errado** — devolve bytes, e a conversão devolve um número plausível. A
+proteção que resta é o **valor bruto exibido no card**, que já existe e revela canal mudo ou escala
+inesperada. Ela passa a ser a única.
+
+⚠️ Contraria o padrão da tela de peso da coluna, que recalcula enquanto se digita porque *"esperar o
+Salvar para ver o efeito de cada parâmetro tornaria a calibração lenta"*.
+
+### RN-094 · Dois cards podem ler o mesmo endereço
+**[DECIDIDO 2026-09-07]** Permitido. O caso real é a mesma leitura interpretada com escalas
+diferentes.
+
+⚠️ **Custo aceito:** duas séries no histórico com o mesmo dado de origem, e nada que indique serem a
+mesma coisa. Hoje `PRESSAO_01` já alimenta dois indicadores da tela, mas com **um** dispositivo no
+contrato; passariam a ser dois.
+
+Encerra [OQ-047](open-questions.md#oq-047--dois-cards-no-mesmo-endereço).
+
+### RN-095 · A leitura do CLP passa a ser em bloco
+**[DECIDIDO 2026-09-07]** Uma unidade tem **5 a 10 cards em geral, e pode ter mais**.
+
+**[FATO]** Hoje são cinco chamadas `ReadArea` separadas por ciclo, uma por grandeza. Com N cards
+configuráveis isso viraria N chamadas por segundo, e N deixou de ser conhecido.
+
+**Passa a ler a faixa do DB de uma vez e fatiar em memória.** Além do custo, isso torna as leituras do
+mesmo ciclo **coerentes entre si**: hoje, cinco chamadas sequenciais podem pegar o CLP em estados
+diferentes e compor um ciclo que nunca existiu.
+
+### RN-096 · O Horus continua separado
+**[DECIDIDO 2026-09-07]** O Geopetro-Desktop passa a cobrir unidades de cimentação, mas **não absorve
+o Braserv-Horus**. Não há convergência prevista, e o desenho dos cards não deve reservar espaço para
+ela.
+
+Uma unidade de cimentação pode ter os dois instalados, medindo coisas diferentes. A duplicação segue
+aceita de propósito — [DT-010](technical-debt.md#dt-010--duplicação-entre-os-dois-desktops).

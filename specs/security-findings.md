@@ -9,10 +9,10 @@
 
 | ID | Achado | Severidade | Status |
 |---|---|---|---|
-| [SEC-001](#sec-001--bypass-de-autorização-por-rota-duplicada) | Bypass de autorização por rota duplicada | **Crítica** | ✅ **Corrigido e depois eliminado** |
-| [SEC-002](#sec-002--apiregionais-sem-restrição-de-role) | `/api/regionais/**` sem restrição de role | **Crítica** | ✅ **Corrigido 2026-08-26** |
-| [SEC-003](#sec-003--usuáriosme-exige-admin) | `/usuarios/me` exige ADMIN | **Alta** (funcional) | ✅ **Corrigido 2026-08-26** |
-| [SEC-004](#sec-004--segredo-jwt-padrão-no-código) | Segredo JWT padrão no código | **Alta** | ✅ **Corrigido 2026-08-26** |
+| [SEC-001](#sec-001--rotas-duplicadas-protegidas--e-depois-eliminadas) | Bypass de autorização por rota duplicada | **Crítica** | ✅ **Corrigido e depois eliminado** |
+| [SEC-002](#sec-002--regionais-com-controle-de-acesso) | `/api/regionais/**` sem restrição de role | **Crítica** | ✅ **Corrigido 2026-08-26** |
+| [SEC-003](#sec-003--autoatendimento-liberado) | `/usuarios/me` exige ADMIN | **Alta** (funcional) | ✅ **Corrigido 2026-08-26** |
+| [SEC-004](#sec-004--segredo-jwt-sem-valor-padrão) | Segredo JWT padrão no código | **Alta** | ✅ **Corrigido 2026-08-26** |
 | [SEC-005](#sec-005--senha-smtp-em-texto-puro) | Senha SMTP em texto puro no banco | Média | ✅ **Eliminado** — módulo removido |
 | [SEC-006](#sec-006--credencial-mysql-no-histórico-do-git) | Credencial MySQL no histórico do Git | **Alta** | ⏳ **Aberto — ação humana** |
 | [SEC-007](#sec-007--senha-de-banco-em-texto-plano-versionada) | Senha de banco dev versionada | Média | ⏳ Aberto |
@@ -35,7 +35,7 @@ sobe o contexto Spring completo.
 
 **Correção inicial:** os caminhos sem `/api` passaram a exigir as **mesmas roles** dos caminhos com
 `/api`. As rotas foram **protegidas, não removidas**, porque
-[OQ-024](open-questions.md#oq-024--rotas-duplicadas-sem-api-têm-consumidor-legado) seguia sem resposta
+[OQ-024](open-questions.md#perguntas-encerradas-pelas-remoções) seguia sem resposta
 — fechando a falha sem quebrar consumidores legados.
 
 **Eliminação definitiva:** os quatro controllers com mapeamento duplo eram exatamente
@@ -270,14 +270,14 @@ assim que o auto-update existir, que é exatamente o que torna a alternativa bar
 | 1 | SEC-006 — rotacionar credencial `braservone` | ⏳ **Pendente — ação humana**, independente de código |
 | 2 | SEC-001, SEC-002, SEC-003, SEC-004 | ✅ Corrigidos em 2026-08-26 |
 | 3 | SEC-005, SEC-010 | ✅ Eliminados com a remoção dos módulos |
-| 4 | **Testes de `SecurityConfig`** | ⏳ **Pendente** — as correções não têm rede de proteção |
+| 4 | **Testes de `SecurityConfig`** | ✅ **2026-09-06** — 11 testes HTTP de identidade, além da cobertura de poços |
 | 5 | SEC-009 | ⏳ Antes de o Backend-Telemetria entrar em produção |
 | 6 | SEC-007, SEC-008 | ⏳ Requerem decisão |
 | 7 | Rotacionar senha SMTP se a conta ainda for usada | ⏳ Ver SEC-005 |
 
 ### Próximo passo recomendado
 
-**Testes de integração do `SecurityConfig`.** As correções aplicadas não têm rede de proteção: uma
+**[HISTÓRICO — proposta implementada em 2026-09-06] Testes de integração do `SecurityConfig`.** As correções aplicadas não tinham rede de proteção: uma
 alteração futura na ordem dos `requestMatchers` reintroduz qualquer uma delas silenciosamente. A ordem
 das regras é significativa e não é óbvia ao ler o código.
 
@@ -288,6 +288,9 @@ Casos mínimos sugeridos, ajustados ao escopo atual:
 - `CLIENTE` recebe `403` em `/api/setores` e `/api/unidades-sondas`
 - Contexto **falha ao subir** sem `security.jwt.secret`
 
-**[FATO]** Hoje não existe nenhum teste HTTP no repositório — seria a primeira classe do tipo, e
-exigiria adicionar `spring-boot-starter-test` ao módulo `security`
-([DT-007](technical-debt.md#dt-007--ausência-de-testes-em-áreas-críticas)).
+**[FATO 2026-09-06]** Os casos mínimos acima foram implementados em
+`app/src/test/java/com/geopetro/security/IdentidadeHttpSecurityTest.java`, usando os
+controllers e a cadeia de segurança reais. As URLs de identidade agora possuem
+`/api`. Nove testes passaram antes da migração e onze depois, incluindo retirada
+das rotas antigas e proteção das ações de status sob o username `me`.
+Detalhes em [`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md).

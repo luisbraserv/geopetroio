@@ -25,6 +25,8 @@ isso vivem na raiz de `specs/`, não numa das pastas acima:
 | Spec | Cobre | Módulos |
 |---|---|---|
 | [`simulador-pocos.md`](simulador-pocos.md) | Entidade Poço e cenários vinculados | `simulador` |
+| [`recuperacao-senha.md`](recuperacao-senha.md) | OQ-021: link temporário, troca de senha e SMTP | `app`, `usuario`, `security` |
+| [`configuracao-smtp.md`](configuracao-smtp.md) | Configurações → E-mail: SMTP corporativo pela interface | `app`, `security` |
 | [`identidade-e-cadastro.md`](identidade-e-cadastro.md) | RN-061 · RN-062 · RN-064 · RN-065 | `usuario`, `security`, `unidade-sonda`, `core` |
 
 ## Escopo do backend
@@ -42,9 +44,9 @@ próprio, e mesmo ele é agnóstico (persiste blobs opacos).
 
 | Módulo Maven | Domínio | Prefixo | Roles |
 |---|---|---|---|
-| `security` | authentication | `/auth/**` | público |
-| `usuario` | usuarios | `/usuarios/me`, `/usuarios/me/**` | autenticado |
-| `usuario` | usuarios | `/usuarios/**` | `ADMIN` |
+| `security` | authentication | `POST /api/auth/login` | público |
+| `usuario` | usuarios | `PATCH /api/usuarios/me`, `PATCH /api/usuarios/me/senha` | autenticado |
+| `usuario` | usuarios | `/api/usuarios/**` | `ADMIN` |
 | `empresa` | organizacao | `/api/empresas/**` | `ADMIN` |
 | `regional` | organizacao | `GET /api/regionais/**` | `INTERNO`, `CIMENTACAO`, `ADMIN` |
 | `regional` | organizacao | `POST/PUT/DELETE /api/regionais/**` | `ADMIN` |
@@ -54,8 +56,8 @@ próprio, e mesmo ele é agnóstico (persiste blobs opacos).
 | `app` | monitoramento | `/api/sondas/**` | `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA`, `CLIENTE`, `ADMIN` |
 | `app` | realtime | `/ws` (handshake) + STOMP | público no handshake; autorizado no CONNECT/SUBSCRIBE |
 
-⚠️ **A ordem das regras no `SecurityConfig` é significativa.** `/usuarios/me` precisa vir **antes** de
-`/usuarios/**`, e o `GET` de regionais antes da regra geral de regionais. Alterar a ordem reintroduz
+⚠️ **A ordem das regras no `SecurityConfig` é significativa.** `PATCH /api/usuarios/me` precisa vir **antes** de
+`/api/usuarios/**`, e o `GET` de regionais antes da regra geral de regionais. Alterar a ordem reintroduz
 falhas corrigidas — e **não há teste que detecte isso**.
 
 ## Grafo de dependências entre módulos
@@ -113,6 +115,10 @@ F-01 a F-07, F-14, F-15 e F-20 pertencem a este repositório.
 
 ## Restrições técnicas a respeitar
 
+**[FATO 2026-09-06]** A padronização de login e usuários em `/api` está implementada.
+Contrato e testes de segurança antes/depois da migração em [`api-prefix.md`](api-prefix.md).
+O deploy precisa acompanhar a atualização dos clientes Desktop-Sonda que usam login.
+
 | # | Restrição | Origem |
 |---|---|---|
 | 1 | **Flyway é o dono do schema** desde 2026-09-06. Migration nova vai em `app/src/main/resources/db/migration/`, idempotente, e **script já aplicado nunca se edita** | [DT-002](../../specs/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema) |
@@ -148,7 +154,7 @@ Além dos endpoints, saíram do sistema:
 | Item | Detalhe |
 |---|---|
 | **`@EnableScheduling`** | O `@Scheduled` diário às 08:00 do `quimico` era o único job. Nenhum resta |
-| **`spring-boot-starter-mail`** | Dependência exclusiva do `quimico` — não há mais envio de e-mail |
+| **`spring-boot-starter-mail`** | Retirado com `quimico`; reintegrado em 2026-09-06 exclusivamente para recuperação de senha (OQ-021), desativado até configurar SMTP |
 | **`ProcessoSchemaInitializer`** | `ApplicationRunner` que fazia `ALTER TABLE` a cada startup — a terceira estratégia conflitante de schema |
 | **Consumidor MQTT** | Pacote `com.geopetro.telemetria` (6 classes), dependência Paho e propriedades `mqtt.*` |
 | **Violação do grafo** | O SQL nativo cruzando módulos saiu com `quimico` |
@@ -234,8 +240,7 @@ Angular ◄── /topic/realtime/unidades-sondas/{id}
 
 ### Decisões
 
-**Nada é persistido.** O histórico tem outro caminho (MQTT → Backend-Telemetria → InfluxDB). Este
-canal é o "agora", com validade de um segundo.
+**As amostras de estado atual não são persistidas.** O histórico tem outro caminho (MQTT → Backend-Telemetria → InfluxDB). A configuração por unidade tem persistência própria, descrita abaixo.
 
 **O backend continua sem MQTT.** A decisão de 2026-08-26 permanece — WebSocket não é reintrodução do
 broker, é canal distinto com outra responsabilidade.
@@ -254,3 +259,9 @@ assinante na instância A não recebe o que o Desktop publicou na B. Resolver co
 (RabbitMQ/ActiveMQ) ou afinidade de sessão.
 
 Contrato completo: [`websocket-realtime.md`](../../specs/contracts/websocket-realtime.md).
+
+### Configuração remota por sonda (2026-09-07)
+
+**[FATO]** `app/configuracaosonda` oferece GET/PUT `/api/sondas/{id}/configuracao`, documento versionado no MySQL, autoria do servidor e publicação STOMP após commit. O snapshot pode ser solicitado por `SUBSCRIBE /app/config/unidades-sondas/{id}`. Leitura, gravação e entrega exigem acesso vigente à unidade e conta ativa. A migration `V2026.09.07.2` adiciona a tabela e a FK; configuração vinculada bloqueia exclusão da unidade.
+
+Contrato: [`configuracao-sonda.md`](../../specs/contracts/configuracao-sonda.md). O motor de alarmes e as telas continuam pendentes.

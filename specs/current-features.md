@@ -32,10 +32,11 @@
 | [F-18](#f-18--monitoramento-de-cimentação) | Monitoramento de Cimentação | Horus | Ativo |
 | [F-19](#f-19--carta-de-operação-cimentação) | Carta de Operação (Cimentação) | Horus | Ativo |
 | [F-20](#f-20--tempo-real-de-sondas) | **Tempo Real de Sondas** | Front + Backend + Desktop | **Novo 2026-08-27** |
+| [F-21](#f-21--configuração-remota-da-sonda) | Configuração remota da sonda | Backend + Desktop | Implementado em código 2026-09-07 |
 
-**[FATO]** O sistema hoje tem **14 funcionalidades ativas**, distribuídas em três eixos: administração
+**[FATO]** O inventário reúne **15 funcionalidades implementadas**, distribuídas em três eixos: administração
 de identidade e organização (F-01 a F-07), engenharia de cimentação (F-14, F-18, F-19) e telemetria de
-sonda (F-15 a F-17, F-20).
+sonda (F-15 a F-17, F-20 e F-21). Implementação em código não indica distribuição à frota.
 
 **[FATO 2026-08-27]** A telemetria passou a ter **dois caminhos complementares**: F-15 responde "o
 que aconteceu?" (histórico, InfluxDB) e F-20 responde "o que está acontecendo?" (tempo real,
@@ -51,7 +52,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 | **Atores** | Qualquer usuário cadastrado |
 | **Entradas** | `{username, password}` — aceita **username ou e-mail** |
 | **Saídas** | `AuthResponse{token, username, nome, email, endereço, telefone, roles[], regionalId, regionalNome}` |
-| **Endpoints** | `POST /auth/login` — **público** |
+| **Endpoints** | `POST /api/auth/login` — **público** |
 | **Entidades** | `UsuarioEntity` |
 
 **Fluxo principal [FATO]**
@@ -72,7 +73,17 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 
 **Dependências** · módulo `security` → `usuario` · BCrypt · jjwt 0.12.6
 
-**[PENDENTE]** Não existe recuperação de senha — [OQ-021](open-questions.md#oq-021--recuperação-de-senha-é-planejada).
+**[FATO 2026-09-06]** Recuperação por e-mail implementada: link no login,
+solicitação pública e tela de nova senha. Token de uso único, validade de 30 minutos,
+hash no banco e limites de envio. SMTP desativado por padrão; configuração e teste
+de entrega corporativa pendentes. Contrato em
+[`recuperacao-senha.md`](../Backend-Sonda-Geopetro-IO/specs/recuperacao-senha.md).
+
+**[FATO 2026-09-07]** ADMIN configura o SMTP em **Configurações → E-mail**, com
+menu horizontal, ativação do envio, credencial protegida e teste de conexão.
+Alterações valem sem reiniciar o backend. O teste não envia mensagens nem comprova
+entrega corporativa. Detalhes em
+[`configuracao-smtp.md`](../Backend-Sonda-Geopetro-IO/specs/configuracao-smtp.md).
 
 ---
 ## F-02 · Gestão de Usuários
@@ -81,7 +92,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 |---|---|
 | **Objetivo** | Cadastrar e manter usuários internos (funcionários) e clientes |
 | **Atores** | `ADMIN` |
-| **Endpoints** | `POST /usuarios/clientes` · `POST /usuarios/internos` · `GET /usuarios?pagina&tamanho&busca` · `GET /usuarios/{username}` · `PATCH /usuarios/{username}` · `PATCH /usuarios/{username}/ativar` · `/desativar` |
+| **Endpoints** | `POST /api/usuarios/clientes` · `POST /api/usuarios/internos` · `GET /api/usuarios?pagina&tamanho&busca` · `GET /api/usuarios/{username}` · `PATCH /api/usuarios/{username}` · `PATCH /api/usuarios/{username}/ativar` · `/desativar` |
 | **Permissões** | `ROLE_ADMIN` |
 | **Entidades** | `UsuarioEntity` → `UsuarioInternoEntity` / `UsuarioClienteEntity`, `EmpresaEntity`, `RegionalEntity`, `SetorEntity` |
 | **Tela** | `/app/cadastros/usuarios` |
@@ -109,7 +120,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 
 **Erros** · `400` validação · `404` empresa/regional/setor inexistente · `409` usuário já existe
 
-⚠️ **[FATO] Bug conhecido** — `PATCH /usuarios/{username}` **não é PATCH parcial**: omitir `telefone` ou `email` causa `400`. Ver [DT-008](technical-debt.md#dt-008--patch-que-não-é-parcial).
+⚠️ **[FATO] Bug conhecido** — `PATCH /api/usuarios/{username}` **não é PATCH parcial**: omitir `telefone` ou `email` causa `400`. Ver [DT-008](technical-debt.md#dt-008--patch-que-não-é-parcial).
 
 ---
 
@@ -119,7 +130,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 |---|---|
 | **Objetivo** | Usuário editar o próprio cadastro e trocar a própria senha |
 | **Atores** | Qualquer usuário autenticado |
-| **Endpoints** | `PATCH /usuarios/me` · `PATCH /usuarios/me/senha` |
+| **Endpoints** | `PATCH /api/usuarios/me` · `PATCH /api/usuarios/me/senha` |
 | **Tela** | `/app/meu-usuario` |
 
 ### ✅ Corrigido em 2026-08-26
@@ -129,7 +140,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 `403`. Agravante: `/app/meu-usuario` é o **destino pós-login da role `INTERNO`**.
 
 **Correção:** a regra de `/usuarios/me` passou a ser declarada **antes** da regra genérica, exigindo
-apenas autenticação. Ver [SEC-003](security-findings.md#sec-003--usuáriosme-exige-admin).
+apenas autenticação. Ver [SEC-003](security-findings.md#sec-003--autoatendimento-liberado).
 
 **Regras [FATO]** · senha atual deve conferir · nova = confirmação · **nova deve diferir da atual**
 
@@ -175,7 +186,7 @@ em `.anyRequest().authenticated()`. Qualquer autenticado, inclusive `CLIENTE`, p
 
 **Correção:** `GET` liberado aos perfis internos (as telas de Setor e Unidade/Sonda precisam listar
 regionais nos selects); escrita restrita a `ADMIN`. Ver
-[SEC-002](security-findings.md#sec-002--apiregionais-sem-restrição-de-role).
+[SEC-002](security-findings.md#sec-002--regionais-com-controle-de-acesso).
 
 **Regras [FATO]**
 - Nome duplicado, **case-insensitive** → `409`.
@@ -316,7 +327,7 @@ conformidade operacional
 
 **Regras [FATO]**
 - Cenários organizados em pastas por `operacao` — o backend é agnóstico de domínio.
-- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador (`CIMENTACAO`, `ADMIN`, `GERENCIA` ou `DIRETORIA`) edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015--cenários-do-simulador-não-têm-dono)).
+- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador (`CIMENTACAO`, `ADMIN`, `GERENCIA` ou `DIRETORIA`) edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015---cenários-do-simulador-não-têm-dono)).
 - Pasta com cenários: cascade `ALL` + `orphanRemoval`.
 
 ⚠️ **Validações [FATO]** — **ausência quase total**. Os ~40 campos numéricos críticos de engenharia
@@ -578,3 +589,11 @@ o id da unidade, e um usuário autenticado poderia trocá-lo à mão. Coberto po
 
 **Limitação conhecida [FATO]** · Broker STOMP em memória não propaga entre instâncias do backend.
 Com mais de uma réplica, é preciso broker externo ou afinidade de sessão.
+
+---
+
+## F-21 · Configuração remota da sonda
+
+**[FATO 2026-09-07]** Backend-Sonda persiste um documento de limites por unidade, com revisão e autoria, e o publica por STOMP após commit. GET/PUT `/api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda. O Desktop recebe o snapshot ao iniciar, ao reconectar e a cada 60 segundos, mesmo sem CLP conectado; rejeita revisões antigas e configurações de outra unidade.
+
+**[FATO]** Esta é a base de transporte e persistência. O motor de alarmes, a interface de limites, o histórico e a distribuição à frota continuam pendentes. Contrato, limitações e testes em [`configuracao-sonda.md`](contracts/configuracao-sonda.md).

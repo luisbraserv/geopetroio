@@ -261,7 +261,7 @@ usuário `CLIENTE` + `ADMIN` vê a frota inteira. Há teste cobrindo isso.
 **[FATO]** Até 2026-08-27, um usuário interno só via sondas da sua **regional principal**. Com os
 perfis operacionais passando a ver a frota inteira, essa restrição **deixou de existir** no
 monitoramento — e com ela, a limitação descrita em
-[RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização) perdeu objeto.
+[RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização--superada) perdeu objeto.
 
 O vínculo N:N usuário↔regional/setor continuava no modelo sem influenciar nenhuma decisão de
 autorização. ✅ **[DECIDIDO 2026-09-05] Foi removido** — ver

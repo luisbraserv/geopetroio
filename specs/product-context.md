@@ -199,7 +199,7 @@ por poço na web e a ponte com o simulador levantada em
 | 1 | **Entidade Poço** + vínculo com cenário | Habilita o reaproveitamento de geometria |
 | 2 | **Trajetória direcional (survey)** no simulador | O modelo em curso não comporta — ver spec no Front |
 | 3 | **Alarmes** (limites, avaliação dupla, eventos) | Depende de 4 |
-| 4 | **Canal de configuração do servidor para a sonda** | Pela conexão STOMP existente |
+| 4 | **Canal de configuração do servidor para a sonda** | **[FATO 2026-09-07] Implementado em código** pela conexão STOMP; [contrato](contracts/configuracao-sonda.md). Distribuição à frota pendente |
 | 5 | **Buffer de contingência** no Desktop-Sonda | Depende de 6 para chegar à frota |
 | 6 | **Auto-update do Desktop-Sonda** | Bloqueia 3, 5, formato MQTT-alvo e autenticação do broker |
 | 7 | **Retenção em camadas + backup automatizado** | Nenhuma; é infraestrutura |
@@ -367,7 +367,89 @@ teste HTTP que detecte a regressão. **Os testes de `SecurityConfig` vêm antes 
 
 A entrevista decidiu **cinco alterações de schema**, todas manuais, todas obrigatórias antes do próximo
 deploy — porque não há Flyway e produção roda `validate`. Lista em
-[DT-002](technical-debt.md#️-fila-de-mudanças-manuais-criada-em-2026-09-05).
+[DT-002](technical-debt.md#-fila-de-mudanças-manuais-criada-em-2026-09-05).
 
 Somado às decisões de §11 — sem backup do MySQL, uma pessoa operando —, é o ponto que mais merece
 atenção antes de começar a implementar.
+
+---
+
+## 13. A borda deixa de ser exclusiva de sonda — 2026-09-07
+
+**[DECIDIDO 2026-09-07]** Os cards do Desktop passam a ser **configuráveis**: o usuário declara quais
+grandezas a unidade lê, com que nome e em que endereço do CLP. Spec em
+[`features/cards-configuraveis.md`](features/cards-configuraveis.md).
+
+**Prioridade declarada:** esta alteração vem **antes** dos itens pendentes de alarmes, borda e dívidas
+técnicas.
+
+### O que isso reverte, e por quê
+
+| Decidido em 2026-09-05 | Decidido agora |
+|---|---|
+| O `tipo` da unidade é **classificação apenas**; telemetria segue exclusiva de sonda ([RN-074](business-rules.md#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora)) | O tipo continua sem alterar a leitura — mas **a configuração altera** ([RN-080](business-rules.md#rn-080--o-card-define-o-que-se-lê-do-clp)) |
+| Instrumentar equipamento que não é sonda é **projeto próprio**, com outro CLP e outras grandezas | Vira **cadastro** |
+| Mapeamento card→endereço é melhoria futura ([OQ-043](open-questions.md#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp)) | É a próxima entrega |
+
+**Não é contradição — é o caminho de saída que a própria OQ-043 previu.** Ela dizia, em 2026-09-05,
+que aquele mapeamento resolveria rack/slot por sonda, modelo de CLP variável e instrumentação de
+outros equipamentos *"com uma resposta só"*. É o que se decidiu construir.
+
+### A segunda inversão do Desktop
+
+Em §2 o Desktop deixou de ser "o produto instalado na sonda" e virou **o sensor do sistema**. Agora
+deixa de ser o sensor *da sonda* e vira **o agente de borda de qualquer unidade cadastrada**.
+
+Os nomes dos projetos acompanham: `Geopetro-Desktop`, `Geopetro-Front`, `Geopetro-Backend` e
+`Geopetro-Telemetria` — [`renomeacao-projetos.md`](renomeacao-projetos.md).
+
+### Duas grandezas que o sistema não conhecia
+
+**[DECIDIDO 2026-09-07]** Temperatura e nível de tanque entram como tipos de card. Nenhuma das duas
+existe hoje no contrato MQTT, no catálogo da Telemetria ou na tela.
+
+O nível de tanque traz junto uma decisão de produto que parece detalhe e não é: **o sensor fica sempre
+no topo**, então ele mede distância até o líquido, não nível. O volume sai da forma do tanque e das
+dimensões. Ler o valor como se fosse nível daria um tanque que **enche quando esvazia** — e os números
+continuariam plausíveis o tempo todo.
+
+### O que isto cobra de volta
+
+⚠️ **O cache persistente do Desktop deixa de ser opcional.** Hoje, um Desktop que reinicia sem rede
+perde os limites de alarme e continua publicando. Com os cards vindo da configuração, ele **não sabe o
+que ler** — e a telemetria daquela unidade para por inteiro. É a consequência mais cara desta decisão,
+registrada em [RN-088](business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
+
+⚠️ **Uma role nova.** `SUPORTE` não existe, e `usuario_roles.role` é `ENUM` no banco — acrescentar
+valor é migration, não só código.
+
+### A entrevista de 2026-09-07
+
+**[DECIDIDO 2026-09-07]** Quatro rodadas fecharam o desenho. Registro item a item em
+[`features/cards-configuraveis.md §12`](features/cards-configuraveis.md#12-a-entrevista-de-2026-09-07)
+e em [RN-089 a RN-096](business-rules.md#regras-da-entrevista-de-2026-09-07).
+
+| Tema | Decisão |
+|---|---|
+| Onde se configura | **Só no Geopetro-Desktop** — acertar byte e rack exige estar na unidade. O Front só lê |
+| Documento | **Dois**: cards (`ADMIN`/`SUPORTE`) e limites (quem enxerga a sonda), com revisões próprias |
+| Tanque | Publica **volume em bbl** — é o que se compara com o plano do simulador |
+| Contador de stroke | **Três séries** por card, e **várias bombas** por unidade |
+| Card | **Não se exclui**, só se desativa. O limite de alarme hiberna junto |
+| Leitura do CLP | **Em bloco**, não card a card — o número de cards deixou de ser conhecido |
+| Horus | **Continua separado**, sem convergência prevista |
+
+### Três riscos aceitos com o custo à vista
+
+**[DECIDIDO 2026-09-07]** Escolhas feitas contra a recomendação registrada. Ficam anotadas para que a
+revisão, se vier, comece de onde parou:
+
+| Decisão | O que se aceita junto |
+|---|---|
+| **A frota nasce vazia** | Unidade sem card não lê nada ([RN-088](business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)). Com configuração só presencial e mais de dez unidades, a telemetria de cada uma fica parada entre o deploy e a visita. ✅ Mitigado por **copiar a configuração de outra unidade** |
+| **Sem conferência ao vivo ao configurar** | O CLP não recusa endereço errado — devolve bytes e a conversão devolve número plausível. O valor bruto no card vira a **única** proteção |
+| **Dois cards no mesmo endereço** | Duas séries no histórico com o mesmo dado de origem, sem nada indicando que são a mesma coisa |
+
+**O que essas três têm em comum:** todas trocam trabalho de construção por trabalho de operação — e a
+operação é **uma pessoa**, que também desenvolve (§4). É a mesma troca registrada em §11 para backup
+e OneDrive.
