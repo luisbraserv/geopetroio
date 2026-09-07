@@ -168,7 +168,7 @@ public class InfluxTelemetriaRepository {
 	/**
 	 * Primeiro e ultimo ponto gravados para uma sonda, em toda a retencao — RN-072.
 	 *
-	 * <p>Existe para responder "esta sonda tem historico?" antes de o Backend-Sonda excluir o
+	 * <p>Existe para responder "esta sonda tem historico?" antes de o Geopetro-Backend excluir o
 	 * cadastro. <b>Nao e varredura de serie:</b> {@code first()} e {@code last()} sao empurrados
 	 * para o mecanismo de armazenamento, que resolve pelo indice.
 	 *

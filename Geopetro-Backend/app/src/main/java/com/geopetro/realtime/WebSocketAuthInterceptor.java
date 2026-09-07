@@ -45,7 +45,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 	private static final Pattern TOPICO_REALTIME =
 			Pattern.compile("^/(?:topic/realtime|topic/config|app/config)/unidades-sondas/([1-9][0-9]{0,18})$");
 
-	/** Destino que o Desktop-Sonda usa para publicar o estado. */
+	/** Destino que o Geopetro-Desktop usa para publicar o estado. */
 	private static final String DESTINO_PUBLICACAO = "/app/realtime/estado";
 
 	private final TokenPort tokenPort;

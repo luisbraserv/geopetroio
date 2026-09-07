@@ -22,7 +22,7 @@ import com.influxdb.client.WriteOptions;
  * assincrona acumula e descarrega em lote, reduzindo isso a um flush por intervalo.
  *
  * <p><b>Contrapartida aceita:</b> pontos ainda em buffer se perdem se o processo cair. E aceitavel
- * porque o Desktop-Sonda mantem copia local em H2 de toda leitura (ver F-16), entao a fonte de
+ * porque o Geopetro-Desktop mantem copia local em H2 de toda leitura (ver F-16), entao a fonte de
  * verdade da sonda nao depende deste buffer.
  */
 @Configuration

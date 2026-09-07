@@ -9,7 +9,7 @@
 | ID | Item | Aplicação | Severidade | Estado |
 |---|---|---|---|---|
 | [DT-001](#dt-001--código-fonte-perdido-de-almoxarifado-e-compras) | Código-fonte perdido (almoxarifado/compras) | Backend | **Crítica** | Registro histórico |
-| [DT-002](#dt-002--estratégias-conflitantes-de-evolução-de-schema) | Estratégias conflitantes de schema | Backend | **Crítica** | ✅ **Resolvido 2026-09-06** — Flyway |
+| [DT-002](#dt-002--estratégias-conflitantes-de-evolução-de-schema) | Estratégias conflitantes de schema | Backend | **Crítica** | ✅ **Resolvido 2026-09-07** — Flyway |
 | [DT-003](#dt-003--telemetria-capturada-mas-nunca-persistida) | Telemetria capturada e descartada | Sistema | **Crítica** | ✅ Resolvido |
 | [DT-004](#dt-004--risco-de-onedrive-sobre-repositórios-git) | OneDrive corrompendo repositórios Git | Todas | **Crítica** | Aberto |
 | [DT-005](#dt-005--módulos-de-backend-sem-interface) | Módulos de backend sem interface | Backend | Alta | ✅ Resolvido |
@@ -70,7 +70,8 @@ entrado no Git.
 
 ## DT-002 · Estratégias conflitantes de evolução de schema
 
-**Severidade: Crítica** · Geopetro-Backend · ✅ **Resolvido em 2026-09-06** com a adoção do Flyway
+**Severidade: Crítica** · Geopetro-Backend · ✅ **Resolvido em 2026-09-07** — Flyway adotado em
+2026-09-06 e efetivamente **rodando** em 2026-09-07 (ver a ⚠️ ao final)
 
 ### O problema, como foi encontrado — registro histórico
 
@@ -126,7 +127,12 @@ app/src/main/resources/db/migration/
 ├── V2026.09.04__baseline.sql          ← era deploy/vm1-transacional/mysql-init/01-schema.sql
 ├── V2026.09.05__simulador_pocos.sql
 ├── V2026.09.06.1__unidade_sonda_tipo.sql
-└── V2026.09.06.2__usuario_sem_vinculo_organizacional.sql
+├── V2026.09.06.2__usuario_sem_vinculo_organizacional.sql
+├── V2026.09.06.3__recuperacao_senha.sql
+├── V2026.09.07.1__configuracao_smtp.sql
+├── V2026.09.07.2__configuracao_sonda.sql
+├── V2026.09.07.3__role_suporte.sql
+└── V2026.09.07.4__configuracao_cards.sql
 
 db/historico/                          ← V2026.06.*, aplicados à mão antes do Flyway. Não rodam mais
 ```
@@ -142,6 +148,43 @@ de entidade — que era a ⚠️ registrada aqui antes.
 local: foi assim que `simulador_pocos` nasceu no MySQL de desenvolvimento sem ninguém rodar migration
 ([registro](../Geopetro-Backend/specs/simulador-pocos.md#banco)). O preço daquilo é um
 ambiente que passa nos testes e uma produção que não sobe.
+
+### ⚠️ O Flyway ficou três dias no classpath sem rodar
+
+**[FATO 2026-09-07]** Adotado o Flyway em 2026-09-06, o backend **não subiu**:
+
+```
+Schema-validation: missing table [configuracao_cards]
+```
+
+Sem log do Flyway, sem tabela `flyway_schema_history`, sem erro. **O Flyway simplesmente não rodou** —
+e o Hibernate validou um schema que ninguém migrou.
+
+A causa é do **Spring Boot 4**: as autoconfigurações foram quebradas em artefatos por tecnologia
+(`spring-boot-hibernate`, `spring-boot-jpa`, `spring-boot-flyway`). `flyway-core` e `flyway-mysql`
+entregam o **motor**; quem o liga no startup é o terceiro. Faltando ele, nada acusa: o Flyway está no
+classpath, importável, testável — e inerte.
+
+São **três** dependências, e cada ausência falha diferente:
+
+| Ausente | Sintoma |
+|---|---|
+| `flyway-core` | Erro de compilação/classe não encontrada |
+| `flyway-mysql` | Startup falha com *"Unsupported Database: MySQL"* — ruidoso, fácil |
+| `spring-boot-flyway` | **Silêncio.** O Hibernate acusa uma tabela ausente muito depois, e a pista aponta para o lugar errado |
+
+⚠️ **Por que os testes não pegaram.** `MigracaoFlywayTest` constrói o Flyway **programaticamente** —
+`Flyway.configure()...load().migrate()`. Ele prova que o **SQL** está correto, em ordem, e que roda
+sobre base nova e sobre base com histórico. Não prova que o **Spring** o executa, porque não é o
+Spring quem o executa ali. Verde nos testes, quebrado ao subir.
+
+✅ Corrigido em 2026-09-07 com `spring-boot-flyway` no `app/pom.xml`, junto de um comentário que
+explica as três dependências — ver o `<!-- -->` sobre o bloco. As 8 migrations aplicaram no banco de
+desenvolvimento, com `baseline-on-migrate` marcando `2026.09.04` sem executá-lo, e o `validate` do
+Hibernate passou em seguida.
+
+**A lição vale além do Flyway:** num framework que autoconfigura, *estar no classpath* e *estar ligado*
+são coisas distintas, e teste de unidade não distingue as duas. Só subir a aplicação distingue.
 
 **Verificação:** `MigracaoFlywayTest` roda a cadeia inteira contra um **MySQL real**, numa base
 descartável — base vazia, base existente sem histórico, e a base que já tinha estrutura criada pelo

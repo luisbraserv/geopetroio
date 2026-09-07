@@ -14,7 +14,7 @@ import com.geopetro.monitoramento.SondaMonitoramentoService;
 import com.geopetro.realtime.dto.EstadoRealtimeDTO;
 
 /**
- * Recebe o estado publicado pelo Desktop-Sonda e retransmite aos assinantes autorizados.
+ * Recebe o estado publicado pelo Geopetro-Desktop e retransmite aos assinantes autorizados.
  *
  * <p><b>Nao persiste nada.</b> A responsabilidade deste canal e o "agora"; o historico segue por
  * MQTT -> Backend-Telemetria -> InfluxDB. Ver specs/contracts/websocket-realtime.md.

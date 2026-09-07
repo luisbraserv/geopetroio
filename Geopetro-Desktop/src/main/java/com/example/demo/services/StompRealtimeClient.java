@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.function.Consumer;
 
 /**
- * Cliente STOMP minimo sobre WebSocket, para publicar o estado no Backend-Sonda.
+ * Cliente STOMP minimo sobre WebSocket, para publicar o estado no Geopetro-Backend.
  *
  * <p>Publica o estado e recebe snapshots tipados de configuracao. O parser aceita frames
  * fragmentados, agrupados e heartbeats; rejeita buffers acima de 65536 caracteres.

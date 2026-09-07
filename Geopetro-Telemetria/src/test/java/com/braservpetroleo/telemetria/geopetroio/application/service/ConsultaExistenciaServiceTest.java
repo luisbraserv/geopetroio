@@ -17,7 +17,7 @@ import com.braservpetroleo.telemetria.geopetroio.infrastructure.influx.InfluxTel
 /**
  * RN-072 — historico de telemetria conta como vinculo na exclusao do cadastro.
  *
- * <p>O que este servico responde decide se o Backend-Sonda apaga ou nao uma Unidade/Sonda, entao a
+ * <p>O que este servico responde decide se o Geopetro-Backend apaga ou nao uma Unidade/Sonda, entao a
  * distincao entre "nao tem serie" e "nao consegui perguntar" precisa ficar do lado de la: aqui, uma
  * resposta sempre significa que a consulta aconteceu.
  */

@@ -78,7 +78,7 @@ services:
       mosquitto:
         condition: service_started
     ports:
-      # Consumido pelo Backend-Sonda, que esta na VM-1. Restrinja por firewall
+      # Consumido pelo Geopetro-Backend, que esta na VM-1. Restrinja por firewall
       # ao IP da VM-1 — nao ha autenticacao servico-a-servico ainda (OQ-029).
       - "8081:8081"
     environment:

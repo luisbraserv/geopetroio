@@ -31,7 +31,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-		<!-- WebSocket/STOMP: canal de tempo real Desktop-Sonda -> Backend -> Angular -->
+		<!-- WebSocket/STOMP: canal de tempo real Geopetro-Desktop -> Backend -> Angular -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
@@ -93,9 +93,21 @@
 			<scope>runtime</scope>
 		</dependency>
 		<!--
-		  Flyway passa a ser o dono do schema (DT-002). flyway-mysql e obrigatorio
-		  alem do core: o suporte a MySQL vive num modulo separado desde o Flyway 9,
-		  e sem ele o startup falha com "Unsupported Database: MySQL".
+		  Flyway passa a ser o dono do schema (DT-002). Sao TRES dependencias, e
+		  faltar qualquer uma falha de um jeito diferente:
+
+		  - flyway-core   : o motor
+		  - flyway-mysql  : o suporte a MySQL vive num modulo separado desde o
+		                    Flyway 9. Sem ele o startup falha com
+		                    "Unsupported Database: MySQL"
+		  - spring-boot-flyway : a AUTOCONFIGURACAO. O Spring Boot 4 modularizou
+		                    as autoconfiguracoes em artefatos por tecnologia
+		                    (spring-boot-hibernate, spring-boot-jpa...). Sem este,
+		                    o Flyway fica no classpath e simplesmente NAO RODA:
+		                    nenhum log, nenhuma tabela de historico, e o Hibernate
+		                    valida um schema que ninguem migrou. Foi assim que a
+		                    aplicacao falhou ao subir com
+		                    "missing table [configuracao_cards]" em 2026-09-07.
 		-->
 		<dependency>
 			<groupId>org.flywaydb</groupId>
@@ -104,6 +116,10 @@
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-flyway</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

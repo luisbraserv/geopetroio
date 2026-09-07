@@ -22,7 +22,7 @@ import com.example.demo.models.EstadoAtual;
 import jakarta.annotation.PreDestroy;
 
 /**
- * Canal de TEMPO REAL com o Backend-Sonda.
+ * Canal de TEMPO REAL com o Geopetro-Backend.
  *
  * <h2>Por que AtomicReference e nao fila</h2>
  * <p>Este canal transmite o <b>estado atual</b>, nao um historico. Se a rede engasgar por 10
@@ -191,7 +191,7 @@ public class TelemetriaRealtimeService {
 	}
 
 	/**
-	 * Obtem um JWT no Backend-Sonda, reutilizando o mesmo {@code /api/auth/login} da aplicacao web.
+	 * Obtem um JWT no Geopetro-Backend, reutilizando o mesmo {@code /api/auth/login} da aplicacao web.
 	 *
 	 * <p>Deliberado: o Desktop e um usuario do sistema como outro qualquer, sujeito as mesmas
 	 * regras de autorizacao. Um token estatico separado criaria um segundo mecanismo de

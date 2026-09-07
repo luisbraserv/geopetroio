@@ -11,11 +11,11 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 /**
- * Canal de tempo real: Desktop-Sonda -> Backend -> Angular.
+ * Canal de tempo real: Geopetro-Desktop -> Backend -> Angular.
  *
  * <h2>Desenho</h2>
  * <pre>
- *   Desktop-Sonda --SEND--> /app/realtime/estado --> RealtimeController
+ *   Geopetro-Desktop --SEND--> /app/realtime/estado --> RealtimeController
  *                                                          |
  *                                                          v
  *   Angular   &lt;--SUBSCRIBE-- /topic/realtime/unidades-sondas/{id}

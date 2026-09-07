@@ -20,7 +20,7 @@ public class ApplicationService {
      */
     public SystemInfo getSystemInfo() {
         SystemInfo info = new SystemInfo();
-        info.setAppName("Sonda Geopetro IO");
+        info.setAppName("Geopetro Desktop");
         info.setVersion("1.0.0");
         info.setStartupTime(LocalDateTime.now());
         info.setJavaVersion(System.getProperty("java.version"));

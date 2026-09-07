@@ -35,7 +35,7 @@ public class OperationChartPdfService {
     private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final DateTimeFormatter FILE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter INDEX_DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-    private static final String APP_NAME = "Geopetro IO - Sonda";
+    private static final String APP_NAME = "Geopetro Desktop";
     private static final String LOGO_PATH = "/icon/logo2.png";
     private static final double PAGE_WIDTH = 842;
     private static final double PAGE_HEIGHT = 595;

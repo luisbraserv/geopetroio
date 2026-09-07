@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Busca no Backend-Sonda as Unidades/Sondas que o usuario de servico desta estacao pode ver.
+ * Busca no Geopetro-Backend as Unidades/Sondas que o usuario de servico desta estacao pode ver.
  *
  * <p>Serve a tela de Configuracoes: em vez de digitar o id numerico do cadastro e o codigo do
  * historico separadamente, o usuario escolhe a sonda numa lista e os dois enderecos vem prontos e

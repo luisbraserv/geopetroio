@@ -97,7 +97,7 @@
             <!-- ================= Tempo real ================= -->
             <VBox fx:id="cartaoTempoReal" spacing="12.0" styleClass="cartao"
                   GridPane.columnIndex="0" GridPane.rowIndex="1">
-               <Label text="Tempo real (Backend-Sonda)" styleClass="cartao-titulo" />
+               <Label text="Tempo real (Geopetro-Backend)" styleClass="cartao-titulo" />
                <Label styleClass="cartao-nota"
                       text="Caminho do tempo real: o estado atual vai ao backend por WebSocket e é retransmitido a quem tem acesso. Nada é gravado." />
 

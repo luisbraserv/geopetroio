@@ -87,7 +87,7 @@ public class JavaFXConfiguration extends Application {
         }
 
         if (anotherInstanceRunning) {
-            showStartupWarning("Sonda Geopetro IO ja esta em execucao.");
+            showStartupWarning("Geopetro Desktop ja esta em execucao.");
             Platform.exit();
             return;
         }
@@ -148,7 +148,7 @@ public class JavaFXConfiguration extends Application {
 
     private void showStartupWarning(String message) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Sonda Geopetro IO");
+        alert.setTitle("Geopetro Desktop");
         alert.setHeaderText("Aplicacao ja esta aberta");
         alert.setContentText(message);
         alert.showAndWait();

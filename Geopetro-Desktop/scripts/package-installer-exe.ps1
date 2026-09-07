@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$AppName = "Geopetro IO - Sonda"
+$AppName = "Geopetro Desktop"
 $BaseVersion = "0.1.0"
 
 # Auto-incrementa o build number para permitir reinstalar sem desinstalar

@@ -6,7 +6,7 @@ REM ======================================================================
 REM  GeopetroIO - sobe o ambiente completo de DESENVOLVIMENTO
 REM
 REM  Infraestrutura (Docker): MySQL, InfluxDB, Mosquitto
-REM  Aplicacoes (nativas)    : Backend-Sonda, Telemetria, Frontend
+REM  Aplicacoes (nativas)    : Geopetro-Backend, Telemetria, Frontend
 REM
 REM  As aplicacoes rodam nativamente, e nao em container, para permitir
 REM  hot reload e debug pela IDE. Cada uma abre numa janela propria, com
@@ -166,9 +166,9 @@ REM Projeto multi-modulo: 'spring-boot:run' com '-am' seria executado em TODOS o
 REM modulos do reactor, comecando pelo pom raiz, que nao tem main class e falha com
 REM "Unable to find a suitable main class". Por isso sao dois passos: primeiro
 REM instala as dependencias no repositorio local, depois roda SOMENTE o modulo app.
-start "GeopetroIO :: Backend-Sonda (8080)" cmd /k ^
+start "GeopetroIO :: Geopetro-Backend (8080)" cmd /k ^
     "cd /d ""%RAIZ%\Geopetro-Backend"" && echo Perfil: dev ^(MySQL local^) && echo. && echo [1/2] Compilando os modulos... && mvnw.cmd -q -pl app -am -DskipTests install && echo [2/2] Iniciando a aplicacao... && mvnw.cmd -pl app spring-boot:run"
-echo   Backend-Sonda ......... iniciando  (porta 8080)
+echo   Geopetro-Backend ......... iniciando  (porta 8080)
 
 REM Aguarda o backend adiantar a inicializacao antes de subir os demais:
 REM as tres aplicacoes compilando ao mesmo tempo saturam a maquina.
@@ -190,7 +190,7 @@ echo [6/6] Aguardando as aplicacoes responderem...
 echo       ^(a primeira compilacao pode levar varios minutos^)
 echo.
 
-call :aguardar_http "http://localhost:8080/actuator/health" "Backend-Sonda" 180
+call :aguardar_http "http://localhost:8080/actuator/health" "Geopetro-Backend" 180
 call :aguardar_http "http://localhost:8081/actuator/health" "Telemetria"    180
 call :aguardar_http "http://localhost:4200"                 "Frontend"      180
 
@@ -213,7 +213,7 @@ if "!FALHAS!" NEQ "0" (
     echo ======================================================================
     echo.
     echo     Frontend .......... http://localhost:4200
-    echo     Backend-Sonda ..... http://localhost:8080
+    echo     Geopetro-Backend ..... http://localhost:8080
     echo       Swagger ......... http://localhost:8080/swagger-ui.html
     echo     Telemetria ........ http://localhost:8081
     echo       Swagger ......... http://localhost:8081/swagger-ui.html

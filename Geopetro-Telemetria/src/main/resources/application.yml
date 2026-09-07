@@ -3,7 +3,7 @@ spring:
     name: Geopetro-Telemetria
   jackson:
     serialization:
-      # ISO-8601 em vez de epoch numerico. O Backend-Sonda desserializa em Instant e aceita os dois,
+      # ISO-8601 em vez de epoch numerico. O Geopetro-Backend desserializa em Instant e aceita os dois,
       # mas o texto e legivel em log e no Swagger.
       write-dates-as-timestamps: false
 
@@ -12,7 +12,7 @@ server:
 
 # ---------------------------------------------------------------------------
 # MQTT — este servico e o UNICO consumidor do broker.
-# O produtor e o Desktop-Sonda. Ver specs/contracts/mqtt-telemetria.md.
+# O produtor e o Geopetro-Desktop. Ver specs/contracts/mqtt-telemetria.md.
 # ---------------------------------------------------------------------------
 mqtt:
   broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}

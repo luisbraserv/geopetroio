@@ -22,12 +22,12 @@ import jakarta.validation.constraints.NotBlank;
 /**
  * API de consulta de series temporais.
  *
- * <p><b>Consumidor unico: o Backend-Sonda.</b> O caminho e o formato de resposta sao ditados pelo
+ * <p><b>Consumidor unico: o Geopetro-Backend.</b> O caminho e o formato de resposta sao ditados pelo
  * {@code MonitoramentoClient} que ja existe la — este servico foi escrito para encaixar no cliente,
  * nao o contrario. Ver specs/contracts/rest-monitoramento.md.
  *
  * <p>O frontend nunca chama este servico diretamente: quem valida o vinculo do usuario com a sonda e
- * o Backend-Sonda, que possui o cadastro.
+ * o Geopetro-Backend, que possui o cadastro.
  */
 @RestController
 @RequestMapping("/api/monitoramentos")
@@ -64,7 +64,7 @@ public class MonitoramentoController {
 
 	@GetMapping("/sondas/{idSondaUnidade}/existe")
 	@Operation(summary = "Informa se a sonda possui serie gravada",
-			description = "Responde a exclusao de cadastro no Backend-Sonda (RN-072): historico de "
+			description = "Responde a exclusao de cadastro no Geopetro-Backend (RN-072): historico de "
 					+ "telemetria conta como vinculo. Devolve tambem o primeiro e o ultimo ponto, "
 					+ "para a recusa dizer de quando ate quando ha telemetria. Consulta os extremos "
 					+ "da serie, nao varredura.")

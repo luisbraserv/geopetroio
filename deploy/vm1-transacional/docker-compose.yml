@@ -1,7 +1,7 @@
 # =====================================================================
 # VM-1 · TRANSACIONAL
 #
-# Frontend + Backend-Sonda + MySQL. Separado da telemetria porque a
+# Frontend + Geopetro-Backend + MySQL. Separado da telemetria porque a
 # ingestao e continua e write-heavy, enquanto esta VM e intermitente e
 # read-heavy — juntas, competiriam por I/O de disco.
 #

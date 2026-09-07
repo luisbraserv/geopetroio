@@ -5,7 +5,7 @@ import java.time.Instant;
 /**
  * Um ponto da serie.
  *
- * <p>O formato espelha exatamente o record de mesmo nome no Backend-Sonda
+ * <p>O formato espelha exatamente o record de mesmo nome no Geopetro-Backend
  * ({@code com.geopetro.monitoramento.dto.MonitoramentoPontoDTO}), que e quem desserializa esta
  * resposta. Alterar nomes de campo ou tipos quebra a tela de monitoramento.
  *

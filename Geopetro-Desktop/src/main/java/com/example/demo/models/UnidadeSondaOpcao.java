@@ -1,7 +1,7 @@
 package com.example.demo.models;
 
 /**
- * Uma Unidade/Sonda do cadastro do Backend-Sonda, como oferecida na tela de Configuracoes.
+ * Uma Unidade/Sonda do cadastro do Geopetro-Backend, como oferecida na tela de Configuracoes.
  *
  * <p><b>Por que os dois identificadores andam juntos:</b> a mesma sonda e enderecada de duas formas
  * no sistema. O historico (MQTT -> InfluxDB) usa o {@code idSondaUnidade}, um texto como

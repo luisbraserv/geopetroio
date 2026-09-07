@@ -21,7 +21,7 @@
 
    A configuração saiu da barra de ações: não é uma ação de operação como conectar o CLP ou gerar
    o relatório — é ajuste da estação, consultado raramente. Como ícone à direita da barra de marca,
-   fica fora do caminho do fluxo diário e alinhado ao Desktop-Sonda, que já traz a engrenagem ali.
+   fica fora do caminho do fluxo diário e alinhado ao Geopetro-Desktop, que já traz a engrenagem ali.
 -->
 <BorderPane fx:id="rootPane"
             stylesheets="@geopetro-design-system.css"

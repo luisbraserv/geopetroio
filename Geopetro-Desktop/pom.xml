@@ -11,8 +11,8 @@
 	<groupId>geopetro-desktop.geopetro.braservpetroelo.com.br</groupId>
 	<artifactId>Geopetro-Desktop</artifactId>
 	<version>0.1.0</version>
-	<name>Geopetro IO - Sonda</name>
-	<description>Geopetro IO - Sonda desktop application</description>
+	<name>Geopetro Desktop</name>
+	<description>Aplicacao desktop de aquisicao e monitoramento das unidades Geopetro</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -78,7 +78,7 @@
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
-		<!-- Cliente STOMP/WebSocket para o canal de tempo real com o Backend-Sonda -->
+		<!-- Cliente STOMP/WebSocket para o canal de tempo real com o Geopetro-Backend -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>

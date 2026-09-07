@@ -16,7 +16,7 @@ import com.influxdb.exceptions.InfluxException;
 /**
  * Padroniza os erros da API.
  *
- * <p>O formato espelha o ApiErrorResponse do Backend-Sonda, para que os dois servicos falem a mesma
+ * <p>O formato espelha o ApiErrorResponse do Geopetro-Backend, para que os dois servicos falem a mesma
  * lingua de erro.
  */
 @RestControllerAdvice
@@ -31,7 +31,7 @@ public class ApiExceptionHandler {
 	}
 
 	/**
-	 * Falha do InfluxDB vira 503, nao 500: o problema esta na dependencia, e o Backend-Sonda ja
+	 * Falha do InfluxDB vira 503, nao 500: o problema esta na dependencia, e o Geopetro-Backend ja
 	 * traduz indisponibilidade em 502 para o frontend.
 	 */
 	@ExceptionHandler(InfluxException.class)

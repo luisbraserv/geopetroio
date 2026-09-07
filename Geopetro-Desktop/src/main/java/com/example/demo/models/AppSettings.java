@@ -11,7 +11,7 @@ public class AppSettings {
     private String telemetriaSenha;
 
     /**
-     * Id da Unidade/Sonda no cadastro do Backend-Sonda.
+     * Id da Unidade/Sonda no cadastro do Geopetro-Backend.
      *
      * <p>OBRIGATORIO para o tempo real: cada instalacao do Desktop pertence a uma unica
      * Unidade/Sonda. E este id que endereca o topico e que o backend usa para autorizar a
@@ -19,10 +19,10 @@ public class AppSettings {
      */
     private Long unidadeSondaId;
 
-    /** URL base do Backend-Sonda, ex.: http://localhost:8080 */
+    /** URL base do Geopetro-Backend, ex.: http://localhost:8080 */
     private String backendUrl;
 
-    /** Credenciais do usuario de servico que o Desktop usa para autenticar no Backend-Sonda. */
+    /** Credenciais do usuario de servico que o Desktop usa para autenticar no Geopetro-Backend. */
     private String backendUsuario;
     private String backendSenha;
     private double pumpConstant;

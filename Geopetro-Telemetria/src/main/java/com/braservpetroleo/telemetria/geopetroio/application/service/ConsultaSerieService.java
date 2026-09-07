@@ -13,9 +13,9 @@ import com.braservpetroleo.telemetria.geopetroio.config.TelemetriaProperties;
 import com.braservpetroleo.telemetria.geopetroio.infrastructure.influx.InfluxTelemetriaRepository;
 
 /**
- * Consulta de series para o Backend-Sonda.
+ * Consulta de series para o Geopetro-Backend.
  *
- * <p><b>Este servico nao autoriza.</b> Quem valida o vinculo usuario-sonda e o Backend-Sonda, que
+ * <p><b>Este servico nao autoriza.</b> Quem valida o vinculo usuario-sonda e o Geopetro-Backend, que
  * possui o cadastro (regional -> setor -> unidade). Aqui so existe leitura de serie temporal.
  * Ver specs/contracts/rest-monitoramento.md.
  */

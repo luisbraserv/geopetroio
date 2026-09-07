@@ -26,7 +26,7 @@
 		  Spring Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que nao reconhece o
 		  bytecode do Java 25 instalado nas maquinas de desenvolvimento: toda mockagem de classe
 		  falha com "Java 25 (69) is not supported by the current version of Byte Buddy".
-		  Estas versoes sao as mesmas que o Backend-Sonda ja resolve pelo Spring Boot 4, onde a
+		  Estas versoes sao as mesmas que o Geopetro-Backend ja resolve pelo Spring Boot 4, onde a
 		  suite roda sem erro. Removivel quando este servico subir para o Boot 4.
 		-->
 		<mockito.version>5.20.0</mockito.version>
@@ -48,7 +48,7 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- MQTT - Eclipse Paho: consumidor da telemetria publicada pelo Desktop-Sonda -->
+		<!-- MQTT - Eclipse Paho: consumidor da telemetria publicada pelo Geopetro-Desktop -->
 		<dependency>
 			<groupId>org.eclipse.paho</groupId>
 			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>

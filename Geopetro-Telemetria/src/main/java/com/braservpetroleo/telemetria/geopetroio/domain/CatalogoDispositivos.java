@@ -11,7 +11,7 @@ import java.util.Optional;
  * <ul>
  *   <li>Enriquecer mensagens no <b>formato antigo</b>, que trazem apenas {@code dispositivo} e
  *       {@code valor}, para que gravem no InfluxDB com as mesmas tags do formato novo. Sem isso, o
- *       historico ficaria dividido em dois esquemas conforme a versao do Desktop-Sonda que publicou.</li>
+ *       historico ficaria dividido em dois esquemas conforme a versao do Geopetro-Desktop que publicou.</li>
  *   <li>Validar {@code dispositivoId} desconhecido — sinal de produtor desatualizado ou payload forjado.</li>
  * </ul>
  *

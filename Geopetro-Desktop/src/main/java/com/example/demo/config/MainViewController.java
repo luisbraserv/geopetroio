@@ -71,7 +71,7 @@ public class MainViewController {
 
             Scene scene = new Scene(root, 1200, 800);
 
-            stage.setTitle("Sonda Geopetro IO - Desktop");
+            stage.setTitle("Geopetro Desktop");
             stage.setScene(scene);
             stage.setWidth(1200);
             stage.setHeight(800);
@@ -125,7 +125,7 @@ public class MainViewController {
             event.consume();
             stage.hide();
             trayIcon.displayMessage(
-                    "Sonda Geopetro IO",
+                    "Geopetro Desktop",
                     "Aplicacao em segundo plano lendo o PLC e salvando no H2.",
                     TrayIcon.MessageType.INFO
             );
@@ -149,7 +149,7 @@ public class MainViewController {
         popupMenu.addSeparator();
         popupMenu.add(exitItem);
 
-        trayIcon = new TrayIcon(loadTrayImage(), "Sonda Geopetro IO", popupMenu);
+        trayIcon = new TrayIcon(loadTrayImage(), "Geopetro Desktop", popupMenu);
         trayIcon.setImageAutoSize(true);
         trayIcon.addActionListener(event -> Platform.runLater(this::showMainWindow));
 

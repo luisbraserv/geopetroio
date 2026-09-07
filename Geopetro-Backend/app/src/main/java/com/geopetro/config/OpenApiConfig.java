@@ -23,8 +23,8 @@ public class OpenApiConfig {
 										.bearerFormat("JWT")))
 				.addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
 				.info(new Info()
-						.title("Backend Sonda Geopetro IO")
-						.description("API REST do Backend Sonda Geopetro IO. Use o endpoint de autenticação para obter o token JWT e informe-o no botão Authorize.")
+						.title("Geopetro Backend")
+						.description("API REST do Geopetro Backend. Use o endpoint de autenticação para obter o token JWT e informe-o no botão Authorize.")
 						.version("0.0.1-SNAPSHOT"));
 	}
 }

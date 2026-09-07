@@ -26,7 +26,7 @@ export interface MonitoramentoSerie {
 @Injectable({ providedIn: 'root' })
 export class MonitoramentoSondaService {
   private readonly http = inject(HttpClient);
-  // Backend-Sonda (API principal): valida JWT/permissões do usuário e faz proxy da
+  // Geopetro-Backend (API principal): valida JWT/permissões do usuário e faz proxy da
   // consulta ao InfluxDB (via aplicação de telemetria). O front não fala direto com o
   // telemetria; sempre passa pelo backend para respeitar o vínculo do usuário às sondas.
   private readonly sondasUrl = `${environment.apiUrl}/api/sondas`;

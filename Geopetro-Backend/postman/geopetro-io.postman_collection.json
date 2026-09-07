@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "9bbfa2c3-2f2f-4d30-bc21-geopetro000001",
     "name": "Geopetro IO API",
-    "description": "Collection para testar autenticacao JWT e endpoints de usuario do Backend Sonda Geopetro IO.",
+    "description": "Collection para testar autenticacao JWT e endpoints de usuario do Backend Geopetro Desktop.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

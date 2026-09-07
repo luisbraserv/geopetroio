@@ -14,7 +14,7 @@ import com.geopetro.unidadesonda.repository.UnidadeSondaJpaRepository;
  * O historico de telemetria impede a exclusao da Unidade/Sonda — RN-072.
  *
  * <p>Este e o unico implementador de {@link VinculoCadastroPort} que <b>nao</b> consulta o banco
- * relacional: a serie vive no InfluxDB, dentro de outro servico, e o Backend-Sonda so sabe dela
+ * relacional: a serie vive no InfluxDB, dentro de outro servico, e o Geopetro-Backend so sabe dela
  * perguntando. Mora no modulo {@code app} porque e onde o {@link MonitoramentoClient} existe.
  *
  * <p>A consulta e por <b>nome</b>, nao por id: o nome da Unidade/Sonda e a chave de integracao com a

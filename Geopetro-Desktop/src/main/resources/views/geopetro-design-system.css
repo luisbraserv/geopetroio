@@ -314,7 +314,7 @@
 .estado-erro    { -fx-text-fill: #b42318; }
 
 /* =========================================================================
- * Telas de acompanhamento (Desktop-Sonda e Horus).
+ * Telas de acompanhamento (Geopetro-Desktop e Horus).
  *
  * Mantido no arquivo comum, e nao num CSS por aplicacao: duas copias divergiriam na primeira
  * alteracao, e a razao de existir um design system e nao ter dois azuis institucionais.

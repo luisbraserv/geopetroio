@@ -10,13 +10,13 @@ import com.braservpetroleo.telemetria.geopetroio.infrastructure.influx.InfluxTel
 /**
  * Responde se uma sonda tem historico gravado — RN-072.
  *
- * <p>Serve a uma pergunta de <b>cadastro</b>, nao de monitoramento: o Backend-Sonda precisa saber se
+ * <p>Serve a uma pergunta de <b>cadastro</b>, nao de monitoramento: o Geopetro-Backend precisa saber se
  * pode excluir a Unidade/Sonda, e o vinculo que ele enxerga e relacional, enquanto a serie vive aqui.
  *
  * <p>Fica separado do {@link ConsultaSerieService} porque a pergunta e outra e a resposta tambem: la
  * o modelo de leitura e uma serie agregada com teto de pontos; aqui sao dois instantes.
  *
- * <p><b>Este servico tambem nao autoriza.</b> Como todo o resto da API, confia no Backend-Sonda.
+ * <p><b>Este servico tambem nao autoriza.</b> Como todo o resto da API, confia no Geopetro-Backend.
  */
 @Service
 public class ConsultaExistenciaService {

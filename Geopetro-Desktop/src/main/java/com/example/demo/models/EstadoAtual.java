@@ -9,7 +9,7 @@ import java.time.Instant;
  * atraves de um {@code AtomicReference}. Sendo imutavel, a troca e segura sem lock nenhum — o worker
  * sempre le um estado coerente, nunca um meio-atualizado.
  *
- * @param unidadeSondaId  id da Unidade/Sonda no cadastro do Backend-Sonda
+ * @param unidadeSondaId  id da Unidade/Sonda no cadastro do Geopetro-Backend
  * @param timestamp       instante da leitura, em UTC
  */
 public record EstadoAtual(

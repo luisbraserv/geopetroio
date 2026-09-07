@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$AppName = "Geopetro IO - Sonda"
+$AppName = "Geopetro Desktop"
 $AppVersion = "0.1.0"
 $ArtifactName = "Geopetro-Desktop-$AppVersion.jar"
 $InputDir = Join-Path $ProjectRoot "target\jpackage-input"

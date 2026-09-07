@@ -31,7 +31,7 @@ const BACKOFF_MAXIMO_MS = 30000;
 const JANELA_GRAFICO = 120;
 
 /**
- * Canal de tempo real com o Backend-Sonda.
+ * Canal de tempo real com o Geopetro-Backend.
  *
  * **Responsabilidade:** apenas o "agora". O histórico vem por REST
  * (`MonitoramentoSondaService`), que consulta o InfluxDB via backend.

@@ -29,7 +29,7 @@ public class SettingsService {
     private static final Pattern TELEMETRIA_USER_PATTERN = Pattern.compile("\"telemetriaUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern TELEMETRIA_PASS_PATTERN = Pattern.compile("\"telemetriaSenha\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern PUMP_CONSTANT_PATTERN = Pattern.compile("\"pumpConstant\"\\s*:\\s*([-+]?\\d+(?:\\.\\d+)?)");
-    // Canal de tempo real (WebSocket) com o Backend-Sonda
+    // Canal de tempo real (WebSocket) com o Geopetro-Backend
     private static final Pattern BACKEND_URL_PATTERN   = Pattern.compile("\"backendUrl\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_USER_PATTERN  = Pattern.compile("\"backendUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_PASS_PATTERN  = Pattern.compile("\"backendSenha\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
