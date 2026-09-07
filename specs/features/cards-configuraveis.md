@@ -351,7 +351,7 @@ iniciar.
 |---|---|
 | Sem login | O app **funciona normalmente**: lê o CLP, publica, mostra os cards, gera a carta |
 | Login com `ADMIN`/`SUPORTE` | Configuração liberada |
-| Usuário sem o perfil | Recusado, com a mesma mensagem de credencial inválida |
+| Usuário sem o perfil | Recusado, com **mensagem própria** — quem acertou a senha ficaria tentando de novo |
 | Sem rede | Recusado — não há validação local de credencial |
 | Fechar e reabrir o app | **Perde a sessão.** Novo login |
 
@@ -438,7 +438,7 @@ dispositivo no contrato; agora seriam dois.
    de uma vez e fatia. Falta trocar a origem dos endereços, das constantes para o documento de cards
 4. ✅ **Estado de stroke e vazão por card** (§3) — entregue em 2026-09-07, antes de existir
    configuração que declare duas bombas: é refatoração sem mudança de comportamento
-5. 🔶 **Role `SUPORTE`** entregue; **sessão de configuração no Desktop** (§9) pendente
+5. ✅ **Role `SUPORTE` + sessão de configuração no Desktop** (§9) — entregues
 6. **UI de configuração de cards** no Desktop, com cópia entre unidades (§10)
 7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
 8. **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade

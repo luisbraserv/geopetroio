@@ -11,8 +11,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +55,6 @@ public class TelemetriaRealtimeService {
 	private static final Duration BACKOFF_INICIAL = Duration.ofSeconds(2);
 	private static final Duration BACKOFF_MAXIMO = Duration.ofSeconds(30);
 
-	private static final Pattern TOKEN_PATTERN = Pattern.compile("\"token\"\\s*:\\s*\"([^\"]+)\"");
 
 	/**
 	 * Ultimo estado lido do CLP. Sobrescrito a cada ciclo; o worker le e envia.
@@ -78,6 +75,8 @@ public class TelemetriaRealtimeService {
 	private ExecutorService worker;
 	private StompRealtimeClient client;
     private final ConfiguracaoRemotaState configuracaoRemota = new ConfiguracaoRemotaState();
+    /** Mesmo login da sessao de configuracao — uma implementacao so, para nao divergirem. */
+    private final BackendLogin backendLogin = new BackendLogin(httpClient);
     private Alvo alvoConectado;
     private long ultimaSolicitacao;
     private record Alvo(String backend, Long unidade, String usuario, String senha) {
@@ -199,26 +198,8 @@ public class TelemetriaRealtimeService {
 	 * autenticacao para manter.
 	 */
 	private String autenticar(AppSettings settings) throws Exception {
-		String corpo = "{\"username\":\"" + escapar(settings.getBackendUsuario())
-				+ "\",\"password\":\"" + escapar(settings.getBackendSenha()) + "\"}";
-
-		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create(normalizarBase(settings.getBackendUrl()) + "/api/auth/login"))
-				.header("Content-Type", "application/json")
-				.timeout(Duration.ofSeconds(10))
-				.POST(HttpRequest.BodyPublishers.ofString(corpo, StandardCharsets.UTF_8))
-				.build();
-
-		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-		if (response.statusCode() != 200) {
-			throw new IllegalStateException("login recusado pelo backend (HTTP " + response.statusCode() + ")");
-		}
-
-		Matcher matcher = TOKEN_PATTERN.matcher(response.body());
-		if (!matcher.find()) {
-			throw new IllegalStateException("resposta de login sem token");
-		}
-		return matcher.group(1);
+		return backendLogin.autenticar(normalizarBase(settings.getBackendUrl()),
+				settings.getBackendUsuario(), settings.getBackendSenha()).token();
 	}
 
 	private void enviarEstadoMaisRecente() throws Exception {
@@ -263,9 +244,6 @@ public class TelemetriaRealtimeService {
 		}
 	}
 
-	private static String escapar(String valor) {
-		return valor == null ? "" : valor.replace("\\", "\\\\").replace("\"", "\\\"");
-	}
 
 	@PreDestroy
 	public void encerrar() {

@@ -959,6 +959,19 @@ já registra uma credencial de serviço única para toda a frota como risco acei
 gravado na máquina da unidade ampliaria a superfície sem necessidade — configurar é ato raro e
 deliberado.
 
+✅ **[FATO 2026-09-07] Implementada** em `SessaoConfiguracao`. Guarda **o token, nunca a credencial**:
+não há re-login silencioso depois.
+
+⚠️ **A credencial de serviço da frota não serve para configurar.** Ela é uma só para toda a frota e
+tem perfil de monitoramento; se liberasse configuração, qualquer máquina instalada em qualquer
+unidade configuraria qualquer coisa. O teste
+`SessaoConfiguracaoTest.credencialDeServicoNaoConfigura` guarda isso.
+
+**[DECIDIDO 2026-09-07 — ajuste sobre a spec da entrevista]** Perfil sem permissão recebe mensagem
+**própria**, não "credencial inválida". A entrevista tinha registrado o contrário, mas quem digitou a
+senha certa ficaria tentando de novo — e não vaza nada: a pessoa já conhece o próprio perfil. É a
+mesma escolha de [RN-062](#rn-062--desativar-usuário-corta-o-acesso-na-hora) para conta desativada.
+
 ### RN-088 · Sem configuração, a unidade não lê nada
 **[DECIDIDO 2026-09-07]** Uma unidade sem cards configurados **não produz telemetria**. Não há
 conjunto padrão: o que se lê é exatamente o que foi declarado.
