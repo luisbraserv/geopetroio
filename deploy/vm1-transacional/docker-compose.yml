@@ -42,12 +42,12 @@ services:
 
   backend:
     build:
-      context: ../../Backend-Sonda-Geopetro-IO
+      context: ../../Geopetro-Backend
       dockerfile: Dockerfile
-    image: geopetro/backend-sonda:${TAG:-latest}
-    # O nginx do frontend faz proxy para o host 'backend-sonda' — o nome do
+    image: geopetro/geopetro-backend:${TAG:-latest}
+    # O nginx do frontend faz proxy para o host 'geopetro-backend' — o nome do
     # servico e do alias precisam bater com o nginx.conf.
-    container_name: backend-sonda
+    container_name: geopetro-backend
     restart: unless-stopped
     depends_on:
       mysql:
@@ -84,7 +84,7 @@ services:
 
   front:
     build:
-      context: ../../Front-Sonda-Geopetro-IO
+      context: ../../Geopetro-Front
       dockerfile: Dockerfile
     image: geopetro/front:${TAG:-latest}
     container_name: geopetro-front

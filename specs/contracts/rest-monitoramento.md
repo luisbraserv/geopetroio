@@ -8,9 +8,9 @@
 
 | Papel | Aplicação | Estado |
 |---|---|---|
-| **Cliente** | Backend-Sonda-Geopetro-IO (`com.geopetro.monitoramento`) | **[FATO]** Implementado |
-| **Servidor** | Backend-Telemetria-Sonda-Geopetro-io | ✅ **Implementado em 2026-08-27** |
-| Consumidor final | Front-Sonda-Geopetro-IO | **[FATO]** Implementado |
+| **Cliente** | Geopetro-Backend (`com.geopetro.monitoramento`) | **[FATO]** Implementado |
+| **Servidor** | Geopetro-Telemetria | ✅ **Implementado em 2026-08-27** |
+| Consumidor final | Geopetro-Front | **[FATO]** Implementado |
 
 **[FATO]** Este contrato foi derivado do `MonitoramentoClient` já existente — o serviço novo foi
 escrito para encaixar no cliente, sem alterar o Backend-Sonda.

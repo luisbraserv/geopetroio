@@ -190,7 +190,7 @@ segmentação por poço. Com `Poço` existindo, a ponte entre os dois eixos do s
 hipotética — mas **não foi decidida**. Ver
 [OQ-027](open-questions.md#oq-027--o-simulador-deve-ganhar-um-consumidor-de-telemetria).
 
-Detalhe em [`../Front-Sonda-Geopetro-IO/specs/simulador/geometria-poco.md`](../Front-Sonda-Geopetro-IO/specs/simulador/geometria-poco.md)
+Detalhe em [`../Geopetro-Front/specs/simulador/geometria-poco.md`](../Geopetro-Front/specs/simulador/geometria-poco.md)
 e [RN-059](business-rules.md#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário).
 
 ## 5. Domínios fora de escopo

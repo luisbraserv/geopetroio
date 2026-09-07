@@ -28,11 +28,11 @@ diretório `GeopetroIO/` que os agrupa **não é** um repositório — é apenas
 
 | Aplicação | Stack | Repositório | Papel |
 |---|---|---|---|
-| **Backend-Sonda-Geopetro-IO** | Spring Boot 4.0.5 · Java 21 · Maven multi-módulo | `luisbraserv/geopetro-io-back-end` | API REST central, autenticação, todo o domínio administrativo |
-| **Front-Sonda-Geopetro-IO** | Angular 21.2.7 · Taiga UI 5.2 · NGXS 21 | `luisbraserv/geopetro-io-front` | SPA web — cadastros, monitoramento, simulador de cimentação |
-| **Desktop-Sonda-Geopetro-IO** | JavaFX 21 + Spring Boot 4.0.5 · Maven | `luisbraserv/geopetro-io-sonda-desktop` | Agente de borda na sonda: lê CLP, publica telemetria via MQTT |
+| **Geopetro-Backend** | Spring Boot 4.0.5 · Java 21 · Maven multi-módulo | `luisbraserv/geopetro-io-back-end` | API REST central, autenticação, todo o domínio administrativo |
+| **Geopetro-Front** | Angular 21.2.7 · Taiga UI 5.2 · NGXS 21 | `luisbraserv/geopetro-io-front` | SPA web — cadastros, monitoramento, simulador de cimentação |
+| **Geopetro-Desktop** | JavaFX 21 + Spring Boot 4.0.5 · Maven | `luisbraserv/geopetro-io-sonda-desktop` | Agente de borda na sonda: lê CLP, publica telemetria via MQTT |
 | **Braserv-Horus-Desktop** | JavaFX 21 · Gradle 9.3 | `luisbraserv/geopetro-io-cimentacao-desktop` | Desktop de Cimentação: lê CLP da bomba, gera Carta de Operação |
-| **Backend-Telemetria-Sonda-Geopetro-io** | Spring Boot 3.4.5 · Java 21 · Maven | — | Ingestão MQTT → InfluxDB e API de consulta de séries. ✅ **Implementado em 2026-08-27** |
+| **Geopetro-Telemetria** | Spring Boot 3.4.5 · Java 21 · Maven | — | Ingestão MQTT → InfluxDB e API de consulta de séries. ✅ **Implementado em 2026-08-27** |
 
 ## 3. Topologia de execução
 
@@ -198,7 +198,7 @@ tela de Monitoramento sempre retornava `502`.
 levantamento. **[PENDENTE]** O repositório precisa ser criado — preferencialmente **fora do OneDrive**
 ([DT-004](technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)).
 
-Detalhes em [`Backend-Telemetria-Sonda-Geopetro-io/specs/`](../Backend-Telemetria-Sonda-Geopetro-io/specs/).
+Detalhes em [`Geopetro-Telemetria/specs/`](../Geopetro-Telemetria/specs/).
 
 ## 8. Integrações externas
 
@@ -249,7 +249,7 @@ publicada passa a ser persistida no InfluxDB e fica disponível para consulta. V
 **[FATO]**
 
 - **Backend-Sonda**: Docker multi-stage (`maven:3.9-eclipse-temurin-21` → `eclipse-temurin:21-jre-jammy`), compila só `-pl app -am`, expõe `8080`.
-- **Front**: Docker (`node:22-alpine` → `nginx:alpine`), build `--configuration k8s`, expõe `80`. nginx faz proxy reverso same-origin para `backend-sonda:8080` e `telemetria:8081`.
+- **Front**: Docker (`node:22-alpine` → `nginx:alpine`), build `--configuration k8s`, expõe `80`. nginx faz proxy reverso same-origin para `geopetro-backend:8080` e `telemetria:8081`.
 - **Front alternativo**: Cloudflare Pages (`wrangler.toml`, `public/_redirects`).
 - **Desktops**: instalador Windows `.exe` via `jpackage` (Horus exige WiX Toolset), instalação per-user, execução em bandeja do sistema.
 - **Domínios de produção**: `api.geopetro-io.braserv.com.br` · `telemetria.geopetro-io.braserv.com.br`.

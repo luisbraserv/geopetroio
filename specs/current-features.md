@@ -77,13 +77,13 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 solicitação pública e tela de nova senha. Token de uso único, validade de 30 minutos,
 hash no banco e limites de envio. SMTP desativado por padrão; configuração e teste
 de entrega corporativa pendentes. Contrato em
-[`recuperacao-senha.md`](../Backend-Sonda-Geopetro-IO/specs/recuperacao-senha.md).
+[`recuperacao-senha.md`](../Geopetro-Backend/specs/recuperacao-senha.md).
 
 **[FATO 2026-09-07]** ADMIN configura o SMTP em **Configurações → E-mail**, com
 menu horizontal, ativação do envio, credencial protegida e teste de conexão.
 Alterações valem sem reiniciar o backend. O teste não envia mensagens nem comprova
 entrega corporativa. Detalhes em
-[`configuracao-smtp.md`](../Backend-Sonda-Geopetro-IO/specs/configuracao-smtp.md).
+[`configuracao-smtp.md`](../Geopetro-Backend/specs/configuracao-smtp.md).
 
 ---
 ## F-02 · Gestão de Usuários
@@ -249,7 +249,7 @@ as mesmas cinco variáveis de sonda para qualquer unidade — ver
 ## F-08 a F-11 · Projetos, Processos, Anotações e Observações — REMOVIDOS
 
 **[DECIDIDO 2026-08-26]** Os módulos `projeto`, `processo` (com anotações) e `observacao` foram
-**removidos do Backend-Sonda-Geopetro-IO**, e a tela de Projetos foi removida do frontend.
+**removidos do Geopetro-Backend**, e a tela de Projetos foi removida do frontend.
 
 ### O que saiu
 
@@ -275,18 +275,18 @@ Endpoints removidos: `/api/projetos/**`, `/api/processos/**`, `/api/anotacoes/**
 
 ⚠️ **[FATO]** A remoção do código **não** apaga as tabelas. Permanecem no MySQL: `projetos`,
 `processos`, `anotacoes`, `observacoes`. Não quebram nada (`ddl-auto=validate` ignora tabelas extras),
-mas contêm dados. Ver `Backend-Sonda-Geopetro-IO/db/cleanup/`.
+mas contêm dados. Ver `Geopetro-Backend/db/cleanup/`.
 
 ### Recuperação
 
 **[FATO]** Tudo está no histórico do Git — ver
-[`Backend-Sonda-Geopetro-IO/specs/README.md`](../Backend-Sonda-Geopetro-IO/specs/README.md#módulos-removidos).
+[`Geopetro-Backend/specs/README.md`](../Geopetro-Backend/specs/README.md#módulos-removidos).
 
 ---
 
 ## F-12 e F-13 · Químicos — REMOVIDOS
 
-**[DECIDIDO 2026-08-26]** O módulo `quimico` foi **removido do Backend-Sonda-Geopetro-IO**.
+**[DECIDIDO 2026-08-26]** O módulo `quimico` foi **removido do Geopetro-Backend**.
 
 Saíram o Estoque de Químicos (F-12) e os Alertas por E-mail (F-13), com todos os endpoints
 (`/api/quimicos/**`, `/api/movimentacoes-quimico/**`, `/api/operacoes-sonda/**`,
@@ -301,7 +301,7 @@ puro).
 
 ⚠️ **Tabelas órfãs:** `quimicos`, `operacoes_sonda`, `movimentacoes_quimico`, `configuracoes_email`,
 `alertas_email_quimico`. Script de limpeza sugerido (não executado) em
-`Backend-Sonda-Geopetro-IO/db/cleanup/2026-08-26-remove-quimico.sql`.
+`Geopetro-Backend/db/cleanup/2026-08-26-remove-quimico.sql`.
 
 ---
 
@@ -360,7 +360,7 @@ próprio** que resta no backend, além da identidade e da organização.
 ### ✅ Fonte de dados implementada em 2026-08-27
 
 O serviço em `monitoramento.base-url` (default `:8081`) é o
-[Backend-Telemetria](../Backend-Telemetria-Sonda-Geopetro-io/specs/README.md), **implementado em
+[Backend-Telemetria](../Geopetro-Telemetria/specs/README.md), **implementado em
 2026-08-27**. A cadeia completa — captura no CLP, publicação MQTT, ingestão, InfluxDB, consulta REST,
 tela — existe agora ponta a ponta.
 
@@ -405,7 +405,7 @@ não-interno — o que dava a **todo `CLIENTE` acesso a todas as sondas**. Hoje 
 |---|---|
 | **Objetivo** | Ler sensores do CLP, converter em grandezas de engenharia, gravar local e publicar via MQTT |
 | **Atores** | Operador da sonda (configura) · Sistema (ciclo automático) |
-| **Aplicação** | Desktop-Sonda-Geopetro-IO — **é o produtor MQTT do sistema** |
+| **Aplicação** | Geopetro-Desktop — **é o produtor MQTT do sistema** |
 | **Entradas** | CLP Siemens S7 — DB1, leitura a cada **1 segundo** |
 | **Saídas** | H2 local · MQTT `telemetria/{unidade}/batch` · dashboard JavaFX |
 

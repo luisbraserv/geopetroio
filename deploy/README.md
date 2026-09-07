@@ -15,7 +15,7 @@ armazenamento.
 │  VM-1 · TRANSACIONAL     │              │  VM-2 · TELEMETRIA       │
 │                          │   REST 8081  │                          │
 │  front (nginx :80)       │─────────────►│  mosquitto  :1883        │
-│  backend-sonda :8080     │              │  telemetria :8081        │
+│  geopetro-backend :8080     │              │  telemetria :8081        │
 │  mysql :3306 (loopback)  │              │  influxdb :8086 (loop.)  │
 └──────────────────────────┘              └──────────────────────────┘
      read-heavy, intermitente                write-heavy, contínuo 24/7
@@ -139,7 +139,7 @@ conferida de memória, e esquecer um derrubava a subida da aplicação.
 
 ### Como funciona agora
 
-As migrations vivem em `Backend-Sonda-Geopetro-IO/app/src/main/resources/db/migration/` e **rodam
+As migrations vivem em `Geopetro-Backend/app/src/main/resources/db/migration/` e **rodam
 sozinhas no startup do backend**, antes de o Hibernate validar. Nada a executar à mão, em base nova
 ou existente.
 
@@ -175,7 +175,7 @@ na tela de cadastro depois do deploy — o campo é editável para isso.
 
 ⚠️ Uma base existente pode conter tabelas de módulos removidos (`projetos`, `processos`, `anotacoes`,
 `observacoes`, `quimicos`...). Elas **não quebram nada** — `validate` ignora tabelas extras — mas há
-scripts de limpeza em `Backend-Sonda-Geopetro-IO/db/cleanup/`, comentados e **não executados**.
+scripts de limpeza em `Geopetro-Backend/db/cleanup/`, comentados e **não executados**.
 
 ### Escrever uma migration nova
 
@@ -193,7 +193,7 @@ houver MySQL alcançável.
 
 ### Scripts históricos
 
-`Backend-Sonda-Geopetro-IO/db/historico/` guarda os `V2026.06.*`, aplicados à mão antes do Flyway
+`Geopetro-Backend/db/historico/` guarda os `V2026.06.*`, aplicados à mão antes do Flyway
 existir. **Não rodam mais** — seus efeitos estão dentro do baseline. Ficam como registro.
 
 ---
@@ -247,7 +247,7 @@ do Desktop-Sonda, ou as sondas com a versão antiga param de publicar.
 
 Os `docker-compose.yml` são a via recomendada para duas VMs. Se migrar para Kubernetes:
 
-- Os **nomes de Service** devem ser `backend-sonda` e `telemetria` — o `nginx.conf` do frontend faz proxy por esses nomes.
+- Os **nomes de Service** devem ser `geopetro-backend` e `telemetria` — o `nginx.conf` do frontend faz proxy por esses nomes.
 - Probes: `/actuator/health/readiness` e `/actuator/health/liveness` nos dois backends.
 - Use `Secret` (não `ConfigMap`) para as variáveis da tabela acima.
 - MySQL e InfluxDB precisam de `PersistentVolumeClaim` — ou, preferencialmente, serviços gerenciados.

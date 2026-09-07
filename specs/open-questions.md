@@ -84,7 +84,7 @@ primeira rodada abriu.
 
 | # | Tema | Decisão |
 |---|---|---|
-| OQ-009 | Faixas do simulador | **A equipe fornece** — tabela pronta em [`faixas-validacao.md`](../Front-Sonda-Geopetro-IO/specs/simulador/faixas-validacao.md) |
+| OQ-009 | Faixas do simulador | **A equipe fornece** — tabela pronta em [`faixas-validacao.md`](../Geopetro-Front/specs/simulador/faixas-validacao.md) |
 | OQ-018 | Modelo do CLP | **Varia por sonda** — a documentação que diz "LOGO!" está incompleta |
 | OQ-020 | Credencial `braservone` | **Banco não existe mais** — encerra por perda de objeto |
 | OQ-023 | Autenticação do broker | **Esperar o auto-update** — broker aceita anônimo até a frota migrar |
@@ -239,7 +239,7 @@ entidades com histórico, bloqueio para cadastros-mestre com vínculo.
 
 ⏳ **ENCAMINHADA 2026-09-05** · **[DECIDIDO 2026-09-05]** As faixas serão **fornecidas pela equipe
 técnica**. A tabela a preencher, campo a campo, está em
-[`Front/specs/simulador/faixas-validacao.md`](../Front-Sonda-Geopetro-IO/specs/simulador/faixas-validacao.md).
+[`Front/specs/simulador/faixas-validacao.md`](../Geopetro-Front/specs/simulador/faixas-validacao.md).
 
 **Segue bloqueada até os números chegarem** — mas as **regras entre campos** (ID < OD, TVD ≤ MD, base >
 topo, fratura > poro) podem ser implementadas antes, porque não dependem de nenhuma faixa.
@@ -272,7 +272,7 @@ cosmético; saber que não indica Kubernetes é o que importa.
 
 **Contexto original:**
 **Contexto [FATO]:** o build do frontend usa `--configuration k8s` e o `nginx.conf` referencia os
-serviços por nome (`backend-sonda:8080`, `telemetria:8081`), mas **não há nenhum manifesto Kubernetes**
+serviços por nome (`geopetro-backend:8080`, `telemetria:8081`), mas **não há nenhum manifesto Kubernetes**
 no workspace.
 
 ---
@@ -284,7 +284,7 @@ no workspace.
 
 **[FATO 2026-09-06] Implementado no código local**, com testes HTTP antes/depois
 e atualização dos consumidores web/desktop. Contrato e validação em
-[`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md). Distribuição em
+[`api-prefix.md`](../Geopetro-Backend/specs/api-prefix.md). Distribuição em
 produção ainda não realizada; o contexto abaixo registra a situação anterior.
 
 ⚠️ **A migração toca `SecurityConfig`, o front e o `nginx.conf` no mesmo deploy** — e a ordem dos
@@ -431,7 +431,7 @@ checkbox "Lembrar acesso" não tem binding — ambos devem sair da tela até o f
 `/redefinir-senha` recebe o token temporário. Backend, persistência, limitação de
 envio e telas implementados. SMTP configurável por ambiente, desativado por padrão.
 Ativação e teste de entrega corporativa pendentes; sem deploy ou envio real.
-Detalhes em [recuperação de senha](../Backend-Sonda-Geopetro-IO/specs/recuperacao-senha.md).
+Detalhes em [recuperação de senha](../Geopetro-Backend/specs/recuperacao-senha.md).
 
 ---
 
@@ -462,7 +462,7 @@ atuais não o têm. A primeira distribuição é presencial de qualquer forma. O
 única rodada de campo** instalando uma versão que já traga auto-update, credencial MQTT, formato-alvo do
 payload e buffer de contingência — depois disso, tudo é remoto. Ver
 [SEC-009](security-findings.md#sec-009--broker-mqtt-sem-autenticação) e
-[OQ-035](#oq-035--como-o-desktop-sonda-se-atualiza-em-campo).
+[OQ-035](#oq-035--como-o-geopetro-desktop-se-atualiza-em-campo).
 **Contexto [FATO]:** hoje o Desktop-Sonda conecta **sem autenticação**. A escolha afeta custo por
 mensagem — que foi a razão original do formato batch.
 
@@ -535,7 +535,7 @@ Ver [DT-004](technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git
 ### OQ-026 · O que fazer com as tabelas órfãs?
 
 ✅ **RESPONDIDA 2026-09-05** · **[DECIDIDO 2026-09-05] Descartar direto**, sem exportar. Os scripts em
-`Backend-Sonda-Geopetro-IO/db/cleanup/` já existem, comentados e nunca executados.
+`Geopetro-Backend/db/cleanup/` já existem, comentados e nunca executados.
 
 ✅ **Resolve junto o resíduo de [SEC-005](security-findings.md#sec-005--senha-smtp-em-texto-puro):** a
 tabela `configuracoes_email`, que guarda uma senha SMTP em texto puro, some com o descarte. ⚠️ Se
@@ -558,7 +558,7 @@ Não quebram nada — `ddl-auto=validate` ignora tabelas extras. Mas ocupam espa
 inspeciona o schema, e `configuracoes_email` contém uma **senha SMTP em texto puro**.
 
 **O que precisamos:** os dados devem ser exportados, arquivados ou descartados? Script sugerido (não
-executado) em `Backend-Sonda-Geopetro-IO/db/cleanup/`.
+executado) em `Geopetro-Backend/db/cleanup/`.
 
 ---
 

@@ -123,10 +123,10 @@ echo.
 REM ---------------------------------------------------------------- 4/6
 echo [4/6] Verificando dependencias do frontend...
 
-if not exist "%RAIZ%\Front-Sonda-Geopetro-IO\node_modules" (
+if not exist "%RAIZ%\Geopetro-Front\node_modules" (
     echo   node_modules ausente. Executando npm install...
     echo   ^(isto leva alguns minutos na primeira vez^)
-    pushd "%RAIZ%\Front-Sonda-Geopetro-IO"
+    pushd "%RAIZ%\Geopetro-Front"
     call npm install
     if errorlevel 1 (
         popd
@@ -167,7 +167,7 @@ REM modulos do reactor, comecando pelo pom raiz, que nao tem main class e falha 
 REM "Unable to find a suitable main class". Por isso sao dois passos: primeiro
 REM instala as dependencias no repositorio local, depois roda SOMENTE o modulo app.
 start "GeopetroIO :: Backend-Sonda (8080)" cmd /k ^
-    "cd /d ""%RAIZ%\Backend-Sonda-Geopetro-IO"" && echo Perfil: dev ^(MySQL local^) && echo. && echo [1/2] Compilando os modulos... && mvnw.cmd -q -pl app -am -DskipTests install && echo [2/2] Iniciando a aplicacao... && mvnw.cmd -pl app spring-boot:run"
+    "cd /d ""%RAIZ%\Geopetro-Backend"" && echo Perfil: dev ^(MySQL local^) && echo. && echo [1/2] Compilando os modulos... && mvnw.cmd -q -pl app -am -DskipTests install && echo [2/2] Iniciando a aplicacao... && mvnw.cmd -pl app spring-boot:run"
 echo   Backend-Sonda ......... iniciando  (porta 8080)
 
 REM Aguarda o backend adiantar a inicializacao antes de subir os demais:
@@ -175,13 +175,13 @@ REM as tres aplicacoes compilando ao mesmo tempo saturam a maquina.
 call :dormir 20
 
 start "GeopetroIO :: Telemetria (8081)" cmd /k ^
-    "cd /d ""%RAIZ%\Backend-Telemetria-Sonda-Geopetro-io"" && echo INFLUX_URL=%INFLUX_URL%  MQTT=%MQTT_BROKER_URL% && echo. && mvnw.cmd spring-boot:run"
+    "cd /d ""%RAIZ%\Geopetro-Telemetria"" && echo INFLUX_URL=%INFLUX_URL%  MQTT=%MQTT_BROKER_URL% && echo. && mvnw.cmd spring-boot:run"
 echo   Telemetria ............ iniciando  (porta 8081)
 
 call :dormir 10
 
 start "GeopetroIO :: Frontend (4200)" cmd /k ^
-    "cd /d ""%RAIZ%\Front-Sonda-Geopetro-IO"" && npm start"
+    "cd /d ""%RAIZ%\Geopetro-Front"" && npm start"
 echo   Frontend .............. iniciando  (porta 4200)
 echo.
 

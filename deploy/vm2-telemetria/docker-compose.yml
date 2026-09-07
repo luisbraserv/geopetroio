@@ -67,7 +67,7 @@ services:
 
   telemetria:
     build:
-      context: ../../Backend-Telemetria-Sonda-Geopetro-io
+      context: ../../Geopetro-Telemetria
       dockerfile: Dockerfile
     image: geopetro/telemetria:${TAG:-latest}
     container_name: geopetro-telemetria

@@ -162,7 +162,7 @@ Registro completo em [`product-context.md`](product-context.md); decisões item 
 | Auto-update | **Só com o CLP desconectado** |
 | Tipo da unidade | **Classificação apenas** — telemetria segue exclusiva de sonda |
 | Simulador × telemetria | **Sem correlação** — encerra OQ-027 |
-| Faixas do simulador | Equipe fornece — [tabela pronta](../Front-Sonda-Geopetro-IO/specs/simulador/faixas-validacao.md) |
+| Faixas do simulador | Equipe fornece — [tabela pronta](../Geopetro-Front/specs/simulador/faixas-validacao.md) |
 | Broker · CLP · OneDrive · backup | Autenticação **depois** do auto-update · modelo **varia por sonda** · repos **ficam** no OneDrive · MySQL **sem backup**, InfluxDB **adiado** |
 
 ### Rodada final — arquitetura

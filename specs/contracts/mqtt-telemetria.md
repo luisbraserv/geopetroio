@@ -11,9 +11,9 @@
 
 | Papel | Aplicação | Estado |
 |---|---|---|
-| **Produtor** | `Desktop-Sonda-Geopetro-IO` | Existe — publica formato antigo, a migrar |
+| **Produtor** | `Geopetro-Desktop` | Existe — publica formato antigo, a migrar |
 | **Broker** | a definir | [OQ-023](../open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção) |
-| **Consumidor** | `Backend-Telemetria-Sonda-Geopetro-io` | ✅ **Implementado em 2026-08-27** |
+| **Consumidor** | `Geopetro-Telemetria` | ✅ **Implementado em 2026-08-27** |
 
 ```
 ┌──────────────────────┐  publish   ┌────────┐  subscribe  ┌────────────────────────┐
@@ -27,8 +27,8 @@
                                                            └────────────────────────┘
 ```
 
-**[FATO]** `Backend-Sonda-Geopetro-IO` **não participa do MQTT**. O consumidor no-op que existia foi
-**removido em 2026-08-26** — ver [§6](#6-remoção-do-consumidor-do-backend-sonda). Sua única relação
+**[FATO]** `Geopetro-Backend` **não participa do MQTT**. O consumidor no-op que existia foi
+**removido em 2026-08-26** — ver [§6](#6-remoção-do-consumidor-do-geopetro-backend). Sua única relação
 com telemetria é **consultar séries já processadas** via REST, contrato em
 [`rest-monitoramento.md`](rest-monitoramento.md).
 
@@ -238,7 +238,7 @@ de um fuso, será preciso derivar a zona da unidade. Hoje não há evidência di
 
 | Item | Referência |
 |---|---|
-| ~~Consumidor legado~~ | ✅ **Resolvido 2026-08-26** — ver [§6](#6-remoção-do-consumidor-do-backend-sonda) |
+| ~~Consumidor legado~~ | ✅ **Resolvido 2026-08-26** — ver [§6](#6-remoção-do-consumidor-do-geopetro-backend) |
 | Broker de produção e autenticação | [OQ-023](../open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção) · [SEC-009](../security-findings.md#sec-009--broker-mqtt-sem-autenticação) |
 | Buffer de contingência | [OQ-019](../open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
 | Fuso horário | [§7](#7-fuso-horário) |

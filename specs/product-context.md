@@ -319,7 +319,7 @@ que a revisão, quando vier, comece de onde parou.
 |---|---|
 | Estruturar backup do histórico | [OQ-042](open-questions.md#oq-042--backup-do-histórico-de-telemetria) |
 | Mapeamento configurável de card → endereço no CLP | [OQ-043](open-questions.md#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp) |
-| Faixas de validação do simulador | [`faixas-validacao.md`](../Front-Sonda-Geopetro-IO/specs/simulador/faixas-validacao.md) |
+| Faixas de validação do simulador | [`faixas-validacao.md`](../Geopetro-Front/specs/simulador/faixas-validacao.md) |
 
 **[DECIDIDO 2026-09-05]** O OQ-043 é o mais estratégico dos três: resolve rack/slot por sonda, o modelo
 de CLP variável e o caminho para instrumentar equipamentos que não são sonda — três perguntas com uma
@@ -400,8 +400,9 @@ outros equipamentos *"com uma resposta só"*. É o que se decidiu construir.
 Em §2 o Desktop deixou de ser "o produto instalado na sonda" e virou **o sensor do sistema**. Agora
 deixa de ser o sensor *da sonda* e vira **o agente de borda de qualquer unidade cadastrada**.
 
-Os nomes dos projetos acompanham: `Geopetro-Desktop`, `Geopetro-Front`, `Geopetro-Backend` e
-`Geopetro-Telemetria` — [`renomeacao-projetos.md`](renomeacao-projetos.md).
+✅ **[FATO 2026-09-07]** Os nomes dos projetos acompanharam: `Geopetro-Desktop`, `Geopetro-Front`,
+`Geopetro-Backend` e `Geopetro-Telemetria`, renomeados no mesmo dia —
+[`renomeacao-projetos.md`](renomeacao-projetos.md).
 
 ### Duas grandezas que o sistema não conhecia
 

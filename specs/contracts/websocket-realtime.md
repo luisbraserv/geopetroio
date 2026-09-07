@@ -31,9 +31,9 @@ CLP. Cada um tem seu worker; a thread de leitura apenas entrega e segue.
 
 | Papel | Aplicação | Destino |
 |---|---|---|
-| **Produtor** | `Desktop-Sonda-Geopetro-IO` | envia para `/app/realtime/estado` |
-| **Retransmissor** | `Backend-Sonda-Geopetro-IO` | publica em `/topic/realtime/unidades-sondas/{id}` |
-| **Consumidor** | `Front-Sonda-Geopetro-IO` | assina o tópico da unidade escolhida |
+| **Produtor** | `Geopetro-Desktop` | envia para `/app/realtime/estado` |
+| **Retransmissor** | `Geopetro-Backend` | publica em `/topic/realtime/unidades-sondas/{id}` |
+| **Consumidor** | `Geopetro-Front` | assina o tópico da unidade escolhida |
 
 **[FATO]** O Backend-Sonda **não persiste as amostras de estado atual** e **não consome MQTT**. Desde 2026-09-07, a mesma conexão também transporta [configurações persistidas por unidade](configuracao-sonda.md), em destinos próprios.
 

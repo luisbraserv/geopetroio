@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: Geopetro-Telemetria
+  jackson:
+    serialization:
+      # ISO-8601 em vez de epoch numerico. O Backend-Sonda desserializa em Instant e aceita os dois,
+      # mas o texto e legivel em log e no Swagger.
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8081}
+
+# ---------------------------------------------------------------------------
+# MQTT — este servico e o UNICO consumidor do broker.
+# O produtor e o Desktop-Sonda. Ver specs/contracts/mqtt-telemetria.md.
+# ---------------------------------------------------------------------------
+mqtt:
+  broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+  client-id: ${MQTT_CLIENT_ID:backend-telemetria-geopetro-io}
+  topico: ${MQTT_TOPICO:telemetria/+/batch}
+  qos: 1
+  # SEC-009: broker sem autenticacao. Definir antes de producao — qualquer host com acesso de rede
+  # pode publicar telemetria forjada ou ler a telemetria da frota.
+  username: ${MQTT_USERNAME:}
+  password: ${MQTT_PASSWORD:}
+  clean-session: true
+  connection-timeout-segundos: 10
+  keep-alive-segundos: 60
+  # false: sobe mesmo com o broker fora, porque a API de consulta continua util.
+  falhar-se-broker-indisponivel: ${MQTT_FALHAR_SE_INDISPONIVEL:false}
+
+# ---------------------------------------------------------------------------
+# InfluxDB — persistencia da serie temporal.
+# ---------------------------------------------------------------------------
+influx:
+  url: ${INFLUX_URL:http://localhost:8086}
+  # Sem valor padrao de proposito: a aplicacao falha no startup se o token nao for fornecido,
+  # em vez de subir e descartar telemetria silenciosamente.
+  token: ${INFLUX_TOKEN:}
+  org: ${INFLUX_ORG:braserv}
+  bucket: ${INFLUX_BUCKET:telemetria}
+  measurement: telemetria
+
+# ---------------------------------------------------------------------------
+# Interpretacao e consulta.
+# ---------------------------------------------------------------------------
+telemetria:
+  # O produtor publica hora local sem offset; e assim que ela e interpretada antes de virar UTC.
+  zona-sonda: ${TELEMETRIA_ZONA_SONDA:America/Sao_Paulo}
+  # 6h a 1 leitura/s dariam 21.600 pontos por serie, e a tela pede ate 5 series em paralelo.
+  max-pontos-por-serie: ${TELEMETRIA_MAX_PONTOS:2000}
+  agregar-quando-exceder-teto: true
+  seed:
+    # Exige tambem o profile "dev". Em producao, manter sempre desabilitado.
+    habilitado: ${TELEMETRIA_SEED_HABILITADO:false}
+    id-sonda-unidade: ${TELEMETRIA_SEED_SONDA:SPT-145}
+    pontos-por-variavel: ${TELEMETRIA_SEED_PONTOS_POR_VARIAVEL:28800}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# ---------------------------------------------------------------------------
+# Actuator — apenas health, para os probes do orquestrador.
+# Nenhum outro endpoint e exposto: /env e /configprops vazariam o INFLUX_TOKEN.
+# ---------------------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      # 'when-authorized' nao se aplica: nao ha autenticacao neste servico. Os detalhes
+      # mostrados sao estado de conexao e contadores — nao expoem credenciais.
+      show-details: always
+
+logging:
+  level:
+    com.braservpetroleo.telemetria: ${LOG_LEVEL:INFO}

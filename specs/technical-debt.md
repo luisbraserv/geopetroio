@@ -140,7 +140,7 @@ de entidade — que era a ⚠️ registrada aqui antes.
 
 **`dev` saiu de `update` para `validate`.** Era o `update` que criava estrutura em silêncio no banco
 local: foi assim que `simulador_pocos` nasceu no MySQL de desenvolvimento sem ninguém rodar migration
-([registro](../Backend-Sonda-Geopetro-IO/specs/simulador-pocos.md#banco)). O preço daquilo é um
+([registro](../Geopetro-Backend/specs/simulador-pocos.md#banco)). O preço daquilo é um
 ambiente que passa nos testes e uma produção que não sobe.
 
 **Verificação:** `MigracaoFlywayTest` roda a cadeia inteira contra um **MySQL real**, numa base
@@ -202,14 +202,14 @@ Era a maior lacuna funcional do sistema.
 ### Como foi resolvido
 
 **[DECIDIDO 2026-08-26]** Papéis definidos: `Desktop-Sonda` é o **produtor**,
-`Backend-Telemetria-Sonda-Geopetro-io` é o **consumidor**. O consumidor no-op do Backend-Sonda
+`Geopetro-Telemetria` é o **consumidor**. O consumidor no-op do Backend-Sonda
 (`MonitoramentoTelemetriaService.processar`, que apenas logava) foi removido junto com a dependência
 Paho e as propriedades `mqtt.*` — não para resolver o problema, mas para **esclarecer de quem era a
 responsabilidade**.
 
 **[FATO 2026-08-27]** O Backend-Telemetria foi implementado: consumidor MQTT, persistência em
 InfluxDB e API REST de consulta. 24 testes passando. Ver
-[`Backend-Telemetria-Sonda-Geopetro-io/specs/`](../Backend-Telemetria-Sonda-Geopetro-io/specs/).
+[`Geopetro-Telemetria/specs/`](../Geopetro-Telemetria/specs/).
 
 ### Pendências operacionais remanescentes
 
@@ -253,6 +253,11 @@ Três manifestações distintas, todas verificadas durante este levantamento:
    ⚠️ **Consequência perigosa:** o Git não consegue fazer `stat` no arquivo e o reporta como
    **modificado mesmo estando intacto**. Um `git add -A` seguido de commit pode registrar mudanças
    fantasma — ou pior, mascarar mudanças reais em meio a ruído.
+
+   ✅ **[FATO 2026-09-07] Aliviado, não resolvido.** A [renomeação dos projetos](renomeacao-projetos.md)
+   encurtou **todo** caminho do repositório em 8 caracteres — `Geopetro-Backend` contra
+   `Backend-Sonda-Geopetro-IO`. A fronteira dos 260 ficou mais longe; a causa, que é a profundidade da
+   árvore do OneDrive, continua.
 
 ### Causa
 
@@ -353,7 +358,7 @@ em `IdentidadeHttpSecurityTest`: nove testes passaram nas URLs antigas antes de
 nas URLs `/api` após a migração. A ordem das regras de autoatendimento/administração,
 as restrições de regionais/cadastros e a ausência de segredo JWT têm regressões.
 Backend: 121 testes aprovados nesta execução, excluindo o teste de migrations MySQL.
-Contrato em [`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md).
+Contrato em [`api-prefix.md`](../Geopetro-Backend/specs/api-prefix.md).
 
 **Ainda aberto:** geração, assinatura, expiração e validação criptográfica de JWT
 não são exercitadas pela nova suíte HTTP, que usa `TokenPort` mockado. Também

@@ -44,7 +44,9 @@ unidade de cimentação pode ter os dois instalados, medindo coisas diferentes. 
 aceita de propósito ([DT-010](../technical-debt.md#dt-010--duplicação-entre-os-dois-desktops)), e o
 desenho dos cards **não** deve prever absorver o Horus.
 
-O nome dos projetos acompanha a mudança — [`renomeacao-projetos.md`](../renomeacao-projetos.md).
+✅ **[FATO 2026-09-07]** O nome dos projetos já acompanhou a mudança: `Geopetro-Backend`,
+`Geopetro-Front`, `Geopetro-Desktop` e `Geopetro-Telemetria` —
+[`renomeacao-projetos.md`](../renomeacao-projetos.md).
 
 ## 3. Os seis tipos de card
 

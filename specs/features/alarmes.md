@@ -98,7 +98,7 @@ por isso o registro de autoria (§6) é o que permite entender depois por que o 
 
 **Por que no Backend-Sonda e não no serviço de Telemetria:** o limite é configuração de cadastro,
 editada por gente autenticada, sujeita à mesma autorização por sonda. O serviço de Telemetria
-deliberadamente **não conhece usuários** ([spec do Backend-Telemetria](../../Backend-Telemetria-Sonda-Geopetro-io/specs/README.md)).
+deliberadamente **não conhece usuários** ([spec do Backend-Telemetria](../../Geopetro-Telemetria/specs/README.md)).
 
 ### Evento
 
@@ -170,7 +170,7 @@ velho sem que ninguém percebesse.
 
 **Por que não um tópico MQTT de comando:** exigiria que o Backend-Sonda voltasse a falar MQTT, revertendo
 a decisão de 2026-08-26 que deixou **um produtor e um consumidor** no broker
-([`mqtt-telemetria.md §6`](../contracts/mqtt-telemetria.md#6-remoção-do-consumidor-do-backend-sonda)).
+([`mqtt-telemetria.md §6`](../contracts/mqtt-telemetria.md#6-remoção-do-consumidor-do-geopetro-backend)).
 A retenção do broker entregaria a configuração após um período offline — vantagem real —, mas o pedido
 no reconnect resolve o mesmo problema sem um segundo mecanismo.
 

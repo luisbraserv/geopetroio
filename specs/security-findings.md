@@ -89,7 +89,7 @@ aberta — inconsistente com o BCrypt usado nas senhas de usuário.
 
 ⚠️ **Ação residual:** a tabela `configuracoes_email` **permanece no banco** com a senha em texto puro.
 Se a conta SMTP ainda for usada em outro lugar, **rotacione a senha**. Ver o script de limpeza em
-`Backend-Sonda-Geopetro-IO/db/cleanup/2026-08-26-remove-quimico.sql`.
+`Geopetro-Backend/db/cleanup/2026-08-26-remove-quimico.sql`.
 
 ### SEC-010 · observações sem controle de acesso
 
@@ -253,7 +253,7 @@ Consequências concretas:
 
 - **Um usuário por sonda** — resolve os quatro itens; custa cadastro e distribuição de credencial.
 - **Rotação viabilizada pelo auto-update** — o item 3 deixa de ser presencial quando
-  [OQ-035](open-questions.md#oq-035--como-o-desktop-sonda-se-atualiza-em-campo) existir.
+  [OQ-035](open-questions.md#oq-035--como-o-geopetro-desktop-se-atualiza-em-campo) existir.
 - **Registrar a origem da publicação** (id de instalação no payload) — ataca o item 4 sem mexer na
   autenticação.
 
@@ -293,4 +293,4 @@ Casos mínimos sugeridos, ajustados ao escopo atual:
 controllers e a cadeia de segurança reais. As URLs de identidade agora possuem
 `/api`. Nove testes passaram antes da migração e onze depois, incluindo retirada
 das rotas antigas e proteção das ações de status sob o username `me`.
-Detalhes em [`api-prefix.md`](../Backend-Sonda-Geopetro-IO/specs/api-prefix.md).
+Detalhes em [`api-prefix.md`](../Geopetro-Backend/specs/api-prefix.md).
