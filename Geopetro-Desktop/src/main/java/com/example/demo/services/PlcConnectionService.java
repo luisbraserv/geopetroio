@@ -145,12 +145,17 @@ public class PlcConnectionService {
         try {
             AppSettings settings = settingsService.loadSettings();
 
-            double b002Peso    = readPressaoPsi(B002_PESO_START,    settings.getSensor01()); // Peso Coluna
-            double b003Torque1 = readPressaoPsi(B003_TORQUE1_START, settings.getSensor02()); // T. Ch. Hid. Tubos
-            double b004Torque2 = readPressaoPsi(B004_TORQUE2_START, settings.getSensor03()); // T. Ch. Flutuante
-            double b005Pressao = readPressaoPsi(B005_PRESSAO_START, settings.getSensor04()); // P. Bomba / ESCP
+            // UMA ida ao CLP por ciclo, fatiada em memoria — RN-095. Antes eram cinco, e cinco
+            // leituras sequenciais podem pegar o CLP em estados diferentes: o ciclo resultante
+            // misturava instantes e nunca existiu de fato.
+            BlocoDeLeitura bloco = readBlock();
 
-            long cumulativeStroke = readCumulativeStroke();
+            double b002Peso    = pressaoPsi(bloco, B002_PESO_START,    settings.getSensor01()); // Peso Coluna
+            double b003Torque1 = pressaoPsi(bloco, B003_TORQUE1_START, settings.getSensor02()); // T. Ch. Hid. Tubos
+            double b004Torque2 = pressaoPsi(bloco, B004_TORQUE2_START, settings.getSensor03()); // T. Ch. Flutuante
+            double b005Pressao = pressaoPsi(bloco, B005_PRESSAO_START, settings.getSensor04()); // P. Bomba / ESCP
+
+            long cumulativeStroke = strokeCumulativo(bloco);
             long currentStroke = strokeCalculatorService.calculateCurrentStroke(cumulativeStroke);
             double pumpConstant = settings.getPumpConstant();
             double flowRateBblMin = flowRateCalculatorService.calculateBblPerMinute(currentStroke, pumpConstant);
@@ -191,20 +196,31 @@ public class PlcConnectionService {
         }
     }
 
+    /** Enderecos e tamanhos que o ciclo precisa. Vira configuracao quando os cards entrarem. */
+    private static final int[] ENDERECOS = { STROKE_START, B002_PESO_START, B003_TORQUE1_START, B004_TORQUE2_START, B005_PRESSAO_START };
+    private static final int[] TAMANHOS  = { STROKE_SIZE, BlocoDeLeitura.TAMANHO_WORD, BlocoDeLeitura.TAMANHO_WORD, BlocoDeLeitura.TAMANHO_WORD, BlocoDeLeitura.TAMANHO_WORD };
+
+    /** Le de uma vez a faixa que cobre todos os enderecos do ciclo. */
+    private BlocoDeLeitura readBlock() {
+        BlocoDeLeitura.Faixa faixa = BlocoDeLeitura.faixaQueCobre(ENDERECOS, TAMANHOS);
+        byte[] buffer = new byte[faixa.tamanho()];
+        int result = client.ReadArea(S7.S7AreaDB, DB_NUMBER, faixa.inicio(), faixa.tamanho(), buffer);
+        if (result != 0) {
+            throw new IllegalStateException("Falha ao ler DB%d [%d..%d). Codigo: %d"
+                    .formatted(DB_NUMBER, faixa.inicio(), faixa.inicio() + faixa.tamanho(), result));
+        }
+        return BlocoDeLeitura.de(buffer, faixa.inicio());
+    }
+
     /**
-     * Le um canal analogico e devolve a pressao em PSI.
+     * Converte um canal analogico do bloco em pressao PSI.
      *
      * <p>O valor publicado pelo LOGO! ({@code Ax, amplified}) e o laco 4-20 mA reescalonado para
      * -50..750 pelo bloco Analog Amplifier — nao e pressao. A faixa do transmissor, configurada em
      * "Range do sensor (bar)", e o que traduz essa posicao em pressao.
      */
-    private double readPressaoPsi(int startByte, SensorPressaoConfig config) {
-        byte[] buffer = new byte[2];
-        int result = client.ReadArea(S7.S7AreaDB, DB_NUMBER, startByte, 2, buffer);
-        if (result != 0) throw new IllegalStateException("Falha ao ler pressao em DB1.DBW" + startByte + ". Codigo: " + result);
-
-        // A escala do amplificador comeca em -50: precisa ser lida com sinal.
-        short ax = ConversaoPressao.axComoSigned(S7.GetWordAt(buffer, 0));
+    private double pressaoPsi(BlocoDeLeitura bloco, int startByte, SensorPressaoConfig config) {
+        short ax = bloco.word(startByte);
 
         // O bruto vai para a tela: e ele que revela um canal mudo ou uma escala diferente da
         // esperada, casos em que a pressao convertida pareceria plausivel.
@@ -218,12 +234,8 @@ public class PlcConnectionService {
         return ConversaoPressao.axParaPsi(ax, config);
     }
 
-    private long readCumulativeStroke() {
-        byte[] buffer = new byte[STROKE_SIZE];
-        int result = client.ReadArea(S7.S7AreaDB, DB_NUMBER, STROKE_START, STROKE_SIZE, buffer);
-        if (result != 0) throw new IllegalStateException("Falha ao ler stroke (DB1.DBD0). Codigo: " + result);
-
-        long cumulativo = S7.GetDIntAt(buffer, 0);
+    private long strokeCumulativo(BlocoDeLeitura bloco) {
+        long cumulativo = bloco.dword(STROKE_START);
         // Alimenta o rodapé do card de Vazão: ela é derivada deste contador, não de um canal
         // analógico, então é este o número cru que explica uma vazão parada ou estranha.
         sondaService.registrarValorBruto(STROKE_START, cumulativo);
