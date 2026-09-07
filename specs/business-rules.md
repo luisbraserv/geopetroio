@@ -935,8 +935,10 @@ monitoramento, e cair em "acesso negado" seria absurdo para quem configura o sis
 
 ⚠️ **A migration foi necessária por uma divergência, não pelo enum.** `usuario_roles.role` era
 `VARCHAR(255)` em produção e `ENUM` em base nova. `V2026.09.07.3` normaliza para `VARCHAR` **somente
-onde ainda é `ENUM`** — produção não é tocada, e a collation dela fica preservada. Ver
-[DT-002](technical-debt.md#-divergência-confirmada-entre-produção-e-base-nova).
+onde ainda é `ENUM`** — produção não é tocada, e a collation dela fica preservada.
+
+✅ **[FATO 2026-09-07]** Verificada contra MySQL real nos dois ramos: base nova e base com a coluna já
+`VARCHAR`. Ver [DT-002](technical-debt.md#-divergência-confirmada-entre-produção-e-base-nova).
 
 **Sem rede não se configura**, por desenho: não há validação local de credencial. O custo aceito é que
 a instalação inicial de uma unidade precisa de rede ao menos uma vez.

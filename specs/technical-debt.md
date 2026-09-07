@@ -166,9 +166,15 @@ Ela rodou em produção, foi arquivada em `db/historico/`, e o baseline — vind
 não é tocada — nada de rewrite desnecessário, e a collation `utf8mb4_unicode_ci` de lá fica preservada.
 A divergência de tipo deixa de existir.
 
-⚠️ **A migration não foi verificada contra MySQL real**: a instância local estava parada quando a role
-entrou. `MigracaoFlywayTest.colunaDeRoleAceitaSuporte` cobre o caso — tipo final da coluna e um
-`INSERT` de `'SUPORTE'` — e roda assim que houver banco.
+✅ **[FATO 2026-09-07] Verificada contra MySQL real**, nos **dois ramos** do `IF`:
+
+| Caso | O que prova |
+|---|---|
+| `colunaDeRoleAceitaSuporte` | Base nova: a coluna termina `VARCHAR` e um `INSERT` de `'SUPORTE'` entra |
+| `colunaJaVarcharNaoEAlterada` | Produção: com a coluna já `VARCHAR`, a migration passa sem tocar na tabela e a collation `utf8mb4_unicode_ci` sobrevive |
+
+O segundo caso importa mais do que parece: é o ramo que roda em produção, e um erro nele só apareceria
+no deploy.
 
 ⚠️ **[INFERÊNCIA] Provavelmente não é o único caso.** As migrations manuais criaram FKs com nomes
 próprios (`fk_setores_regional`, `fk_uir_usuario`) e collation `utf8mb4_unicode_ci`, enquanto o

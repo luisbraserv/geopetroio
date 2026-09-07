@@ -109,6 +109,28 @@ class MigracaoFlywayTest {
 		assertThat(contar("SELECT COUNT(*) FROM usuario_roles WHERE role = 'SUPORTE'")).isEqualTo(1L);
 	}
 
+	/**
+	 * O ramo da migration que roda <b>em producao</b>: la a coluna ja e VARCHAR desde V2026.06.04,
+	 * e o script deve passar sem tocar na tabela.
+	 *
+	 * <p>Sem este caso, so o ramo da base nova seria exercitado — e o {@code IF} da migration tem
+	 * dois lados. Um erro no lado de producao so apareceria no deploy.
+	 */
+	@Test
+	@DisplayName("base com role ja VARCHAR, como producao: a migration nao quebra nem altera")
+	void colunaJaVarcharNaoEAlterada() throws SQLException {
+		simularBaseAnteriorSemHistorico();
+		// Reproduz o efeito de V2026.06.04, que rodou em producao e nao no baseline.
+		executarNoSchema("ALTER TABLE usuario_roles MODIFY COLUMN role VARCHAR(255) "
+				+ "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL");
+
+		flyway().migrate();
+
+		assertThat(tipoDaColuna("usuario_roles", "role")).isEqualTo("varchar");
+		// A collation de producao sobrevive: a migration nao declara uma propria.
+		assertThat(collationDaColuna("usuario_roles", "role")).isEqualTo("utf8mb4_unicode_ci");
+	}
+
 	@Test
 	@DisplayName("migrar de novo nao muda nada — o historico impede reexecucao")
 	void migrarDuasVezesEIdempotente() throws SQLException {
@@ -313,6 +335,16 @@ class MigracaoFlywayTest {
 				Statement statement = conexao.createStatement();
 				ResultSet rs = statement.executeQuery(
 						"SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '" + SCHEMA
+								+ "' AND TABLE_NAME = '" + tabela + "' AND COLUMN_NAME = '" + coluna + "'")) {
+			return rs.next() ? rs.getString(1) : null;
+		}
+	}
+
+	private static String collationDaColuna(String tabela, String coluna) throws SQLException {
+		try (Connection conexao = DriverManager.getConnection(URL_SCHEMA, USUARIO, SENHA);
+				Statement statement = conexao.createStatement();
+				ResultSet rs = statement.executeQuery(
+						"SELECT COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '" + SCHEMA
 								+ "' AND TABLE_NAME = '" + tabela + "' AND COLUMN_NAME = '" + coluna + "'")) {
 			return rs.next() ? rs.getString(1) : null;
 		}
