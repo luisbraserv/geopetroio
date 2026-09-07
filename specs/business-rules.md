@@ -852,7 +852,11 @@ retenção é de 5 anos. Com id livre, cada rebatismo criaria tag nova e **corta
 editável da unidade virou chave de integração — já registrado como o risco de maior custo da base.
 Repeti-lo por card multiplicaria por seis.
 
-**Número não se reaproveita:** excluir `TEMPERATURA_02` e criar outro produz `TEMPERATURA_03`.
+**Número não se reaproveita:** desativar `TEMPERATURA_02` e criar outro produz `TEMPERATURA_03`.
+
+✅ **[FATO 2026-09-07]** O servidor gera o id; um id inventado pelo cliente é recusado. Como card não
+se exclui ([RN-091](#rn-091--card-se-desativa-nunca-se-exclui)), **o maior número presente é o maior
+já usado** — a numeração sai de somar um, sem contador separado.
 
 ### RN-082 · A conversão analógica é linear sobre a fração 4-20 mA
 **[DECIDIDO 2026-09-07]** Todo card analógico converte em dois passos: posiciona o `Ax` na faixa do
@@ -1004,6 +1008,10 @@ autorização ficaria escondida numa comparação. Separados, **não há como er
 
 Encerra [OQ-044](open-questions.md#oq-044--um-documento-de-configuração-duas-autoridades).
 
+✅ **[FATO 2026-09-07] Implementado.** `/api/sondas/{id}/cards`, tabela `configuracao_cards`
+(`V2026.09.07.4`), revisão pelo lock otimista e tópico STOMP próprio. Ler é de quem enxerga a sonda
+mais `ADMIN`/`SUPORTE`; gravar é só de `ADMIN`/`SUPORTE`.
+
 ### RN-090 · Um contador de stroke produz três séries
 **[DECIDIDO 2026-09-07]** Cada card `CONTADOR_STROKE` publica:
 
@@ -1038,6 +1046,9 @@ que explicasse o que ela é.
 Quem desativa por engano não perde a configuração de alarme junto.
 
 Encerra [OQ-046](open-questions.md#oq-046--o-que-acontece-com-a-série-de-um-card-excluído).
+
+✅ **[FATO 2026-09-07]** O `PUT` **recusa** um documento que omita um card existente, com a mensagem
+dizendo qual. Desativar é a única saída.
 
 ### RN-092 · A unidade nasce sem cards, e se configura copiando outra
 **[DECIDIDO 2026-09-07]** As unidades existentes **não** recebem automaticamente os cards

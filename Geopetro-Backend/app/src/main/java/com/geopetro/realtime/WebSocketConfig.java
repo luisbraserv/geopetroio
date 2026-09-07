@@ -37,6 +37,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	private final List<String> allowedOrigins;
     @org.springframework.beans.factory.annotation.Autowired
     private com.geopetro.configuracaosonda.ConfiguracaoSondaOutbound configOutbound;
+    /** Topico de cards tem sufixo proprio e nao casa com a guarda acima — ver a classe. */
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.geopetro.cards.ConfiguracaoCardsOutbound cardsOutbound;
 
 	public WebSocketConfig(WebSocketInboundGuard authInterceptor,
 			@Value("${security.cors.allowed-origin-patterns:http://localhost:*}") List<String> allowedOrigins) {
@@ -60,7 +63,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {
-        registration.interceptors(configOutbound);
+        registration.interceptors(configOutbound, cardsOutbound);
     }
 
 	@Override

@@ -56,6 +56,13 @@ public class SecurityConfig {
 						// Monitoramento: CLIENTE tambem acessa, mas o SondaMonitoramentoService
 						// restringe o escopo dele as unidades concedidas no cadastro. Os demais
 						// perfis aqui listados enxergam a frota inteira.
+						// Cards: SUPORTE entra aqui e so aqui dentro de /api/sondas. Ele configura
+						// o sistema, nao acompanha operacao — dar-lhe a rota inteira seria mais do
+						// que "configurar". Precisa vir ANTES da regra geral para nao herda-la.
+						// Quem pode LER e GRAVAR e decidido em ConfiguracaoCardsAccess; aqui so se
+						// garante que o perfil chega ao recurso.
+						.requestMatchers("/api/sondas/*/cards")
+						.hasAnyRole("SONDA", "CIMENTACAO", "GERENCIA", "DIRETORIA", "CLIENTE", "ADMIN", "SUPORTE")
 						.requestMatchers("/api/sondas/**")
 						.hasAnyRole("SONDA", "CIMENTACAO", "GERENCIA", "DIRETORIA", "CLIENTE", "ADMIN")
 						.requestMatchers("/api/simulador/**")

@@ -82,9 +82,10 @@
 
 ---
 
-## 5. Documento de cards — a implementar
+## 5. Documento de cards
 
-> **[DECIDIDO 2026-09-07]** · Spec completa em
+> **[FATO 2026-09-07] Implementado no backend.** UI e consumo na borda seguem pendentes.
+> Spec completa em
 > [`../features/cards-configuraveis.md`](../features/cards-configuraveis.md).
 
 **[DECIDIDO 2026-09-07]** Os cards **não entram neste documento**. Vão para um **documento próprio**,
@@ -93,13 +94,31 @@ com seu endpoint e sua revisão.
 | Documento | Recurso | Quem grava | Onde |
 |---|---|---|---|
 | Limites de alarme | `/api/sondas/{id}/configuracao` — este contrato | Quem enxerga a sonda, inclusive `CLIENTE` ([RN-069](../business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)) | Web |
-| **Cards** | `/api/sondas/{id}/cards` *(nome a confirmar)* | `ADMIN` ou `SUPORTE` ([RN-086](../business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)) | **Só no Desktop** |
+| **Cards** | `/api/sondas/{id}/cards` | `ADMIN` ou `SUPORTE` ([RN-086](../business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)) | **Só no Desktop** |
 
 **Por que separados.** Num documento só, o cliente que ajusta um limite devolveria o documento
 inteiro — cards inclusive. O servidor teria de comparar campo a campo para descobrir se ele mexeu no
 que não podia, e a regra de autorização ficaria escondida numa comparação. Separados, **não há como
 errar**. Encerra [OQ-044](../open-questions.md#oq-044--um-documento-de-configuração-duas-autoridades)
 e está em [RN-089](../business-rules.md#rn-089--cards-e-limites-são-documentos-separados).
+
+### Transporte
+
+| Operação | Destino | Quem |
+|---|---|---|
+| HTTP GET | `/api/sondas/{id}/cards` | Quem enxerga a sonda, mais `ADMIN` e `SUPORTE` |
+| HTTP PUT | `/api/sondas/{id}/cards` | **Somente** `ADMIN` ou `SUPORTE` |
+| STOMP SUBSCRIBE | `/topic/config/unidades-sondas/{id}/cards` | Mesma regra da leitura |
+| STOMP SUBSCRIBE | `/app/config/unidades-sondas/{id}/cards` | Snapshot direto ao solicitante |
+
+⚠️ **A guarda de saída é uma segunda classe, não a mesma.** `ConfiguracaoSondaOutbound` casa
+`/config/unidades-sondas/{id}` **terminando no id** — o tópico de cards tem sufixo e passaria sem
+verificação nenhuma. `ConfiguracaoCardsOutbound` guarda o tópico novo, com a regra de acesso de
+cards, e confere **a cada entrega**: uma sessão que já assinava continua sendo verificada depois de
+a conta ser desativada.
+
+⚠️ **`SUPORTE` entra em `/api/sondas/*/cards` e em nada mais sob `/api/sondas`.** Dar-lhe a rota
+inteira seria monitoramento, não configuração.
 
 ### Forma do documento de cards
 

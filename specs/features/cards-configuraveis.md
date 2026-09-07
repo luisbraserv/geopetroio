@@ -427,12 +427,17 @@ dispositivo no contrato; agora seriam dois.
 
 ## 13. Ordem de implementação sugerida
 
-1. **Modelo e contrato** — documento de cards separado do de limites, com `conexao` e `cards`
-2. **Cache persistente no Desktop** (§8) — antes de qualquer card depender dele
-3. **Leitura em bloco dirigida por configuração** — `PlcConnectionService` passa a ler a faixa do DB e
-   fatiar, iterando cards em vez de constantes, com os tipos que já existem
+1. ✅ **Modelo e contrato** — documento de cards separado do de limites, com `conexao` e `cards`.
+   Entregue em 2026-09-07: `/api/sondas/{id}/cards`, tabela própria, revisão, tópico STOMP e guarda
+   de saída dedicada. ⚠️ **A calibração de peso e torque ficou de fora** — os 8 parâmetros da cadeia
+   do sargento vivem na configuração local do Desktop, medidos na unidade, e trazê-los para o
+   documento é migração de valores calibrados, não acréscimo de campo. O card diz **onde ler**; o
+   Desktop aplica a calibração que já tem
+2. ✅ **Cache persistente no Desktop** (§8) — antes de qualquer card depender dele
+3. **Leitura em bloco dirigida por configuração** — 🔶 metade feita: `BlocoDeLeitura` já lê a faixa
+   de uma vez e fatia. Falta trocar a origem dos endereços, das constantes para o documento de cards
 4. **Estado de stroke e vazão por card** (§3) — pré-requisito de várias bombas
-5. **Role `SUPORTE` + sessão de configuração no Desktop** (§9)
+5. 🔶 **Role `SUPORTE`** entregue; **sessão de configuração no Desktop** (§9) pendente
 6. **UI de configuração de cards** no Desktop, com cópia entre unidades (§10)
 7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
 8. **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade
