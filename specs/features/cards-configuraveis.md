@@ -313,16 +313,18 @@ errar**: o cliente nem toca no documento de cards.
 das cinco grandezas fixas. Passa a ser derivado: um limite só existe para um `dispositivoId` que a
 unidade declara.
 
-### ⚠️ O cache persistente deixa de ser opcional
+### ✅ O cache persistente — entregue
 
-**[FATO]** O contrato registra como **[PENDENTE]** o *"cache persistente para reiniciar sem rede"*.
-Hoje, um Desktop que reinicia sem rede perde os limites de alarme — degradação incômoda, não fatal:
-ele continua lendo o CLP e publicando.
+**[FATO 2026-09-07]** Era **[PENDENTE]** no contrato. Enquanto o cache fosse só de memória, um Desktop
+que reiniciasse sem rede perderia os limites de alarme — incômodo, não fatal. Com os cards vindos da
+configuração, perderia **toda a telemetria da unidade**: sem configuração ele não sabe o que ler.
 
-**[DECIDIDO 2026-09-07]** Com os cards vindos da configuração, **um Desktop que reinicia sem rede não
-sabe o que ler, e não lê nada.** A telemetria da unidade para por inteiro.
+`ConfiguracaoRemotaStore` grava o último snapshot válido em `config/configuracao-remota.json` e
+`ConfiguracaoRemotaState` o restaura ao conectar. Detalhes e garantias em
+[RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
 
-O cache em disco passa de melhoria a **requisito de entrega desta feature**.
+**Entregue antes dos cards de propósito** — é o passo 2 da ordem abaixo justamente porque nada pode
+depender da configuração antes de ela sobreviver a um reinício.
 
 ## 9. Quem configura
 

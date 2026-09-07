@@ -959,11 +959,25 @@ deliberado.
 **[DECIDIDO 2026-09-07]** Uma unidade sem cards configurados **não produz telemetria**. Não há
 conjunto padrão: o que se lê é exatamente o que foi declarado.
 
-⚠️ **Isto promove um [PENDENTE] a requisito.** O contrato de configuração registra o *"cache
-persistente para reiniciar sem rede"* como melhoria futura. Hoje, um Desktop que reinicia sem rede
-perde só os limites de alarme e continua publicando. Com os cards vindo da configuração, ele **não
-sabe o que ler, e a telemetria da unidade para por inteiro**. O cache em disco passa a ser requisito
-de entrega — ver [`features/cards-configuraveis.md §8`](features/cards-configuraveis.md#-o-cache-persistente-deixa-de-ser-opcional).
+⚠️ **Isto promoveu um [PENDENTE] a requisito.** O contrato registrava o *"cache persistente para
+reiniciar sem rede"* como melhoria futura. Enquanto o cache era só de memória, reiniciar sem rede
+custava os limites de alarme. Com os cards vindo da configuração, custaria **toda a telemetria da
+unidade**.
+
+✅ **[FATO 2026-09-07] Entregue.** `ConfiguracaoRemotaStore` grava o último snapshot válido em
+`config/configuracao-remota.json`, e `ConfiguracaoRemotaState` o restaura ao conectar.
+
+| Garantia | Como |
+|---|---|
+| Não serve configuração de outro lugar | O arquivo guarda a **chave** — servidor, usuário e unidade — e só carrega se ela bater |
+| Não regride a revisão | O restaurado entra como `current`, e `aceitar` continua exigindo revisão **maior** |
+| Não corrompe na queda de energia | Grava em temporário e move de forma atômica |
+| Não derruba o app | Arquivo ilegível vira log e é descartado; falha ao gravar não impede a memória de funcionar |
+| Não vaza credencial | A chave usa servidor e usuário; **a senha não passa pelo cache** |
+
+⚠️ **Alternar entre duas unidades perde o cache a cada troca:** o arquivo guarda uma configuração só,
+e a da unidade anterior é sobrescrita. É conservador de propósito — servir configuração da unidade
+errada seria pior que não servir nenhuma.
 
 ⚠️ **Consequência de migração:** a frota atual precisa **nascer** com os cards equivalentes ao
 mapeamento fixo de hoje, ou a telemetria para no dia do deploy. É migração de dados, não de schema.

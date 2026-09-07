@@ -72,7 +72,11 @@
 
 **[FATO]** Falha de publicação após commit não desfaz a gravação; consulta periódica e reconexão recuperam o snapshot. Broker em memória: sem entrega imediata entre réplicas, outbox durável ou confirmação de aplicação por dispositivo.
 
-**[PENDENTE]** Cache persistente para reiniciar sem rede, avaliação de leituras, alertas e atualização automática da frota. O canal transporta dados tipados; não executa comandos, instala pacotes nem altera parâmetros do CLP.
+✅ **[FATO 2026-09-07]** Cache persistente entregue — `ConfiguracaoRemotaStore`, gravação atômica em
+`config/configuracao-remota.json`, chaveada por servidor/usuário/unidade. Ver
+[RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
+
+**[PENDENTE]** Avaliação de leituras, alertas e atualização automática da frota. O canal transporta dados tipados; não executa comandos, instala pacotes nem altera parâmetros do CLP.
 
 **[FATO]** Testes: `ConfiguracaoSondaServiceTest` (persistência, autoria, revisão, rollback, falha do broker e validação); `ConfiguracaoSondaWebSocketTest` (TCP/WebSocket real, snapshot, atualização, consulta periódica, reconexão, revogação e isolamento); `ConfiguracaoSondaAccessTest` e `IdentidadeHttpSecurityTest` (acesso); `MigracaoFlywayTest` (MySQL descartável, atualização, unicidade e FK); `ConfiguracaoRemotaTest` (cache, parser e evento de configuração sem CLP).
 
@@ -150,7 +154,5 @@ unidade declara no documento de cards, e um card desativado mantém o limite hib
 ⚠️ **`SEND` recusado continua valendo, e ganha peso:** a configuração de cards decide o que a borda lê,
 e gravação segue só por HTTP, pelo `WebSocketInboundGuard`.
 
-⚠️ **O cache em memória deixa de bastar.** Hoje um Desktop que reinicia sem rede perde só os limites e
-continua publicando. Com os cards vindo da configuração, ele **não sabe o que ler** — e a telemetria
-da unidade para por inteiro. O *"cache persistente"* registrado como **[PENDENTE]** no §4 vira
-requisito de entrega — [RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
+✅ **O cache em memória deixou de bastar, e o de disco já existe** — entregue em 2026-09-07, antes de
+qualquer card depender dele. [RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).

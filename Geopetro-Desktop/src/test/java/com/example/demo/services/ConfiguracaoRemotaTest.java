@@ -13,8 +13,14 @@ class ConfiguracaoRemotaTest {
     private ConfiguracaoSondaRemota snapshot(long unit, long revision) {
         return new ConfiguracaoSondaRemota(1, unit, revision, List.of(), "ana", "2026-09-07T12:00:00Z");
     }
-    @Test void rejectsOldRevisionsWrongUnitsAndCallbacksFromAnOldConnection() {
-        var state = new ConfiguracaoRemotaState();
+    /** Store em pasta temporaria: sem isso o teste escreveria no diretorio do projeto. */
+    private ConfiguracaoRemotaState estadoIsolado() throws Exception {
+        return new ConfiguracaoRemotaState(
+            new ConfiguracaoRemotaStore(java.nio.file.Files.createTempDirectory("cfg").resolve("c.json")));
+    }
+
+    @Test void rejectsOldRevisionsWrongUnitsAndCallbacksFromAnOldConnection() throws Exception {
+        var state = estadoIsolado();
         long first = state.conectar("backend\nana", 7L);
         assertTrue(state.aceitar(first, snapshot(7, 2)));
         assertFalse(state.aceitar(first, snapshot(7, 1)));

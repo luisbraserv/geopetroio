@@ -176,8 +176,10 @@ preenchidos.
 | 3 | ~~Modelo real do CLP?~~ | ✅ Deixa de importar globalmente — endereçamento por unidade |
 | 4 | Perda de telemetria em falha de MQTT é aceitável? | [OQ-019](../../specs/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
 
-⚠️ **Aberto e agora crítico:** o cache de configuração é só em memória. Com os cards vindo da
-configuração, um Desktop que reinicia sem rede **não sabe o que ler** e para de publicar. Ver
+✅ **[FATO 2026-09-07] Resolvido antes de virar problema.** O cache de configuração era só em memória,
+e com os cards vindo da configuração um Desktop que reiniciasse sem rede não saberia o que ler.
+`ConfiguracaoRemotaStore` grava o último snapshot válido em `config/configuracao-remota.json`, com
+gravação atômica e chave de servidor/usuário/unidade. Ver
 [RN-088](../../specs/business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
 
 ---
