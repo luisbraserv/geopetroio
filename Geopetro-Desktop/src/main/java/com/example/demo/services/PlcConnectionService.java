@@ -33,6 +33,12 @@ public class PlcConnectionService {
     private static final int STROKE_START = 0;
     private static final int STROKE_SIZE  = 4;
 
+    /**
+     * Id do unico card de stroke de hoje. Vira o dispositivoId real quando a leitura passar a ser
+     * dirigida pelo documento de cards; ate la, nomeia o estado por card dos calculadores.
+     */
+    private static final String CARD_STROKE = "CONTADOR_STROKE_01";
+
     // B002..B005 addr=4,6,8,10 Word (2 bytes cada) — Ax do Analog Amplifier, ja em bar
     private static final int B002_PESO_START    = 4;  // B002 - Peso da Coluna
     private static final int B003_TORQUE1_START = 6;  // B003 - T. Ch. Hid. Tubos
@@ -156,9 +162,9 @@ public class PlcConnectionService {
             double b005Pressao = pressaoPsi(bloco, B005_PRESSAO_START, settings.getSensor04()); // P. Bomba / ESCP
 
             long cumulativeStroke = strokeCumulativo(bloco);
-            long currentStroke = strokeCalculatorService.calculateCurrentStroke(cumulativeStroke);
+            long currentStroke = strokeCalculatorService.calculateCurrentStroke(CARD_STROKE, cumulativeStroke);
             double pumpConstant = settings.getPumpConstant();
-            double flowRateBblMin = flowRateCalculatorService.calculateBblPerMinute(currentStroke, pumpConstant);
+            double flowRateBblMin = flowRateCalculatorService.calculateBblPerMinute(CARD_STROKE, currentStroke, pumpConstant);
 
             // peso, pressao01=B002Peso, pressao02=B003Torque1, pressao03=B004Torque2, pressao04=B005Pressao
             sondaService.atualizarDados(b002Peso, b002Peso, b003Torque1, b004Torque2, b005Pressao, (double) currentStroke);

@@ -1028,8 +1028,15 @@ guarda `lastCumulativeStroke` e `firstReading`; `FlowRateCalculatorService` guar
 `Queue<ReadingData>` que é **janela móvel de 60 segundos**. Ambos foram escritos para uma bomba.
 
 Com duas bombas contra esse estado compartilhado, os deltas se trocam **e** a janela de um minuto soma
-strokes de bombas diferentes. As duas vazões sairiam plausíveis e erradas. Com N cards, o estado passa
-a ser **por card**.
+strokes de bombas diferentes. As duas vazões sairiam plausíveis e erradas.
+
+✅ **[FATO 2026-09-07] Corrigido.** Os dois calculadores guardam estado **por `dispositivoId`**, com
+`reset()` geral — usado ao reconectar o CLP — e `reset(id)` para um card só. O comportamento com uma
+bomba é idêntico ao de antes.
+
+**Entregue antes de existir a configuração que declara duas bombas**, de propósito: é refatoração sem
+mudança de comportamento, e fazê-la junto com a leitura dirigida por cards misturaria um risco que já
+existe com um que estaria sendo introduzido.
 
 **[PENDENTE]** Vazão somada entre bombas não entra por ora. Se entrar, é derivada do conjunto de
 cards, sem quebrar o que existe.

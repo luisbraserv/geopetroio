@@ -436,7 +436,8 @@ dispositivo no contrato; agora seriam dois.
 2. ✅ **Cache persistente no Desktop** (§8) — antes de qualquer card depender dele
 3. **Leitura em bloco dirigida por configuração** — 🔶 metade feita: `BlocoDeLeitura` já lê a faixa
    de uma vez e fatia. Falta trocar a origem dos endereços, das constantes para o documento de cards
-4. **Estado de stroke e vazão por card** (§3) — pré-requisito de várias bombas
+4. ✅ **Estado de stroke e vazão por card** (§3) — entregue em 2026-09-07, antes de existir
+   configuração que declare duas bombas: é refatoração sem mudança de comportamento
 5. 🔶 **Role `SUPORTE`** entregue; **sessão de configuração no Desktop** (§9) pendente
 6. **UI de configuração de cards** no Desktop, com cópia entre unidades (§10)
 7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
@@ -445,3 +446,8 @@ dispositivo no contrato; agora seriam dois.
 ⚠️ O passo 3 é o de maior risco: troca o caminho de leitura de toda a frota. Como a frota nasce vazia
 (§10), o comportamento observável **vai** mudar no dia do deploy — a telemetria só volta unidade a
 unidade, conforme cada uma for configurada.
+
+⚠️ **Por isso o passo 3 não pode ser concluído antes dos passos 5 e 6.** Enquanto não houver sessão de
+configuração e UI no Desktop, ninguém consegue configurar unidade nenhuma: fechar o passo 3 antes
+deixaria a frota sem telemetria **e sem meio de restabelecê-la**. A ordem numérica não é a ordem de
+entrega — a dependência real é 5 e 6 antes de 3b.
