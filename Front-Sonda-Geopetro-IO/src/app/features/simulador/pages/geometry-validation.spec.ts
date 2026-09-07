@@ -33,6 +33,51 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
       localStorage.clear();
     });
 
+    it('warns about engineering relations without blocking results or the report, and clears warnings on scenario load', () => {
+      const original = structuredClone(page.form.getRawValue());
+      page.form.patchValue({ fracGrad: 8, poreGrad: 9, displacementWeight: 20, theta200: 200 }, { emitEvent: false });
+      page.simulate();
+      expect(page.engineeringIssues.map(i => i.code)).toEqual(expect.arrayContaining([
+        'FRACTURE_PORE_ORDER', 'SLURRY_DISPLACEMENT_DENSITY', 'FANN_READING_ORDER',
+      ]));
+      expect(page.engineeringIssues.every(i => i.level === 'warning')).toBe(true);
+      expect(result()).not.toBeNull();
+      expect(page.hydraulicSim).not.toBeNull();
+      expect(page.recipe).not.toBeNull();
+      page.openCapaModal();
+      expect(page.capaModalOpen).toBe(true);
+      expect(page.form.getRawValue().fracGrad).toBe(8);
+      page.onCarregarEstado(original);
+      expect(page.engineeringIssues).toEqual([]);
+      expect(result()).not.toBeNull();
+    });
+
+    it('removes stale engineering warnings when geometry becomes invalid', () => {
+      page.form.patchValue({ fracGrad: 8 }, { emitEvent: false });
+      page.simulate();
+      expect(page.engineeringIssues.length).toBeGreaterThan(0);
+      page.form.patchValue({ operacaoBaseMD: 1800 }, { emitEvent: false });
+      page.simulate();
+      expect(page.engineeringIssues).toEqual([]);
+      expect(result()).toBeNull();
+    });
+
+    if (component === SimuladorSqueezeComponent) {
+      it('warns when the actual hydraulic reference lies between two perforations', () => {
+        const squeeze = page as SimuladorSqueezeComponent;
+        squeeze.perforacoes.clear({ emitEvent: false });
+        for (const [top, base] of [[1400, 1420], [1460, 1480]]) {
+          squeeze.perforacoes.push(TestBed.inject(FormBuilder).group({ top, base }), { emitEvent: false });
+        }
+        squeeze.simulate();
+        expect(squeeze.hydraulicSim!.summary.referenceMD).toBe(1440);
+        expect(squeeze.engineeringIssues.map(i => i.code)).toContain('SQUEEZE_REFERENCE_OUTSIDE_PERFORATIONS');
+        squeeze.perforacoes.at(0).patchValue({ base: 1440 }, { emitEvent: false });
+        squeeze.simulate();
+        expect(squeeze.engineeringIssues.map(i => i.code)).not.toContain('SQUEEZE_REFERENCE_OUTSIDE_PERFORATIONS');
+      });
+    }
+
     it('reuses shared well geometry, preserves operation data and clears the reference on legacy load', () => {
       const legacy = JSON.parse(JSON.stringify(page.form.getRawValue()));
       const poco: PocoApi = { id: 4, nome: 'Poço A', version: 0, geometria: page.pocoGeometry, atualizadoPor: 'ana', atualizadoEm: '' };

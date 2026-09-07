@@ -913,3 +913,8 @@ tr:hover td {
 }
 .sim-validation p { margin: 4px 0; }
 .sim-validation--warning { color: var(--brand-orange-800, #8d551f); }
+
+.sim-validation--attention {
+  border-color: var(--brand-orange-800, #8d551f);
+  color: var(--brand-orange-800, #8d551f);
+}

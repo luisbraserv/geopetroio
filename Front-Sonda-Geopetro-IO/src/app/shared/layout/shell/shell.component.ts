@@ -90,6 +90,13 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         route: '/app/cadastros',
         roles: ROLES_ADMINISTRACAO,
       },
+      {
+        kind: 'leaf',
+        label: 'Configurações',
+        icon: '@tui.settings',
+        route: '/app/configuracoes',
+        roles: ROLES_ADMINISTRACAO,
+      },
     ],
   },
 ];

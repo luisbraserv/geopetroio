@@ -32,6 +32,10 @@ RUN apt-get update \
 
 COPY --from=build --chown=geopetro:geopetro /build/app/target/*.jar app.jar
 
+# Chave SMTP fora do banco, em volume persistente com acesso do usuario da aplicacao.
+RUN mkdir -p /app/secrets && chown geopetro:geopetro /app/secrets && chmod 700 /app/secrets
+ENV SMTP_SETTINGS_KEY_FILE=/app/secrets/smtp-settings.key
+
 USER geopetro
 
 # A imagem e um artefato de PRODUCAO: o perfil correto e o default, nao algo a lembrar

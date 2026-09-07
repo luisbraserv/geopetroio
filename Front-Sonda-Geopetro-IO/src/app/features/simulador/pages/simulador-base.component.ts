@@ -13,6 +13,8 @@ import { SimuladorStateStoreService, DadosRelatorio } from '../services/simulado
 import { RheologyAdjustmentResult } from '../services/rheology-adjustment.service';
 import { RelatorioCapaData } from '../components/relatorio/relatorio-capa-modal.component';
 import { OpsPhase } from '../components/charts/ops-chart.component';
+import { WellGeometryIssue } from '../models/well-geometry.model';
+import { EngineeringValidationInput, validateEngineeringRelations } from '../services/engineering-validation';
 
 /**
  * Lógica compartilhada entre os simuladores de squeeze e tampão:
@@ -61,6 +63,19 @@ export abstract class SimuladorBaseComponent {
 
   // ── Estado compartilhado ──
   slurry: SlurryDesign | null = null;
+  engineeringIssues: WellGeometryIssue[] = [];
+
+  protected updateEngineeringIssues(squeeze?: EngineeringValidationInput['squeeze']): void {
+    const v = this.form.getRawValue();
+    this.engineeringIssues = validateEngineeringRelations({
+      fractureGradient: v.fracGrad,
+      poreGradient: v.poreGrad,
+      slurryDensity: this.slurry?.density,
+      displacementDensity: v.displacementWeight ?? v.completionWeight,
+      thetaReadings: v,
+      squeeze,
+    });
+  }
   recipe: SlurryRecipe | null = null;
   manualRecipeResult: SlurryRecipeByVolume | null = null;
   temperatureResult: SqtTemperatureResult | null = null;
@@ -89,6 +104,7 @@ export abstract class SimuladorBaseComponent {
 
   /** Uma entrada inválida não pode deixar resultados da simulação anterior na tela. */
   protected clearCalculatedResults(): void {
+    this.engineeringIssues = [];
     this.slurry = null;
     this.recipe = null;
     this.manualRecipeResult = null;

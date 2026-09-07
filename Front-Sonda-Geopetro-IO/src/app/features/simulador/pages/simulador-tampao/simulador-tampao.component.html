@@ -33,6 +33,15 @@
   }
 
   <!-- ── Tabs ── -->
+  @if (engineeringIssues.length) {
+    <div class="sim-validation sim-validation--attention" role="status" aria-label="Avisos de consistência">
+      <strong>Confira os dados. O cálculo e o relatório continuam disponíveis.</strong>
+      @for (issue of engineeringIssues; track issue.code) {
+        <p>{{ issue.message }}</p>
+      }
+    </div>
+  }
+
   <div class="sim-tabs">
     @for (tab of tabs; track tab.id) {
       <button tuiButton appearance="flat" class="sim-tab" [class.sim-tab--active]="activeTab === tab.id"

@@ -33,10 +33,12 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-	private final WebSocketAuthInterceptor authInterceptor;
+	private final WebSocketInboundGuard authInterceptor;
 	private final List<String> allowedOrigins;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.geopetro.configuracaosonda.ConfiguracaoSondaOutbound configOutbound;
 
-	public WebSocketConfig(WebSocketAuthInterceptor authInterceptor,
+	public WebSocketConfig(WebSocketInboundGuard authInterceptor,
 			@Value("${security.cors.allowed-origin-patterns:http://localhost:*}") List<String> allowedOrigins) {
 		this.authInterceptor = authInterceptor;
 		this.allowedOrigins = allowedOrigins;
@@ -44,15 +46,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
-		registry.addEndpoint("/ws")
+		registry.setPreserveReceiveOrder(true);
+        registry.addEndpoint("/ws")
 				.setAllowedOriginPatterns(allowedOrigins.toArray(String[]::new));
 	}
 
 	@Override
 	public void configureMessageBroker(MessageBrokerRegistry registry) {
-		registry.enableSimpleBroker("/topic");
+		registry.setPreservePublishOrder(true);
+        registry.enableSimpleBroker("/topic");
 		registry.setApplicationDestinationPrefixes("/app");
 	}
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        registration.interceptors(configOutbound);
+    }
 
 	@Override
 	public void configureClientInboundChannel(ChannelRegistration registration) {

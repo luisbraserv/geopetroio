@@ -77,23 +77,44 @@ public class TelemetriaRealtimeService {
 
 	private ExecutorService worker;
 	private StompRealtimeClient client;
+    private final ConfiguracaoRemotaState configuracaoRemota = new ConfiguracaoRemotaState();
+    private Alvo alvoConectado;
+    private long ultimaSolicitacao;
+    private record Alvo(String backend, Long unidade, String usuario, String senha) {
+        @Override public String toString() { return "Alvo[redacted]"; }
+    }
+    public java.util.Optional<com.example.demo.models.ConfiguracaoSondaRemota> getConfiguracaoSonda() {
+        AppSettings settings = configuracao.get();
+        if (settings == null) return java.util.Optional.empty();
+        return configuracaoRemota.atual(chaveCache(alvo(settings)), settings.getUnidadeSondaId());
+    }
+    private String chaveCache(Alvo alvo) { return alvo == null ? null : alvo.backend() + "\n" + alvo.usuario(); }
+    private Alvo alvo(AppSettings settings) {
+        return settings == null || !settings.temConfiguracaoTempoReal() ? null :
+            new Alvo(normalizarBase(settings.getBackendUrl()), settings.getUnidadeSondaId(), settings.getBackendUsuario(), settings.getBackendSenha());
+    }
 
 	/**
 	 * Publica o estado mais recente. Chamado pela thread de leitura do CLP.
 	 *
 	 * <p>Nao bloqueia e nao lanca: e apenas uma troca de referencia.
 	 */
-	public void publicarEstado(AppSettings settings, EstadoAtual estado) {
-		if (settings == null || !settings.temConfiguracaoTempoReal()) {
-			return;
-		}
-		configuracao.set(settings);
-		estadoAtual.set(estado);
+    public void atualizarConfiguracao(AppSettings settings) {
+        Alvo novo = alvo(settings);
+        if (!java.util.Objects.equals(novo, alvo(configuracao.get()))) estadoAtual.set(null);
+        if (novo == null) { configuracao.set(null); return; }
+        // Snapshot das credenciais evita mutacao de AppSettings durante login/reconexao.
+        AppSettings snapshot = new AppSettings();
+        snapshot.setBackendUrl(novo.backend()); snapshot.setUnidadeSondaId(novo.unidade());
+        snapshot.setBackendUsuario(novo.usuario()); snapshot.setBackendSenha(novo.senha());
+        configuracao.set(snapshot);
+        if (ativo.compareAndSet(false, true)) iniciarWorker();
+    }
 
-		if (ativo.compareAndSet(false, true)) {
-			iniciarWorker();
-		}
-	}
+    public void publicarEstado(AppSettings settings, EstadoAtual estado) {
+        atualizarConfiguracao(settings);
+        if (alvo(settings) != null) estadoAtual.set(estado);
+    }
 
 	public boolean isConectado() {
 		return conectado.get();
@@ -116,12 +137,19 @@ public class TelemetriaRealtimeService {
 
 		while (ativo.get() && !Thread.currentThread().isInterrupted()) {
 			try {
-				if (!conectado.get()) {
-					conectar();
-					backoff = BACKOFF_INICIAL;
-				}
-
-				enviarEstadoMaisRecente();
+                Alvo desejado = alvo(configuracao.get());
+                if (!java.util.Objects.equals(desejado, alvoConectado)) {
+                    fecharClienteSilenciosamente(); conectado.set(false);
+                    configuracaoRemota.conectar(chaveCache(desejado), desejado == null ? null : desejado.unidade());
+                }
+                if (desejado == null) { dormir(INTERVALO_ENVIO); continue; }
+                if (!conectado.get() || client == null || !client.isConectado()) {
+                    fecharClienteSilenciosamente(); conectar(); backoff = BACKOFF_INICIAL;
+                }
+                if (System.nanoTime() - ultimaSolicitacao >= Duration.ofSeconds(60).toNanos()) {
+                    client.solicitarConfiguracao(); ultimaSolicitacao = System.nanoTime();
+                }
+                enviarEstadoMaisRecente();
 				dormir(INTERVALO_ENVIO);
 			}
 			catch (InterruptedException e) {
@@ -152,15 +180,19 @@ public class TelemetriaRealtimeService {
 		}
 
 		String token = autenticar(settings);
-		client = new StompRealtimeClient(urlWebSocket(settings.getBackendUrl()), token);
+		Alvo destino = alvo(settings);
+        long generation = configuracaoRemota.conectar(chaveCache(destino), destino.unidade());
+        client = new StompRealtimeClient(urlWebSocket(destino.backend()), token, destino.unidade(),
+            snapshot -> configuracaoRemota.aceitar(generation, snapshot));
 		client.conectar();
-		conectado.set(true);
+        alvoConectado = destino; ultimaSolicitacao = System.nanoTime();
+        conectado.set(true);
 		logger.info("Canal de tempo real conectado ao backend {} (unidade {}).",
 				settings.getBackendUrl(), settings.getUnidadeSondaId());
 	}
 
 	/**
-	 * Obtem um JWT no Backend-Sonda, reutilizando o mesmo {@code /auth/login} da aplicacao web.
+	 * Obtem um JWT no Backend-Sonda, reutilizando o mesmo {@code /api/auth/login} da aplicacao web.
 	 *
 	 * <p>Deliberado: o Desktop e um usuario do sistema como outro qualquer, sujeito as mesmas
 	 * regras de autorizacao. Um token estatico separado criaria um segundo mecanismo de
@@ -171,7 +203,7 @@ public class TelemetriaRealtimeService {
 				+ "\",\"password\":\"" + escapar(settings.getBackendSenha()) + "\"}";
 
 		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create(normalizarBase(settings.getBackendUrl()) + "/auth/login"))
+				.uri(URI.create(normalizarBase(settings.getBackendUrl()) + "/api/auth/login"))
 				.header("Content-Type", "application/json")
 				.timeout(Duration.ofSeconds(10))
 				.POST(HttpRequest.BodyPublishers.ofString(corpo, StandardCharsets.UTF_8))
@@ -191,7 +223,7 @@ public class TelemetriaRealtimeService {
 
 	private void enviarEstadoMaisRecente() throws Exception {
 		EstadoAtual estado = estadoAtual.get();
-		if (estado == null || client == null) {
+		if (estado == null || client == null || alvoConectado == null || !java.util.Objects.equals(estado.unidadeSondaId(), alvoConectado.unidade())) {
 			return;
 		}
 		client.enviarEstado(estado);

@@ -38,7 +38,9 @@ public class SecurityConfig {
 				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/auth/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
+						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/recuperacao-senha", "/api/auth/recuperacao-senha/confirmar")
+						.permitAll()
+						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
 						.permitAll()
 						// Probes de liveness/readiness do orquestrador, que nao se autentica.
 						// Apenas /health e exposto (management.endpoints.web.exposure.include),
@@ -66,10 +68,10 @@ public class SecurityConfig {
 						.hasAnyRole("INTERNO", "CIMENTACAO", "ADMIN")
 						.requestMatchers("/api/regionais/**")
 						.hasRole("ADMIN")
-						// Autoatendimento: precisa vir ANTES de /usuarios/** para nao herdar ADMIN.
-						.requestMatchers("/usuarios/me", "/usuarios/me/**")
+						// Autoatendimento: precisa vir ANTES de /api/usuarios/** para nao herdar ADMIN.
+						.requestMatchers(HttpMethod.PATCH, "/api/usuarios/me", "/api/usuarios/me/senha")
 						.authenticated()
-						.requestMatchers("/api/empresas/**", "/usuarios/**", "/api/usuarios/**")
+						.requestMatchers("/api/empresas/**", "/api/usuarios/**", "/api/configuracoes/**")
 						.hasRole("ADMIN")
 						.anyRequest()
 						.authenticated())

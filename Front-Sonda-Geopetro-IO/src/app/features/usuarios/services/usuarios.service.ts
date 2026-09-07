@@ -30,37 +30,37 @@ export class UsuariosService {
     const params: Record<string, string | number> = { pagina, tamanho };
     if (busca) params['busca'] = busca;
     return this.http
-      .get<UsuarioPaginadoResponse>(`${this.apiUrl}/usuarios`, { params })
+      .get<UsuarioPaginadoResponse>(`${this.apiUrl}/api/usuarios`, { params })
       .pipe(catchError((error) => this.handleError(error)));
   }
 
   criarCliente(payload: CriarUsuarioClientePayload): Observable<UsuarioResponse> {
     return this.http
-      .post<UsuarioResponse>(`${this.apiUrl}/usuarios/clientes`, payload)
+      .post<UsuarioResponse>(`${this.apiUrl}/api/usuarios/clientes`, payload)
       .pipe(catchError((error) => this.handleError(error)));
   }
 
   criarInterno(payload: CriarUsuarioInternoPayload): Observable<UsuarioResponse> {
     return this.http
-      .post<UsuarioResponse>(`${this.apiUrl}/usuarios/internos`, payload)
+      .post<UsuarioResponse>(`${this.apiUrl}/api/usuarios/internos`, payload)
       .pipe(catchError((error) => this.handleError(error)));
   }
 
   atualizarUsuario(username: string, payload: AtualizarUsuarioPayload): Observable<UsuarioResponse> {
     return this.http
-      .patch<UsuarioResponse>(`${this.apiUrl}/usuarios/${encodeURIComponent(username)}`, payload)
+      .patch<UsuarioResponse>(`${this.apiUrl}/api/usuarios/${encodeURIComponent(username)}`, payload)
       .pipe(catchError((error) => this.handleError(error)));
   }
 
   atualizarMeuUsuario(payload: UsuarioContatoPayload): Observable<UsuarioResponse> {
     return this.http
-      .patch<UsuarioResponse>(`${this.apiUrl}/usuarios/me`, payload)
+      .patch<UsuarioResponse>(`${this.apiUrl}/api/usuarios/me`, payload)
       .pipe(catchError((error) => this.handleError(error)));
   }
 
   alterarMinhaSenha(payload: AlterarSenhaPayload): Observable<UsuarioResponse> {
     return this.http
-      .patch<UsuarioResponse>(`${this.apiUrl}/usuarios/me/senha`, payload)
+      .patch<UsuarioResponse>(`${this.apiUrl}/api/usuarios/me/senha`, payload)
       .pipe(catchError((error) => this.handleError(error)));
   }
 

@@ -73,8 +73,11 @@ class MigracaoFlywayTest {
 	void baseVaziaMigraDoZero() throws SQLException {
 		flyway().migrate();
 
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
+        assertThat(existeTabela("recuperacao_senha")).isTrue();
+        assertThat(existeTabela("configuracao_smtp")).isTrue();
+        assertThat(existeTabela("configuracao_sonda")).isTrue();
 		assertThat(existeColuna("unidades_sondas", "tipo")).isTrue();
 		assertThat(colunaAceitaNulo("unidades_sondas", "tipo")).isFalse();
 		assertThat(existeColuna("simulador_cenarios", "poco_id")).isTrue();
@@ -122,7 +125,7 @@ class MigracaoFlywayTest {
 
 		// Se o baseline tivesse sido executado, os CREATE TABLE teriam colidido e a migracao
 		// falharia. Ele entra so como registro.
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2");
 		assertThat(tipoDoRegistro("2026.09.04")).isEqualTo("BASELINE");
 		assertThat(tipoDoRegistro("2026.09.05")).isEqualTo("SQL");
 
@@ -154,13 +157,17 @@ class MigracaoFlywayTest {
 
 		assertThat(versoesAplicadas()).contains("2026.09.05");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
+        assertThat(existeTabela("recuperacao_senha")).isTrue();
+        assertThat(existeTabela("configuracao_smtp")).isTrue();
+        assertThat(existeTabela("configuracao_sonda")).isTrue();
 		assertThat(existeColuna("simulador_cenarios", "poco_id")).isTrue();
 	}
 
 	@Test
 	@DisplayName("rodar a migration de vinculo numa base que ja nao os tem nao quebra")
 	void dropDeVinculoJaAusenteNaoQuebra() throws SQLException {
-		flyway().migrate();
+        Flyway.configure().dataSource(URL_SCHEMA, USUARIO, SENHA)
+            .locations("classpath:db/migration").target("2026.09.06.2").load().migrate();
 
 		// A guarda do script protege quem aplicou o SQL a mao antes do Flyway existir:
 		// reaplicar o DROP num schema que ja nao tem a coluna nem as tabelas e inofensivo.
@@ -170,6 +177,69 @@ class MigracaoFlywayTest {
 
 		assertThat(existeColuna("usuarios", "regional_id")).isFalse();
 	}
+
+    @Test
+    void recuperacaoMantemIntegridadeEPermiteTokensConsumidos() throws SQLException {
+        flyway().migrate();
+        executarNoSchema("""
+            INSERT INTO usuarios (username, password, email, nome, telefone, status, tipo_usuario)
+            VALUES ('recovery-a', 'test-hash', 'a@example.test', 'A', '1', 'ATIVO', 'INTERNO'),
+                   ('recovery-b', 'test-hash', 'b@example.test', 'B', '2', 'ATIVO', 'INTERNO')
+            """);
+        String insert = "INSERT INTO recuperacao_senha (username, token_hash, credential_hash, issued_at, expires_at) VALUES ";
+        executarNoSchema(insert + "('recovery-a', REPEAT('a',64), REPEAT('b',64), NOW(6), NOW(6))");
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () ->
+            executarNoSchema(insert + "('recovery-b', REPEAT('a',64), REPEAT('b',64), NOW(6), NOW(6))"));
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () ->
+            executarNoSchema(insert + "('missing-user', REPEAT('c',64), REPEAT('b',64), NOW(6), NOW(6))"));
+        executarNoSchema("UPDATE recuperacao_senha SET token_hash = NULL WHERE username = 'recovery-a'");
+        executarNoSchema(insert + "('recovery-b', NULL, REPEAT('b',64), NOW(6), NOW(6))");
+        assertThat(contar("SELECT COUNT(*) FROM recuperacao_senha")).isEqualTo(2);
+        executarNoSchema("DELETE FROM usuarios WHERE username = 'recovery-a'");
+        assertThat(contar("SELECT COUNT(*) FROM recuperacao_senha")).isEqualTo(1);
+    }
+
+    @Test
+    void configuracaoSmtpMigraDaRecuperacaoSemAlterarDadosEImpedeMaisDeUmRegistro() throws SQLException {
+        Flyway.configure().dataSource(URL_SCHEMA, USUARIO, SENHA)
+            .locations("classpath:db/migration").target("2026.09.06.3").load().migrate();
+        flyway().migrate();
+        assertThat(existeTabela("configuracao_smtp")).isTrue();
+        assertThat(existeTabela("configuracao_sonda")).isTrue();
+        assertThat(colunaAceitaNulo("configuracao_smtp", "password_encrypted")).isTrue();
+        assertThat(contar("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '" + SCHEMA
+            + "' AND TABLE_NAME = 'configuracao_smtp' AND COLUMN_NAME = 'password_encrypted'")).isEqualTo(8192);
+        String insert = """
+            INSERT INTO configuracao_smtp
+            (id, version, enabled, host, port, transport, auth, username, password_encrypted, sender_address, frontend_url)
+            VALUES
+            """;
+        executarNoSchema(insert + "(1, 0, false, 'smtp.example.test', 587, 'STARTTLS', false, '', NULL, '', '')");
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () ->
+            executarNoSchema(insert + "(2, 0, false, 'smtp.example.test', 587, 'STARTTLS', false, '', NULL, '', '')"));
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () ->
+            executarNoSchema("UPDATE configuracao_smtp SET port = 70000 WHERE id = 1"));
+        flyway().migrate();
+        assertThat(contar("SELECT COUNT(*) FROM configuracao_smtp")).isEqualTo(1);
+    }
+
+    @Test
+    void configuracaoSondaPreservaUnidadeNaMigracaoEProtegeVinculo() throws SQLException {
+        Flyway.configure().dataSource(URL_SCHEMA, USUARIO, SENHA)
+            .locations("classpath:db/migration").target("2026.09.07.1").load().migrate();
+        executarNoSchema("INSERT INTO regionais (id, nome) VALUES (7, 'Teste')");
+        executarNoSchema("INSERT INTO setores (id, nome, regional_id) VALUES (7, 'Teste', 7)");
+        executarNoSchema("INSERT INTO unidades_sondas (id, nome, setor_id, tipo) VALUES (7, 'Teste', 7, 'SONDA')");
+        flyway().migrate();
+        assertThat(contar("SELECT COUNT(*) FROM unidades_sondas WHERE id = 7")).isEqualTo(1);
+        String insert = "INSERT INTO configuracao_sonda (unidade_sonda_id, version, limites_json, atualizado_por, atualizado_em) VALUES ";
+        executarNoSchema(insert + "(7, 0, '[]', 'ana', NOW(6))");
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema(insert + "(8, 0, '[]', 'ana', NOW(6))"));
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema(insert + "(7, 0, '[]', 'ana', NOW(6))"));
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema("DELETE FROM unidades_sondas WHERE id = 7"));
+        flyway().migrate();
+        assertThat(contar("SELECT COUNT(*) FROM configuracao_sonda WHERE unidade_sonda_id = 7 AND version = 0")).isEqualTo(1);
+    }
 
 	// --- utilitarios -------------------------------------------------------------
 

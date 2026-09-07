@@ -402,6 +402,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   }
 
   simulate(): void {
+    this.engineeringIssues = [];
     try {
       const raw = this.form.getRawValue();
       const perfs: Perfuracao[] = (raw.perforacoes || []).map((p: any) => ({ top: geometryNumber(p.top), base: geometryNumber(p.base) }));
@@ -472,6 +473,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       const limiarRaw = this.conformidadeReport.limiarInjetividadeSugerido(this.hydraulicSim, v);
       this.limiarInjetividadeSugerido = limiarRaw != null ? +limiarRaw.toPrecision(2) : null;
 
+      this.updateEngineeringIssues({ referenceMD: this.hydraulicSim?.summary.referenceMD, perforations: perfs });
       this.buildOpsPhases();
       this.buildManualRecipeOpsPhases();
       this.buildRecipeDiags();

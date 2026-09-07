@@ -42,11 +42,12 @@
               "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "{{baseUrl}}/api/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "auth",
                 "login"
               ]
@@ -101,11 +102,12 @@
               "raw": "{\n  \"id\": 1,\n  \"empresa\": \"Braserv Petroleo\",\n  \"username\": \"Luis123\",\n  \"password\": \"Senha@123\",\n  \"nome\": \"Luis Silveira\",\n  \"telefone\": \"(27) 99999-9999\",\n  \"email\": \"luis.silveira@braserv.com.br\",\n  \"cep\": \"29123-456\",\n  \"logradouro\": \"Rua das Flores\",\n  \"bairro\": \"Centro\",\n  \"cidade\": \"Vitoria\",\n  \"estado\": \"ES\",\n  \"numero\": \"123\",\n  \"complemento\": \"Sala 2\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/usuarios/clientes",
+              "raw": "{{baseUrl}}/api/usuarios/clientes",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "usuarios",
                 "clientes"
               ]
@@ -137,11 +139,12 @@
               "raw": "{\n  \"matricula\": 100,\n  \"setor\": \"Automacao\",\n  \"username\": \"Interno123\",\n  \"password\": \"Senha@123\",\n  \"nome\": \"Usuario Interno\",\n  \"telefone\": \"27988887777\",\n  \"email\": \"interno@braserv.com.br\",\n  \"cep\": \"29123456\",\n  \"logradouro\": \"Avenida Brasil\",\n  \"bairro\": \"Jardim Camburi\",\n  \"cidade\": \"Vitoria\",\n  \"estado\": \"ES\",\n  \"numero\": \"1000\",\n  \"complemento\": \"\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/usuarios/internos",
+              "raw": "{{baseUrl}}/api/usuarios/internos",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "usuarios",
                 "internos"
               ]
@@ -164,11 +167,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/usuarios?pagina=0&tamanho=20",
+              "raw": "{{baseUrl}}/api/usuarios?pagina=0&tamanho=20",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "usuarios"
               ],
               "query": [
@@ -200,11 +204,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/usuarios/{{username}}",
+              "raw": "{{baseUrl}}/api/usuarios/{{username}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "usuarios",
                 "{{username}}"
               ]
@@ -227,11 +232,12 @@
             "method": "PATCH",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/usuarios/{{username}}/ativar",
+              "raw": "{{baseUrl}}/api/usuarios/{{username}}/ativar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "usuarios",
                 "{{username}}",
                 "ativar"
@@ -255,11 +261,12 @@
             "method": "PATCH",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/usuarios/{{username}}/desativar",
+              "raw": "{{baseUrl}}/api/usuarios/{{username}}/desativar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
                 "usuarios",
                 "{{username}}",
                 "desativar"

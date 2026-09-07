@@ -377,6 +377,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   }
 
   simulate(): void {
+    this.engineeringIssues = [];
     const well = this.syncWellGeometry();
     if (!well) {
       this.invalidateSimulation();
@@ -428,6 +429,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     this.pressureProfile = this.tampaoCalc.calcPressureProfile(this.plug, this.slurry, inputs, well);
     this.hydraulicSim = this.buildHydraulicSimulation(v, aditivosRaw, thetaReadings);
 
+    this.updateEngineeringIssues();
     this.buildOpsPhases();
     this.buildManualRecipeOpsPhases();
     this.buildRecipeDiags();

@@ -22,9 +22,10 @@ import {
 } from '../models/constantes';
 import { AditivoCalc } from '../models/aditivo.model';
 
-export const GAL_PER_FT3  = 7.4805;
-export const FT3_PER_BBL  = 5.6146;
+// US gallon: 231 in3; cubic foot: 1728 in3; oil barrel: 42 US gallons.
+export const GAL_PER_FT3  = 1728 / 231;
 export const GAL_PER_BBL  = 42;
+export const FT3_PER_BBL  = GAL_PER_BBL / GAL_PER_FT3;
 
 /** Volume absoluto do cimento em gal/lb — base API para Classe G/A/B/C/D/E/F/H */
 export const CEMENT_ABS_VOL_GAL_PER_LB = 0.0382;

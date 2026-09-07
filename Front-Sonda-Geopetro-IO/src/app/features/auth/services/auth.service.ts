@@ -37,7 +37,7 @@ export class AuthService {
 
   authenticate$(username: string, password: string): Observable<AuthenticatedUser> {
     return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/login`, { username, password })
+      .post<AuthResponse>(`${this.apiUrl}/api/auth/login`, { username, password })
       .pipe(
         map((response) => ({
           ...response,

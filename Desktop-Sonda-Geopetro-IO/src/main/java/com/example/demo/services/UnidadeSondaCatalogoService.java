@@ -78,7 +78,7 @@ public class UnidadeSondaCatalogoService {
         String corpo = "{\"username\":\"" + escapar(usuario) + "\",\"password\":\"" + escapar(senha) + "\"}";
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(base + "/auth/login"))
+                .uri(URI.create(base + "/api/auth/login"))
                 .header("Content-Type", "application/json")
                 .timeout(TIMEOUT)
                 .POST(HttpRequest.BodyPublishers.ofString(corpo, StandardCharsets.UTF_8))

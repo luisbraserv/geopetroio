@@ -1,0 +1,93 @@
+<div class="email-settings">
+  <header class="section-header">
+    <div class="section-icon"><tui-icon icon="@tui.mail" /></div>
+    <div>
+      <h2>E-mail corporativo</h2>
+      <p>Configure o SMTP usado para enviar os e-mails de recuperação de senha.</p>
+    </div>
+  </header>
+  @if (error()) { <p class="notice notice--error" role="alert">{{ error() }}</p> }
+  @if (success()) { <p class="notice notice--success" role="status">{{ success() }}</p> }
+  @if (loading()) {
+    <p role="status">Carregando configurações...</p>
+  } @else if (!loaded()) {
+    <button tuiButton appearance="secondary" type="button" (click)="load()">Tentar novamente</button>
+  } @else {
+    <form #smtpForm="ngForm" (ngSubmit)="save(smtpForm)">
+      <fieldset [disabled]="busy() || testing()">
+        <label class="enable-row">
+          <input type="checkbox" name="enabled" [(ngModel)]="model.enabled">
+          <span><strong>Ativar envio por e-mail</strong><small>Permite que os usuários recuperem a senha pelo login.</small></span>
+        </label>
+
+        <section class="form-section">
+          <h3>Servidor SMTP</h3>
+          <div class="form-grid server-grid">
+            <div class="field">
+              <label for="smtp-host">Servidor</label>
+              <input id="smtp-host" name="host" [(ngModel)]="model.host" [required]="model.enabled" maxlength="255" placeholder="smtp.empresa.com.br" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="smtp-security">Segurança da conexão</label>
+              <select id="smtp-security" name="transport" [(ngModel)]="model.transport" (ngModelChange)="changeTransport()">
+                <option value="STARTTLS">STARTTLS</option>
+                <option value="TLS">TLS (SSL)</option>
+                <option value="NONE">Sem TLS — relay sem autenticação</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="smtp-port">Porta</label>
+              <input id="smtp-port" name="port" type="number" [(ngModel)]="model.port" required min="1" max="65535" step="1">
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h3>Autenticação</h3>
+          <label class="check-row"><input type="checkbox" name="auth" [(ngModel)]="model.auth"> O servidor exige autenticação</label>
+          @if (model.auth) {
+            <div class="form-grid">
+              <div class="field">
+                <label for="smtp-user">Usuário</label>
+                <input id="smtp-user" name="username" [(ngModel)]="model.username" [required]="model.enabled" maxlength="255" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="field">
+                <label for="smtp-password">Senha SMTP</label>
+                <input id="smtp-password" name="password" type="password" [(ngModel)]="password" maxlength="1024" autocomplete="new-password" [disabled]="clearPassword" aria-describedby="password-help">
+                <small id="password-help">{{ model.passwordConfigured ? 'Senha cadastrada. Deixe em branco para manter a atual.' : 'Informe a senha ou senha de aplicativo fornecida pela empresa.' }}</small>
+              </div>
+            </div>
+          }
+          @if (model.passwordConfigured) {
+            <label class="check-row remove-password"><input type="checkbox" name="clearPassword" [(ngModel)]="clearPassword"> Remover a senha cadastrada ao salvar</label>
+          }
+        </section>
+
+        <section class="form-section">
+          <h3>Remetente e recuperação de senha</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label for="smtp-from">E-mail do remetente</label>
+              <input id="smtp-from" name="from" type="email" email [(ngModel)]="model.from" [required]="model.enabled" maxlength="255" placeholder="nao-responda@empresa.com.br" autocomplete="off">
+              <small>Endereço autorizado pelo servidor SMTP a enviar mensagens.</small>
+            </div>
+            <div class="field">
+              <label for="smtp-origin">Endereço do sistema</label>
+              <input id="smtp-origin" name="frontendUrl" type="url" [(ngModel)]="model.frontendUrl" [required]="model.enabled" maxlength="2048" placeholder="https://geopetro.empresa.com.br" autocomplete="off">
+              <small>Endereço usado nos links de recuperação, sem caminho após o domínio.</small>
+            </div>
+          </div>
+        </section>
+      </fieldset>
+      <footer class="form-actions">
+        <button tuiButton appearance="primary" type="submit" [disabled]="busy() || testing()">
+          {{ busy() ? 'Salvando...' : 'Salvar configurações' }}
+        </button>
+        <button tuiButton appearance="secondary" type="button" (click)="test()" [disabled]="busy() || testing() || hasChanges() || !model.host">
+          {{ testing() ? 'Testando...' : 'Testar conexão' }}
+        </button>
+        <p>Salve as alterações antes de testar. O teste verifica a conexão e a autenticação, sem enviar e-mail.</p>
+      </footer>
+    </form>
+  }
+</div>

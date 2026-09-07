@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CEMENT_WEIGHT, VOL_WATER_FRESH, VOL_WATER_SEA, VOL_NACL, VOL_SILICA, LB_TO_KG, GAL_TO_L } from '../models/constantes';
+import { CEMENT_WEIGHT, VOL_WATER_FRESH, VOL_WATER_SEA, VOL_NACL, VOL_SILICA, LB_TO_KG, GAL_TO_L, FT3_TO_L } from '../models/constantes';
 import { AditivoCalc } from '../models/aditivo.model';
 import {
   CementSlurryRecipeRow,
@@ -10,9 +10,7 @@ import {
   SlurryRecipeByVolume,
 } from '../models/pasta.model';
 import {
-  calcSlurryEngine,
-  scaleSlurry,
-  CEMENT_BASE_VOL_GAL,
+  FT3_PER_BBL,
   GAL_PER_FT3,
   GAL_PER_BBL,
 } from './slurry-engine';
@@ -21,21 +19,21 @@ import {
 export class CementSlurryRecipeService {
 
   calculateRecipeBase(slurryDesign: SlurryDesign): SlurryRecipeBase {
-    const { freshFrac, seaFrac } = this.waterFractions(slurryDesign);
-    const cementVolGal = this.finite(slurryDesign.cementClassCv) > 0
-      ? this.finite(slurryDesign.cementClassCv)
-      : CEMENT_BASE_VOL_GAL;
-
-    // Engine centralizado — fonte única de verdade para FAC/FAM/rendimento
-    const eng = calcSlurryEngine({
-      targetDensityPpg:   slurryDesign.density,
-      freshWaterFraction: freshFrac,
-      seaWaterFraction:   seaFrac,
-      silicaPct:          this.finite(slurryDesign.silica),
-      naclPct:            this.naclPct(slurryDesign),
-      cementAbsVolGal:    cementVolGal,
-      adds:               slurryDesign.adds || [],
-    });
+    // O design já contém a composição resolvida pelo motor. A receita apenas
+    // contabiliza esses componentes; recalcular pela densidade mudaria a mistura.
+    const cementVolGal = slurryDesign.cementClassCv;
+    const { waterFreshLb, waterSeaLb, naclLb, silicaWt } = slurryDesign;
+    const components = [waterFreshLb, waterSeaLb, naclLb, silicaWt,
+      ...(slurryDesign.adds || []).flatMap(a => [a.wt, a.vol])];
+    if (!Number.isFinite(cementVolGal) || cementVolGal <= 0 ||
+        components.some(value => !Number.isFinite(value) || value < 0)) {
+      return {
+        densityPpg: 0, densityCheckPpg: 0, yieldFt3PerFt3Cement: 0,
+        yieldLPerSk: 0, facGpc: 0, famGpc: 0, facPercent: 0,
+        totalMassLb: 0, totalVolumeGal: 0, rows: [],
+      };
+    }
+    const waterWeightLb = waterFreshLb + waterSeaLb;
 
     const rows: CementSlurryRecipeRow[] = [];
 
@@ -52,56 +50,56 @@ export class CementSlurryRecipeService {
     });
 
     // Água doce
-    if (eng.waterFreshLb > 0) {
+    if (waterFreshLb > 0) {
       rows.push({
         productName:         'Água doce',
         type:                'water',
-        concentration:       this.percentOf(eng.waterFreshLb, eng.waterWeightLbPerFt3Cement),
+        concentration:       this.percentOf(waterFreshLb, waterWeightLb),
         concentrationUnit:   '% água mistura',
-        baseMassLb:          eng.waterFreshLb,
-        baseVolumeGal:       eng.waterFreshLb * VOL_WATER_FRESH,
+        baseMassLb:          waterFreshLb,
+        baseVolumeGal:       waterFreshLb * VOL_WATER_FRESH,
         absoluteVolumeGalLb: VOL_WATER_FRESH,
         operationalNote:     'Água de mistura.',
       });
     }
 
     // Água do mar
-    if (eng.waterSeaLb > 0) {
+    if (waterSeaLb > 0) {
       rows.push({
         productName:         'Água do mar',
         type:                'water',
-        concentration:       this.percentOf(eng.waterSeaLb, eng.waterWeightLbPerFt3Cement),
+        concentration:       this.percentOf(waterSeaLb, waterWeightLb),
         concentrationUnit:   '% água mistura',
-        baseMassLb:          eng.waterSeaLb,
-        baseVolumeGal:       eng.waterSeaLb * VOL_WATER_SEA,
+        baseMassLb:          waterSeaLb,
+        baseVolumeGal:       waterSeaLb * VOL_WATER_SEA,
         absoluteVolumeGalLb: VOL_WATER_SEA,
         operationalNote:     'Água de mistura.',
       });
     }
 
     // NaCl
-    if (eng.naclWeightLb > 0) {
+    if (naclLb > 0) {
       rows.push({
         productName:         'NaCl',
         type:                'salt',
-        concentration:       this.naclPct(slurryDesign),
+        concentration:       this.percentOf(naclLb, waterFreshLb),
         concentrationUnit:   '% BWOW',
-        baseMassLb:          eng.naclWeightLb,
-        baseVolumeGal:       eng.naclVolumeGal,
+        baseMassLb:          naclLb,
+        baseVolumeGal:       naclLb * VOL_NACL,
         absoluteVolumeGalLb: VOL_NACL,
         operationalNote:     'Sal calculado sobre água doce.',
       });
     }
 
     // Sílica
-    if (eng.silicaWeightLb > 0) {
+    if (silicaWt > 0) {
       rows.push({
         productName:         'Sílica',
         type:                'silica',
-        concentration:       this.finite(slurryDesign.silica),
+        concentration:       this.percentOf(silicaWt, CEMENT_WEIGHT),
         concentrationUnit:   '% BWOC',
-        baseMassLb:          eng.silicaWeightLb,
-        baseVolumeGal:       eng.silicaVolumeGal,
+        baseMassLb:          silicaWt,
+        baseVolumeGal:       silicaWt * VOL_SILICA,
         absoluteVolumeGalLb: VOL_SILICA,
         operationalNote:     'Misturada a seco com o cimento. Não entra no FAM.',
       });
@@ -112,16 +110,22 @@ export class CementSlurryRecipeService {
       rows.push(this.additiveRow(add));
     }
 
+    const totalMassLb = rows.reduce((sum, row) => sum + row.baseMassLb, 0);
+    const totalVolumeGal = rows.reduce((sum, row) => sum + row.baseVolumeGal, 0);
+    const facGpc = waterFreshLb * VOL_WATER_FRESH + waterSeaLb * VOL_WATER_SEA;
+    const famGpc = facGpc + naclLb * VOL_NACL + (slurryDesign.adds || [])
+      .filter(a => a.type === 'liquid').reduce((sum, a) => sum + a.vol, 0);
+    const yieldFt3 = totalVolumeGal / GAL_PER_FT3;
     return {
-      densityPpg:           eng.densityCheckPpg,
-      densityCheckPpg:      eng.densityCheckPpg,
-      yieldFt3PerFt3Cement: eng.yieldFt3PerFt3Cement,
-      yieldLPerSk:          eng.yieldLPerSk,
-      facGpc:               eng.facGpc,
-      famGpc:               eng.famGpc,
-      facPercent:           eng.facPercent,
-      totalMassLb:          eng.totalWeightLbPerFt3Cement,
-      totalVolumeGal:       eng.totalVolumeGalPerFt3Cement,
+      densityPpg:           totalMassLb / totalVolumeGal,
+      densityCheckPpg:      totalMassLb / totalVolumeGal,
+      yieldFt3PerFt3Cement: yieldFt3,
+      yieldLPerSk:          yieldFt3 * FT3_TO_L,
+      facGpc,
+      famGpc,
+      facPercent:           this.percentOf(waterWeightLb, CEMENT_WEIGHT),
+      totalMassLb,
+      totalVolumeGal,
       rows,
     };
   }
@@ -132,14 +136,13 @@ export class CementSlurryRecipeService {
     rendimentoOverride?: number | null,
   ): SlurryRecipeByVolume {
     const base   = this.calculateRecipeBase(slurryDesign);
-    const yieldV = this.finite(rendimentoOverride, NaN) > 0
-      ? this.finite(rendimentoOverride, NaN)
-      : this.finite(base.yieldFt3PerFt3Cement, NaN);
+    const yieldV = rendimentoOverride ?? base.yieldFt3PerFt3Cement;
 
-    if (!Number.isFinite(yieldV) || yieldV <= 0) {
+    if (!Number.isFinite(yieldV) || yieldV <= 0 || base.rows.length === 0 ||
+        !Number.isFinite(volumePastaBbl) || volumePastaBbl < 0) {
       return {
         targetSlurryVolumeBbl:   volumePastaBbl,
-        targetSlurryVolumeFt3:   this.finite(volumePastaBbl) * 5.6146,
+        targetSlurryVolumeFt3:   this.finite(volumePastaBbl) * FT3_PER_BBL,
         yieldFt3PerFt3Cement:    0,
         cementVolumeFt3:         0,
         sacks94lb:               0,
@@ -149,25 +152,14 @@ export class CementSlurryRecipeService {
         totalMixWaterGal:        0,
         totalMixWaterBbl:        0,
         rows:                    [],
-        error: 'Não foi possível calcular a receita por volume porque o rendimento da pasta não foi calculado.',
+        error: !Number.isFinite(volumePastaBbl) || volumePastaBbl < 0
+          ? 'Informe um volume de pasta finito e maior ou igual a zero.'
+          : 'Não foi possível calcular a receita por volume porque o rendimento da pasta não foi calculado.',
       };
     }
 
-    const { freshFrac, seaFrac } = this.waterFractions(slurryDesign);
-    const eng = calcSlurryEngine({
-      targetDensityPpg:   slurryDesign.density,
-      freshWaterFraction: freshFrac,
-      seaWaterFraction:   seaFrac,
-      silicaPct:          this.finite(slurryDesign.silica),
-      naclPct:            this.naclPct(slurryDesign),
-      cementAbsVolGal:    this.finite(slurryDesign.cementClassCv) > 0
-        ? this.finite(slurryDesign.cementClassCv)
-        : CEMENT_BASE_VOL_GAL,
-      adds:               slurryDesign.adds || [],
-    });
-
-    const scaled      = scaleSlurry({ ...eng, yieldFt3PerFt3Cement: yieldV }, volumePastaBbl);
-    const scaleFactor = scaled.scaleFactor;
+    const targetSlurryVolumeFt3 = volumePastaBbl * FT3_PER_BBL;
+    const scaleFactor = targetSlurryVolumeFt3 / yieldV;
 
     const rows = base.rows.map(row => ({
       ...row,
@@ -182,17 +174,17 @@ export class CementSlurryRecipeService {
 
     return {
       targetSlurryVolumeBbl:  volumePastaBbl,
-      targetSlurryVolumeFt3:  scaled.targetSlurryVolumeFt3,
+      targetSlurryVolumeFt3,
       yieldFt3PerFt3Cement:   yieldV,
-      cementVolumeFt3:        scaled.cementRequiredFt3,
-      sacks94lb:              scaled.sacks94lb,
+      cementVolumeFt3:        scaleFactor,
+      sacks94lb:              scaleFactor,
       scaleFactor,
-      totalCementLb:          scaled.totalCementLb,
-      totalCementKg:          scaled.totalCementKg,
+      totalCementLb:          scaleFactor * CEMENT_WEIGHT,
+      totalCementKg:          scaleFactor * CEMENT_WEIGHT * LB_TO_KG,
       totalMixWaterGal,
       totalMixWaterBbl:       totalMixWaterGal / GAL_PER_BBL,
-      facGpc:                 eng.facGpc,
-      famGpc:                 eng.famGpc,
+      facGpc:                 base.facGpc,
+      famGpc:                 base.famGpc,
       rows,
     };
   }
@@ -215,10 +207,13 @@ export class CementSlurryRecipeService {
     famGpc: number,
     yieldFt3: number,
   ): SlurryRecipeByVolume {
-    if (!Number.isFinite(yieldFt3) || yieldFt3 <= 0 || !Number.isFinite(facGpc) || facGpc <= 0) {
+    const base = this.calculateRecipeBase(slurryDesign);
+    if (!Number.isFinite(yieldFt3) || yieldFt3 <= 0 || !Number.isFinite(facGpc) || facGpc <= 0 ||
+        !Number.isFinite(famGpc) || famGpc <= 0 || !Number.isFinite(volumePastaBbl) || volumePastaBbl < 0 ||
+        base.rows.length === 0) {
       return {
         targetSlurryVolumeBbl:  volumePastaBbl,
-        targetSlurryVolumeFt3:  this.finite(volumePastaBbl) * 5.6146,
+        targetSlurryVolumeFt3:  this.finite(volumePastaBbl) * FT3_PER_BBL,
         yieldFt3PerFt3Cement:   yieldFt3,
         cementVolumeFt3:        0,
         sacks94lb:              0,
@@ -230,18 +225,16 @@ export class CementSlurryRecipeService {
         facGpc,
         famGpc,
         rows:  [],
-        error: 'Preencha FAC GPC e rendimento válidos para calcular.',
+        error: 'Informe uma composição, um volume, FAC, FAM e rendimento válidos para calcular.',
       };
     }
 
-    const targetFt3      = this.finite(volumePastaBbl) * 5.6146;
+    const targetFt3      = this.finite(volumePastaBbl) * FT3_PER_BBL;
     const cementFt3      = targetFt3 / yieldFt3;
     const scaleFactor    = cementFt3;
     const totalCementLb  = scaleFactor * CEMENT_WEIGHT;
     const totalWaterGal  = facGpc * scaleFactor;
-    const totalFamGal    = famGpc * scaleFactor;
 
-    const base = this.calculateRecipeBase(slurryDesign);
     const rows = base.rows.map(row => ({
       ...row,
       scaledMassLb:    row.baseMassLb    * scaleFactor,
@@ -255,7 +248,7 @@ export class CementSlurryRecipeService {
     const waterRows = rows.filter(r => r.type === 'water');
     if (waterRows.length > 0) {
       const waterVolBase = waterRows.reduce((s, r) => s + r.baseVolumeGal, 0);
-      const ratio = waterVolBase > 0 ? totalWaterGal / (waterVolBase * scaleFactor) : 1;
+      const ratio = waterVolBase > 0 && scaleFactor > 0 ? totalWaterGal / (waterVolBase * scaleFactor) : 0;
       waterRows.forEach(r => {
         r.scaledVolumeGal = (r.scaledVolumeGal ?? 0) * ratio;
         r.scaledVolumeBbl = (r.scaledVolumeGal) / GAL_PER_BBL;
@@ -288,10 +281,7 @@ export class CementSlurryRecipeService {
   ): SlurryRecipe {
     const baseRecipe   = this.calculateRecipeBase(slurryDesign);
     const volumeRecipe = this.calculateRecipeByVolume(slurryDesign, volumePastaBbl, rendimentoOverride);
-    const recipeItems  = this.toLegacyRecipeItems(
-      volumeRecipe.rows.length ? volumeRecipe.rows : baseRecipe.rows,
-      volumeRecipe.scaleFactor || 1,
-    );
+    const recipeItems = this.toLegacyRecipeItems(volumeRecipe.rows, volumeRecipe.scaleFactor);
 
     return {
       sacks:           volumeRecipe.error ? 0 : Math.ceil(volumeRecipe.sacks94lb),
@@ -304,31 +294,6 @@ export class CementSlurryRecipeService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
-  private waterFractions(d: SlurryDesign): { freshFrac: number; seaFrac: number } {
-    let freshPct = this.finite(d.waterFreshLb > 0 || d.waterSeaLb > 0
-      ? (d.waterFreshLb / (d.waterFreshLb + d.waterSeaLb)) * 100
-      : 100,
-    );
-    // Se o design já tem frações salvas, usar; senão assumir 100% doce
-    if (!isNaN((d as any).waterSplitFresh)) {
-      freshPct = this.finite((d as any).waterSplitFresh, 100);
-    }
-    const seaPct   = 100 - freshPct;
-    const total    = freshPct + seaPct;
-    return {
-      freshFrac: total > 0 ? freshPct / total : 1,
-      seaFrac:   total > 0 ? seaPct  / total : 0,
-    };
-  }
-
-  private naclPct(d: SlurryDesign): number {
-    // naclLb / waterFreshLb * 100 — ou campo nacl (% direto)
-    if (this.finite(d.naclLb) > 0 && this.finite(d.waterFreshLb) > 0) {
-      return d.naclLb / d.waterFreshLb * 100;
-    }
-    return this.finite((d as any).nacl);
-  }
 
   private additiveRow(add: AditivoCalc): CementSlurryRecipeRow {
     const type = add.category === 'salt'

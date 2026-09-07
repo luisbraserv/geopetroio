@@ -5,6 +5,7 @@ import { TuiButton, TuiIcon, TuiTitle } from '@taiga-ui/core';
 import { TuiInput } from '@taiga-ui/core/components/input';
 import { Store } from '@ngxs/store';
 import { Subject } from 'rxjs';
+import { RouterLink } from '@angular/router';
 
 import { Login, ClearAuthError } from '../../features/auth/state/auth.actions';
 import { AuthState } from '../../features/auth/state/auth.state';
@@ -12,7 +13,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login-page',
-  imports: [CommonModule, FormsModule, TuiButton, TuiIcon, TuiInput, TuiTitle],
+  imports: [CommonModule, FormsModule, TuiButton, TuiIcon, TuiInput, TuiTitle, RouterLink],
   templateUrl: './login-page.component.html',
   styleUrl: './login-page.component.css',
 })

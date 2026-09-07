@@ -43,7 +43,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
 	/** Destinos de assinatura de tempo real, dos quais extraimos o id da unidade. */
 	private static final Pattern TOPICO_REALTIME =
-			Pattern.compile("^/topic/realtime/unidades-sondas/(\\d+)$");
+			Pattern.compile("^/(?:topic/realtime|topic/config|app/config)/unidades-sondas/([1-9][0-9]{0,18})$");
 
 	/** Destino que o Desktop-Sonda usa para publicar o estado. */
 	private static final String DESTINO_PUBLICACAO = "/app/realtime/estado";
@@ -103,7 +103,9 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 			throw new WebSocketNaoAutorizadoException("Destino nao permitido: " + destino);
 		}
 
-		Long unidadeSondaId = Long.valueOf(matcher.group(1));
+		Long unidadeSondaId;
+        try { unidadeSondaId = Long.valueOf(matcher.group(1)); }
+        catch (NumberFormatException e) { throw new WebSocketNaoAutorizadoException("Unidade invalida."); }
 		if (!monitoramentoService.usuarioPossuiAcessoAUnidade(username, unidadeSondaId)) {
 			log.warn("Assinatura NEGADA: usuario={} tentou acessar unidade={}", username, unidadeSondaId);
 			throw new WebSocketNaoAutorizadoException("Sem acesso a esta Unidade/Sonda.");

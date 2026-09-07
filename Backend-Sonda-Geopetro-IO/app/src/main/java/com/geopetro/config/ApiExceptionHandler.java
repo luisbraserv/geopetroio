@@ -16,6 +16,12 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler({org.springframework.web.servlet.NoHandlerFoundException.class,
+        org.springframework.web.servlet.resource.NoResourceFoundException.class})
+    ResponseEntity<ApiErrorResponse> handleNotFound(HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Recurso não encontrado.", request.getRequestURI(), List.of());
+    }
+
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
     ResponseEntity<ApiErrorResponse> handleUnreadable(HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido.", request.getRequestURI(), List.of());

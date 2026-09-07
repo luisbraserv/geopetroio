@@ -16,6 +16,14 @@ import { AuthState } from './features/auth/state/auth.state';
 export const routes: Routes = [
   // Rotas públicas
   {
+    path: 'recuperar-senha',
+    loadComponent: () => import('./pages/password-recovery/password-recovery.component').then(m => m.PasswordRecoveryComponent),
+  },
+  {
+    path: 'redefinir-senha', data: { reset: true },
+    loadComponent: () => import('./pages/password-recovery/password-recovery.component').then(m => m.PasswordRecoveryComponent),
+  },
+  {
     path: '',
     redirectTo: '/login',
     pathMatch: 'full',
@@ -92,6 +100,19 @@ export const routes: Routes = [
         path: 'administracao/usuarios',
         redirectTo: 'cadastros/usuarios',
         pathMatch: 'full',
+      },
+      {
+        path: 'configuracoes',
+        loadComponent: () => import('./features/configuracoes/settings-page.component').then(m => m.SettingsPageComponent),
+        canActivate: [authGuard],
+        data: { roles: ROLES_ADMINISTRACAO },
+        children: [
+          { path: '', redirectTo: 'email', pathMatch: 'full' },
+          {
+            path: 'email',
+            loadComponent: () => import('./features/configuracoes/email-settings.component').then(m => m.EmailSettingsComponent),
+          },
+        ],
       },
       {
         path: 'cadastros',

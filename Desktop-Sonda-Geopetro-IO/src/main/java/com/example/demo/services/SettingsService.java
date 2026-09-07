@@ -36,6 +36,9 @@ public class SettingsService {
     private static final Pattern UNIDADE_SONDA_ID_PATTERN = Pattern.compile("\"unidadeSondaId\"\\s*:\\s*(\\d+)");
 
     private final Path settingsPath;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher events;
+    public record Alteradas() {}
 
     public SettingsService() {
         this.settingsPath = AppPaths.configDir().resolve("app-settings.json");
@@ -198,6 +201,7 @@ public class SettingsService {
                     + "  \"cardVisibility\" : " + cardVisibilityJson(settings.getCardVisibility()) + "\n"
                     + "}\n";
             Files.writeString(settingsPath, content, StandardCharsets.UTF_8);
+            if (events != null) events.publishEvent(new Alteradas());
         } catch (IOException e) {
             logger.error("Erro ao salvar configuracoes em {}", settingsPath, e);
             throw new IllegalStateException("Nao foi possivel salvar as configuracoes.", e);
