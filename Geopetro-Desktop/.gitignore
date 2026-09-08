@@ -39,3 +39,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Caches de runtime desta estacao: snapshots recebidos pelo canal de configuracao
+# e calibracao por dispositivoId. Sao estado local, nao fonte.
+config/cards-da-unidade.json
+config/configuracao-remota.json
+config/calibracao-cards.json
