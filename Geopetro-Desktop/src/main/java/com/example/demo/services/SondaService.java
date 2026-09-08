@@ -73,6 +73,39 @@ public class SondaService {
                 pressao01, pressao02, pressao03, pressao04, torqueTubos, torqueFluante);
     }
 
+    /**
+     * Recebe as grandezas <b>já convertidas</b> pelo caminho dirigido por cards — passo 3b.
+     *
+     * <p>A diferença para {@link #atualizarDados} é de responsabilidade, não de forma. Lá chegam
+     * pressões e esta classe refaz a conversão de peso e torque com a calibração do
+     * {@code app-settings.json} — ligada por <b>posição</b>. Aqui quem converteu foi
+     * {@link LeituraDeCards}, com a calibração de cada card por {@code dispositivoId}.
+     *
+     * <p>⚠️ <b>Método transitório</b>, como a ponte que o chama em {@code PlcConnectionService}:
+     * ele existe porque a tela ainda tem campos fixos. Some no passo 7, junto com o dashboard
+     * montado a partir do documento.
+     *
+     * <p>{@code null} significa <b>sem valor</b> — card sem calibração, por exemplo. O indicador
+     * fica marcado como não configurado em vez de mostrar zero, que passaria por leitura real.
+     */
+    public synchronized void atualizarValoresConvertidos(Double pesoLbf, Double torqueTubosLbfFt,
+                                                         Double torqueFlutuanteLbfFt, Double pressaoPsi,
+                                                         Double stroke) {
+        sondaAtual.setPeso(pesoLbf != null ? pesoLbf : 0.0);
+        sondaAtual.setPressao04(pressaoPsi != null ? pressaoPsi : 0.0);
+        sondaAtual.setStroke(stroke != null ? stroke : 0.0);
+        sondaAtual.atualizarTimestamp();
+
+        pesoColunLbf = pesoLbf != null ? Math.round(pesoLbf * 100.0) / 100.0 : 0.0;
+        pesoColunConfigurado = pesoLbf != null;
+        torqueTubos = torqueTubosLbfFt != null ? torqueTubosLbfFt : 0.0;
+        torqueTubosConfigurado = torqueTubosLbfFt != null;
+        torqueFluante = torqueFlutuanteLbfFt != null ? torqueFlutuanteLbfFt : 0.0;
+        torqueFluanteConfigurado = torqueFlutuanteLbfFt != null;
+
+        validarStatus();
+    }
+
     public synchronized void updateFlowRate(Double flowRateBblMin, Double stroke) {
         sondaAtual.setVazao(flowRateBblMin != null ? flowRateBblMin : 0.0);
         sondaAtual.setStroke(stroke        != null ? stroke         : 0.0);

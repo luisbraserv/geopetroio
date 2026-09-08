@@ -66,9 +66,14 @@ public class RealtimeController {
 		}
 	}
 
+	/**
+	 * ⚠️ Com a lista de leituras, este metodo deixou de precisar conhecer as grandezas.
+	 *
+	 * <p>Antes ele repetia os seis campos fixos so para trocar o timestamp — e cada card novo
+	 * exigiria mexer aqui. Agora as leituras passam intactas: o backend valida a origem e o acesso,
+	 * e retransmite.
+	 */
 	private EstadoRealtimeDTO comTimestamp(EstadoRealtimeDTO estado, Instant timestamp) {
-		return new EstadoRealtimeDTO(estado.unidadeSondaId(), timestamp, estado.pesoColuna(),
-				estado.torqueTubos(), estado.torqueFlutuante(), estado.pressaoBomba(),
-				estado.vazao(), estado.strokeAtual());
+		return new EstadoRealtimeDTO(estado.unidadeSondaId(), timestamp, estado.leituras());
 	}
 }

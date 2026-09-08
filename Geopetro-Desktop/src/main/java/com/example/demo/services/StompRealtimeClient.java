@@ -114,22 +114,33 @@ class StompRealtimeClient {
 	}
 
 	/**
-	 * Preserva a precisao decimal usada pelo produtor de estado.
-	 * {@link Locale#US} evita separador decimal com virgula no JSON.
+	 * Serializa o estado no formato de {@code websocket-realtime.md §3} — lista de leituras, a
+	 * mesma forma do MQTT.
+	 *
+	 * <p>{@link Locale#US} evita separador decimal com virgula no JSON.
+	 *
+	 * <p>⚠️ Os campos fixos sairam em 2026-09-08. Com dois cards de torque e um de temperatura eles
+	 * eram uma verdade parcial se passando por completa.
 	 */
 	private String paraJson(EstadoAtual estado) {
+		String leituras = estado.leituras().stream()
+				.map(StompRealtimeClient::leituraJson)
+				.collect(java.util.stream.Collectors.joining(","));
 		return String.format(Locale.US,
-				"{\"unidadeSondaId\":%d,\"timestamp\":\"%s\",\"pesoColuna\":%.4f,"
-						+ "\"torqueTubos\":%.4f,\"torqueFlutuante\":%.4f,\"pressaoBomba\":%.4f,"
-						+ "\"vazao\":%.6f,\"strokeAtual\":%d}",
-				estado.unidadeSondaId(),
-				estado.timestamp(),
-				estado.pesoColuna(),
-				estado.torqueTubos(),
-				estado.torqueFlutuante(),
-				estado.pressaoBomba(),
-				estado.vazao(),
-				estado.strokeAtual());
+				"{\"unidadeSondaId\":%d,\"timestamp\":\"%s\",\"leituras\":[%s]}",
+				estado.unidadeSondaId(), estado.timestamp(), leituras);
+	}
+
+	/** {@code serie} sai do JSON quando ausente: so o card de stroke tem mais de uma grandeza. */
+	private static String leituraJson(com.example.demo.models.LeituraPublicada leitura) {
+		String serie = leitura.serie() == null || leitura.serie().isBlank()
+				? ""
+				: String.format("\"serie\":\"%s\",", leitura.serie());
+		return String.format(Locale.US,
+				"{\"dispositivoId\":\"%s\",%s\"tipo\":\"%s\",\"unidade\":\"%s\","
+						+ "\"enderecoDb\":\"%s\",\"valor\":%.4f,\"valorBruto\":%.4f}",
+				leitura.dispositivoId(), serie, leitura.tipo(), leitura.unidade(),
+				leitura.enderecoDb(), leitura.valor(), leitura.valorBruto());
 	}
 
 	void fechar() {

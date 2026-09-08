@@ -1,33 +1,52 @@
 package com.geopetro.realtime.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Estado instantaneo de uma Unidade/Sonda, retransmitido em tempo real.
  *
  * <p><b>Nao e persistido.</b> Este canal existe apenas para refletir o "agora" na tela; o historico
- * segue pelo caminho MQTT -> Backend-Telemetria -> InfluxDB. Ver
+ * segue pelo caminho MQTT -> Geopetro-Telemetria -> InfluxDB. Ver
  * {@code specs/contracts/websocket-realtime.md}.
  *
- * <p>Os nomes de campo espelham as grandezas ja usadas no monitoramento historico, para que a tela
- * possa alimentar os mesmos cards com qualquer uma das duas origens.
+ * <h2>⚠️ Os campos fixos sairam — 2026-09-08</h2>
+ * Eram {@code pesoColuna}, {@code torqueTubos}, {@code torqueFlutuante}, {@code pressaoBomba},
+ * {@code vazao} e {@code strokeAtual}, espelhando os cinco dispositivos que toda sonda tinha.
  *
- * @param unidadeSondaId  id da Unidade/Sonda no cadastro — identifica a origem e o topico de destino
- * @param timestamp       instante da leitura no CLP, em UTC
- * @param pesoColuna      lbf   (B002)
- * @param torqueTubos     lbf.ft (B003)
- * @param torqueFlutuante lbf.ft (B004)
- * @param pressaoBomba    psi   (B005)
- * @param vazao           bbl/min (B001, por delta de strokes)
- * @param strokeAtual     contagem de strokes do ciclo corrente
+ * <p>Com <a href="../../../../../../../../../specs/features/cards-configuraveis.md">cards por
+ * unidade</a> o conjunto passou a variar de sonda para sonda: uma unidade com dois cards de torque e
+ * um de temperatura nao cabe em campos fixos — eles seriam uma <b>verdade parcial se passando por
+ * completa</b>.
+ *
+ * <h2>O backend nao interpreta o conteudo</h2>
+ * Ele valida a origem e o acesso, e retransmite. Cada leitura ja carrega tipo e unidade (RN-097),
+ * entao nao ha aqui vocabulario de dispositivo nenhum para manter — e um card de um tipo novo
+ * atravessa sem que este arquivo mude.
+ *
+ * @param unidadeSondaId id da Unidade/Sonda no cadastro — identifica a origem e o topico de destino
+ * @param timestamp      instante da leitura no CLP, em UTC
+ * @param leituras       so cards visiveis, e so grandezas com valor (RN-037, RN-099)
  */
 public record EstadoRealtimeDTO(
 		Long unidadeSondaId,
 		Instant timestamp,
-		Double pesoColuna,
-		Double torqueTubos,
-		Double torqueFlutuante,
-		Double pressaoBomba,
-		Double vazao,
-		Long strokeAtual) {
+		List<LeituraRealtimeDTO> leituras) {
+
+	/**
+	 * Uma leitura, na mesma forma do MQTT ({@code mqtt-telemetria.md §3}).
+	 *
+	 * @param serie      distingue as tres grandezas de um card de stroke (RN-098); ausente nas demais
+	 * @param enderecoDb onde foi lido neste ciclo, como {@code DBW10}
+	 * @param valorBruto o que veio do CLP antes da conversao
+	 */
+	public record LeituraRealtimeDTO(
+			String dispositivoId,
+			String serie,
+			String tipo,
+			String unidade,
+			String enderecoDb,
+			Double valor,
+			Double valorBruto) {
+	}
 }

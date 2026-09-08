@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.example.demo.models.CardsDaUnidade.Card;
 import com.example.demo.models.CardsDaUnidade.Parametros;
 import com.example.demo.models.CardsDaUnidade.Tipo;
+import com.example.demo.models.LeituraPublicada;
 import com.example.demo.models.SensorPressaoConfig;
 
 /**
@@ -46,10 +47,15 @@ public class LeituraDeCards {
 	/** Uma grandeza medida por um card neste ciclo. */
 	public record Grandeza(
 			String dispositivoId,
+			/** Rótulo de tela. Fica no Desktop: não entra no contrato de telemetria (RN-097). */
 			String nome,
 			Tipo tipo,
 			/** Discrimina as três séries do contador de stroke; vazio para os demais. */
 			String serie,
+			/** Onde foi lido neste ciclo, como {@code DBW10}. Vai na mensagem — RN-097. */
+			String enderecoDb,
+			/** RN-037: visibilidade controla publicação, não gravação. */
+			boolean visivel,
 			/** {@code null} quando não há como converter — falta calibração ou o tipo ainda não converte. */
 			Double valor,
 			String unidade,
@@ -63,11 +69,17 @@ public class LeituraDeCards {
 		}
 
 		static Grandeza de(Card card, String serie, double valor, String unidade, double bruto) {
-			return new Grandeza(card.dispositivoId(), card.nome(), card.tipo(), serie, valor, unidade, bruto, null);
+			return new Grandeza(card.dispositivoId(), card.nome(), card.tipo(), serie,
+					endereco(card), card.visivel(), valor, unidade, bruto, null);
 		}
 
 		static Grandeza sem(Card card, String serie, String unidade, double bruto, String porque) {
-			return new Grandeza(card.dispositivoId(), card.nome(), card.tipo(), serie, null, unidade, bruto, porque);
+			return new Grandeza(card.dispositivoId(), card.nome(), card.tipo(), serie,
+					endereco(card), card.visivel(), null, unidade, bruto, porque);
+		}
+
+		private static String endereco(Card card) {
+			return card.tipo().enderecoLegivel(card.byteInicial());
 		}
 	}
 
@@ -85,6 +97,34 @@ public class LeituraDeCards {
 		this.calibracoes = calibracoes;
 		this.strokes = strokes;
 		this.vazoes = vazoes;
+	}
+
+	/**
+	 * O que vai para os canais de telemetria — RN-037, RN-099.
+	 *
+	 * <p>Duas filtragens, e são regras diferentes:
+	 * <ul>
+	 *   <li><b>Visível</b>: card ativo mas invisível é lido e gravado localmente, e não publicado.
+	 *       Visibilidade controla publicação, não gravação (RN-037).</li>
+	 *   <li><b>Com valor</b>: grandeza sem conversão possível não entra. Lacuna no gráfico é
+	 *       honesta; zero seria um número, entraria no histórico e passaria por medição real
+	 *       (RN-099).</li>
+	 * </ul>
+	 */
+	public static List<LeituraPublicada> paraPublicar(List<Grandeza> grandezas) {
+		return grandezas.stream()
+				.filter(Grandeza::visivel)
+				.filter(Grandeza::temValor)
+				.map(g -> new LeituraPublicada(
+						g.dispositivoId(),
+						// Ausente no JSON para card de uma grandeza so.
+						g.serie() == null || g.serie().isBlank() ? null : g.serie(),
+						g.tipo().name(),
+						g.unidade(),
+						g.enderecoDb(),
+						g.valor(),
+						g.bruto()))
+				.toList();
 	}
 
 	/** Só os cards ativos: desativado não é lido nem publicado. */

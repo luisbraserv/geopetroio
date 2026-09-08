@@ -1,6 +1,7 @@
 package com.example.demo.services;
 
 import com.example.demo.models.AppSettings;
+import com.example.demo.models.LeituraPublicada;
 import com.example.demo.models.CardVisibilityConfig;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -64,14 +65,14 @@ public class TelemetriaMqttService {
      * abrir espaco. Preferimos perder o passado distante a perder o presente; e o H2 local
      * mantem o registro completo de qualquer forma.
      */
-    public void enviarLeitura(AppSettings settings,
-                              double pesoColuna,
-                              double chHidTubos,
-                              double chFlutuante,
-                              double bombaEscp,
-                              double vazao) {
+    public void enviarLeitura(AppSettings settings, List<LeituraPublicada> leituras) {
         if (settings == null || settings.getSondaId() == null || settings.getSondaId().isBlank()) {
             logger.debug("Telemetria MQTT nao configurada: sondaId vazio.");
+            return;
+        }
+
+        if (leituras == null || leituras.isEmpty()) {
+            // Sem card visivel com valor nao ha o que publicar. Nao e erro (RN-037, RN-099).
             return;
         }
 
@@ -80,9 +81,8 @@ public class TelemetriaMqttService {
                 normalizarBrokerUrl(settings.getTelemetriaUrl()),
                 settings.getTelemetriaUsuario(),
                 settings.getTelemetriaSenha(),
-                settings.getCardVisibility(),
                 LocalDateTime.now(),
-                pesoColuna, chHidTubos, chFlutuante, bombaEscp, vazao);
+                List.copyOf(leituras));
 
         if (!fila.offer(leitura)) {
             LeituraPendente descartada = fila.poll();
@@ -105,16 +105,8 @@ public class TelemetriaMqttService {
         String usuario = pendente.usuario();
         String senha = pendente.senha();
         LocalDateTime dataHora = pendente.dataHora();
-        CardVisibilityConfig vis = pendente.visibilidade();
 
-        // Monta as leituras visíveis num único payload (1 mensagem por ciclo)
-        List<String> leituras = new ArrayList<>();
-        if (vis == null || vis.isVazao())        leituras.add(leituraJson("VAZAO_01", pendente.vazao()));
-        if (vis == null || vis.isPesoColuna())   leituras.add(leituraJson("PESO_COLUNA_01", pendente.pesoColuna()));
-        if (vis == null || vis.isChHidTubos())   leituras.add(leituraJson("TORQUE_01", pendente.chHidTubos()));
-        if (vis == null || vis.isChFlutuante())  leituras.add(leituraJson("TORQUE_02", pendente.chFlutuante()));
-        if (vis == null || vis.isBombaLama() || vis.isEscp()) leituras.add(leituraJson("PRESSAO_01", pendente.bombaEscp()));
-
+        List<String> leituras = pendente.leituras().stream().map(this::leituraJson).toList();
         if (leituras.isEmpty()) {
             return;
         }
@@ -180,18 +172,20 @@ public class TelemetriaMqttService {
      * trocar o broker enquanto ha itens na fila, cada item vai para onde estava configurado quando
      * foi lido — e nao para o destino novo.
      */
+    /**
+     * ⚠️ A filtragem por visibilidade saiu daqui — passo 3b.
+     *
+     * <p>Antes esta classe conhecia os cinco dispositivos fixos e decidia quais publicar. Com cards
+     * por unidade ela deixa de conhecer o vocabulario: recebe as leituras ja filtradas por
+     * {@code LeituraDeCards.paraPublicar}, que aplica RN-037 e RN-099 num lugar so.
+     */
     private record LeituraPendente(
             String sondaId,
             String brokerUrl,
             String usuario,
             String senha,
-            CardVisibilityConfig visibilidade,
             LocalDateTime dataHora,
-            double pesoColuna,
-            double chHidTubos,
-            double chFlutuante,
-            double bombaEscp,
-            double vazao) {
+            List<LeituraPublicada> leituras) {
     }
 
     private synchronized MqttClient conectar(String brokerUrl, String usuario, String senha) throws Exception {
@@ -235,10 +229,24 @@ public class TelemetriaMqttService {
         return client;
     }
 
-    /** Monta o fragmento JSON de uma leitura: {"dispositivo":"X","valor":N} */
-    private String leituraJson(String dispositivo, double valor) {
+    /**
+     * Monta o fragmento JSON de uma leitura — {@code mqtt-telemetria.md §3}.
+     *
+     * <p>A mensagem se descreve (RN-097): tipo e unidade viajam junto do valor, e por isso a
+     * Telemetria nao precisa consultar ninguem para grava-la.
+     *
+     * <p>{@code serie} sai do JSON quando ausente: so o card de stroke tem mais de uma grandeza, e
+     * um {@code "serie":""} nas outras seria ruido em toda leitura de toda sonda.
+     */
+    private String leituraJson(LeituraPublicada leitura) {
+        String serie = leitura.serie() == null || leitura.serie().isBlank()
+                ? ""
+                : String.format("\"serie\":\"%s\",", leitura.serie());
         return String.format(Locale.US,
-                "{\"dispositivo\":\"%s\",\"valor\":%.6f}", dispositivo, valor);
+                "{\"dispositivoId\":\"%s\",%s\"tipo\":\"%s\",\"unidade\":\"%s\","
+                        + "\"enderecoDb\":\"%s\",\"valor\":%.6f,\"valorBruto\":%.6f}",
+                leitura.dispositivoId(), serie, leitura.tipo(), leitura.unidade(),
+                leitura.enderecoDb(), leitura.valor(), leitura.valorBruto());
     }
 
     /**
@@ -250,7 +258,7 @@ public class TelemetriaMqttService {
     private void publicarBatch(MqttClient mqtt, String unidade, LocalDateTime dataHora,
                                List<String> leituras) throws Exception {
         String payload = String.format(Locale.US,
-                "{\"unidade\":\"%s\",\"dataHora\":\"%s\",\"leituras\":[%s]}",
+                "{\"idSondaUnidade\":\"%s\",\"dataHora\":\"%s\",\"leituras\":[%s]}",
                 unidade,
                 dataHora.format(FORMATTER),
                 String.join(",", leituras));
