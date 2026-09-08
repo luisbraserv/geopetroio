@@ -37,15 +37,31 @@ public class ConfiguracaoCardsOutbound implements ChannelInterceptor {
         if (destino == null) return message;
         var match = DESTINO.matcher(destino);
         if (!match.matches()) return message;
+        long unidade = Long.parseLong(match.group(1));
         try {
             String sessao = SimpMessageHeaderAccessor.getSessionId(message.getHeaders());
             var dono = registry.getObject().getUsers().stream()
                 .filter(u -> u.getSession(sessao) != null).findFirst();
-            return dono.isPresent() && access.podeLer(dono.get().getName(), Long.parseLong(match.group(1)))
-                ? message : null;
+            if (dono.isEmpty()) {
+                // ⚠️ Descartar em silencio esconderia uma sonda que nunca recebe a configuracao —
+                // e o sintoma seria "a unidade nao le nada", longe da causa.
+                log.warn("Cards da unidade {} nao entregues: sessao {} sem usuario no registro.",
+                    unidade, sessao);
+                return null;
+            }
+            if (!access.podeLer(dono.get().getName(), unidade)) {
+                log.warn("Cards da unidade {} nao entregues a {}: sem acesso.", unidade, dono.get().getName());
+                return null;
+            }
+            return message;
         } catch (RuntimeException e) {
             // Na duvida, nao entrega: e configuracao de uma unidade especifica.
+            log.warn("Cards da unidade {} nao entregues: falha ao verificar acesso ({}).",
+                unidade, e.toString());
             return null;
         }
     }
+
+    private static final org.slf4j.Logger log =
+        org.slf4j.LoggerFactory.getLogger(ConfiguracaoCardsOutbound.class);
 }

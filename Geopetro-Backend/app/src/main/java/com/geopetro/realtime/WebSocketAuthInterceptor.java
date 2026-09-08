@@ -42,8 +42,20 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 	private static final Logger log = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
 
 	/** Destinos de assinatura de tempo real, dos quais extraimos o id da unidade. */
-	private static final Pattern TOPICO_REALTIME =
-			Pattern.compile("^/(?:topic/realtime|topic/config|app/config)/unidades-sondas/([1-9][0-9]{0,18})$");
+	/**
+	 * Destinos que este canal reconhece. Tudo o que não casar é <b>recusado</b> — ver
+	 * {@link #autorizarAssinatura}.
+	 *
+	 * <p>⚠️ O sufixo {@code /cards} é opcional e precisa estar aqui explicitamente. Sem ele, o
+	 * documento de cards de uma unidade nunca chega ao Desktop, e o sintoma aparece longe da causa:
+	 * "a unidade não lê nada" (RN-088), sem nada acusando que a assinatura foi recusada.
+	 *
+	 * <p>Os dois documentos têm a <b>mesma</b> regra de acesso na assinatura — quem enxerga a
+	 * Unidade/Sonda pode assinar as duas. A diferença de autoridade está na <b>gravação</b>, que
+	 * passa pelo REST e por {@code ConfiguracaoCardsAccess} (RN-086, RN-089).
+	 */
+	private static final Pattern TOPICO_REALTIME = Pattern.compile(
+			"^/(?:topic/realtime|topic/config|app/config)/unidades-sondas/([1-9][0-9]{0,18})(?:/cards)?$");
 
 	/** Destino que o Geopetro-Desktop usa para publicar o estado. */
 	private static final String DESTINO_PUBLICACAO = "/app/realtime/estado";

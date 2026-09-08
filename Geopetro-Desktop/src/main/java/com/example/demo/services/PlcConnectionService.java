@@ -86,20 +86,48 @@ public class PlcConnectionService {
      * <p>Unidade não configurada é <b>estado normal</b> (RN-092), não erro: a frota nasce vazia e
      * cada unidade vira quando alguém a configura pela tela de Cards.
      */
-    public synchronized boolean connectUsingSavedIp() {
+    /**
+     * O que aconteceu ao tentar conectar.
+     *
+     * <p>⚠️ <b>Faltar configuração não é falha.</b> É o estado normal de uma unidade que ainda não
+     * foi configurada (RN-092), e quem está diante da tela resolve em dois cliques. Um booleano
+     * juntava os dois casos e a tela dizia "entre em contato com suporte" para alguém que só
+     * precisava abrir a janela de Cards — o tipo de mensagem que gasta uma visita a campo.
+     */
+    public sealed interface Resultado {
+        record Conectado() implements Resultado {
+        }
+
+        /** Unidade sem cards, ou sem IP no documento. A saída é configurar, não chamar suporte. */
+        record SemConfiguracao(String oQueFalta) implements Resultado {
+        }
+
+        /** O CLP não respondeu, ou respondeu recusando. Aí sim é falha. */
+        record Falhou() implements Resultado {
+        }
+    }
+
+    public synchronized Resultado connectUsingSavedIp() {
         var documento = telemetriaRealtimeService.cardsAtuais(settingsService.loadSettings()).orElse(null);
-        if (documento == null || documento.conexao() == null
-                || documento.conexao().ip() == null || documento.conexao().ip().isBlank()) {
+        if (documento == null || documento.cards().isEmpty()) {
             updateStatus(false);
-            logger.info("Unidade sem configuracao de cards: nada a ler. Configure em Cards.");
-            return false;
+            logger.info("Unidade sem configuracao de cards: nada a ler.");
+            return new Resultado.SemConfiguracao("esta unidade ainda não tem cards configurados");
         }
         if (LeituraDeCards.ativos(documento.cards()).isEmpty()) {
             updateStatus(false);
             logger.info("Unidade sem card ativo: nada a ler.");
-            return false;
+            return new Resultado.SemConfiguracao("todos os cards desta unidade estão desativados");
         }
-        return connect(documento.conexao().ip().trim());
+        if (documento.conexao() == null || documento.conexao().ip() == null
+                || documento.conexao().ip().isBlank()) {
+            updateStatus(false);
+            logger.info("Configuracao de cards sem IP do CLP.");
+            return new Resultado.SemConfiguracao("falta o IP do CLP na configuração dos cards");
+        }
+        return connect(documento.conexao().ip().trim())
+                ? new Resultado.Conectado()
+                : new Resultado.Falhou();
     }
 
     public synchronized boolean connect(String ip) {

@@ -149,9 +149,9 @@ public class MainViewFxmlController {
         Stage connectingStage = showConnectingModal();
         btnPlcConnection.setDisable(true);
 
-        Task<Boolean> connectionTask = new Task<>() {
+        Task<PlcConnectionService.Resultado> connectionTask = new Task<>() {
             @Override
-            protected Boolean call() {
+            protected PlcConnectionService.Resultado call() {
                 return plcConnectionService.connectUsingSavedIp();
             }
         };
@@ -161,10 +161,18 @@ public class MainViewFxmlController {
             btnPlcConnection.setDisable(false);
             updatePlcStatus();
 
-            if (Boolean.TRUE.equals(connectionTask.getValue())) {
-                showResultModal(Alert.AlertType.INFORMATION, "Conectado", "Conectado ao PLC com sucesso.");
-            } else {
-                showResultModal(Alert.AlertType.ERROR, "Erro ao conectar", "Erro ao conectar! Entre em contato com suporte se a falha persistir.");
+            switch (connectionTask.getValue()) {
+                case PlcConnectionService.Resultado.Conectado ignorado ->
+                    showResultModal(Alert.AlertType.INFORMATION, "Conectado", "Conectado ao PLC com sucesso.");
+                // Nao e erro: e uma unidade que ainda nao foi configurada (RN-092), e a saida
+                // esta na propria tela. Mandar chamar o suporte aqui gastaria uma visita.
+                case PlcConnectionService.Resultado.SemConfiguracao motivo ->
+                    showResultModal(Alert.AlertType.WARNING, "Sem configuração",
+                            "Não há o que ler: " + motivo.oQueFalta()
+                                    + ".\n\nAbra \"Cards\" na barra superior para configurar a unidade.");
+                case PlcConnectionService.Resultado.Falhou ignorado ->
+                    showResultModal(Alert.AlertType.ERROR, "Erro ao conectar",
+                            "Erro ao conectar! Entre em contato com suporte se a falha persistir.");
             }
         });
 

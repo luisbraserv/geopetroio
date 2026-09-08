@@ -7,6 +7,7 @@ import java.net.http.WebSocket;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -126,6 +127,35 @@ class ConfiguracaoRemotaTest {
         listener.onText(ws, frameCards(8, 3), true);
 
         assertTrue(cards.isEmpty(), "configuracao de outra unidade nao entra como se fosse desta");
+    }
+
+    /**
+     * ⚠️ Este teste existe por causa de um defeito real: o despacho dos cards foi escrito e
+     * testado, mas os frames de SUBSCRIBE nao chegaram a ser enviados. A suite passava — os outros
+     * testes alimentam o listener direto, pulando o {@code conectar()} — e o sintoma so apareceu ao
+     * rodar o app: "a unidade nao le nada", longe da causa.
+     *
+     * <p>Confere os QUATRO destinos: os dois documentos, cada um com atualizacao continua
+     * ({@code /topic}) e snapshot inicial ({@code /app}).
+     */
+    @Test void assinaOsQuatroDestinosDaConfiguracao() throws Exception {
+        var enviados = new ArrayList<String>();
+        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 144L, s -> {}, c -> {});
+        var ws = mock(WebSocket.class);
+        when(ws.sendText(any(), anyBoolean())).thenAnswer(chamada -> {
+            enviados.add(chamada.getArgument(0).toString());
+            return java.util.concurrent.CompletableFuture.completedFuture(ws);
+        });
+        var campo = StompRealtimeClient.class.getDeclaredField("webSocket");
+        campo.setAccessible(true);
+        campo.set(client, ws);
+
+        client.solicitarConfiguracao();
+
+        assertThat(enviados).anyMatch(f -> f.contains("id:config-snapshot")
+                && f.contains("destination:/app/config/unidades-sondas/144\n"));
+        assertThat(enviados).anyMatch(f -> f.contains("id:cards-snapshot")
+                && f.contains("destination:/app/config/unidades-sondas/144/cards\n"));
     }
 
     /**

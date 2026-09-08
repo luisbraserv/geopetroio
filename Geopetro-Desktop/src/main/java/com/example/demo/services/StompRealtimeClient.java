@@ -82,8 +82,12 @@ class StompRealtimeClient {
 		// apareceria depois — e o worker acharia que esta publicando.
 		conexaoEstabelecida.get(TIMEOUT_CONEXAO.toSeconds(), TimeUnit.SECONDS);
         if (unidade != null) {
-            enviarTexto("SUBSCRIBE\n" + "id:config-updates\n" + "destination:/topic/config/unidades-sondas/" + unidade + "\nack:auto\n\n" + NULO);
+            enviarTexto(assinar("config-updates", "/topic/config/unidades-sondas/" + unidade));
+            enviarTexto(assinar("cards-updates", "/topic/config/unidades-sondas/" + unidade + "/cards"));
             solicitarConfiguracao();
+            // So o snapshot de limites e esperado para dar a conexao por boa. Bloquear no de cards
+            // faria uma unidade nunca configurada — revisao 0, caso normal de RN-092 — travar a
+            // conexao inteira ate o timeout.
             snapshotRecebido.get(TIMEOUT_CONEXAO.toSeconds(), TimeUnit.SECONDS);
         }
 	}
@@ -91,7 +95,14 @@ class StompRealtimeClient {
     void solicitarConfiguracao() throws Exception {
         if (unidade == null) return;
         enviarTexto("UNSUBSCRIBE\nid:config-snapshot\n\n" + NULO);
-        enviarTexto("SUBSCRIBE\nid:config-snapshot\ndestination:/app/config/unidades-sondas/" + unidade + "\nack:auto\n\n" + NULO);
+        enviarTexto(assinar("config-snapshot", "/app/config/unidades-sondas/" + unidade));
+        enviarTexto("UNSUBSCRIBE\nid:cards-snapshot\n\n" + NULO);
+        enviarTexto(assinar("cards-snapshot", "/app/config/unidades-sondas/" + unidade + "/cards"));
+    }
+
+    /** Frame SUBSCRIBE. Extraido porque agora sao quatro, e o formato tem de ser identico. */
+    private static String assinar(String id, String destino) {
+        return "SUBSCRIBE\nid:" + id + "\ndestination:" + destino + "\nack:auto\n\n" + NULO;
     }
 
 	void enviarEstado(EstadoAtual estado) throws Exception {
