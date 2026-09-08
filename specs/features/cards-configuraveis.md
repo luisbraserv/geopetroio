@@ -378,6 +378,17 @@ telemetria de cada unidade fica parada entre o deploy e a visita de quem vai con
 unidade já configurada** e ajustar o que difere. Sondas iguais têm o mesmo mapeamento, então a maior
 parte do trabalho repetido some.
 
+**[FATO 2026-09-07] Como a cópia ficou.** Três decisões que só apareceram ao implementar:
+
+| O que | Decisão | Por quê |
+|---|---|---|
+| `dispositivoId` | **Não** é copiado | O id pertence ao histórico da unidade de origem (RN-081). Levá-lo faria duas unidades publicarem sob o mesmo dispositivo |
+| **IP do CLP** | **Não** é copiado; o resto da conexão sim | ⚠️ Rack, slot, DB e intervalo descrevem o *modelo* de CLP — é o que se quer repetir. O IP descreve **qual** CLP. Copiá-lo apontaria o Desktop da unidade B para o CLP da A: a conexão teria sucesso, os endereços existiriam, e a B publicaria a leitura da A sob o próprio nome. **Nada acusaria** |
+| Destino com card ativo | Cópia **recusada** | Copiar por cima criaria um conjunto duplicado lendo os mesmos endereços, e RN-091 impede remover o primeiro. A tela manda desativar os atuais antes |
+
+Cards desativados no destino permanecem, e a numeração de `ordem` continua depois da maior já usada —
+o backend recusa duas posições iguais na tela, e um card desativado também ocupa posição.
+
 ### Sem conferência ao vivo ao configurar
 
 **[DECIDIDO 2026-09-07]** A tela de configuração **não** lê o endereço em tempo real enquanto se
@@ -439,7 +450,12 @@ dispositivo no contrato; agora seriam dois.
 4. ✅ **Estado de stroke e vazão por card** (§3) — entregue em 2026-09-07, antes de existir
    configuração que declare duas bombas: é refatoração sem mudança de comportamento
 5. ✅ **Role `SUPORTE` + sessão de configuração no Desktop** (§9) — entregues
-6. **UI de configuração de cards** no Desktop, com cópia entre unidades (§10)
+6. ✅ **UI de configuração de cards** no Desktop, com cópia entre unidades (§10) — entregue em
+   2026-09-07. Botão **Cards** na barra do Desktop, ao lado da engrenagem e não dentro dela: são
+   autoridades diferentes. Configurações ajusta *esta estação* e não pede login; Cards altera o que a
+   *unidade* lê, só por ADMIN ou SUPORTE, com login. Lista à esquerda, formulário à direita com os
+   parâmetros trocando conforme o tipo, painel de conexão do CLP e rodapé fixo.
+   ⚠️ **Não há botão de excluir** (RN-091) e **não há leitura ao vivo do endereço** (§10)
 7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
 8. **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade
 

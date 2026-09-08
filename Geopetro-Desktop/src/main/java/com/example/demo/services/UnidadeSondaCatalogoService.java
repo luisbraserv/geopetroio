@@ -74,6 +74,36 @@ public class UnidadeSondaCatalogoService {
         }
     }
 
+    /**
+     * Lista as sondas visiveis para quem abriu a sessao de configuracao.
+     *
+     * <p>Serve a copia de cards entre unidades: ali quem escolhe a origem e uma pessoa ADMIN ou
+     * SUPORTE, ja autenticada, e o token dela ja esta em maos. Passar pela credencial de servico
+     * desta estacao mostraria a lista errada — ela enxerga so o que a estacao monitora, e configurar
+     * alcanca a frota inteira.
+     *
+     * @param token o da {@code SessaoConfiguracao}, nao o da credencial de servico
+     */
+    public List<UnidadeSondaOpcao> listarComToken(String backendUrl, String token) {
+        if (backendUrl == null || backendUrl.isBlank()) {
+            throw new CatalogoIndisponivelException("Informe a URL do Backend.");
+        }
+        if (token == null || token.isBlank()) {
+            throw new CatalogoIndisponivelException("A sessão de configuração não está aberta.");
+        }
+        try {
+            return buscarSondas(normalizarBase(backendUrl), token);
+        } catch (CatalogoIndisponivelException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CatalogoIndisponivelException("Consulta interrompida.");
+        } catch (Exception e) {
+            logger.warn("Falha ao listar Unidades/Sondas com o token da sessao: {}", e.getMessage());
+            throw new CatalogoIndisponivelException("Não foi possível falar com o Backend: " + e.getMessage());
+        }
+    }
+
     private String autenticar(String base, String usuario, String senha) throws Exception {
         String corpo = "{\"username\":\"" + escapar(usuario) + "\",\"password\":\"" + escapar(senha) + "\"}";
 

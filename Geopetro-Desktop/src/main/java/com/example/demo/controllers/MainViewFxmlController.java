@@ -80,6 +80,9 @@ public class MainViewFxmlController {
     private Button btnSettings;
 
     @FXML
+    private Button btnCards;
+
+    @FXML
     private Button btnMonitoring;
 
     @FXML
@@ -108,6 +111,7 @@ public class MainViewFxmlController {
 
     private void setupActions() {
         btnSettings.setOnAction(event -> openSettingsWindow());
+        btnCards.setOnAction(event -> openCardsWindow());
         btnMonitoring.setOnAction(event -> {
             loadPage("/views/monitoring.fxml");
             setActiveMenu(btnMonitoring);
@@ -259,6 +263,21 @@ public class MainViewFxmlController {
         } catch (IOException e) {
             logger.error("Erro ao abrir tela de configuracoes", e);
         }
+    }
+
+    /**
+     * Abre a configuracao de cards da unidade — RN-086.
+     *
+     * <p>A janela pede login antes de abrir, e nao abre se a pessoa desistir, errar a credencial,
+     * nao tiver perfil ou estiver sem rede. Nos quatro casos o resto do app segue funcionando: so a
+     * configuracao fica restrita.
+     *
+     * <p>Recarrega a pagina ao fechar, como {@link #openSettingsWindow()}, porque o conjunto de
+     * cards muda o que o dashboard mostra.
+     */
+    private void openCardsWindow() {
+        CardsConfigController.abrir(stage, applicationContext);
+        loadPage(currentPage);
     }
 
     private void startInternetChecker() {
