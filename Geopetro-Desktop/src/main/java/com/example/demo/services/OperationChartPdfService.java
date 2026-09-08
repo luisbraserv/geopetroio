@@ -1,11 +1,7 @@
 package com.example.demo.services;
 
-import com.example.demo.models.FlowRateReading;
 import com.example.demo.models.GeneratedOperationChart;
 import com.example.demo.models.OperationChartRequest;
-import com.example.demo.models.SondaReading;
-import com.example.demo.repositories.FlowRateReadingRepository;
-import com.example.demo.repositories.SondaReadingRepository;
 import org.springframework.stereotype.Service;
 
 import java.awt.Graphics2D;
@@ -48,20 +44,15 @@ public class OperationChartPdfService {
     private static final double CHART_WIDTH = 732;
     private static final double CHART_HEIGHT = 386;
 
-    private final FlowRateReadingRepository flowRateReadingRepository;
-    private final SondaReadingRepository    sondaReadingRepository;
+    private final SeriesLocais seriesLocais;
 
-    public OperationChartPdfService(FlowRateReadingRepository flowRateReadingRepository,
-                                     SondaReadingRepository sondaReadingRepository) {
-        this.flowRateReadingRepository = flowRateReadingRepository;
-        this.sondaReadingRepository    = sondaReadingRepository;
+    public OperationChartPdfService(
+                                     SeriesLocais seriesLocais) {
+        this.seriesLocais = seriesLocais;
     }
 
     public GeneratedOperationChart generate(OperationChartRequest request, Path savePath) throws IOException {
-        List<FlowRateReading> readings = request.isIncludeFlowRate()
-                ? flowRateReadingRepository.findByTimestampBetweenOrderByTimestampAsc(request.getStart(), request.getEnd())
-                : Collections.emptyList();
-        byte[] pdfBytes = buildPdf(request, readings);
+        byte[] pdfBytes = buildPdf(request);
         Path parent = savePath.toAbsolutePath().getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -96,62 +87,34 @@ public class OperationChartPdfService {
         }
     }
 
-    private byte[] buildPdf(OperationChartRequest request, List<FlowRateReading> flowReadings) throws IOException {
-        List<SondaReading> sondaReadings = sondaReadingRepository
-                .findByTimestampBetweenOrderByTimestampAsc(request.getStart(), request.getEnd());
+    /**
+     * Monta o PDF a partir das séries que a unidade gravou — uma página por série escolhida.
+     *
+     * <p>⚠️ Antes eram cinco blocos {@code if} com o nome, a unidade e o extrator escritos no
+     * código. Uma unidade com dois tanques não tinha como incluí-los — e a carta é entregável ao
+     * cliente.
+     *
+     * <p>Cada série carrega <b>os seus</b> instantes: grandeza sem valor não é gravada (RN-099),
+     * então os tamanhos diferem, e um eixo de tempo compartilhado desalinharia os pontos.
+     */
+    private byte[] buildPdf(OperationChartRequest request) throws IOException {
+        List<SeriesLocais.SerieLocal> series = seriesLocais
+                .carregar(request.getStart(), request.getEnd()).stream()
+                .filter(s -> request.inclui(s.chave()))
+                .toList();
+        int pontos = series.stream().mapToInt(s -> s.valores().size()).sum();
 
         LogoImage logoImage = loadLogoImage();
         List<String> pages = new ArrayList<>();
         StringBuilder content = new StringBuilder();
-        drawSummaryPage(content, request, logoImage, sondaReadings.size(), flowReadings.size());
-        List<LocalDateTime> sondaTimes = sondaReadings.stream()
-                .map(SondaReading::getTimestamp)
-                .collect(Collectors.toList());
-        List<LocalDateTime> flowTimes = flowReadings.stream()
-                .map(FlowRateReading::getTimestamp)
-                .collect(Collectors.toList());
+        drawSummaryPage(content, request, logoImage, pontos, series.size());
 
-        if (!request.hasAnyVariable()) {
-            text(content, 50, 398, 13, "Nenhuma variavel selecionada.");
-        } else if (sondaReadings.isEmpty() && flowReadings.isEmpty()) {
+        if (series.isEmpty()) {
             text(content, 50, 398, 13, "Nao existem dados no periodo selecionado.");
         } else {
-            // distribui gráficos verticalmente na página (espaço útil ~430 pts)
-            if (request.isIncludePesoColuna()) {
-                List<Double> vals = sondaReadings.stream()
-                        .map(r -> Optional.ofNullable(r.getPesoColunLbf()).orElse(0.0)).collect(Collectors.toList());
-                pages.add(buildChartPage(request, logoImage, "Peso da Coluna", vals, "lbf", sondaTimes));
-            }
-            if (request.isIncludeTorqueTubos()) {
-                List<Double> vals = sondaReadings.stream()
-                        .map(r -> Optional.ofNullable(r.getTorqueTubos()).orElse(0.0)).collect(Collectors.toList());
-                pages.add(buildChartPage(request, logoImage, "Torque Ch. Hid. Tubos", vals, "lbf.ft", sondaTimes));
-            }
-            if (request.isIncludeTorqueFlutuante()) {
-                List<Double> vals = sondaReadings.stream()
-                        .map(r -> Optional.ofNullable(r.getTorqueFluante()).orElse(0.0)).collect(Collectors.toList());
-                pages.add(buildChartPage(request, logoImage, "Torque Ch. Flutuante", vals, "lbf.ft", sondaTimes));
-            }
-            if (request.isIncludePressaoBomba()) {
-                List<Double> vals = sondaReadings.stream()
-                        .map(r -> Optional.ofNullable(r.getPressaoBomba()).orElse(0.0)).collect(Collectors.toList());
-                pages.add(buildChartPage(request, logoImage, "Pressao Bomba / ESCP", vals, "psi", sondaTimes));
-            }
-            if (request.isIncludeFlowRate()) {
-                List<Double> vals;
-                List<LocalDateTime> times;
-                if (!sondaReadings.isEmpty()) {
-                    vals = sondaReadings.stream()
-                            .map(r -> Optional.ofNullable(r.getVazaoBblMin()).orElse(0.0))
-                            .collect(Collectors.toList());
-                    times = sondaTimes;
-                } else {
-                    vals = flowReadings.stream()
-                            .map(r -> Optional.ofNullable(r.getFlowRateBblMin()).orElse(0.0))
-                            .collect(Collectors.toList());
-                    times = flowTimes;
-                }
-                pages.add(buildChartPage(request, logoImage, "Vazao", vals, "bbl/min", times));
+            for (SeriesLocais.SerieLocal serie : series) {
+                pages.add(buildChartPage(request, logoImage, serie.rotulo(),
+                        serie.valores(), serie.unidade(), serie.instantes()));
             }
         }
         pages.add(0, content.toString());
@@ -199,14 +162,10 @@ public class OperationChartPdfService {
      * Divide o espaço útil da página entre os gráficos selecionados.
      * Retorna lista de [y_base, height] para cada slot.
      */
-    private List<double[]> buildChartSlots(OperationChartRequest request) {
-        int count = 0;
-        if (request.isIncludePesoColuna())      count++;
-        if (request.isIncludeTorqueTubos())     count++;
-        if (request.isIncludeTorqueFlutuante()) count++;
-        if (request.isIncludePressaoBomba())    count++;
-        if (request.isIncludeFlowRate())        count++;
-        if (count == 0) return List.of();
+    private List<double[]> buildChartSlots(int count) {
+        // Uma pagina por serie, entao um slot por pagina. O metodo ficou com a assinatura antiga
+        // por enquanto: quem chama passa quantas series ha.
+        if (count <= 0) return List.of();
 
         double usableHeight = 420;
         double gap          = 30;
@@ -395,21 +354,6 @@ public class OperationChartPdfService {
                 .append(format(cx + radius)).append(' ').append(format(cy)).append(" c f\n");
     }
 
-    private void drawTimeLabels(StringBuilder content, List<FlowRateReading> readings, List<Point> points, double y) {
-        if (readings == null || readings.isEmpty() || points.isEmpty()) {
-            return;
-        }
-        int labels = Math.min(6, points.size());
-        for (int i = 0; i < labels; i++) {
-            int index = labels == 1 ? 0 : (int) Math.round((points.size() - 1) * (i / (double) (labels - 1)));
-            Point point = points.get(index);
-            LocalDateTime timestamp = readings.get(Math.min(index, readings.size() - 1)).getTimestamp();
-            String label = timestamp == null ? "" : timestamp.toLocalTime().withNano(0).toString();
-            text(content, point.x - 14, y, 7, label);
-            setStroke(content, 0.82, 0.86, 0.91, 0.5);
-            line(content, point.x, y + 10, point.x, y + 14);
-        }
-    }
     private LogoImage loadLogoImage() throws IOException {
         try (InputStream inputStream = getClass().getResourceAsStream(LOGO_PATH)) {
             if (inputStream == null) {

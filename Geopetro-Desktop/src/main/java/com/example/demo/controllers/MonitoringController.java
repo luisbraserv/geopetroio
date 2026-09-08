@@ -27,6 +27,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 
 import java.io.IOException;
+import com.example.demo.models.CardsDaUnidade;
+import com.example.demo.services.ConversaoTanque;
+import com.example.demo.services.ConversaoTemperatura;
+import com.example.demo.services.LeituraDeCards;
+import com.example.demo.services.TelemetriaRealtimeService;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -44,94 +50,177 @@ public class MonitoringController {
     @Autowired private SondaService sondaService;
     @Autowired private SettingsService settingsService;
     @Autowired private ApplicationContext applicationContext;
+    @Autowired private TelemetriaRealtimeService telemetriaRealtimeService;
 
     @FXML private FlowPane cardsPane;
 
-    // Label references built in code
-    private Label lblPesoColuna;
-    private Label lblTubes;
-    private Label lblFloating;
-    private Label lblTubesStatus;
-    private Label lblFloatingStatus;
-    private Label lblBomba;
-    private Label lblEscp;
-    private Label lblVazao;
-
-    // Valor bruto do CLP, exibido no rodapé de cada card
-    private Label lblPesoRaw;
-    private Label lblTubesRaw;
-    private Label lblFloatingRaw;
-    private Label lblBombaRaw;
-    private Label lblEscpRaw;
-    private Label lblVazaoRaw;
-
-    // Card nodes built in code
-    private Node cardPesoColuna;
-    private Node cardChHidTubos;
-    private Node cardChFlutuante;
-    private Node cardBombaLama;
-    private Node cardEscp;
-    private Node cardVazao;
-
-    // Ordered map to maintain display order
-    private final Map<String, CardEntry> cards = new LinkedHashMap<>();
 
     @FXML
     public void initialize() {
         logger.info("Inicializando MonitoringController");
-        buildCards();
-        applyCardVisibility();
         Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateData()));
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.play();
         updateData();
     }
 
-    private void buildCards() {
-        lblPesoColuna = new Label("0");
-        lblTubes      = new Label("0");
-        lblFloating   = new Label("0");
-        lblBomba      = new Label("0");
-        lblEscp       = new Label("0");
-        lblVazao      = new Label("0");
-        lblTubesStatus = buildHydraulicConfigStatusLabel();
-        lblFloatingStatus = buildHydraulicConfigStatusLabel();
+    /**
+     * Um card na tela, ligado a uma grandeza do documento.
+     *
+     * @param visual termômetro ou tanque, quando o tipo tem desenho próprio; senão {@code null}
+     */
+    private record CardDinamico(Node no, Label valor, Label bruto, Label estado, Node visual) {
+    }
 
-        Button btnSensorPeso     = new Button("⚙");
-        Button btnSensorTubes    = new Button("⚙");
-        Button btnSensorFloating = new Button("⚙");
-        Button btnSensorBomba    = new Button("⚙");
-        Button btnSensorEscp     = new Button("⚙");
-        Button btnVazaoSettings  = new Button("⚙");
+    /** Chave de um card: o dispositivo mais a série, porque o stroke produz três. */
+    private static String chave(LeituraDeCards.Grandeza g) {
+        return g.dispositivoId() + "|" + (g.serie() == null ? "" : g.serie());
+    }
 
-        // Valor cru lido do CLP, para diagnostico direto no card.
-        lblPesoRaw     = buildRawLabel();
-        lblTubesRaw    = buildRawLabel();
-        lblFloatingRaw = buildRawLabel();
-        lblBombaRaw    = buildRawLabel();
-        lblEscpRaw     = buildRawLabel();
-        lblVazaoRaw    = buildRawLabel();
+    private final Map<String, CardDinamico> cardsDinamicos = new LinkedHashMap<>();
 
-        btnSensorPeso.setOnAction(e     -> openPesoColunaSettings(btnSensorPeso));
-        btnSensorTubes.setOnAction(e    -> openChaveSettings(true,  btnSensorTubes));
-        btnSensorFloating.setOnAction(e -> openChaveSettings(false, btnSensorFloating));
-        btnSensorBomba.setOnAction(e    -> openSensorSettings(4, "P. Bomba de Lama / ESCP", false, btnSensorBomba));
-        btnSensorEscp.setOnAction(e     -> openSensorSettings(4, "P. Bomba de Lama / ESCP", false, btnSensorEscp));
-        btnVazaoSettings.setOnAction(e  -> openPumpSettingsWindow(btnVazaoSettings));
+    /**
+     * Monta a tela a partir das grandezas do último ciclo — passo 7.
+     *
+     * <p>Antes eram seis cards fixos no código. Agora a tela é o que a unidade declarou: dois
+     * tanques, três torques ou nenhum peso aparecem sem que este arquivo saiba de antemão.
+     *
+     * <p>Só reconstrói quando o <b>conjunto</b> muda. Refazer os nós a cada segundo faria a tela
+     * piscar e perderia o foco de quem estivesse interagindo.
+     */
+    private void sincronizarCards(List<LeituraDeCards.Grandeza> grandezas) {
+        List<String> chaves = grandezas.stream().map(MonitoringController::chave).toList();
+        if (chaves.equals(List.copyOf(cardsDinamicos.keySet()))) {
+            return;
+        }
 
-        cardPesoColuna  = buildCard("Peso da Coluna",                       "P", "lbf",     ICON_WEIGHT, lblPesoColuna, null,              btnSensorPeso, lblPesoRaw);
-        cardChHidTubos  = buildCard("Torque Chave Hidráulico dos Tubos",    "τ", "lbf·ft",  ICON_WRENCH, lblTubes,      lblTubesStatus,    btnSensorTubes, lblTubesRaw);
-        cardChFlutuante = buildCard("Torque da Chave Flutuante",            "τ", "lbf·ft",  ICON_WRENCH, lblFloating,   lblFloatingStatus, btnSensorFloating, lblFloatingRaw);
-        cardBombaLama   = buildCard("P. Bomba de Lama",                     "P", "PSI",     ICON_GAUGE,  lblBomba,      null,              btnSensorBomba, lblBombaRaw);
-        cardEscp        = buildCard("ESCP",                                 "P", "PSI",     ICON_GAUGE,  lblEscp,       null,              btnSensorEscp, lblEscpRaw);
-        cardVazao       = buildCard("Vazão",                                "Q", "bbl/min", ICON_DROP,   lblVazao,      null,              btnVazaoSettings, lblVazaoRaw);
+        cardsDinamicos.clear();
+        cardsPane.getChildren().clear();
+        for (LeituraDeCards.Grandeza g : grandezas) {
+            CardDinamico card = construir(g);
+            cardsDinamicos.put(chave(g), card);
+            cardsPane.getChildren().add(card.no());
+        }
+        logger.info("Dashboard montado com {} grandezas.", grandezas.size());
+    }
 
-        cards.put("pesoColuna",  new CardEntry(cardPesoColuna,  () -> settingsService.getCardVisibility().isPesoColuna()));
-        cards.put("chHidTubos",  new CardEntry(cardChHidTubos,  () -> settingsService.getCardVisibility().isChHidTubos()));
-        cards.put("chFlutuante", new CardEntry(cardChFlutuante, () -> settingsService.getCardVisibility().isChFlutuante()));
-        cards.put("bombaLama",   new CardEntry(cardBombaLama,   () -> settingsService.getCardVisibility().isBombaLama()));
-        cards.put("escp",        new CardEntry(cardEscp,        () -> settingsService.getCardVisibility().isEscp()));
-        cards.put("vazao",       new CardEntry(cardVazao,       () -> settingsService.getCardVisibility().isVazao()));
+    private CardDinamico construir(LeituraDeCards.Grandeza g) {
+        Label valor = new Label("--");
+        Label bruto = buildRawLabel();
+        Label estado = new Label();
+        estado.getStyleClass().add("ajuda");
+        estado.setWrapText(true);
+        estado.setVisible(false);
+        estado.setManaged(false);
+
+        Node visual = visualDe(g);
+        Button engrenagem = new Button("⚙");
+        engrenagem.setOnAction(e -> abrirCalibracaoDoCard(g, engrenagem));
+
+        Node no = buildCardDinamico(rotulo(g), g.unidade(), visual, iconeDe(g.tipo()),
+                valor, estado, engrenagem, bruto);
+        return new CardDinamico(no, valor, bruto, estado, visual);
+    }
+
+    /** O nome do card é o rótulo; a série entra entre parênteses quando há mais de uma. */
+    private static String rotulo(LeituraDeCards.Grandeza g) {
+        if (g.serie() == null || g.serie().isBlank()) {
+            return g.nome();
+        }
+        String legivel = switch (g.serie()) {
+            case LeituraDeCards.SERIE_STROKE -> "stroke";
+            case LeituraDeCards.SERIE_VAZAO -> "vazão";
+            case LeituraDeCards.SERIE_VOLUME -> "volume acumulado";
+            default -> g.serie();
+        };
+        return g.nome() + " — " + legivel;
+    }
+
+    /**
+     * Termômetro e tanque desenhados; os demais tipos ficam com o ícone de sempre.
+     *
+     * <p>O desenho não é enfeite: no tanque, é a conferência visual mais barata de que a distância
+     * não foi confundida com o nível.
+     */
+    private Node visualDe(LeituraDeCards.Grandeza g) {
+        var card = cardDoDocumento(g.dispositivoId());
+        var p = card == null ? null : card.parametros();
+        return switch (g.tipo()) {
+            case TEMPERATURA -> p == null || p.minimoEscala() == null || p.maximoEscala() == null
+                    ? null
+                    : new TermometroView(p.minimoEscala(), p.maximoEscala(), ConversaoTemperatura.unidade(p));
+            case NIVEL_TANQUE -> p == null ? null : new TanqueView(p.forma());
+            default -> null;
+        };
+    }
+
+    private static String iconeDe(CardsDaUnidade.Tipo tipo) {
+        return switch (tipo) {
+            case PESO -> ICON_WEIGHT;
+            case TORQUE -> ICON_WRENCH;
+            case PRESSAO, TEMPERATURA -> ICON_GAUGE;
+            case CONTADOR_STROKE, NIVEL_TANQUE -> ICON_DROP;
+        };
+    }
+
+    /** O card do documento, para chegar aos parâmetros de escala do desenho. */
+    private CardsDaUnidade.Card cardDoDocumento(String dispositivoId) {
+        return telemetriaRealtimeService.cardsAtuais(settingsService.loadSettings())
+                .map(CardsDaUnidade::cards).orElse(List.of()).stream()
+                .filter(c -> dispositivoId.equals(c.dispositivoId()))
+                .findFirst().orElse(null);
+    }
+
+    private void atualizarCard(CardDinamico card, LeituraDeCards.Grandeza g) {
+        if (g.temValor()) {
+            card.valor().setText(formatar(g.valor(), g.tipo()));
+            card.estado().setVisible(false);
+            card.estado().setManaged(false);
+        } else {
+            // ⚠️ Traço, nao zero: zero pareceria medicao real. RN-099.
+            card.valor().setText("--");
+            card.estado().setText(g.semValorPorque());
+            card.estado().setVisible(true);
+            card.estado().setManaged(true);
+        }
+        card.bruto().setText(g.enderecoDb() + "  " + Math.round(g.bruto()));
+
+        if (card.visual() instanceof TermometroView termometro) {
+            termometro.setValor(g.temValor() ? g.valor() : null);
+        } else if (card.visual() instanceof TanqueView tanque) {
+            atualizarTanque(tanque, g);
+        }
+    }
+
+    private void atualizarTanque(TanqueView tanque, LeituraDeCards.Grandeza g) {
+        var card = cardDoDocumento(g.dispositivoId());
+        var p = card == null ? null : card.parametros();
+        Double alturaM = p == null ? null : ConversaoTanque.alturaDoLiquidoM(g.bruto(), p);
+        tanque.atualizar(alturaM == null ? 0 : ConversaoTanque.fracaoCheia(alturaM, p),
+                alturaM != null && g.temValor());
+    }
+
+    /** Casas decimais por tipo: peso em lbf não precisa de fração; vazão em bbl/min precisa. */
+    private static String formatar(double valor, CardsDaUnidade.Tipo tipo) {
+        return switch (tipo) {
+            case PESO, TORQUE -> String.format("%.0f", valor);
+            case PRESSAO, TEMPERATURA -> String.format("%.1f", valor);
+            case NIVEL_TANQUE -> String.format("%.1f", valor);
+            case CONTADOR_STROKE -> String.format("%.2f", valor);
+        };
+    }
+
+    /** A engrenagem abre a calibração do card — a mesma janela que a tela de Cards abre. */
+    private void abrirCalibracaoDoCard(LeituraDeCards.Grandeza g, Button dono) {
+        switch (g.tipo()) {
+            case PESO -> openPesoColunaSettings(dono);
+            case TORQUE -> openChaveSettings(true, dono);
+            case CONTADOR_STROKE -> openPumpSettingsWindow(dono);
+            // Pressao, temperatura e tanque tem a escala no DOCUMENTO, nao nesta estacao: quem
+            // ajusta e a tela de Cards, com login. Mandar para a janela local seria oferecer um
+            // ajuste que nao tem efeito.
+            default -> CardsConfigController.abrir(dono.getScene().getWindow(), applicationContext);
+        }
     }
 
     private Node buildCard(String title, String symbol, String unit, String iconSvg,
@@ -143,6 +232,48 @@ public class MonitoringController {
      * @param rawLabel rotulo do valor bruto do CLP, no canto inferior direito. {@code null} para
      *                 cards que nao vem de um endereco unico do CLP.
      */
+    /**
+     * Card com um visual proprio no lugar do icone — termometro ou tanque.
+     *
+     * <p>O desenho ocupa o espaco do icone de proposito: ele DIZ mais que o icone, e o layout do
+     * card ja reservava aquele lugar para a identificacao visual da grandeza.
+     */
+    private Node buildCardDinamico(String titulo, String unidade, Node visual, String iconSvg,
+                                   Label valor, Label estado, Button engrenagem, Label bruto) {
+        if (visual == null) {
+            return buildCard(titulo, "", unidade, iconSvg, valor, estado, engrenagem, bruto);
+        }
+        styleValueLabel(valor);
+
+        Label titulos = new Label(titulo);
+        titulos.getStyleClass().add("card-grandeza-titulo");
+        titulos.setWrapText(true);
+        titulos.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+        titulos.setAlignment(Pos.CENTER);
+        titulos.setMaxWidth(Double.MAX_VALUE);
+
+        Label unidades = new Label(unidade);
+        unidades.getStyleClass().add("muted");
+        styleGearButton(engrenagem);
+
+        // Desenho a esquerda, numero a direita: o valor continua legivel de longe, e o desenho
+        // responde a pergunta que o numero sozinho nao responde.
+        VBox numeros = new VBox(6, titulos, valor, unidades, estado);
+        numeros.setAlignment(Pos.CENTER);
+        javafx.scene.layout.HBox corpo = new javafx.scene.layout.HBox(12, visual, numeros);
+        corpo.setAlignment(Pos.CENTER);
+        javafx.scene.layout.HBox.setHgrow(numeros, javafx.scene.layout.Priority.ALWAYS);
+
+        javafx.scene.layout.StackPane conteudo = new javafx.scene.layout.StackPane(corpo, engrenagem, bruto);
+        javafx.scene.layout.StackPane.setAlignment(engrenagem, Pos.TOP_RIGHT);
+        javafx.scene.layout.StackPane.setAlignment(bruto, Pos.BOTTOM_RIGHT);
+        conteudo.setPadding(new Insets(20));
+        conteudo.getStyleClass().add("card-grandeza");
+        conteudo.setPrefHeight(260);
+        conteudo.prefWidthProperty().bind(cardsPane.widthProperty().subtract(61).divide(4));
+        return conteudo;
+    }
+
     private Node buildCard(String title, String symbol, String unit, String iconSvg,
                            Label valueLabel, Label statusLabel, Button gearButton, Label rawLabel) {
         styleValueLabel(valueLabel);
@@ -157,7 +288,7 @@ public class MonitoringController {
         iconBox.setPrefSize(44, 44);
         iconBox.setMaxSize(44, 44);
 
-        Label titleLabel = new Label(title + " (" + symbol + ")");
+        Label titleLabel = new Label(symbol == null || symbol.isBlank() ? title : title + " (" + symbol + ")");
         titleLabel.getStyleClass().add("card-grandeza-titulo");
         titleLabel.setWrapText(true);
         titleLabel.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
@@ -250,59 +381,23 @@ public class MonitoringController {
         btn.getStyleClass().add("botao-icone");
     }
 
-    private void applyCardVisibility() {
-        cardsPane.getChildren().clear();
-        for (CardEntry entry : cards.values()) {
-            if (entry.visibilitySupplier.get()) {
-                cardsPane.getChildren().add(entry.node);
+    /**
+     * Atualiza a tela a cada ciclo a partir das grandezas convertidas.
+     *
+     * <p>⚠️ <b>A visibilidade nao filtra mais aqui.</b> Ela controla PUBLICACAO, nao exibicao
+     * (RN-037), e quem a aplica e {@code LeituraDeCards.paraPublicar}. Filtrar tambem na tela
+     * escondia da estacao um card que ela esta lendo e gravando — e o operador nao teria como
+     * saber que ele existe.
+     */
+    private void updateData() {
+        List<LeituraDeCards.Grandeza> grandezas = sondaService.grandezas();
+        sincronizarCards(grandezas);
+        for (LeituraDeCards.Grandeza g : grandezas) {
+            CardDinamico card = cardsDinamicos.get(chave(g));
+            if (card != null) {
+                atualizarCard(card, g);
             }
         }
-    }
-
-    private void updateData() {
-        AppSettings settings = settingsService.loadSettings();
-        CardVisibilityConfig vis = settings.getCardVisibility();
-
-        if (vis.isPesoColuna()) {
-            lblPesoColuna.setText(sondaService.isPesoColunConfigurado()
-                    ? String.format("%.0f", sondaService.getPesoColumLbf())
-                    : "0");
-        }
-
-        if (vis.isChHidTubos()) {
-            updateTorqueCard(lblTubes, lblTubesStatus, settings.getChaveTubos().isConfigurado(),
-                    sondaService.getTorqueTubos());
-        }
-
-        if (vis.isChFlutuante()) {
-            updateTorqueCard(lblFloating, lblFloatingStatus, settings.getChaveFlutuante().isConfigurado(),
-                    sondaService.getTorqueFluante());
-        }
-
-        if (vis.isBombaLama())
-            lblBomba.setText(formatDecimalValue(sondaService.getPressao04()));
-
-        if (vis.isEscp())
-            lblEscp.setText(formatDecimalValue(sondaService.getPressao04()));
-
-        if (vis.isVazao())
-            lblVazao.setText(formatFlowRateValue(sondaService.getVazao()));
-
-        // Endereços conforme PlcConnectionService: B002=DBW4, B003=DBW6, B004=DBW8, B005=DBW10.
-        // Bomba e ESCP saem do mesmo B005 — por isso os dois cards mostram o mesmo bruto.
-        updateRawLabel(lblPesoRaw, "DBW", 4);
-        updateRawLabel(lblTubesRaw, "DBW", 6);
-        updateRawLabel(lblFloatingRaw, "DBW", 8);
-        updateRawLabel(lblBombaRaw, "DBW", 10);
-        updateRawLabel(lblEscpRaw, "DBW", 10);
-        // Vazão vem do contador cumulativo de stroke, DWord em DBD0 — não é canal analógico.
-        updateRawLabel(lblVazaoRaw, "DBD", 0);
-    }
-
-    private void updateTorqueCard(Label valueLabel, Label statusLabel, boolean configured, double torque) {
-        valueLabel.setText(configured ? String.format("%.0f", torque) : "0");
-        statusLabel.setManaged(!configured);
-        statusLabel.setVisible(!configured);
     }
 
     private void openSensorSettings(int sensorIndex, String nomeSensor, boolean ignored, Button ownerButton) {
@@ -387,11 +482,6 @@ public class MonitoringController {
         } catch (IOException e) {
             logger.error("Erro ao abrir configuracao da bomba", e);
         }
-    }
-
-    private String formatDecimalValue(Double value) {
-        if (value == null || value == 0.0) return "0";
-        return String.format("%.1f", value);
     }
 
     private String formatFlowRateValue(Double value) {

@@ -1,7 +1,6 @@
 package com.example.demo.controllers;
 
-import com.example.demo.models.SondaReading;
-import com.example.demo.repositories.SondaReadingRepository;
+import com.example.demo.services.SeriesLocais;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -27,6 +26,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javafx.scene.layout.FlowPane;
 import java.util.List;
 import java.util.function.Function;
 
@@ -41,23 +43,18 @@ public class GraficosController {
     private static final double ZOOM_MIN    = 0.5;
     private static final double ZOOM_MAX    = 3.0;
 
-    @Autowired private SondaReadingRepository sondaReadingRepository;
+    @Autowired private SeriesLocais seriesLocais;
 
     @FXML private DatePicker dateStart;
     @FXML private DatePicker dateEnd;
     @FXML private TextField  timeStart;
     @FXML private TextField  timeEnd;
-    @FXML private CheckBox   chkPesoColuna;
-    @FXML private CheckBox   chkTorqueTubos;
-    @FXML private CheckBox   chkTorqueFlutuante;
-    @FXML private CheckBox   chkPressaoBomba;
-    @FXML private CheckBox   chkFlowRate;
     @FXML private Label      lblZoom;
     @FXML private VBox       chartsContainer;
+    @FXML private FlowPane   painelVariaveis;
     @FXML private ScrollPane scrollPane;
 
     private double zoom = 1.0;
-    private List<SondaReading> readings = List.of();
 
     @FXML
     public void initialize() {
@@ -66,25 +63,81 @@ public class GraficosController {
         dateEnd.setValue(today);
         timeStart.setText("00:00:00");
         timeEnd.setText("23:59:59");
-        chkPesoColuna.setSelected(true);
-        chkTorqueTubos.setSelected(true);
-        chkTorqueFlutuante.setSelected(true);
-        chkPressaoBomba.setSelected(true);
-        chkFlowRate.setSelected(true);
 
         // carrega automaticamente ao abrir a tela
         onAtualizar();
     }
+
+    /**
+     * Uma série do H2 local: os pontos de um dispositivo na janela escolhida.
+     *
+     * @param chave  {@code dispositivoId|serie} — o stroke produz três sob o mesmo dispositivo
+     * @param rotulo o que aparece na caixa de seleção e no título do gráfico
+     */
+    /** As séries encontradas na janela, e quais o usuário quer ver. */
+    private List<SeriesLocais.SerieLocal> series = List.of();
+    private final Map<String, CheckBox> selecoes = new LinkedHashMap<>();
+
+    /**
+     * Paleta ciclica. Antes cada variavel tinha sua cor fixa no codigo; com o conjunto vindo da
+     * configuracao, a cor passa a ser atribuida por posicao.
+     */
+    private static final Color[] CORES = {
+            Color.web("#7c3aed"), Color.web("#d97706"), Color.web("#0891b2"),
+            Color.web("#dc2626"), Color.web("#1e5a96"), Color.web("#16a34a"),
+            Color.web("#c026d3"), Color.web("#0f766e")
+    };
 
     @FXML
     public void onAtualizar() {
         try {
             LocalDateTime start = LocalDateTime.of(dateStart.getValue(), LocalTime.parse(timeStart.getText().trim()));
             LocalDateTime end   = LocalDateTime.of(dateEnd.getValue(),   LocalTime.parse(timeEnd.getText().trim()));
-            readings = sondaReadingRepository.findByTimestampBetweenOrderByTimestampAsc(start, end);
+            series = seriesLocais.carregar(start, end);
+            sincronizarSelecoes();
             renderAll();
         } catch (Exception e) {
             logger.warn("Erro ao carregar dados: {}", e.getMessage());
+        }
+    }
+
+    /** Uma caixa de seleção por série encontrada, preservando o que já estava marcado. */
+    private void sincronizarSelecoes() {
+        Map<String, Boolean> marcadas = new LinkedHashMap<>();
+        selecoes.forEach((chave, caixa) -> marcadas.put(chave, caixa.isSelected()));
+
+        selecoes.clear();
+        painelVariaveis.getChildren().removeIf(no -> no instanceof CheckBox);
+        for (SeriesLocais.SerieLocal serie : series) {
+            CheckBox caixa = new CheckBox(serie.rotulo() + " (" + serie.unidade() + ")");
+            caixa.setStyle("-fx-font-size: 12;");
+            // Serie nova entra marcada: quem acabou de configurar um card quer ve-lo.
+            caixa.setSelected(marcadas.getOrDefault(serie.chave(), true));
+            caixa.selectedProperty().addListener((obs, a, b) -> renderAll());
+            selecoes.put(serie.chave(), caixa);
+            painelVariaveis.getChildren().add(caixa);
+        }
+    }
+
+    private void renderAll() {
+        lblZoom.setText(String.format("Zoom: %.0f%%", zoom * 100));
+        chartsContainer.getChildren().clear();
+
+        if (series.isEmpty()) {
+            Label lbl = new Label("Nenhum dado encontrado. Ajuste o periodo e clique em Atualizar.");
+            lbl.setStyle("-fx-font-size: 13; -fx-text-fill: #5a667a;");
+            chartsContainer.getChildren().add(lbl);
+            return;
+        }
+
+        int cor = 0;
+        for (SeriesLocais.SerieLocal serie : series) {
+            CheckBox caixa = selecoes.get(serie.chave());
+            if (caixa != null && caixa.isSelected()) {
+                chartsContainer.getChildren().add(buildChartBox(serie, CORES[cor % CORES.length],
+                        CORES[(cor + 3) % CORES.length]));
+            }
+            cor++;
         }
     }
 
@@ -92,44 +145,11 @@ public class GraficosController {
     @FXML public void onZoomOut() { zoom = Math.max(zoom - ZOOM_STEP, ZOOM_MIN); renderAll(); }
     @FXML public void onReset()   { zoom = 1.0; renderAll(); }
 
-    private void renderAll() {
-        lblZoom.setText(String.format("Zoom: %.0f%%", zoom * 100));
-        chartsContainer.getChildren().clear();
-
-        if (readings.isEmpty()) {
-            Label lbl = new Label("Nenhum dado encontrado. Ajuste o periodo e clique em Atualizar.");
-            lbl.setStyle("-fx-font-size: 13; -fx-text-fill: #5a667a;");
-            chartsContainer.getChildren().add(lbl);
-            return;
-        }
-
-        if (chkPesoColuna.isSelected())
-            chartsContainer.getChildren().add(buildChartBox("Peso da Coluna", "lbf",
-                    r -> r.getPesoColunLbf(), Color.web("#7c3aed"), Color.web("#f59e0b")));
-
-        if (chkTorqueTubos.isSelected())
-            chartsContainer.getChildren().add(buildChartBox("Torque Ch. Hid. Tubos", "lbf·ft",
-                    r -> r.getTorqueTubos(), Color.web("#d97706"), Color.web("#06b6d4")));
-
-        if (chkTorqueFlutuante.isSelected())
-            chartsContainer.getChildren().add(buildChartBox("Torque Ch. Flutuante", "lbf·ft",
-                    r -> r.getTorqueFluante(), Color.web("#0891b2"), Color.web("#f97316")));
-
-        if (chkPressaoBomba.isSelected())
-            chartsContainer.getChildren().add(buildChartBox("Pressão Bomba / ESCP", "psi",
-                    r -> r.getPressaoBomba(), Color.web("#dc2626"), Color.web("#16a34a")));
-
-        if (chkFlowRate.isSelected())
-            chartsContainer.getChildren().add(buildChartBox("Vazão", "bbl/min",
-                    r -> r.getVazaoBblMin(), Color.web("#1e5a96"), Color.web("#c50d15")));
-    }
-
-    private VBox buildChartBox(String title, String unit,
-                                Function<SondaReading, Double> extractor,
-                                Color lineColor, Color smoothColor) {
-        List<Double> values = readings.stream()
-                .map(r -> { Double v = extractor.apply(r); return v != null ? v : 0.0; })
-                .toList();
+    private VBox buildChartBox(SeriesLocais.SerieLocal serie, Color lineColor, Color smoothColor) {
+        String title = serie.rotulo();
+        String unit = serie.unidade();
+        List<Double> values = serie.valores();
+        List<LocalDateTime> instantes = serie.instantes();
 
         double w = BASE_WIDTH  * zoom;
         double h = BASE_HEIGHT * zoom;
@@ -137,20 +157,18 @@ public class GraficosController {
         Canvas canvas = new Canvas(w, h);
         CheckBox chkOriginal = new CheckBox("Original");
         CheckBox chkSmooth = new CheckBox("Suavizada");
-        chkOriginal.setSelected(true);
-        chkSmooth.setSelected(true);
         chkOriginal.setStyle("-fx-font-size: 12; -fx-text-fill: #061c39;");
         chkSmooth.setStyle("-fx-font-size: 12; -fx-text-fill: #061c39;");
-        drawChart(canvas.getGraphicsContext2D(), w, h, values, unit, lineColor, smoothColor,
+        drawChart(canvas.getGraphicsContext2D(), w, h, values, instantes, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected());
 
         // zoom via scroll do mouse
         canvas.setOnScroll(e -> {
             if (e.getDeltaY() > 0) onZoomIn(); else onZoomOut();
         });
-        chkOriginal.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, unit, lineColor, smoothColor,
+        chkOriginal.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, instantes, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected()));
-        chkSmooth.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, unit, lineColor, smoothColor,
+        chkSmooth.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, instantes, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected()));
 
         Label titleLabel = new Label(title);
@@ -168,8 +186,12 @@ public class GraficosController {
         return box;
     }
 
+    /**
+     * @param instantes os instantes dos MESMOS pontos de {@code values} — cada série tem os seus,
+     *                  porque grandeza sem valor não é gravada (RN-099) e os tamanhos diferem
+     */
     private void drawChart(GraphicsContext gc, double w, double h,
-                            List<Double> values, String unit,
+                            List<Double> values, List<LocalDateTime> instantes, String unit,
                             Color lineColor, Color smoothColor,
                             boolean showOriginal, boolean showSmooth) {
         double pad    = 52 * zoom;
@@ -227,13 +249,12 @@ public class GraficosController {
         // labels de tempo
         gc.setFill(Color.web("#5a667a"));
         gc.setFont(Font.font("System", 9 * zoom));
-        int labelCount = Math.min(6, readings.size());
+        int labelCount = Math.min(6, instantes.size());
         for (int i = 0; i < labelCount; i++) {
-            int idx = labelCount == 1 ? 0 : (int) Math.round((readings.size() - 1.0) * i / (labelCount - 1));
+            int idx = labelCount == 1 ? 0 : (int) Math.round((instantes.size() - 1.0) * i / (labelCount - 1));
             if (idx >= pts.size()) continue;
             double[] pt  = pts.get(idx);
-            String   lbl = readings.get(idx).getTimestamp() != null
-                    ? readings.get(idx).getTimestamp().format(TIME_FMT) : "";
+            String   lbl = instantes.get(idx) != null ? instantes.get(idx).format(TIME_FMT) : "";
             gc.fillText(lbl, pt[0] - 12 * zoom, chartY + chartH + 14 * zoom);
             gc.setStroke(Color.web("#d1d5db"));
             gc.setLineWidth(0.5 * zoom);

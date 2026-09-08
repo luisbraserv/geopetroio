@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import java.util.List;
 import com.example.demo.models.AppSettings;
 import com.example.demo.models.ChaveHidraulicaConfig;
 import com.example.demo.models.PesoColunaCalculo;
@@ -104,6 +105,25 @@ public class SondaService {
         torqueFluanteConfigurado = torqueFlutuanteLbfFt != null;
 
         validarStatus();
+    }
+
+    /**
+     * As grandezas do último ciclo, já convertidas — a fonte da tela desde o passo 7.
+     *
+     * <p>Substitui os campos fixos: a tela monta os cards a partir <b>desta lista</b>, então uma
+     * unidade com dois tanques e três torques aparece inteira, sem coluna reservada para nada.
+     *
+     * <p>Lista imutável trocada por referência: a thread de leitura do CLP escreve, a da interface
+     * lê, e nenhuma das duas vê um estado pela metade.
+     */
+    private volatile List<LeituraDeCards.Grandeza> grandezas = List.of();
+
+    public void atualizarGrandezas(List<LeituraDeCards.Grandeza> novas) {
+        this.grandezas = novas == null ? List.of() : List.copyOf(novas);
+    }
+
+    public List<LeituraDeCards.Grandeza> grandezas() {
+        return grandezas;
     }
 
     public synchronized void updateFlowRate(Double flowRateBblMin, Double stroke) {

@@ -1163,3 +1163,36 @@ na tela de cards, que mostra "ainda não calibrado".
 
 ⚠️ **Publicar zero foi recusado.** Zero é um número: entra no histórico, aparece no gráfico e passa
 por medição real — um alarme de peso baixo poderia disparar sobre uma sonda que ninguém calibrou.
+
+### RN-100 · O histórico local é por grandeza, e tem prazo
+**[DECIDIDO 2026-09-08]** O H2 da estação passa a gravar **uma linha por grandeza**, com
+`dispositivoId`, `serie`, `tipo`, `unidade`, `enderecoDb`, valor e valor bruto — a mesma forma do que
+é publicado ([RN-097](#rn-097--a-mensagem-de-telemetria-se-descreve)).
+
+Substitui a tabela de colunas fixas (peso, dois torques, uma pressão, vazão, stroke), que era o
+espelho de um mapeamento fixo e não conseguia representar um terceiro card de torque, um de
+temperatura ou um de tanque.
+
+⚠️ **Grandeza sem valor não é gravada**, como não é publicada
+([RN-099](#rn-099--grandeza-sem-valor-não-é-publicada)). Séries têm tamanhos diferentes, e cada uma
+carrega os seus instantes — completar com zero produziria um gráfico que desce até o chão e volta.
+
+**Grava o que está ativo, não só o visível:** visibilidade controla publicação, não gravação
+([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). O registro local é da
+estação.
+
+### ⚠️ A retenção passou a existir porque não existia
+
+**[FATO]** A tabela local **nunca teve poda**. Com uma linha por ciclo eram ~86 mil linhas por dia,
+~31 milhões por ano, e ninguém tinha reparado — a máquina aguenta e o sintoma demora.
+
+Uma linha por grandeza multiplica isso por N: com 8 cards a 1 Hz são **~691 mil linhas por dia**.
+Multiplicar por oito um crescimento que já era ilimitado, numa máquina em sonda, seria trocar um
+problema lento por um rápido.
+
+**[DECIDIDO 2026-09-08] Retenção de 180 dias**, configurável em `app.retencao-leituras-dias`; zero
+desliga e restaura o comportamento anterior.
+
+⚠️ **Isto apaga dado de medição.** Uma carta de operação de um poço de seis meses atrás deixa de
+poder ser gerada *nesta estação* depois do prazo. O histórico longo vive no InfluxDB, com 5 anos, e
+chega ao Front pelo REST — mas o Desktop lê o H2 local, não o InfluxDB.

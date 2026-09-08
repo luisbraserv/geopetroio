@@ -1,8 +1,8 @@
 package com.example.demo.controllers;
 
 import com.example.demo.models.OperationChartRequest;
-import com.example.demo.models.SondaReading;
-import com.example.demo.repositories.SondaReadingRepository;
+import com.example.demo.services.SeriesLocais;
+
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -35,7 +35,7 @@ public class ChartPreviewController {
     private static final double ZOOM_MIN    = 0.5;
     private static final double ZOOM_MAX    = 3.0;
 
-    @Autowired private SondaReadingRepository sondaReadingRepository;
+    @Autowired private SeriesLocais seriesLocais;
 
     @FXML private Label      lblTitulo;
     @FXML private Label      lblZoom;
@@ -44,12 +44,13 @@ public class ChartPreviewController {
 
     private double zoom = 1.0;
     private OperationChartRequest request;
-    private List<SondaReading>    readings;
+    private List<SeriesLocais.SerieLocal> series = List.of();
 
     public void configurar(OperationChartRequest request) {
         this.request  = request;
-        this.readings = sondaReadingRepository.findByTimestampBetweenOrderByTimestampAsc(
-                request.getStart(), request.getEnd());
+        this.series = seriesLocais.carregar(request.getStart(), request.getEnd()).stream()
+                .filter(s -> request.inclui(s.chave()))
+                .toList();
         lblTitulo.setText("Visualização — " + request.getTitle());
         renderAll();
     }
@@ -63,40 +64,34 @@ public class ChartPreviewController {
         lblZoom.setText(String.format("Zoom: %.0f%%", zoom * 100));
         chartsContainer.getChildren().clear();
 
-        if (readings.isEmpty()) {
+        if (series.isEmpty()) {
             Label empty = new Label("Nenhum dado encontrado no período selecionado.");
             empty.setStyle("-fx-font-size: 14; -fx-text-fill: #5a667a;");
             chartsContainer.getChildren().add(empty);
             return;
         }
 
-        if (request.isIncludePesoColuna())
-            chartsContainer.getChildren().add(buildChart("Peso da Coluna", "lbf",
-                    r -> r.getPesoColunLbf(), Color.web("#7c3aed"), Color.web("#f59e0b")));
-
-        if (request.isIncludeTorqueTubos())
-            chartsContainer.getChildren().add(buildChart("Torque Ch. Hid. Tubos", "lbf·ft",
-                    r -> r.getTorqueTubos(), Color.web("#d97706"), Color.web("#06b6d4")));
-
-        if (request.isIncludeTorqueFlutuante())
-            chartsContainer.getChildren().add(buildChart("Torque Ch. Flutuante", "lbf·ft",
-                    r -> r.getTorqueFluante(), Color.web("#0891b2"), Color.web("#f97316")));
-
-        if (request.isIncludePressaoBomba())
-            chartsContainer.getChildren().add(buildChart("Pressão Bomba / ESCP", "psi",
-                    r -> r.getPressaoBomba(), Color.web("#dc2626"), Color.web("#16a34a")));
-
-        if (request.isIncludeFlowRate())
-            chartsContainer.getChildren().add(buildChart("Vazão", "bbl/min",
-                    r -> r.getVazaoBblMin(), Color.web("#1e5a96"), Color.web("#c50d15")));
+        // Uma serie por card gravado na janela, na ordem em que aparecem. Antes eram cinco fixas.
+        int cor = 0;
+        for (SeriesLocais.SerieLocal serie : series) {
+            chartsContainer.getChildren().add(buildChart(serie,
+                    CORES[cor % CORES.length], CORES[(cor + 3) % CORES.length]));
+            cor++;
+        }
     }
 
-    private VBox buildChart(String title, String unit,
-                             Function<SondaReading, Double> extractor,
-                             Color lineColor, Color smoothColor) {
-        List<Double> values = readings.stream()
-                .map(r -> { Double v = extractor.apply(r); return v != null ? v : 0.0; })
-                .toList();
+    /** Paleta ciclica: com o conjunto vindo da configuracao, a cor e atribuida por posicao. */
+    private static final Color[] CORES = {
+            Color.web("#7c3aed"), Color.web("#d97706"), Color.web("#0891b2"),
+            Color.web("#dc2626"), Color.web("#1e5a96"), Color.web("#16a34a"),
+            Color.web("#c026d3"), Color.web("#0f766e")
+    };
+
+    private VBox buildChart(SeriesLocais.SerieLocal serie, Color lineColor, Color smoothColor) {
+        String title = serie.rotulo();
+        String unit = serie.unidade();
+        List<Double> values = serie.valores();
+        List<java.time.LocalDateTime> instantes = serie.instantes();
 
         double w = BASE_WIDTH  * zoom;
         double h = BASE_HEIGHT * zoom;
@@ -109,16 +104,16 @@ public class ChartPreviewController {
         chkSmooth.setSelected(true);
         chkOriginal.setStyle("-fx-font-size: 12; -fx-text-fill: #061c39;");
         chkSmooth.setStyle("-fx-font-size: 12; -fx-text-fill: #061c39;");
-        drawChart(gc, w, h, values, title, unit, lineColor, smoothColor,
+        drawChart(gc, w, h, values, instantes, title, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected());
 
         // zoom via scroll do mouse
         canvas.setOnScroll(e -> {
             if (e.getDeltaY() > 0) onZoomIn(); else onZoomOut();
         });
-        chkOriginal.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, title, unit, lineColor, smoothColor,
+        chkOriginal.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, instantes, title, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected()));
-        chkSmooth.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, title, unit, lineColor, smoothColor,
+        chkSmooth.setOnAction(e -> drawChart(canvas.getGraphicsContext2D(), w, h, values, instantes, title, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected()));
 
         Label titleLabel = new Label(title);
@@ -137,7 +132,8 @@ public class ChartPreviewController {
     }
 
     private void drawChart(GraphicsContext gc, double w, double h,
-                            List<Double> values, String title, String unit,
+                            List<Double> values, List<java.time.LocalDateTime> instantes,
+                            String title, String unit,
                             Color lineColor, Color smoothColor,
                             boolean showOriginal, boolean showSmooth) {
         double pad = 48 * zoom;
@@ -196,13 +192,12 @@ public class ChartPreviewController {
         // rótulos de tempo (6 labels)
         gc.setFill(Color.web("#5a667a"));
         gc.setFont(Font.font("System", 9 * zoom));
-        int labelCount = Math.min(6, readings.size());
+        int labelCount = Math.min(6, instantes.size());
         for (int i = 0; i < labelCount; i++) {
-            int idx = labelCount == 1 ? 0 : (int) Math.round((readings.size() - 1.0) * i / (labelCount - 1));
+            int idx = labelCount == 1 ? 0 : (int) Math.round((instantes.size() - 1.0) * i / (labelCount - 1));
             if (idx >= pts.size()) continue;
             double[] pt = pts.get(idx);
-            String time = readings.get(idx).getTimestamp() != null
-                    ? readings.get(idx).getTimestamp().format(TIME_FMT) : "";
+            String time = instantes.get(idx) != null ? instantes.get(idx).format(TIME_FMT) : "";
             gc.fillText(time, pt[0] - 12 * zoom, chartY + chartH + 14 * zoom);
             gc.setStroke(Color.web("#d1d5db"));
             gc.setLineWidth(0.5 * zoom);

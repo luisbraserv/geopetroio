@@ -5,6 +5,9 @@ import com.example.demo.config.JavaFXConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
+// A poda do historico local roda agendada; sem isto ela nunca dispararia e a tabela voltaria a
+// crescer sem limite — que era o estado anterior, e o motivo de ela existir.
+@org.springframework.scheduling.annotation.EnableScheduling
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.example.demo"})
 public class DesktopSondaGeopetroIoApplication {

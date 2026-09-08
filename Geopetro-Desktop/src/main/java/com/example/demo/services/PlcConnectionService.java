@@ -3,14 +3,10 @@ package com.example.demo.services;
 import com.example.demo.models.AppSettings;
 import com.example.demo.models.CardsDaUnidade;
 import com.example.demo.models.CardsDaUnidade.Card;
-import com.example.demo.models.CardsDaUnidade.Tipo;
+import com.example.demo.models.LeituraLocal;
 import com.example.demo.models.LeituraPublicada;
 import com.example.demo.models.EstadoAtual;
-import com.example.demo.models.FlowRateReading;
-import com.example.demo.models.SensorPressaoConfig;
-import com.example.demo.models.SondaReading;
-import com.example.demo.repositories.FlowRateReadingRepository;
-import com.example.demo.repositories.SondaReadingRepository;
+import com.example.demo.repositories.LeituraLocalRepository;
 import com.sourceforge.snap7.moka7.S7;
 import com.sourceforge.snap7.moka7.S7Client;
 import org.slf4j.Logger;
@@ -40,8 +36,7 @@ public class PlcConnectionService {
     private final SettingsService settingsService;
     private final StrokeCalculatorService strokeCalculatorService;
     private final FlowRateCalculatorService flowRateCalculatorService;
-    private final FlowRateReadingRepository flowRateReadingRepository;
-    private final SondaReadingRepository sondaReadingRepository;
+    private final LeituraLocalRepository leituraLocalRepository;
     private final SondaService sondaService;
     private final TelemetriaMqttService telemetriaMqttService;
     private final TelemetriaRealtimeService telemetriaRealtimeService;
@@ -57,8 +52,7 @@ public class PlcConnectionService {
             SettingsService settingsService,
             StrokeCalculatorService strokeCalculatorService,
             FlowRateCalculatorService flowRateCalculatorService,
-            FlowRateReadingRepository flowRateReadingRepository,
-            SondaReadingRepository sondaReadingRepository,
+            LeituraLocalRepository leituraLocalRepository,
             SondaService sondaService,
             TelemetriaMqttService telemetriaMqttService,
             TelemetriaRealtimeService telemetriaRealtimeService,
@@ -67,8 +61,7 @@ public class PlcConnectionService {
         this.settingsService = settingsService;
         this.strokeCalculatorService = strokeCalculatorService;
         this.flowRateCalculatorService = flowRateCalculatorService;
-        this.flowRateReadingRepository = flowRateReadingRepository;
-        this.sondaReadingRepository = sondaReadingRepository;
+        this.leituraLocalRepository = leituraLocalRepository;
         this.sondaService = sondaService;
         this.telemetriaMqttService = telemetriaMqttService;
         this.telemetriaRealtimeService = telemetriaRealtimeService;
@@ -76,16 +69,6 @@ public class PlcConnectionService {
         this.calibracoes = calibracoes;
     }
 
-    /**
-     * Conecta usando a configuração da unidade — RN-088.
-     *
-     * <p>⚠️ <b>Sem documento de cards, não conecta.</b> IP, rack, slot, número do DB e intervalo
-     * vêm todos dele. Antes vinham do arquivo desta estação e de constantes no código; a mudança é
-     * o passo 3b.
-     *
-     * <p>Unidade não configurada é <b>estado normal</b> (RN-092), não erro: a frota nasce vazia e
-     * cada unidade vira quando alguém a configura pela tela de Cards.
-     */
     /**
      * O que aconteceu ao tentar conectar.
      *
@@ -107,6 +90,15 @@ public class PlcConnectionService {
         }
     }
 
+    /**
+     * Conecta usando a configuração da unidade — RN-088.
+     *
+     * <p>⚠️ <b>Sem documento de cards, não conecta.</b> IP, rack, slot, número do DB e intervalo
+     * vêm todos dele. Antes vinham do arquivo desta estação e de constantes no código.
+     *
+     * <p>Unidade não configurada é <b>estado normal</b> (RN-092), não erro: a frota nasce vazia e
+     * cada unidade vira quando alguém a configura pela tela de Cards.
+     */
     public synchronized Resultado connectUsingSavedIp() {
         var documento = telemetriaRealtimeService.cardsAtuais(settingsService.loadSettings()).orElse(null);
         if (documento == null || documento.cards().isEmpty()) {
@@ -232,7 +224,9 @@ public class PlcConnectionService {
                                 .mapToDouble(LeituraDeCards.Grandeza::bruto).findFirst().orElse(0));
             }
 
-            atualizarTelaEHistoricoLocal(settings, grandezas);
+            // A tela recebe as grandezas ja convertidas e monta os cards a partir delas.
+            sondaService.atualizarGrandezas(grandezas);
+            gravarHistoricoLocal(grandezas);
 
             List<LeituraPublicada> leituras = LeituraDeCards.paraPublicar(grandezas);
             if (leituras.isEmpty()) {
@@ -257,53 +251,36 @@ public class PlcConnectionService {
     }
 
     /**
-     * ⚠️ <b>Ponte transitória — morre no passo 7.</b>
+     * Grava no H2 local <b>uma linha por grandeza</b> — a ponte por posição saiu no passo 7.
      *
-     * <p>A tela do Desktop e o H2 local ainda têm colunas fixas: peso, dois torques, uma pressão,
-     * vazão e stroke. Enquanto for assim, os cards precisam ser <b>encaixados por posição</b> nelas
-     * — exatamente o acoplamento que o passo 3b removeu do caminho de leitura.
+     * <p>Antes este método encaixava os cards em colunas fixas (peso, dois torques, uma pressão) e
+     * um terceiro card de torque simplesmente não tinha onde caber. Agora cada grandeza é uma linha
+     * com o próprio {@code dispositivoId}, e a tabela representa qualquer configuração.
      *
-     * <p>É deliberado e tem prazo: o dashboard passa a montar do documento no passo 7, junto com o
-     * termômetro e o desenho do tanque, e este método sai inteiro. Até lá, um terceiro card de
-     * torque é lido e publicado corretamente, mas <b>não aparece</b> na tela desta estação.
+     * <p>⚠️ <b>Grandeza sem valor não é gravada</b>, pelo mesmo motivo de não ser publicada
+     * (RN-099): zero entraria no gráfico e na carta de operação como medição real. Uma lacuna é
+     * honesta.
+     *
+     * <p>Grava o que está <b>ativo</b>, não só o visível: visibilidade controla publicação, não
+     * gravação (RN-037). O registro local é da estação.
      */
-    private void atualizarTelaEHistoricoLocal(AppSettings settings, List<LeituraDeCards.Grandeza> grandezas) {
-        Double peso = primeiro(grandezas, Tipo.PESO, 0);
-        Double torque1 = primeiro(grandezas, Tipo.TORQUE, 0);
-        Double torque2 = primeiro(grandezas, Tipo.TORQUE, 1);
-        Double pressao = primeiro(grandezas, Tipo.PRESSAO, 0);
-
-        var stroke = grandezas.stream()
-                .filter(g -> g.tipo() == Tipo.CONTADOR_STROKE && LeituraDeCards.SERIE_STROKE.equals(g.serie()))
-                .findFirst().orElse(null);
-        var vazao = grandezas.stream()
-                .filter(g -> g.tipo() == Tipo.CONTADOR_STROKE && LeituraDeCards.SERIE_VAZAO.equals(g.serie()))
-                .findFirst().orElse(null);
-
-        long strokeAtual = stroke != null && stroke.temValor() ? stroke.valor().longValue() : 0;
-        double vazaoBblMin = vazao != null && vazao.temValor() ? vazao.valor() : 0;
-
-        // A tela ja recebe os valores CONVERTIDOS: quem converte agora e LeituraDeCards, com a
-        // calibracao por dispositivoId. O SondaService deixa de refazer a conta.
-        sondaService.atualizarValoresConvertidos(peso, torque1, torque2, pressao, (double) strokeAtual);
-        sondaService.updateFlowRate(vazaoBblMin, (double) strokeAtual);
-
-        if (settings.getCardVisibility().isVazao() && stroke != null) {
-            saveFlowRateReading(strokeAtual, (long) stroke.bruto(),
-                    vazao != null && vazao.temValor() ? vazao.valor() / Math.max(1, strokeAtual) : 0, vazaoBblMin);
-        }
-        saveSondaReading(strokeAtual, vazaoBblMin);
-    }
-
-    /** A n-ésima grandeza de um tipo, ou {@code null} se não houver — ver a ⚠️ acima. */
-    private static Double primeiro(List<LeituraDeCards.Grandeza> grandezas, Tipo tipo, int posicao) {
-        return grandezas.stream()
-                .filter(g -> g.tipo() == tipo)
-                .skip(posicao)
-                .findFirst()
+    private void gravarHistoricoLocal(List<LeituraDeCards.Grandeza> grandezas) {
+        LocalDateTime instante = LocalDateTime.now();
+        List<LeituraLocal> linhas = grandezas.stream()
                 .filter(LeituraDeCards.Grandeza::temValor)
-                .map(LeituraDeCards.Grandeza::valor)
-                .orElse(null);
+                .map(g -> new LeituraLocal(instante, g.dispositivoId(),
+                        g.serie() == null || g.serie().isBlank() ? null : g.serie(),
+                        g.tipo().name(), g.unidade(), g.enderecoDb(), g.valor(), g.bruto()))
+                .toList();
+        if (linhas.isEmpty()) {
+            return;
+        }
+        try {
+            leituraLocalRepository.saveAll(linhas);
+        } catch (Exception e) {
+            // O H2 local nao pode derrubar a leitura: a sonda continua medindo e publicando.
+            logger.error("Erro ao gravar o historico local", e);
+        }
     }
 
     /** Lê de uma vez a faixa que cobre todos os cards ativos, no DB que o documento declara. */
@@ -317,30 +294,6 @@ public class PlcConnectionService {
                     .formatted(db, faixa.inicio(), faixa.inicio() + faixa.tamanho(), result));
         }
         return BlocoDeLeitura.de(buffer, faixa.inicio());
-    }
-
-    private void saveSondaReading(long currentStroke, double flowRateBblMin) {
-        try {
-            sondaReadingRepository.save(new SondaReading(
-                    LocalDateTime.now(),
-                    sondaService.getPesoColumLbf(),
-                    sondaService.getTorqueTubos(),
-                    sondaService.getTorqueFluante(),
-                    sondaService.getPressao04(),
-                    flowRateBblMin,
-                    currentStroke));
-        } catch (Exception e) {
-            logger.error("Erro ao salvar SondaReading no H2", e);
-        }
-    }
-
-    private void saveFlowRateReading(long currentStroke, long cumulativeStroke, double pumpConstant, double flowRateBblMin) {
-        try {
-            flowRateReadingRepository.save(new FlowRateReading(
-                    LocalDateTime.now(), currentStroke, cumulativeStroke, pumpConstant, flowRateBblMin));
-        } catch (Exception e) {
-            logger.error("Erro ao salvar leitura no H2", e);
-        }
     }
 
     private synchronized void disconnectSilently() {

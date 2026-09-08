@@ -3,6 +3,8 @@ package com.example.demo.controllers;
 import com.example.demo.models.GeneratedOperationChart;
 import com.example.demo.models.OperationChartRequest;
 import com.example.demo.services.OperationChartPdfService;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -41,11 +43,9 @@ public class GenerateOperationChartController {
     @FXML private TextField  timeEnd;
     @FXML private TextField  txtTitle;
     @FXML private TextField  txtWellName;
-    @FXML private CheckBox   chkPesoColuna;
-    @FXML private CheckBox   chkTorqueTubos;
-    @FXML private CheckBox   chkTorqueFlutuante;
-    @FXML private CheckBox   chkPressaoBomba;
-    @FXML private CheckBox   chkFlowRate;
+    @Autowired private com.example.demo.services.SeriesLocais seriesLocais;
+
+    @FXML private VBox       painelSeries;
     @FXML private Button     btnGenerate;
     @FXML private Button     btnPreview;
     @FXML private Button     btnCancel;
@@ -59,8 +59,14 @@ public class GenerateOperationChartController {
         dateEnd.setValue(today);
         timeStart.setText("00:00:00");
         timeEnd.setText("23:59:59");
-        chkFlowRate.setSelected(true);
-        chkPesoColuna.setSelected(true);
+
+        // As series sao as que existem no periodo escolhido, entao a lista se refaz quando ele muda.
+        atualizarSeries();
+        dateStart.valueProperty().addListener((o, a, b) -> atualizarSeries());
+        dateEnd.valueProperty().addListener((o, a, b) -> atualizarSeries());
+        timeStart.focusedProperty().addListener((o, a, b) -> { if (!b) atualizarSeries(); });
+        timeEnd.focusedProperty().addListener((o, a, b) -> { if (!b) atualizarSeries(); });
+
         btnGenerate.setOnAction(e -> generateChart());
         btnPreview.setOnAction(e  -> openPreview());
         btnCancel.setOnAction(e   -> closeWindow());
@@ -115,16 +121,64 @@ public class GenerateOperationChartController {
         }
     }
 
+    /** Uma caixa por serie encontrada no periodo, com a chave {@code dispositivoId|serie}. */
+    private final java.util.Map<String, CheckBox> caixas = new java.util.LinkedHashMap<>();
+
+    /**
+     * Refaz a lista de variaveis a partir do que a unidade gravou no periodo.
+     *
+     * <p>⚠️ Antes eram cinco caixas fixas no FXML. Uma unidade com dois tanques nao tinha como
+     * inclui-los na carta — e a carta e entregavel ao cliente.
+     */
+    private void atualizarSeries() {
+        java.util.Map<String, Boolean> marcadas = new java.util.LinkedHashMap<>();
+        caixas.forEach((chave, caixa) -> marcadas.put(chave, caixa.isSelected()));
+
+        caixas.clear();
+        painelSeries.getChildren().clear();
+        try {
+            for (var serie : seriesLocais.carregar(inicio(), fim())) {
+                CheckBox caixa = new CheckBox(serie.rotulo() + " (" + serie.unidade() + ")");
+                caixa.setStyle("-fx-font-size: 13;");
+                caixa.setSelected(marcadas.getOrDefault(serie.chave(), true));
+                caixas.put(serie.chave(), caixa);
+                painelSeries.getChildren().add(caixa);
+            }
+        } catch (RuntimeException e) {
+            // Periodo meio digitado, por exemplo. A lista fica vazia ate o campo ficar valido.
+            caixas.clear();
+        }
+        if (caixas.isEmpty()) {
+            Label vazio = new Label("Nenhum dado gravado no periodo escolhido.");
+            vazio.setStyle("-fx-font-size: 12; -fx-text-fill: #5a667a;");
+            painelSeries.getChildren().add(vazio);
+        }
+    }
+
+    private java.util.List<String> seriesEscolhidas() {
+        return caixas.entrySet().stream().filter(e -> e.getValue().isSelected())
+                .map(java.util.Map.Entry::getKey).toList();
+    }
+
+    private LocalDateTime inicio() {
+        return LocalDateTime.of(dateStart.getValue(), parseTime(timeStart.getText(), "Hora inicio"));
+    }
+
+    private LocalDateTime fim() {
+        return LocalDateTime.of(dateEnd.getValue(), parseTime(timeEnd.getText(), "Hora fim"));
+    }
+
     private OperationChartRequest buildRequest() {
         String title    = txtTitle.getText()    == null ? "" : txtTitle.getText().trim();
         String wellName = txtWellName.getText() == null ? "" : txtWellName.getText().trim();
         if (title.isBlank())    throw new IllegalArgumentException("Informe o Titulo da Carta.");
         if (wellName.isBlank()) throw new IllegalArgumentException("Informe o Nome do Poco.");
 
-        boolean anySelected = chkPesoColuna.isSelected() || chkTorqueTubos.isSelected()
-                || chkTorqueFlutuante.isSelected() || chkPressaoBomba.isSelected()
-                || chkFlowRate.isSelected();
-        if (!anySelected) throw new IllegalArgumentException("Selecione ao menos uma variavel.");
+        if (seriesEscolhidas().isEmpty()) {
+            throw new IllegalArgumentException(caixas.isEmpty()
+                    ? "Nao ha dados gravados no periodo escolhido."
+                    : "Selecione ao menos uma variavel.");
+        }
 
         LocalDate startDate = dateStart.getValue();
         LocalDate endDate   = dateEnd.getValue();
@@ -134,10 +188,7 @@ public class GenerateOperationChartController {
         LocalDateTime end   = LocalDateTime.of(endDate,   parseTime(timeEnd.getText(),   "Hora fim"));
         if (end.isBefore(start)) throw new IllegalArgumentException("Data/Hora fim deve ser maior ou igual a Data/Hora inicio.");
 
-        return new OperationChartRequest(title, wellName, start, end,
-                chkPesoColuna.isSelected(), chkTorqueTubos.isSelected(),
-                chkTorqueFlutuante.isSelected(), chkPressaoBomba.isSelected(),
-                chkFlowRate.isSelected());
+        return new OperationChartRequest(title, wellName, start, end, seriesEscolhidas());
     }
 
     private LocalTime parseTime(String value, String fieldName) {
