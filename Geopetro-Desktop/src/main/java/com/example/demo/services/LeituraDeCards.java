@@ -156,10 +156,8 @@ public class LeituraDeCards {
 				case TORQUE -> grandezas.add(torque(card, bloco));
 				case PRESSAO -> grandezas.add(pressao(card, bloco));
 				case CONTADOR_STROKE -> grandezas.addAll(stroke(card, bloco));
-				// Passo 7. Ate la o bruto aparece e o motivo fica dito, em vez de um zero mudo.
-				case TEMPERATURA, NIVEL_TANQUE -> grandezas.add(Grandeza.sem(card, "",
-						card.tipo() == Tipo.TEMPERATURA ? unidadeTemperatura(card) : "bbl",
-						bloco.word(card.byteInicial()), "conversao deste tipo ainda nao implementada"));
+				case TEMPERATURA -> grandezas.add(temperatura(card, bloco));
+				case NIVEL_TANQUE -> grandezas.add(tanque(card, bloco));
 			}
 		}
 		return grandezas;
@@ -228,6 +226,48 @@ public class LeituraDeCards {
 				chave.getTipoMovimento()), "lbf.ft", bruto);
 	}
 
+	/**
+	 * Temperatura — RN-083. A escala tem mínimo e máximo, não só fundo.
+	 *
+	 * <p>Não passa por {@link #psi}: um transmissor de temperatura não mede pressão, e a
+	 * sensibilidade que ajusta um sensor de pressão não tem significado aqui.
+	 */
+	private Grandeza temperatura(Card card, BlocoDeLeitura bloco) {
+		short ax = bloco.word(card.byteInicial());
+		String unidade = ConversaoTemperatura.unidade(card.parametros());
+		avisarSeForaDaFaixa(card, ax);
+
+		Double valor = ConversaoTemperatura.valor(ax, card.parametros());
+		return valor == null
+				? Grandeza.sem(card, "", unidade, ax, "card sem escala de temperatura (minimo e maximo)")
+				: Grandeza.de(card, "", valor, unidade, ax);
+	}
+
+	/**
+	 * Nível do tanque — RN-084, RN-085. O que sai é <b>volume em bbl</b>.
+	 *
+	 * <p>⚠️ O sensor está no topo e mede <b>distância até a superfície</b>. O nível é o que sobra, e
+	 * o volume depende da forma. Ler a distância como se fosse nível daria um tanque que enche
+	 * quando esvazia.
+	 */
+	private Grandeza tanque(Card card, BlocoDeLeitura bloco) {
+		short ax = bloco.word(card.byteInicial());
+		avisarSeForaDaFaixa(card, ax);
+
+		Double volume = ConversaoTanque.volumeBbl(ax, card.parametros());
+		return volume == null
+				? Grandeza.sem(card, "", "bbl", ax, "card sem forma, dimensoes ou distancias do tanque")
+				: Grandeza.de(card, "", volume, "bbl", ax);
+	}
+
+	private void avisarSeForaDaFaixa(Card card, short ax) {
+		if (ConversaoPressao.foraDaFaixa(ax)) {
+			logger.warn("[PLC] Ax fora de {}..{} no card {} (DBW{}): {}",
+					ConversaoPressao.AX_MIN, ConversaoPressao.AX_MAX,
+					card.dispositivoId(), card.byteInicial(), ax);
+		}
+	}
+
 	// ============================================================ contador de stroke
 
 	/**
@@ -272,8 +312,4 @@ public class LeituraDeCards {
 		return constante == null ? 0 : constante;
 	}
 
-	private static String unidadeTemperatura(Card card) {
-		Parametros p = card.parametros();
-		return p == null || p.unidade() == null || p.unidade().isBlank() ? "°C" : p.unidade();
-	}
 }

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.example.demo.models.CardsDaUnidade;
 import com.example.demo.models.CardsDaUnidade.Card;
 import com.example.demo.models.CardsDaUnidade.Parametros;
 import com.example.demo.models.CardsDaUnidade.Tipo;
@@ -305,25 +306,101 @@ class LeituraDeCardsTest {
 		assertTrue(grandezas.get(2).semValorPorque().contains("constante"));
 	}
 
-	// ============================================================ tipos do passo 7
+	// ============================================================ temperatura e tanque
+
+	private static Parametros escala(double minimo, double maximo, String unidade) {
+		return new Parametros(null, minimo, maximo, unidade, null, null, null, null, null, null, null, null);
+	}
+
+	private static Parametros tanqueVertical(double raio, double altura, double dMin, double dMax) {
+		return new Parametros(null, null, null, null, CardsDaUnidade.FormaTanque.CILINDRICO_VERTICAL,
+				raio, altura, null, null, dMin, dMax, null);
+	}
+
+	/** Ax no meio da faixa −50..750 do amplificador. */
+	private static final int AX_MEIO = 350;
 
 	@Test
-	@DisplayName("temperatura e tanque ainda nao convertem, e dizem isso em vez de devolver zero")
-	void tiposDoPasso7() {
+	@DisplayName("temperatura converte pela escala do card, e a unidade vem dele")
+	void temperaturaConverte() {
+		var bloco = bloco(12, 2, bytes -> S7.SetWordAt(bytes, 0, AX_MEIO));
+
+		var g = leitura().converter(
+				List.of(card("TEMPERATURA_01", Tipo.TEMPERATURA, 12, escala(-20, 150, "°C"))), bloco).get(0);
+
+		assertTrue(g.temValor());
+		assertEquals(65.0, g.valor(), 0.0001, "meia faixa de -20..150");
+		assertEquals("°C", g.unidade());
+	}
+
+	@Test
+	@DisplayName("dois cards de temperatura com escalas diferentes nao se contaminam")
+	void temperaturasComEscalasDiferentes() {
 		var bloco = bloco(12, 4, bytes -> {
-			S7.SetWordAt(bytes, 0, 400);
-			S7.SetWordAt(bytes, 2, 300);
+			S7.SetWordAt(bytes, 0, AX_MEIO);
+			S7.SetWordAt(bytes, 2, AX_MEIO);
+		});
+
+		var grandezas = leitura().converter(List.of(
+				card("TEMPERATURA_01", Tipo.TEMPERATURA, 12, escala(0, 100, "°C")),
+				card("TEMPERATURA_02", Tipo.TEMPERATURA, 14, escala(32, 212, "°F"))), bloco);
+
+		// Mesmo Ax: um card de fluido e um de equipamento podem ter escalas bem diferentes.
+		assertEquals(50.0, grandezas.get(0).valor(), 0.0001);
+		assertEquals(122.0, grandezas.get(1).valor(), 0.0001);
+		assertEquals("°F", grandezas.get(1).unidade());
+	}
+
+	@Test
+	@DisplayName("o tanque publica VOLUME em bbl, nao nivel nem distancia")
+	void tanquePublicaVolume() {
+		// Cheio: o sensor no topo le a distancia MINIMA, que corresponde a 4 mA.
+		var bloco = bloco(14, 2, bytes -> S7.SetWordAt(bytes, 0, ConversaoPressao.AX_MIN));
+
+		var g = leitura().converter(
+				List.of(card("NIVEL_TANQUE_01", Tipo.NIVEL_TANQUE, 14, tanqueVertical(1.0, 3.0, 0.0, 3.0))),
+				bloco).get(0);
+
+		assertTrue(g.temValor());
+		assertEquals("bbl", g.unidade());
+		assertEquals(Math.PI * 3.0 * ConversaoTanque.BBL_POR_M3, g.valor(), 0.001);
+	}
+
+	@Test
+	@DisplayName("⚠️ o tanque esvazia quando a distancia cresce, nao o contrario")
+	void tanqueEsvaziaQuandoADistanciaCresce() {
+		// Ler a distancia como se fosse nivel daria um tanque que enche quando esvazia — e o
+		// numero seria plausivel o tempo todo.
+		var p = tanqueVertical(1.0, 3.0, 0.0, 3.0);
+		var leitura = leitura();
+		var card = card("NIVEL_TANQUE_01", Tipo.NIVEL_TANQUE, 14, p);
+
+		double cheio = leitura.converter(List.of(card),
+				bloco(14, 2, b -> S7.SetWordAt(b, 0, ConversaoPressao.AX_MIN))).get(0).valor();
+		double vazio = leitura.converter(List.of(card),
+				bloco(14, 2, b -> S7.SetWordAt(b, 0, ConversaoPressao.AX_MAX))).get(0).valor();
+
+		assertTrue(cheio > vazio, "4 mA e cheio; 20 mA e vazio");
+		assertEquals(0.0, vazio, 0.0001);
+	}
+
+	@Test
+	@DisplayName("temperatura e tanque sem escala devolvem ausencia, com o motivo dito")
+	void semEscalaNaoConverte() {
+		var bloco = bloco(12, 4, bytes -> {
+			S7.SetWordAt(bytes, 0, AX_MEIO);
+			S7.SetWordAt(bytes, 2, AX_MEIO);
 		});
 
 		var grandezas = leitura().converter(List.of(
 				card("TEMPERATURA_01", Tipo.TEMPERATURA, 12, null),
 				card("NIVEL_TANQUE_01", Tipo.NIVEL_TANQUE, 14, null)), bloco);
 
-		grandezas.forEach(g -> {
-			assertFalse(g.temValor());
-			assertTrue(g.semValorPorque().contains("ainda nao implementada"));
-		});
-		assertEquals(400.0, grandezas.get(0).bruto(), "o bruto ja aparece");
+		assertFalse(grandezas.get(0).temValor());
+		assertTrue(grandezas.get(0).semValorPorque().contains("escala de temperatura"));
+		assertFalse(grandezas.get(1).temValor());
+		assertTrue(grandezas.get(1).semValorPorque().contains("tanque"));
+		assertEquals(AX_MEIO, grandezas.get(0).bruto(), "o bruto continua visivel");
 	}
 
 	// ============================================================ limites
