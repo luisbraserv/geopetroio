@@ -75,6 +75,15 @@ public class TelemetriaRealtimeService {
 	private ExecutorService worker;
 	private StompRealtimeClient client;
     private final ConfiguracaoRemotaState configuracaoRemota = new ConfiguracaoRemotaState();
+
+    /**
+     * O documento de cards da unidade — o que o ciclo de leitura consulta a cada volta.
+     *
+     * <p>Chega pelo mesmo canal dos limites de alarme, com guardas proprias de geracao, unidade e
+     * revisao. Sem ele o Desktop nao sabe o que ler (RN-088), entao o cache em disco por tras dele
+     * e o que mantem uma sonda medindo depois de reiniciar sem rede.
+     */
+    private final CardsState cards = new CardsState();
     /** Mesmo login da sessao de configuracao — uma implementacao so, para nao divergirem. */
     private final BackendLogin backendLogin = new BackendLogin(httpClient);
     private Alvo alvoConectado;
@@ -86,6 +95,19 @@ public class TelemetriaRealtimeService {
         AppSettings settings = configuracao.get();
         if (settings == null) return java.util.Optional.empty();
         return configuracaoRemota.atual(chaveCache(alvo(settings)), settings.getUnidadeSondaId());
+    }
+
+    /**
+     * O documento de cards da unidade configurada nesta estacao, se ja tiver chegado ou estiver em
+     * cache.
+     *
+     * <p>Vazio significa unidade nao configurada — estado normal (RN-092), e nao erro.
+     */
+    public java.util.Optional<com.example.demo.models.CardsDaUnidade> cardsAtuais(AppSettings settings) {
+        if (settings == null || settings.getUnidadeSondaId() == null) {
+            return java.util.Optional.empty();
+        }
+        return cards.atual(chaveCache(alvo(settings)), settings.getUnidadeSondaId());
     }
     private String chaveCache(Alvo alvo) { return alvo == null ? null : alvo.backend() + "\n" + alvo.usuario(); }
     private Alvo alvo(AppSettings settings) {
@@ -181,8 +203,10 @@ public class TelemetriaRealtimeService {
 		String token = autenticar(settings);
 		Alvo destino = alvo(settings);
         long generation = configuracaoRemota.conectar(chaveCache(destino), destino.unidade());
+        long generationCards = cards.conectar(chaveCache(destino), destino.unidade());
         client = new StompRealtimeClient(urlWebSocket(destino.backend()), token, destino.unidade(),
-            snapshot -> configuracaoRemota.aceitar(generation, snapshot));
+            snapshot -> configuracaoRemota.aceitar(generation, snapshot),
+            documento -> cards.aceitar(generationCards, documento));
 		client.conectar();
         alvoConectado = destino; ultimaSolicitacao = System.nanoTime();
         conectado.set(true);

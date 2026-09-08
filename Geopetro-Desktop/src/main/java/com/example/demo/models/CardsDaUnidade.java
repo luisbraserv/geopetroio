@@ -19,7 +19,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record CardsDaUnidade(int schemaVersion, long unidadeSondaId, long revisao,
-		Conexao conexao, List<Card> cards, String atualizadoPor, String atualizadoEm) {
+		Conexao conexao, List<Card> cards, String atualizadoPor, String atualizadoEm)
+		implements DocumentoDaUnidade {
 
 	public CardsDaUnidade {
 		cards = cards == null ? List.of() : List.copyOf(cards);

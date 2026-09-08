@@ -5,7 +5,7 @@ import java.util.*;
 
 
 public record ConfiguracaoSondaRemota(int schemaVersion, long unidadeSondaId, long revisao,
-    List<Limite> limites, String atualizadoPor, String atualizadoEm) {
+    List<Limite> limites, String atualizadoPor, String atualizadoEm) implements DocumentoDaUnidade {
     public ConfiguracaoSondaRemota {
         if (schemaVersion != 1 || unidadeSondaId <= 0 || revisao < 0) throw new IllegalArgumentException("Snapshot invalido.");
         validar(new Alteracao(revisao, limites));

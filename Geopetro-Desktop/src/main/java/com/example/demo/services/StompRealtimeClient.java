@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.example.demo.models.CardsDaUnidade;
 import com.example.demo.models.EstadoAtual;
 import com.example.demo.models.ConfiguracaoSondaRemota;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,15 +43,17 @@ class StompRealtimeClient {
 	private static final ObjectMapper JSON = new ObjectMapper();
     private final Long unidade;
     private final Consumer<ConfiguracaoSondaRemota> receberConfiguracao;
+    private final Consumer<CardsDaUnidade> receberCards;
     private final CompletableFuture<Void> snapshotRecebido = new CompletableFuture<>();
     private final CompletableFuture<Void> conexaoEstabelecida = new CompletableFuture<>();
 
 	private WebSocket webSocket;
 
-	StompRealtimeClient(String url, String token) { this(url, token, null, snapshot -> {}); }
+	StompRealtimeClient(String url, String token) { this(url, token, null, snapshot -> {}, cards -> {}); }
 
-    StompRealtimeClient(String url, String token, Long unidade, Consumer<ConfiguracaoSondaRemota> receiver) {
-        this.unidade = unidade; this.receberConfiguracao = receiver;
+    StompRealtimeClient(String url, String token, Long unidade,
+            Consumer<ConfiguracaoSondaRemota> receiver, Consumer<CardsDaUnidade> receiverCards) {
+        this.unidade = unidade; this.receberConfiguracao = receiver; this.receberCards = receiverCards;
         this.uri = URI.create(url);
 		this.token = token;
 	}
@@ -200,10 +203,26 @@ class StompRealtimeClient {
                     if (header.startsWith("destination:")) destination = header.substring(12);
                     if (header.startsWith("subscription:")) subscription = header.substring(13);
                 }
-                boolean update = ("config-updates".equals(subscription) && ("/topic/config/unidades-sondas/" + unidade).equals(destination));
-                boolean snapshot = ("config-snapshot".equals(subscription) && ("/app/config/unidades-sondas/" + unidade).equals(destination));
+                String corpo = normalized.substring(divider + 2);
+                String topico = "/topic/config/unidades-sondas/" + unidade;
+                String app = "/app/config/unidades-sondas/" + unidade;
+
+                // Os dois documentos chegam pelo mesmo canal e sao distinguidos pelo destino. O
+                // sufixo /cards nao pode ser conferido so por "termina com", porque o destino dos
+                // limites e prefixo do de cards.
+                boolean cards = ("cards-updates".equals(subscription) && (topico + "/cards").equals(destination))
+                        || ("cards-snapshot".equals(subscription) && (app + "/cards").equals(destination));
+                if (cards) {
+                    var documento = JSON.readValue(corpo, CardsDaUnidade.class);
+                    if (documento.unidadeSondaId() != unidade) return;
+                    receberCards.accept(documento);
+                    return;
+                }
+
+                boolean update = ("config-updates".equals(subscription) && topico.equals(destination));
+                boolean snapshot = ("config-snapshot".equals(subscription) && app.equals(destination));
                 if (!update && !snapshot) return;
-                var config = JSON.readValue(normalized.substring(divider + 2), ConfiguracaoSondaRemota.class);
+                var config = JSON.readValue(corpo, ConfiguracaoSondaRemota.class);
                 if (config.unidadeSondaId() != unidade) return;
                 receberConfiguracao.accept(config);
                 snapshotRecebido.complete(null);

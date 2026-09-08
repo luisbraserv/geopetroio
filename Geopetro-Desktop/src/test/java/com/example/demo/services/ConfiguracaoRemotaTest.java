@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import com.example.demo.models.CardsDaUnidade;
 import com.example.demo.models.ConfiguracaoSondaRemota;
 import com.example.demo.models.AppSettings;
 import java.net.http.WebSocket;
@@ -37,7 +38,7 @@ class ConfiguracaoRemotaTest {
     }
     @Test void parserHandlesFragmentedAndGroupedFramesButRejectsInvalidSnapshots() throws Exception {
         var received = new ArrayList<ConfiguracaoSondaRemota>();
-        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 7L, received::add);
+        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 7L, received::add, cards -> {});
         var listener = listener(client);
         var ws = mock(WebSocket.class);
         listener.onText(ws, "\nCONNE", false);
@@ -79,5 +80,65 @@ class ConfiguracaoRemotaTest {
     private String frame(long unit, long revision) throws Exception {
         String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(snapshot(unit, revision));
         return "MESSAGE\nsubscription:config-snapshot\ndestination:/app/config/unidades-sondas/7\n\n" + json + '\0';
+    }
+
+    // ==================================================================== cards
+
+    private static final String CONECTADO = "CONNECTED\nversion:1.2\n\n\0";
+
+    private String frameCards(long unit, long revision) throws Exception {
+        var documento = new CardsDaUnidade(1, unit, revision, null, List.of(), "ana", null);
+        String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(documento);
+        return "MESSAGE\nsubscription:cards-snapshot\ndestination:/app/config/unidades-sondas/7/cards\n\n"
+            + json + '\0';
+    }
+
+    /**
+     * Os dois documentos chegam pelo mesmo canal e sao separados pelo destino.
+     *
+     * <p>O destino dos limites e PREFIXO do de cards. Um despacho que conferisse so o inicio
+     * mandaria o documento de cards para o parser de limites, que o recusaria — e a unidade ficaria
+     * sem saber o que ler, sem nada explicando por que.
+     */
+    @Test void cardsELimitesChegamPeloMesmoCanalSemSeMisturar() throws Exception {
+        var limites = new ArrayList<ConfiguracaoSondaRemota>();
+        var cards = new ArrayList<CardsDaUnidade>();
+        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 7L, limites::add, cards::add);
+        var listener = listener(client);
+        var ws = mock(WebSocket.class);
+        listener.onText(ws, CONECTADO, true);
+
+        listener.onText(ws, frame(7, 1), true);
+        listener.onText(ws, frameCards(7, 3), true);
+
+        assertEquals(1, limites.size(), "o snapshot de limites nao virou card");
+        assertEquals(1, cards.size(), "o documento de cards nao virou limite");
+        assertEquals(3, cards.get(0).revisao());
+    }
+
+    @Test void cardsDeOutraUnidadeSaoIgnorados() throws Exception {
+        var cards = new ArrayList<CardsDaUnidade>();
+        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 7L, s -> {}, cards::add);
+        var listener = listener(client);
+        var ws = mock(WebSocket.class);
+        listener.onText(ws, CONECTADO, true);
+
+        listener.onText(ws, frameCards(8, 3), true);
+
+        assertTrue(cards.isEmpty(), "configuracao de outra unidade nao entra como se fosse desta");
+    }
+
+    /**
+     * Unidade nunca configurada devolve revisao 0 e lista vazia (RN-092). A conexao nao pode travar
+     * esperando um documento de cards que talvez nunca venha.
+     */
+    @Test void unidadeSemCardsNaoTravaAConexao() throws Exception {
+        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 7L, s -> {}, c -> {});
+        var listener = listener(client);
+        var ws = mock(WebSocket.class);
+
+        listener.onText(ws, CONECTADO + frame(7, 1), true);
+
+        assertTrue(client.isConectado(), "so o snapshot de limites e esperado para dar a conexao por boa");
     }
 }
