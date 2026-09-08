@@ -190,7 +190,7 @@ são coisas distintas, e teste de unidade não distingue as duas. Só subir a ap
 descartável — base vazia, base existente sem histórico, e a base que já tinha estrutura criada pelo
 `ddl-auto`. Pula quando não há MySQL alcançável, em vez de quebrar a suíte.
 
-### ⚠️ Divergência confirmada entre produção e base nova
+### Divergência confirmada entre produção e base nova
 
 **[FATO 2026-09-07 — encontrado em revisão]** O baseline `V2026.09.04` foi gerado a partir das
 **entidades JPA**, não do banco de produção. Onde as migrations manuais divergiram do que o Hibernate

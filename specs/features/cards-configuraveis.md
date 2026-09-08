@@ -451,7 +451,7 @@ sempre nesta base, o número sai plausível. A tela avisa; o código ainda não 
 | 1 | ⚠️ **A configuração `−50..750` é assumida igual em todo canal.** A escala em si foi confirmada em 2026-08-31 e o código reescrito; o que segue sem conferência de campo, com calibrador de laço, é se **cada amplificador** está assim. Com cards configuráveis isso deixa de valer para 4 canais e passa a valer para todos os que a frota declarar | [OQ-016](../open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
 | 2 | Validação do alcance do DB ao configurar | [OQ-048](../open-questions.md#oq-048--validação-de-endereço) |
 | 2b | ⚠️ **A ligação card → calibração de peso/torque é posicional** e só comporta três slots | §6b, abaixo |
-| 3 | `CatalogoDispositivos` da Telemetria perde a fonte fixa | [mqtt-telemetria §4](../contracts/mqtt-telemetria.md#4-vocabulário-de-dispositivos) |
+| ~~3~~ | ✅ **Resolvido 2026-09-08** — a mensagem se descreve e o `CatalogoDispositivos` deixa de existir ([RN-097](../business-rules.md#rn-097--a-mensagem-de-telemetria-se-descreve)) | [mqtt-telemetria §4](../contracts/mqtt-telemetria.md#4-o-conjunto-de-dispositivos-é-por-unidade) |
 | 4 | Vazão somada entre bombas, se um dia entrar | §3 |
 
 ## 12. A entrevista de 2026-09-07
@@ -491,7 +491,10 @@ sempre nesta base, o número sai plausível. A tela avisa; o código ainda não 
    parâmetros trocando conforme o tipo, painel de conexão do CLP e rodapé fixo.
    ⚠️ **Não há botão de excluir** (RN-091) e **não há leitura ao vivo do endereço** (§10)
 7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
-8. **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade
+8. **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade.
+   ⚠️ **Deixou de ser opcional:** o canal de tempo real passa a mandar lista de leituras em vez dos
+   campos fixos, então o Angular atual **para de funcionar** até este passo
+   ([websocket-realtime §3](../contracts/websocket-realtime.md#os-campos-fixos-saíram--isto-quebra-o-angular))
 
 ⚠️ O passo 3 é o de maior risco: troca o caminho de leitura de toda a frota. Como a frota nasce vazia
 (§10), o comportamento observável **vai** mudar no dia do deploy — a telemetria só volta unidade a
@@ -501,3 +504,33 @@ unidade, conforme cada uma for configurada.
 configuração e UI no Desktop, ninguém consegue configurar unidade nenhuma: fechar o passo 3 antes
 deixaria a frota sem telemetria **e sem meio de restabelecê-la**. A ordem numérica não é a ordem de
 entrega — a dependência real é 5 e 6 antes de 3b.
+
+## 14. A entrevista de 2026-09-08 — o contrato por unidade
+
+**[DECIDIDO 2026-09-08]** Seis decisões que reescreveram
+[`mqtt-telemetria.md`](../contracts/mqtt-telemetria.md) e
+[`websocket-realtime.md`](../contracts/websocket-realtime.md).
+
+| # | Pergunta | Resposta | Consequência |
+|---|---|---|---|
+| 1 | "Remover card" contradiz RN-091. O que significa? | **Continua só desativando** | RN-091 fica como está. É ela que sustenta o histórico: série gravada continua tendo o que a explique |
+| 2 | Como as três séries do stroke se identificam? | **Delegado** — proposta aceita | [RN-098](../business-rules.md#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie): um `dispositivoId` + campo `serie` |
+| 3 | O que fazer com o histórico já gravado? | **Não há dado relevante** | Quebra limpa. Sem mapa de equivalência para manter para sempre |
+| 4 | Quem descreve a leitura para a Telemetria? | **A mensagem se descreve** | [RN-097](../business-rules.md#rn-097--a-mensagem-de-telemetria-se-descreve). `CatalogoDispositivos` morre |
+| 5 | Unidade sem cards, o que faz? | **Não lê nada** (RN-088) | Um caminho de leitura só. ⚠️ A frota fica muda no deploy até ser configurada |
+| 6 | Card sem calibração publica o quê? | **Nada — lacuna no gráfico** | [RN-099](../business-rules.md#rn-099--grandeza-sem-valor-não-é-publicada) |
+| 7 | Tempo real acompanha o MQTT? | **Sim, lista de leituras** | ⚠️ Quebra o Angular até o passo 8 |
+| 8 | Dashboard do Desktop vira agora? | **Depois, com o passo 7** | Por um tempo o Desktop lê e publica cards que a própria tela não mostra |
+
+### O que a soma dessas decisões produz
+
+Três delas — **5**, **7** e a **quebra de ids** — valem individualmente e se somam num deploy que
+muda Desktop, Backend e Front ao mesmo tempo, com a frota inteira muda até ser configurada unidade a
+unidade.
+
+Está registrado com o custo à vista em
+[`mqtt-telemetria.md §10`](../contracts/mqtt-telemetria.md#10-o-que-a-virada-quebra), com as
+alternativas recusadas e o motivo de cada uma. A mitigação que existe é a tela de configuração e a
+cópia entre unidades, entregues em 2026-09-07. A que **falta** é saber de fora quais unidades já
+viraram — [OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas).
+

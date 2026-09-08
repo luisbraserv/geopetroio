@@ -942,7 +942,7 @@ monitoramento, e cair em "acesso negado" seria absurdo para quem configura o sis
 onde ainda é `ENUM`** — produção não é tocada, e a collation dela fica preservada.
 
 ✅ **[FATO 2026-09-07]** Verificada contra MySQL real nos dois ramos: base nova e base com a coluna já
-`VARCHAR`. Ver [DT-002](technical-debt.md#-divergência-confirmada-entre-produção-e-base-nova).
+`VARCHAR`. Ver [DT-002](technical-debt.md#divergência-confirmada-entre-produção-e-base-nova).
 
 **Sem rede não se configura**, por desenho: não há validação local de credencial. O custo aceito é que
 a instalação inicial de uma unidade precisa de rede ao menos uma vez.
@@ -1120,3 +1120,46 @@ ela.
 
 Uma unidade de cimentação pode ter os dois instalados, medindo coisas diferentes. A duplicação segue
 aceita de propósito — [DT-010](technical-debt.md#dt-010--duplicação-entre-os-dois-desktops).
+
+### RN-097 · A mensagem de telemetria se descreve
+**[DECIDIDO 2026-09-08]** Cada leitura publicada carrega `dispositivoId`, `tipo`, `unidade` e
+`enderecoDb` junto do valor.
+
+⚠️ **É isto que permite cards por unidade.** Com o conjunto variando de sonda para sonda, um
+consumidor que dependesse de tabela fixa precisaria conhecer a configuração de cada unidade para
+gravar uma leitura — e ficaria mudo diante do primeiro card de um tipo novo.
+
+**Recusado:** a Telemetria consultar o Backend para descobrir o que recebeu. Criaria dependência da
+VM-2 para a VM-1 no caminho de ingestão: com o Backend fora, a Telemetria gravaria dado que não sabe
+interpretar. O `CatalogoDispositivos` deixa de existir.
+
+⚠️ **O `nome` NÃO viaja.** É rótulo editável: renomear faria a mesma série aparecer com dois nomes na
+mesma linha do tempo, sem nada dizendo qual valia quando. Quem identifica é o `dispositivoId`
+([RN-081](#rn-081--o-id-do-card-é-gerado-o-nome-é-rótulo)).
+
+Contrato em [mqtt-telemetria §3](contracts/mqtt-telemetria.md#a-mensagem-se-descreve).
+
+### RN-098 · As três séries do contador de stroke se distinguem por `serie`
+**[DECIDIDO 2026-09-08]** Um card `CONTADOR_STROKE` publica contagem, vazão e volume acumulado sob
+**um** `dispositivoId` — o do card —, separadas pelo campo `serie` (`stroke`, `vazao`,
+`volumeAcumulado`). O campo é **ausente** para card de uma grandeza só.
+
+**Recusado gerar três ids** (`CONTADOR_STROKE_01`, `VAZAO_01`, `VOLUME_01`), por dois motivos:
+
+1. `<TIPO>_<NN>` só faz sentido se `<TIPO>` for tipo de card. `VAZAO_01` seria id de um tipo que
+   ninguém pode criar, porque vazão é derivada.
+2. Com duas bombas haveria `VAZAO_01` e `VAZAO_02`, e **nada no id diria qual bomba é qual** — só o
+   documento saberia, e a consulta ao histórico precisaria dele para responder.
+
+⚠️ **Consulta por `dispositivoId` de um card de stroke devolve as três séries** se não filtrar por
+`serie`.
+
+### RN-099 · Grandeza sem valor não é publicada
+**[DECIDIDO 2026-09-08]** Card que lê o CLP mas não tem como converter — peso ou torque sem
+calibração — **não entra** no array de leituras daquele ciclo.
+
+O gráfico mostra lacuna, que é honesta: não houve medição válida. O motivo fica no log do Desktop e
+na tela de cards, que mostra "ainda não calibrado".
+
+⚠️ **Publicar zero foi recusado.** Zero é um número: entra no histórico, aparece no gráfico e passa
+por medição real — um alarme de peso baixo poderia disparar sobre uma sonda que ninguém calibrou.

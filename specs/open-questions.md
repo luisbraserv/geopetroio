@@ -747,7 +747,7 @@ regra desse tipo, a atualização automática vira risco operacional em vez de c
 **[FATO]** Hoje a tela de Monitoramento consulta **cinco dispositivos fixos** para qualquer unidade —
 `PESO_COLUNA_01`, `TORQUE_01`, `TORQUE_02`, `PRESSAO_01` e `VAZAO_01` — e o Tempo Real mostra as mesmas
 seis grandezas para todas. O vocabulário de dispositivos do
-[contrato MQTT](contracts/mqtt-telemetria.md#4-vocabulário-de-dispositivos) também é único.
+[contrato MQTT](contracts/mqtt-telemetria.md#4-o-conjunto-de-dispositivos-é-por-unidade) também é único.
 
 **O problema:** peso de coluna e torque de chave hidráulica **não existem** numa unidade de bombeio nem
 numa de slickline. Uma unidade de cimentação mede pressão e vazão da bomba, não torque de tubos. Com o
@@ -916,3 +916,22 @@ apontar para o byte errado.
 
 **Continua aberta:** validar o alcance do DB no momento de salvar seria a única barreira preventiva —
 e é barata, já que o Desktop está conectado ao CLP enquanto se configura.
+
+### OQ-049 · Como saber quais unidades da frota já foram configuradas
+**[ABERTA 2026-09-08]**
+
+Com [RN-088](business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada) e a frota nascendo
+vazia, a virada dos cards deixa cada unidade muda até alguém configurá-la pela tela do Desktop.
+
+⚠️ **Não há como olhar de fora e saber quem já virou.** "A migração terminou" é hoje uma afirmação
+sem como conferir — e uma unidade esquecida fica sem telemetria sem que nada acuse.
+
+**Caminhos possíveis, nenhum decidido:**
+
+| Caminho | Custo |
+|---|---|
+| Tela no Front listando unidades com e sem cards | O backend já tem o dado: basta uma consulta por `configuracao_cards` |
+| Alerta quando uma unidade fica N horas sem publicar | Pega mais que falta de configuração — pega também sonda desligada, o que pode ser bom ou ruído |
+| Relatório no deploy | Uma foto, não um acompanhamento |
+
+Ver [mqtt-telemetria §10](contracts/mqtt-telemetria.md#10-o-que-a-virada-quebra).

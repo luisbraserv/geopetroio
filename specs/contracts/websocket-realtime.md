@@ -62,21 +62,52 @@ mas evita reproduzir a mesma fragilidade num canal novo.
 
 ## 3. Payload
 
+**[DECIDIDO 2026-09-08]** Reescrito para cards por unidade, **no mesmo formato do MQTT**.
+
 ```json
 {
-  "unidadeSondaId": 7,
-  "timestamp": "2026-08-27T16:32:05.120Z",
-  "pesoColuna": 12450.75,
-  "torqueTubos": 3200.0,
-  "torqueFlutuante": 2980.5,
-  "pressaoBomba": 1450.25,
-  "vazao": 0.523,
-  "strokeAtual": 184
+  "unidadeSondaId": 144,
+  "timestamp": "2026-09-08T16:32:05.120Z",
+  "leituras": [
+    { "dispositivoId": "PESO_01", "tipo": "PESO", "unidade": "lbf",
+      "enderecoDb": "DBW4", "valor": 184300.5, "valorBruto": 412 },
+    { "dispositivoId": "CONTADOR_STROKE_01", "serie": "vazao",
+      "tipo": "CONTADOR_STROKE", "unidade": "bbl/min",
+      "enderecoDb": "DBD0", "valor": 1.52, "valorBruto": 148320 }
+  ]
 }
 ```
 
 **[FATO]** `unidadeSondaId` e `timestamp` são **obrigatórios**. Se o timestamp vier ausente, o
 backend carimba o instante de recepção — mas isso é rede de segurança, não o caminho esperado.
+
+### Mesma forma que o MQTT, de propósito
+
+As regras de cada leitura são as de
+[`mqtt-telemetria.md §3`](mqtt-telemetria.md#campos-de-cada-leitura) — **não são repetidas aqui**,
+para não haver duas versões da mesma definição divergindo. O que muda entre os dois canais é o
+destino e a garantia, não o conteúdo:
+
+| | MQTT (histórico) | WebSocket (tempo real) |
+|---|---|---|
+| Garantia | QoS 1, cada leitura importa | Sobrescreve: estados intermediários são descartados de propósito |
+| Consumidor | Geopetro-Telemetria → InfluxDB | Angular, direto na tela |
+| Envelope | `idSondaUnidade` (nome) | `unidadeSondaId` (id numérico) — ver [§2](#por-que-unidadesondaid-numérico-e-não-o-nome) |
+
+### Os campos fixos saíram — isto quebra o Angular
+
+**[DECIDIDO 2026-09-08]** `pesoColuna`, `torqueTubos`, `torqueFlutuante`, `pressaoBomba`, `vazao` e
+`strokeAtual` **deixam de existir**. O consumidor Angular atual espera esses campos e **para de
+funcionar** até ser atualizado (passo 8 de
+[cards-configuraveis](../features/cards-configuraveis.md#13-ordem-de-implementação-sugerida)).
+
+**Por que não manter os dois formatos por um tempo:** o payload carregaria os campos fixos e a lista
+ao mesmo tempo, e se divergissem não haveria como dizer qual vale. Pior: com uma unidade que tem dois
+cards de torque e um de temperatura, os campos fixos já não conseguiriam representá-la — seriam uma
+verdade parcial se passando por completa.
+
+⚠️ **Consequência de deploy:** Desktop, Backend e Front mudam **juntos**. Ver
+[`mqtt-telemetria.md §10`](mqtt-telemetria.md#10-o-que-a-virada-quebra).
 
 ---
 
