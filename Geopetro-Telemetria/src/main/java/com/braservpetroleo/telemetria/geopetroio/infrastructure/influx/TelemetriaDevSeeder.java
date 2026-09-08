@@ -17,8 +17,6 @@ import org.springframework.stereotype.Component;
 
 import com.braservpetroleo.telemetria.geopetroio.config.TelemetriaSeedProperties;
 import com.braservpetroleo.telemetria.geopetroio.config.TelemetriaProperties;
-import com.braservpetroleo.telemetria.geopetroio.domain.CatalogoDispositivos;
-import com.braservpetroleo.telemetria.geopetroio.domain.CatalogoDispositivos.Dispositivo;
 import com.braservpetroleo.telemetria.geopetroio.domain.LeituraTelemetria;
 import com.braservpetroleo.telemetria.geopetroio.domain.TelemetriaBatch;
 
@@ -98,28 +96,35 @@ public class TelemetriaDevSeeder implements ApplicationRunner {
 	private List<LeituraTelemetria> gerarLeituras(Instant instante) {
 		double segundos = instante.getEpochSecond();
 		return List.of(
-				leitura("PESO_COLUNA_01", 102_000 + 9_000 * Math.sin(segundos / 420.0)
-						+ 2_200 * Math.sin(segundos / 73.0)),
-				leitura("TORQUE_01", 8_200 + 1_900 * Math.sin(segundos / 180.0 + 0.4)),
-				leitura("TORQUE_02", 6_700 + 1_450 * Math.cos(segundos / 210.0 + 0.8)),
-				leitura("PRESSAO_01", 2_650 + 360 * Math.sin(segundos / 300.0)
-						+ 85 * Math.sin(segundos / 47.0)),
-				leitura("VAZAO_01", 5.8 + 1.1 * Math.sin(segundos / 240.0)
-						+ 0.22 * Math.cos(segundos / 31.0)));
+				leitura("PESO_01", null, "PESO", "lbf", "DBW4",
+						102_000 + 9_000 * Math.sin(segundos / 420.0) + 2_200 * Math.sin(segundos / 73.0)),
+				leitura("TORQUE_01", null, "TORQUE", "lbf.ft", "DBW6",
+						8_200 + 1_900 * Math.sin(segundos / 180.0 + 0.4)),
+				leitura("TORQUE_02", null, "TORQUE", "lbf.ft", "DBW8",
+						6_700 + 1_450 * Math.cos(segundos / 210.0 + 0.8)),
+				leitura("PRESSAO_01", null, "PRESSAO", "psi", "DBW10",
+						2_650 + 360 * Math.sin(segundos / 300.0) + 85 * Math.sin(segundos / 47.0)),
+				// As tres series de um card de stroke (RN-098): o seeder passa a produzi-las para
+				// que a tela de desenvolvimento mostre o que a frota real vai mandar.
+				leitura("CONTADOR_STROKE_01", "vazao", "CONTADOR_STROKE", "bbl/min", "DBD0",
+						5.8 + 1.1 * Math.sin(segundos / 240.0) + 0.22 * Math.cos(segundos / 31.0)),
+				leitura("CONTADOR_STROKE_01", "stroke", "CONTADOR_STROKE", "stroke", "DBD0",
+						12 + 4 * Math.sin(segundos / 240.0)),
+				leitura("CONTADOR_STROKE_01", "volumeAcumulado", "CONTADOR_STROKE", "bbl", "DBD0",
+						segundos * 0.09));
 	}
 
-	private LeituraTelemetria leitura(String dispositivoId, double valor) {
-		Dispositivo dispositivo = CatalogoDispositivos.buscar(dispositivoId)
-				.orElseThrow(() -> new IllegalStateException("Dispositivo ausente do catalogo: " + dispositivoId));
-		return new LeituraTelemetria(
-				dispositivo.dispositivoId(),
-				dispositivo.nome(),
-				dispositivo.codigoOrigem(),
-				dispositivo.tipo(),
-				dispositivo.unidade(),
-				arredondar(valor),
-				null,
-				null);
+	/**
+	 * ⚠️ O seeder passou a declarar tipo e unidade — nao ha mais catalogo de onde busca-los.
+	 *
+	 * <p>E o mesmo que um Desktop real faz: a mensagem se descreve (RN-097). Se um dia divergir do
+	 * que a frota manda, o dado de desenvolvimento fica diferente do de producao — que e o custo de
+	 * um seeder, e o motivo de ele viver so no perfil de dev.
+	 */
+	private LeituraTelemetria leitura(String dispositivoId, String serie, String tipo,
+			String unidade, String enderecoDb, double valor) {
+		return new LeituraTelemetria(dispositivoId, serie, tipo, unidade, enderecoDb,
+				arredondar(valor), null);
 	}
 
 	private void validarConfiguracao() {

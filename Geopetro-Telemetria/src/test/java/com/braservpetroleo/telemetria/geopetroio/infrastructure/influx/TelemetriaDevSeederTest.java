@@ -42,9 +42,20 @@ class TelemetriaDevSeederTest {
 		assertThat(batches.getLast().dataHora()).isEqualTo(Instant.parse("2026-08-28T00:00:00Z"));
 		assertThat(batches).allSatisfy(batch -> {
 			assertThat(batch.idSondaUnidade()).isEqualTo("SPT-145");
+			// Os ids passaram a ser os que os cards geram, e o contador de stroke produz TRES
+			// series sob o mesmo dispositivoId (RN-098).
 			assertThat(batch.leituras())
 					.extracting(leitura -> leitura.dispositivoId())
-					.containsExactly("PESO_COLUNA_01", "TORQUE_01", "TORQUE_02", "PRESSAO_01", "VAZAO_01");
+					.containsExactly("PESO_01", "TORQUE_01", "TORQUE_02", "PRESSAO_01",
+							"CONTADOR_STROKE_01", "CONTADOR_STROKE_01", "CONTADOR_STROKE_01");
+			assertThat(batch.leituras())
+					.extracting(leitura -> leitura.serie())
+					.containsExactly(null, null, null, null, "vazao", "stroke", "volumeAcumulado");
+			// A mensagem se descreve (RN-097): tipo e unidade vem preenchidos, sem catalogo.
+			assertThat(batch.leituras()).allSatisfy(leitura -> {
+				assertThat(leitura.tipo()).isNotBlank();
+				assertThat(leitura.unidade()).isNotBlank();
+			});
 			assertThat(batch.leituras()).allSatisfy(leitura -> assertThat(leitura.valor()).isPositive());
 		});
 	}

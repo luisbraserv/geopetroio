@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.braservpetroleo.telemetria.geopetroio.config.TelemetriaProperties;
-import com.braservpetroleo.telemetria.geopetroio.domain.CatalogoDispositivos;
 import com.braservpetroleo.telemetria.geopetroio.domain.LeituraTelemetria;
 import com.braservpetroleo.telemetria.geopetroio.domain.TelemetriaBatch;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,26 +21,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Converte o payload JSON recebido do broker no modelo canonico {@link TelemetriaBatch}.
  *
- * <p><b>Aceita dois formatos</b>, conforme decidido em
- * {@code specs/contracts/mqtt-telemetria.md} secao 9. A frota e atualizada por instalador .exe em
- * campo, e esse cronograma nao pode bloquear o deploy deste servico — portanto o consumidor entende
- * o formato antigo ate que todo o parque esteja migrado.
- *
- * <p><b>Formato alvo</b> (detectado pela presenca de {@code idSondaUnidade}):
+ * <p><b>Formato unico</b> desde 2026-09-08 — cards por unidade
+ * ({@code specs/contracts/mqtt-telemetria.md} secao 3):
  * <pre>
  * {"idSondaUnidade":"SPT-144","dataHora":"...","leituras":[
- *    {"dispositivoId":"PESO_COLUNA_01","nome":"...","codigoOrigem":"B002","tipo":"PESO",
- *     "unidade":"lbf","valor":12450.75,"valorBruto":512,"unidadeValorBruto":"..."}]}
+ *    {"dispositivoId":"PESO_01","tipo":"PESO","unidade":"lbf",
+ *     "enderecoDb":"DBW4","valor":184300.5,"valorBruto":412},
+ *    {"dispositivoId":"CONTADOR_STROKE_01","serie":"vazao","tipo":"CONTADOR_STROKE",
+ *     "unidade":"bbl/min","enderecoDb":"DBD0","valor":1.52,"valorBruto":148320}]}
  * </pre>
  *
- * <p><b>Formato antigo</b> (envelope usa {@code unidade} como id da sonda):
- * <pre>
- * {"unidade":"UC-01","dataHora":"...","leituras":[{"dispositivo":"VAZAO_01","valor":0.523}]}
- * </pre>
+ * <h2>⚠️ O formato antigo deixou de ser aceito</h2>
+ * Ele tinha so {@code dispositivo} e {@code valor}, e dependia de {@code CatalogoDispositivos} — uma
+ * tabela com os cinco dispositivos que toda sonda tinha — para completar tipo, unidade e nome.
  *
- * <p>⚠️ Atencao a colisao de nomes: no formato antigo {@code unidade} no <b>envelope</b> e o id da
- * sonda; no formato novo {@code unidade} dentro de cada <b>leitura</b> e a unidade de medida. Por
- * isso a deteccao olha {@code idSondaUnidade} no envelope, e nunca {@code unidade}.
+ * <p>A migracao gradual existia para desacoplar o cronograma da frota (instaladores .exe em campo)
+ * do deploy deste servico. Ela perdeu o sentido: com cards por unidade, <b>o produtor nao tem como
+ * publicar o formato antigo</b>, porque os {@code dispositivoId} fixos nao existem mais e o conjunto
+ * varia de unidade para unidade. Nao ha formato antigo a manter. Ver secao 9 do contrato.
+ *
+ * <p>A colisao de nomes que exigia cuidado — {@code unidade} no envelope era o id da sonda, e dentro
+ * da leitura e a unidade de medida — some junto: so ha {@code idSondaUnidade} no envelope.
  */
 @Component
 public class TelemetriaPayloadParser {
@@ -73,10 +73,7 @@ public class TelemetriaPayloadParser {
 			throw new PayloadInvalidoException("payload nao e um objeto JSON");
 		}
 
-		boolean formatoNovo = raiz.hasNonNull("idSondaUnidade");
-		String idSonda = formatoNovo
-				? texto(raiz, "idSondaUnidade")
-				: texto(raiz, "unidade");
+		String idSonda = texto(raiz, "idSondaUnidade");
 
 		if (idSonda == null || idSonda.isBlank()) {
 			// O topico ja carrega a unidade; usa-lo evita descartar uma leitura por um campo ausente.
@@ -100,7 +97,7 @@ public class TelemetriaPayloadParser {
 		List<LeituraTelemetria> leituras = new ArrayList<>();
 		for (JsonNode node : leiturasNode) {
 			try {
-				leituras.add(formatoNovo ? leituraNova(node) : leituraAntiga(node));
+				leituras.add(leitura(node));
 			}
 			catch (RuntimeException e) {
 				// Uma leitura corrompida nao deve descartar o ciclo inteiro: as demais grandezas
@@ -115,41 +112,27 @@ public class TelemetriaPayloadParser {
 		return new TelemetriaBatch(idSonda, dataHora, leituras);
 	}
 
-	private LeituraTelemetria leituraNova(JsonNode node) {
-		String dispositivoId = normalizar(texto(node, "dispositivoId"));
-		var catalogo = CatalogoDispositivos.buscar(dispositivoId);
-		if (catalogo.isEmpty()) {
-			log.warn("dispositivoId desconhecido: '{}'. Gravando com os metadados informados.", dispositivoId);
-		}
-
-		return new LeituraTelemetria(
-				dispositivoId,
-				coalesce(texto(node, "nome"), catalogo.map(d -> d.nome()).orElse(dispositivoId)),
-				coalesce(texto(node, "codigoOrigem"), catalogo.map(d -> d.codigoOrigem()).orElse("DESCONHECIDO")),
-				coalesce(texto(node, "tipo"), catalogo.map(d -> d.tipo()).orElse("DESCONHECIDO")),
-				coalesce(texto(node, "unidade"), catalogo.map(d -> d.unidade()).orElse("")),
-				numeroObrigatorio(node, "valor"),
-				numeroOpcional(node, "valorBruto"),
-				texto(node, "unidadeValorBruto"));
-	}
-
 	/**
-	 * Formato antigo: so ha {@code dispositivo} e {@code valor}. Os metadados descritivos vem do
-	 * catalogo, para que o dado grave com as mesmas tags do formato novo.
+	 * A mensagem se descreve — RN-097.
+	 *
+	 * <p>{@code tipo} e {@code unidade} sao obrigatorios e vem no payload. Antes podiam faltar e
+	 * eram completados por {@code CatalogoDispositivos}, uma tabela com os cinco dispositivos que
+	 * toda sonda tinha. ⚠️ Com cards por unidade essa tabela deixou de poder existir: nao ha o que
+	 * saiba o que e {@code PRESSAO_03} de uma sonda qualquer sem consultar a configuracao dela.
+	 *
+	 * <p>Leitura sem tipo ou unidade e recusada aqui e ignorada pelo laco acima — o batch segue com
+	 * as demais. Grava-la com {@code "DESCONHECIDO"}, como o catalogo fazia, produziria uma serie no
+	 * historico que ninguem consegue interpretar depois.
 	 */
-	private LeituraTelemetria leituraAntiga(JsonNode node) {
-		String dispositivoId = normalizar(texto(node, "dispositivo"));
-		var catalogo = CatalogoDispositivos.buscar(dispositivoId);
-
+	private LeituraTelemetria leitura(JsonNode node) {
 		return new LeituraTelemetria(
-				dispositivoId,
-				catalogo.map(d -> d.nome()).orElse(dispositivoId),
-				catalogo.map(d -> d.codigoOrigem()).orElse("DESCONHECIDO"),
-				catalogo.map(d -> d.tipo()).orElse("DESCONHECIDO"),
-				catalogo.map(d -> d.unidade()).orElse(""),
+				normalizar(texto(node, "dispositivoId")),
+				texto(node, "serie"),
+				texto(node, "tipo"),
+				texto(node, "unidade"),
+				texto(node, "enderecoDb"),
 				numeroObrigatorio(node, "valor"),
-				null,
-				null);
+				numeroOpcional(node, "valorBruto"));
 	}
 
 	/**

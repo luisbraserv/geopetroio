@@ -96,11 +96,17 @@ public class InfluxTelemetriaRepository {
 			Point ponto = Point.measurement(properties.getMeasurement())
 					.addTag("idSondaUnidade", batch.idSondaUnidade())
 					.addTag("dispositivoId", leitura.dispositivoId())
+					// RN-098: as tres grandezas de um card de stroke dividem o mesmo dispositivoId.
+					// Sem esta tag elas colidiriam no mesmo ponto — mesma measurement, mesmas tags,
+					// mesmo instante — e o InfluxDB guardaria so a ultima.
+					.addTag("serie", leitura.serieTag())
 					.addTag("tipo", leitura.tipo())
-					.addTag("codigoOrigem", leitura.codigoOrigem())
 					.addTag("unidade", leitura.unidade())
+					// Onde foi lido NESTE ciclo. Fica no ponto, e nao so na configuracao, porque o
+					// documento guarda o endereco atual: mudar o byteInicial de um card faria o
+					// historico anterior ser atribuido ao endereco novo.
+					.addField("enderecoDb", leitura.enderecoDb())
 					.addField("valor", leitura.valor())
-					.addField("nome", leitura.nome())
 					.time(batch.dataHora(), WritePrecision.MS);
 
 			if (leitura.possuiValorBruto()) {

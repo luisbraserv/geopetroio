@@ -41,7 +41,7 @@ class MqttTelemetriaSubscriberTest {
 	@DisplayName("encaminha o batch para ingestao")
 	void encaminhaParaIngestao() {
 		TelemetriaBatch batch = new TelemetriaBatch("SPT-144", Instant.now(),
-				List.of(new LeituraTelemetria("VAZAO_01", "Vazao", "B001", "VAZAO", "bbl/min", 1.0, null, null)));
+				List.of(new LeituraTelemetria("CONTADOR_STROKE_01", "vazao", "CONTADOR_STROKE", "bbl/min", "DBD0", 1.0, null)));
 		when(parser.parse(any(), any())).thenReturn(batch);
 
 		subscriber.messageArrived("telemetria/SPT-144/batch", mensagem("{}"));
@@ -66,7 +66,7 @@ class MqttTelemetriaSubscriberTest {
 	@DisplayName("falha na ingestao nao propaga excecao")
 	void falhaNaIngestaoNaoPropaga() {
 		TelemetriaBatch batch = new TelemetriaBatch("SPT-144", Instant.now(),
-				List.of(new LeituraTelemetria("VAZAO_01", "Vazao", "B001", "VAZAO", "bbl/min", 1.0, null, null)));
+				List.of(new LeituraTelemetria("CONTADOR_STROKE_01", "vazao", "CONTADOR_STROKE", "bbl/min", "DBD0", 1.0, null)));
 		when(parser.parse(any(), any())).thenReturn(batch);
 		doThrow(new RuntimeException("influx fora")).when(ingestao).ingerir(any());
 
