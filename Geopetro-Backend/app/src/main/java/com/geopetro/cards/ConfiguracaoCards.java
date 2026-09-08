@@ -85,11 +85,24 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeSondaId, long rev
 	/**
 	 * Parâmetros de escala do sinal.
 	 *
-	 * <p>⚠️ <b>Calibração de peso e torque não está aqui.</b> Aquelas fórmulas têm geometria e
-	 * ajuste de campo (a cadeia do sargento tem 8 parâmetros) e hoje vivem na configuração local do
-	 * Desktop, medidas na unidade. Trazê-las para cá é migração de valores calibrados, não
-	 * acréscimo de campo — fica para uma etapa própria. O card de peso ou torque declara
-	 * <b>onde ler</b>; o Desktop aplica a calibração que já tem.
+	 * <h2>O que fica aqui e o que fica na estação</h2>
+	 * A linha é <b>valor de placa</b> contra <b>medição de campo</b>:
+	 *
+	 * <table>
+	 *   <tr><th>Aqui, no documento</th><th>Na estação, por {@code dispositivoId}</th></tr>
+	 *   <tr><td>{@code rangeSensorBar} — fundo de escala do transmissor 4-20 mA, impresso nele</td>
+	 *       <td>Sensibilidade: trim ajustado na unidade</td></tr>
+	 *   <tr><td>Escala de temperatura, forma e dimensões do tanque — decisões de projeto</td>
+	 *       <td>Geometria do sargento (8 parâmetros) e da chave hidráulica, medidas na unidade</td></tr>
+	 * </table>
+	 *
+	 * <p>⚠️ <b>{@code rangeSensorBar} vale para peso e torque também</b>, não só para pressão: os
+	 * três leem um transmissor 4-20 mA, e sem o range não há como traduzir a posição no laço em
+	 * pressão — que é de onde a geometria parte.
+	 *
+	 * <p>⚠️ <b>A geometria não está aqui de propósito.</b> Trazê-la seria migração de valores
+	 * calibrados, não acréscimo de campo. O card declara <b>onde ler e em que escala</b>; a estação
+	 * aplica a calibração que mediu.
 	 */
 	public record Parametros(
 			Double rangeSensorBar,
@@ -183,7 +196,10 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeSondaId, long rev
 	private static void validarParametros(Card card) {
 		Parametros p = card.parametros();
 		switch (card.tipo()) {
-			case PRESSAO -> exigirPositivo(p == null ? null : p.rangeSensorBar(),
+			// Peso e torque tambem leem um transmissor 4-20 mA: sem o range nao ha como traduzir a
+			// posicao no laco em pressao, e e dela que a geometria parte. O range e valor de placa
+			// do transmissor, nao medicao de campo — por isso vive aqui, ao contrario da geometria.
+			case PRESSAO, PESO, TORQUE -> exigirPositivo(p == null ? null : p.rangeSensorBar(),
 					"Informe o range do sensor, em bar, no card " + card.nome() + ".");
 			case TEMPERATURA -> {
 				Double minimo = p == null ? null : p.minimoEscala();
@@ -198,9 +214,6 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeSondaId, long rev
 			case NIVEL_TANQUE -> validarTanque(card, p);
 			case CONTADOR_STROKE -> exigirPositivo(p == null ? null : p.constanteBomba(),
 					"Informe a constante da bomba no card " + card.nome() + ".");
-			// Peso e torque aplicam a calibracao local do Desktop; o card so diz onde ler.
-			case PESO, TORQUE -> {
-			}
 		}
 	}
 

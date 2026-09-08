@@ -174,11 +174,29 @@ class ConfiguracaoCardsTest {
 		}
 
 		@Test
-		@DisplayName("peso e torque nao exigem parametros: a calibracao fica no Desktop")
-		void pesoETorqueSemParametros() {
+		@DisplayName("peso e torque exigem o range do sensor: eles tambem leem um 4-20 mA")
+		void pesoETorqueExigemRange() {
+			// Sem o range nao ha como traduzir a posicao no laco em pressao, e e dela que a
+			// geometria do sargento e da chave partem. Um default silencioso daria um peso
+			// plausivel e errado.
+			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
+					alteracao(List.of(card(null, Tipo.PESO, 4, 0, null))), List.of()))
+					.hasMessageContaining("range do sensor");
+
+			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
+					alteracao(List.of(card(null, Tipo.TORQUE, 6, 0, null))), List.of()))
+					.hasMessageContaining("range do sensor");
+		}
+
+		@Test
+		@DisplayName("com o range, peso e torque passam — a geometria fica na estacao")
+		void pesoETorqueComRange() {
+			var range = new ConfiguracaoCards.Parametros(400.0, null, null, null, null, null, null,
+					null, null, null, null, null);
+
 			assertThatCode(() -> ConfiguracaoCards.validarEIdentificar(alteracao(List.of(
-					card(null, Tipo.PESO, 4, 0, null),
-					card(null, Tipo.TORQUE, 6, 1, null))), List.of()))
+					card(null, Tipo.PESO, 4, 0, range),
+					card(null, Tipo.TORQUE, 6, 1, range))), List.of()))
 					.doesNotThrowAnyException();
 		}
 	}
