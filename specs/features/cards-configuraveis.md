@@ -411,12 +411,46 @@ diferentes.
 coisa. Hoje isso já acontece na tela — `PRESSAO_01` alimenta Bomba de Lama e ESCP —, mas com **um**
 dispositivo no contrato; agora seriam dois.
 
+## 10b. A calibração de peso e torque não está no documento — e nem por isso se perde
+
+**[FATO 2026-09-07]** A calibração de peso e torque fica na configuração **desta estação**
+(`app-settings.json`: `pesoColuna`, `chaveTubos`, `chaveFlutuante`), não no documento de cards. A
+decisão é do passo 1: são valores **medidos na unidade**, e trazê-los para o documento é migração de
+valores calibrados, não acréscimo de campo.
+
+⚠️ **Isso criou um problema de leitura na tela.** Ao selecionar um card de peso ou torque, a janela
+dizia apenas *"não têm parâmetros aqui"* — o que se lê como **configuração perdida**. Ela não se
+perdeu; está onde sempre esteve.
+
+✅ **Corrigido em 2026-09-07:** o painel do card mostra os **valores atuais** da calibração, se ela
+está preenchida, e traz o botão **Abrir calibração**, que abre o mesmo editor que a engrenagem do
+dashboard já abria. O que era silêncio virou o valor à vista.
+
+### ⚠️ A ligação card → calibração é posicional
+
+**[FATO]** Como sempre foi, e agora dito na tela em vez de escondido:
+
+| Card | Calibração usada |
+|---|---|
+| Card de peso | `pesoColuna` |
+| **Primeiro** card de torque | `chaveTubos` |
+| **Segundo** card de torque | `chaveFlutuante` |
+| Terceiro em diante | ⚠️ Nenhuma própria — a da flutuante acaba reaproveitada |
+
+Com endereços fixos isso bastava: havia exatamente um card de peso e dois de torque. Com cards
+configuráveis, não basta mais — e é **o passo 3b que precisa resolver**, provavelmente guardando a
+calibração por `dispositivoId` em vez de por posição, com migração dos três valores de hoje.
+
+⚠️ Enquanto não resolver, **um terceiro card de torque converte com a calibração errada** — e, como
+sempre nesta base, o número sai plausível. A tela avisa; o código ainda não impede.
+
 ## 11. Pontos que continuam em aberto
 
 | # | Questão | Referência |
 |---|---|---|
 | 1 | ⚠️ **A configuração `−50..750` é assumida igual em todo canal.** A escala em si foi confirmada em 2026-08-31 e o código reescrito; o que segue sem conferência de campo, com calibrador de laço, é se **cada amplificador** está assim. Com cards configuráveis isso deixa de valer para 4 canais e passa a valer para todos os que a frota declarar | [OQ-016](../open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
 | 2 | Validação do alcance do DB ao configurar | [OQ-048](../open-questions.md#oq-048--validação-de-endereço) |
+| 2b | ⚠️ **A ligação card → calibração de peso/torque é posicional** e só comporta três slots | §6b, abaixo |
 | 3 | `CatalogoDispositivos` da Telemetria perde a fonte fixa | [mqtt-telemetria §4](../contracts/mqtt-telemetria.md#4-vocabulário-de-dispositivos) |
 | 4 | Vazão somada entre bombas, se um dia entrar | §3 |
 

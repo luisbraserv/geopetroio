@@ -127,9 +127,22 @@
 
                <!-- ===== Parametros por tipo: o controller mostra um de cada vez ===== -->
 
-               <Label fx:id="lblSemParametros" styleClass="ajuda" wrapText="true" maxWidth="Infinity"
-                      visible="false" managed="false"
-                      text="Peso e torque não têm parâmetros aqui: a calibração é medida na unidade e vive na configuração desta estação. O card diz apenas onde ler." />
+               <!--
+                  Peso e torque nao tem parametros NO DOCUMENTO, mas tem calibracao — ela vive na
+                  configuracao desta estacao porque e medida na unidade. Mostrar os valores aqui, com
+                  o botao que abre o editor de sempre, e o que impede a tela de parecer que a
+                  calibracao se perdeu.
+               -->
+               <VBox fx:id="paramCalibracaoLocal" spacing="8.0" visible="false" managed="false">
+                  <Label fx:id="lblCalibracaoAlvo" text="Calibração" styleClass="rotulo" />
+                  <Label fx:id="lblCalibracaoValores" styleClass="mono" wrapText="true" maxWidth="Infinity" />
+                  <Label fx:id="lblCalibracaoEstado" styleClass="ajuda" wrapText="true" maxWidth="Infinity" />
+                  <HBox spacing="8.0">
+                     <Button fx:id="btnAbrirCalibracao" text="Abrir calibração" styleClass="botao-secundario" />
+                  </HBox>
+                  <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
+                         text="A calibração é medida na unidade e fica nesta estação, não no documento de cards. O card diz onde ler; o Desktop aplica a calibração que já tem." />
+               </VBox>
 
                <VBox fx:id="paramPressao" spacing="5.0" visible="false" managed="false">
                   <Label text="Range do sensor (bar)" styleClass="rotulo" />

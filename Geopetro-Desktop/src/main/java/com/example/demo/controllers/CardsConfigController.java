@@ -80,6 +80,7 @@ public class CardsConfigController {
 	@Autowired private SettingsService settings;
 	@Autowired private SessaoConfiguracao sessao;
 	@Autowired private UnidadeSondaCatalogoService catalogo;
+	@Autowired private ApplicationContext contexto;
 
 	@FXML private VBox raiz;
 	@FXML private SplitPane divisor;
@@ -112,7 +113,11 @@ public class CardsConfigController {
 	@FXML private CheckBox chkAtivo;
 	@FXML private CheckBox chkVisivel;
 
-	@FXML private Label lblSemParametros;
+	@FXML private VBox paramCalibracaoLocal;
+	@FXML private Label lblCalibracaoAlvo;
+	@FXML private Label lblCalibracaoValores;
+	@FXML private Label lblCalibracaoEstado;
+	@FXML private Button btnAbrirCalibracao;
 	@FXML private VBox paramPressao;
 	@FXML private TextField txtRangeBar;
 	@FXML private VBox paramTemperatura;
@@ -197,6 +202,7 @@ public class CardsConfigController {
 		btnDescer.setOnAction(e -> mover(1));
 		btnAlternarAtivo.setOnAction(e -> alternarAtivo());
 		btnCopiar.setOnAction(e -> copiarDeOutraUnidade());
+		btnAbrirCalibracao.setOnAction(e -> abrirCalibracao());
 		btnRecarregar.setOnAction(e -> carregar());
 		btnSalvar.setOnAction(e -> salvar());
 		btnFechar.setOnAction(e -> ((Stage) btnFechar.getScene().getWindow()).close());
@@ -413,7 +419,132 @@ public class CardsConfigController {
 		exibir(paramTemperatura, escolhido == Tipo.TEMPERATURA);
 		exibir(paramTanque, escolhido == Tipo.NIVEL_TANQUE);
 		exibir(paramStroke, escolhido == Tipo.CONTADOR_STROKE);
-		exibir(lblSemParametros, escolhido == Tipo.PESO || escolhido == Tipo.TORQUE);
+		boolean calibracaoLocal = escolhido == Tipo.PESO || escolhido == Tipo.TORQUE;
+		exibir(paramCalibracaoLocal, calibracaoLocal);
+		if (calibracaoLocal) {
+			mostrarCalibracaoLocal(escolhido);
+		}
+	}
+
+	/**
+	 * Mostra a calibração que esta estação já tem para o card.
+	 *
+	 * <p>Peso e torque não têm parâmetros no documento de cards: a calibração é <b>medida na
+	 * unidade</b>, e trazê-la para o documento seria migração de valores calibrados, não acréscimo de
+	 * campo. Mas uma tela que diz apenas "não há parâmetros aqui" se lê como <b>configuração
+	 * perdida</b> — e ela não se perdeu: está no {@code app-settings.json} desta estação, onde
+	 * sempre esteve.
+	 *
+	 * <p>⚠️ <b>A ligação card → calibração ainda é posicional</b>, como sempre foi: o primeiro card
+	 * de torque usa a calibração da chave de tubos, o segundo a da flutuante, e o de peso usa a do
+	 * peso da coluna. Com cards configuráveis isso deixa de bastar — um terceiro card de torque não
+	 * tem calibração própria. Fica dito na tela em vez de escondido, e é o que o passo 3b precisa
+	 * resolver.
+	 */
+	private void mostrarCalibracaoLocal(Tipo tipo) {
+		AppSettings configuracoes = settings.loadSettings();
+		if (configuracoes == null) {
+			return;
+		}
+
+		if (tipo == Tipo.PESO) {
+			var peso = configuracoes.getPesoColuna();
+			lblCalibracaoAlvo.setText("Calibração — Peso da coluna");
+			lblCalibracaoValores.setText(peso == null ? "—" : ("""
+					área efetiva %.3f pol²  ·  braço %.3f pol
+					tambor %.2f pol  ·  cabo %.3f pol  ·  %d linhas
+					catarina %.0f lbf  ·  fator %.4f""")
+					.formatted(peso.getAreaEfetivaSensorPol2(), peso.getBracoSensorPol(),
+							peso.getDiametroTamborPol(), peso.getDiametroCaboPol(),
+							peso.getNumeroLinhas(), peso.getPesoCatarinaLbf(),
+							peso.getFatorCalibracao()));
+			estadoDaCalibracao(peso != null && peso.isConfigurado());
+			return;
+		}
+
+		int posicao = indiceEntreTorques();
+		boolean tubos = posicao == 0;
+		var chave = tubos ? configuracoes.getChaveTubos() : configuracoes.getChaveFlutuante();
+		lblCalibracaoAlvo.setText("Calibração — Chave hidráulica (" + (tubos ? "tubos" : "flutuante") + ")");
+		lblCalibracaoValores.setText(chave == null ? "—" : ("""
+				pistão %.3f pol  ·  haste %.3f pol
+				braço da alavanca %.3f ft  ·  %s""")
+				.formatted(chave.getDiametroPistaoIn(), chave.getDiametroHasteIn(),
+						chave.getBracoAlavancaFt(),
+						chave.getTipoMovimento() == null ? "—" : chave.getTipoMovimento()));
+
+		if (posicao > 1) {
+			// Ha so duas calibracoes de chave nesta estacao. Do terceiro card em diante nao existe
+			// slot proprio, e a da flutuante acaba reaproveitada.
+			alertarCalibracao("⚠️ Esta estação tem calibração para dois cards de torque. "
+					+ "Do terceiro em diante, a da flutuante é reaproveitada.");
+			return;
+		}
+		estadoDaCalibracao(chave != null && chave.isConfigurado());
+	}
+
+	private void estadoDaCalibracao(boolean configurada) {
+		if (configurada) {
+			trocarEstilo(lblCalibracaoEstado, "estado-ok");
+			lblCalibracaoEstado.setText("Calibração preenchida nesta estação.");
+		} else {
+			alertarCalibracao("Ainda não calibrado — o card lê o CLP, mas o valor convertido fica em zero.");
+		}
+	}
+
+	private void alertarCalibracao(String mensagem) {
+		trocarEstilo(lblCalibracaoEstado, "estado-atencao");
+		lblCalibracaoEstado.setText(mensagem);
+	}
+
+	private static void trocarEstilo(Label rotulo, String estilo) {
+		rotulo.getStyleClass().removeAll("estado-ok", "estado-atencao", "estado-erro");
+		rotulo.getStyleClass().add(estilo);
+	}
+
+	/** Posição do card selecionado entre os de torque — a ligação é posicional (ver acima). */
+	private int indiceEntreTorques() {
+		Card selecionado = tabela.getSelectionModel().getSelectedItem();
+		int posicao = 0;
+		for (Card card : rascunho) {
+			if (card == selecionado) {
+				return posicao;
+			}
+			if (card.tipo() == Tipo.TORQUE) {
+				posicao++;
+			}
+		}
+		return posicao;
+	}
+
+	/** Abre o mesmo editor de calibração que a engrenagem do dashboard já abre. */
+	private void abrirCalibracao() {
+		Card selecionado = tabela.getSelectionModel().getSelectedItem();
+		if (selecionado == null) {
+			return;
+		}
+		boolean peso = selecionado.tipo() == Tipo.PESO;
+		String caminho = peso ? "/views/peso-coluna-settings.fxml" : "/views/chave-settings.fxml";
+		try {
+			FXMLLoader loader = new FXMLLoader(getClass().getResource(caminho));
+			loader.setControllerFactory(contexto::getBean);
+			Parent conteudo = loader.load();
+			if (!peso) {
+				loader.<ChaveSettingsController>getController().configurar(indiceEntreTorques() == 0);
+			}
+
+			Stage janela = new Stage();
+			janela.setTitle(peso ? "Configuração — Peso da Coluna" : "Configuração da Chave Hidráulica");
+			janela.setScene(new Scene(conteudo));
+			janela.initModality(Modality.APPLICATION_MODAL);
+			janela.initOwner(raiz.getScene().getWindow());
+			janela.showAndWait();
+
+			// O editor grava direto nas configuracoes desta estacao; reler mostra o que ficou.
+			mostrarCalibracaoLocal(selecionado.tipo());
+		} catch (IOException e) {
+			logger.error("Erro ao abrir a calibracao do card {}", selecionado.identificacao(), e);
+		}
 	}
 
 	/** RN-084: o cilindro horizontal não usa altura, e o retangular não usa raio. */
