@@ -581,8 +581,10 @@ public class CardsConfigController {
 					causa == null ? "desconhecida" : causa.getMessage());
 			if (causa instanceof ConfiguracaoCardsClient.CardsDesatualizadosException) {
 				// Aqui nao adianta tentar de novo: e preciso recarregar e refazer sobre o gravado.
-				alertar("Configuração desatualizada", causa.getMessage());
+				// O status vem ANTES do alerta: alertar() bloqueia em showAndWait(), e o rodape
+				// atras do modal continuaria dizendo "Salvando...", contradizendo o que o modal diz.
 				status("Recarregue antes de salvar.");
+				alertar("Configuração desatualizada", causa.getMessage());
 			} else {
 				status(causa == null ? "Falha inesperada." : causa.getMessage());
 			}
