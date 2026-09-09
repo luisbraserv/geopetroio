@@ -123,14 +123,19 @@ public class SondaMonitoramentoService {
         return false;
     }
 
+    /**
+     * @param serie qual das series do dispositivo; {@code null} significa a serie unica de um card
+     *              de uma grandeza so. Um card {@code CONTADOR_STROKE} grava tres (RN-098)
+     */
     public Optional<MonitoramentoSerieDTO> consultarSerie(String username, String idSondaUnidade,
-                                                           String dispositivoId, Instant inicio, Instant fim) {
+                                                           String dispositivoId, String serie,
+                                                           Instant inicio, Instant fim) {
         if (!usuarioPossuiAcessoASonda(username, idSondaUnidade)) {
             return Optional.empty();
         }
         UnidadeSondaEntity sonda = unidadeSondaRepository.findByNome(idSondaUnidade)
                 .orElseThrow(() -> new ResourceNotFoundException("Sonda não encontrada: " + idSondaUnidade));
-        return monitoramentoClient.consultarSerie(sonda.getNome(), dispositivoId, inicio, fim);
+        return monitoramentoClient.consultarSerie(sonda.getNome(), dispositivoId, serie, inicio, fim);
     }
 
     private UsuarioEntity buscarUsuario(String username) {

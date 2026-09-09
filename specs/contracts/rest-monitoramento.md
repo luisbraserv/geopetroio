@@ -60,21 +60,43 @@ GET /api/monitoramentos/sondas/{idSondaUnidade}/series
 | Parâmetro | Local | Tipo | Obrigatório |
 |---|---|---|---|
 | `idSondaUnidade` | path | string | Sim — é o `UnidadeSonda.nome` (ex.: `SPT-144`) |
-| `dispositivoId` | query | string | Sim — vocabulário em [`mqtt-telemetria.md §4`](mqtt-telemetria.md#4-vocabulário-de-dispositivos) |
+| `dispositivoId` | query | string | Sim — id do card, `<TIPO>_<NN>`. O conjunto é **por unidade** ([`mqtt-telemetria.md §4`](mqtt-telemetria.md#4-o-conjunto-de-dispositivos-é-por-unidade)) |
+| `serie` | query | string | **Não** — ver abaixo |
 | `inicio` | query | ISO-8601 | Sim |
 | `fim` | query | ISO-8601 | Sim |
+
+### O filtro `serie` — **[FATO 2026-09-08]**
+
+Um card `CONTADOR_STROKE` grava **três** séries sob o mesmo `dispositivoId`, distinguidas pela tag
+`serie` ([RN-098](../business-rules.md#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)).
+Sem o filtro, uma consulta a esse card devolveria as três **misturadas na mesma linha do tempo** — um
+gráfico que parece válido e não é. Era a pendência aberta por
+[`mqtt-telemetria.md §4`](mqtt-telemetria.md#as-três-séries-do-contador-de-stroke).
+
+⚠️ **Omitir o parâmetro significa "a série única", não "todas as séries".** É assim que a escrita
+marca as leituras de um card de uma grandeza só (tag `serie = "unica"`). A consequência deliberada é
+que um card de stroke consultado sem `serie` devolve **vazio**, em vez das três sobrepostas:
+
+| Alternativa | Por que não |
+|---|---|
+| Ausência = sem filtro (as três juntas) | Devolve uma curva com três grandezas de unidades diferentes somadas na mesma escala. **Vazio se vê; isso não** |
+| Tornar `serie` obrigatório | Quebraria todo chamador de card comum, para resolver um caso que só existe no stroke |
 
 ### Resposta `200`
 
 ```json
 {
   "idSondaUnidade": "SPT-144",
-  "dispositivoId": "PESO_COLUNA_01",
+  "dispositivoId": "CONTADOR_STROKE_01",
+  "serie": "vazao",
   "pontos": [
-    { "dataHora": "2026-08-26T17:32:05.120Z", "valor": 12450.75 }
+    { "dataHora": "2026-08-26T17:32:05.120Z", "valor": 1.52 }
   ]
 }
 ```
+
+**[FATO]** `serie` volta no eco da resposta, e é `null` para card de uma grandeza só. Sem ele, o
+cliente não distinguiria duas respostas do mesmo `dispositivoId`.
 
 **[FATO]** Estrutura definida por `MonitoramentoSerieDTO` no cliente existente. Os nomes de campo
 **devem** ser exatamente estes.
@@ -140,13 +162,22 @@ esta sonda"* e *"Serviço de telemetria indisponível no momento"*.
 
 **[FATO]** `MonitoramentoSondaPageComponent`:
 - Períodos: 15m · 1h · 6h · personalizado (`datetime-local`)
-- Até **5 séries em paralelo** via `forkJoin` — uma requisição por dispositivo
+- Séries em paralelo via `forkJoin` — uma requisição por grandeza
 - Renderização em **SVG desenhado à mão**, com toggle Original/Suavizada (média móvel de 8 pontos, calculada no client)
 
-**[PENDENTE]** O contrato atual exige **1 requisição por dispositivo**. Para 5 dispositivos são 5
-chamadas em cascata (front → backend → telemetria = 10 saltos). Vale avaliar um endpoint que aceite
-múltiplos `dispositivoId` e retorne várias séries numa resposta — mudança pequena agora, cara depois
-que o cliente estiver em produção.
+**[FATO 2026-09-08]** A lista de variáveis **deixou de ser fixa**: vem de `GET /api/sondas/{id}/cards`
+e é traduzida em grandezas por `services/grandezas-de-card.ts`, que é o único ponto do front que sabe
+que um card de stroke rende três séries. Unidade sem cards não oferece variável nenhuma, e a tela diz
+por quê ([RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).
+
+⚠️ **A tela consulta pelo `UnidadeSonda.nome` e lê os cards pelo id numérico.** São chaves diferentes
+no mesmo fluxo: o histórico correlaciona por nome (RN-018) e a configuração é endereçada por id.
+`GET /api/sondas/minhas` devolve os dois.
+
+**[PENDENTE]** O contrato exige **1 requisição por grandeza** — e o número agora **varia por unidade**:
+uma unidade com duas bombas passa de 5 para 10 séries, e cada uma é uma cascata front → backend →
+telemetria. A pressão por um endpoint que aceite vários `dispositivoId` numa resposta **aumentou** com
+cards configuráveis; continua sendo mudança pequena agora e cara depois de o cliente estar em produção.
 
 ---
 

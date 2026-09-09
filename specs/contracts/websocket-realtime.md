@@ -94,12 +94,21 @@ destino e a garantia, não o conteúdo:
 | Consumidor | Geopetro-Telemetria → InfluxDB | Angular, direto na tela |
 | Envelope | `idSondaUnidade` (nome) | `unidadeSondaId` (id numérico) — ver [§2](#por-que-unidadesondaid-numérico-e-não-o-nome) |
 
-### Os campos fixos saíram — isto quebra o Angular
+### Os campos fixos saíram — isto quebrava o Angular
 
 **[DECIDIDO 2026-09-08]** `pesoColuna`, `torqueTubos`, `torqueFlutuante`, `pressaoBomba`, `vazao` e
-`strokeAtual` **deixam de existir**. O consumidor Angular atual espera esses campos e **para de
-funcionar** até ser atualizado (passo 8 de
-[cards-configuraveis](../features/cards-configuraveis.md#13-ordem-de-implementação-sugerida)).
+`strokeAtual` **deixam de existir**.
+
+✅ **[FATO 2026-09-08] O consumidor Angular foi atualizado** — passo 8 de
+[cards-configuraveis](../features/cards-configuraveis.md#13-ordem-de-implementação-sugerida).
+`EstadoRealtime` passou a carregar `leituras[]`, e a tela monta cards e gráficos a partir do documento
+de cards da unidade. Duas decisões de leitura que valem registrar:
+
+| Situação | O que a tela faz |
+|---|---|
+| Grandeza ausente num ciclo (RN-099) | Vira **lacuna** na série, não ponto omitido — comprimir a falta deslocaria o resto da curva como se o tempo não tivesse passado |
+| Leitura que chega **sem card** no documento lido | Aparece com o `dispositivoId` no lugar do rótulo. Acontece quando o Desktop publica de um cache mais novo ou mais velho que o servidor; **esconder leitura real seria pior que exibi-la sem nome** |
+| Mensagem **sem** `leituras` (produtor antigo) | Recusada, com aviso na tela. Aceitá-la produziria uma tela sem card nenhum e sem explicar por quê |
 
 **Por que não manter os dois formatos por um tempo:** o payload carregaria os campos fixos e a lista
 ao mesmo tempo, e se divergissem não haveria como dizer qual vale. Pior: com uma unidade que tem dois

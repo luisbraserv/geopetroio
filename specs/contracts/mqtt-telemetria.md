@@ -230,9 +230,13 @@ as outras leituras.
 
 Com `serie`, `WHERE dispositivoId = 'CONTADOR_STROKE_02' AND serie = 'vazao'` responde sozinho.
 
-⚠️ **Consequência para quem consulta:** uma query por `dispositivoId` de um card de stroke devolve as
-**três** séries misturadas se não filtrar por `serie`. É explícito, e o contrato de leitura
-([rest-monitoramento.md](rest-monitoramento.md)) precisa expor o filtro.
+⚠️ **Consequência para quem consulta:** uma query por `dispositivoId` de um card de stroke traz as
+**três** séries se não filtrar por `serie`.
+
+✅ **[FATO 2026-09-08]** O contrato de leitura expõe o filtro —
+[rest-monitoramento §2](rest-monitoramento.md#o-filtro-serie--fato-2026-09-08). Lá a ausência do
+parâmetro significa **a série única**, não "todas": um card de stroke consultado sem `serie` devolve
+vazio, em vez de três grandezas de unidades diferentes somadas na mesma escala.
 
 ### O conjunto inicial da frota atual
 
@@ -383,7 +387,7 @@ mesmo tempo**, e isso precisa estar à vista de quem for fazer o deploy.
 | # | O que quebra | Quando volta |
 |---|---|---|
 | 1 | ⚠️ **Toda unidade sem cards para de produzir telemetria** — P-08 / [RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada) | Unidade a unidade, conforme cada uma for configurada pela tela de cards do Desktop |
-| 2 | ⚠️ **O consumidor Angular do tempo real** deixa de entender o payload: os campos fixos viram lista de leituras | Quando o Geopetro-Front for atualizado (passo 8) |
+| 2 | ~~O consumidor Angular do tempo real deixa de entender o payload~~ | ✅ **Resolvido 2026-09-08** — Front atualizado (passo 8), com as telas montadas a partir do documento de cards |
 | 3 | As séries antigas do InfluxDB ficam com os nomes antigos | Não volta — aceito, não há dado relevante |
 
 ### Isto é um deploy coordenado, não três independentes

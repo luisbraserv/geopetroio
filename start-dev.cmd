@@ -277,7 +277,7 @@ set /a TENTATIVA=0
 
 :loop_http
 set /a TENTATIVA+=1
-curl -s -o nul -m 3 "%URL%" >nul 2>&1
+curl --fail -s -o nul -m 3 "%URL%" >nul 2>&1
 if not errorlevel 1 (
     echo   !ROTULO! respondendo.
     exit /b 0

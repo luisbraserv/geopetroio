@@ -32,25 +32,31 @@ public class ConsultaSerieService {
 		this.properties = properties;
 	}
 
-	public MonitoramentoSerieDTO consultar(String idSondaUnidade, String dispositivoId,
+	/**
+	 * @param serie qual das series do dispositivo; {@code null} significa a serie unica. Um card de
+	 *              stroke grava tres sob o mesmo {@code dispositivoId} (RN-098)
+	 */
+	public MonitoramentoSerieDTO consultar(String idSondaUnidade, String dispositivoId, String serie,
 			Instant inicio, Instant fim) {
 
 		List<InfluxTelemetriaRepository.PontoSerie> pontos = repository.consultarSerie(
 				idSondaUnidade,
 				dispositivoId,
+				serie,
 				inicio,
 				fim,
 				properties.getMaxPontosPorSerie(),
 				properties.isAgregarQuandoExcederTeto());
 
-		log.debug("Serie consultada: unidade={} dispositivo={} intervalo=[{} .. {}] pontos={}",
-				idSondaUnidade, dispositivoId, inicio, fim, pontos.size());
+		log.debug("Serie consultada: unidade={} dispositivo={} serie={} intervalo=[{} .. {}] pontos={}",
+				idSondaUnidade, dispositivoId, serie, inicio, fim, pontos.size());
 
 		List<MonitoramentoPontoDTO> pontosDto = pontos.stream()
 				.map(p -> new MonitoramentoPontoDTO(p.dataHora(), p.valor()))
 				.toList();
 
 		// Serie vazia e resposta legitima (sonda sem leitura no periodo), nao erro.
-		return new MonitoramentoSerieDTO(idSondaUnidade, dispositivoId, pontosDto);
+		// A serie vai no eco: sem ela o chamador nao distingue duas respostas do mesmo dispositivo.
+		return new MonitoramentoSerieDTO(idSondaUnidade, dispositivoId, serie, pontosDto);
 	}
 }

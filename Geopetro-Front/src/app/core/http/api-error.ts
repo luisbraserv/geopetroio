@@ -54,8 +54,16 @@ export function parseApiError(error: unknown): string {
     return body.trim();
   }
 
-  if (error.status === 401 || error.status === 403) {
+  if (error.status === 401) {
     return 'Usuário ou senha inválidos.';
+  }
+
+  if (error.status === 403) {
+    return 'Você não tem permissão para realizar esta operação.';
+  }
+
+  if (error.status >= 500) {
+    return 'O servidor está indisponível ou apresentou uma falha. Tente novamente em instantes.';
   }
 
   return 'Erro ao processar resposta do servidor.';

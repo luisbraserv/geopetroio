@@ -30,6 +30,15 @@ describe('Identity API routing', () => {
     request.flush({ username: 'ana', token: 'test-token', roles: ['INTERNO'] });
   });
 
+  it('handles an authentication response without roles without crashing', () => {
+    TestBed.inject(AuthService).authenticate$('ana', 'test-only').subscribe(user => {
+      expect(user.role).toBe('INTERNO');
+      expect(user.roles).toEqual([]);
+    });
+    http.expectOne(`${environment.apiUrl}/api/auth/login`)
+      .flush({ username: 'ana', token: 'test-token' });
+  });
+
   it('keeps authentication errors on the new route', () => {
     TestBed.inject(AuthService).authenticate$('ana', 'invalid').subscribe({
       next: () => expect.unreachable(),

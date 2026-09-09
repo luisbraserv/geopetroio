@@ -80,6 +80,14 @@ select:focus, input:focus {
   margin-top: 1rem;
 }
 
+/* Ocupa a linha inteira: o aviso explica por que nao ha chip nenhum ao lado dele. */
+.variaveis-aviso {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
 .toggle-chip {
   display: inline-flex;
   align-items: center;

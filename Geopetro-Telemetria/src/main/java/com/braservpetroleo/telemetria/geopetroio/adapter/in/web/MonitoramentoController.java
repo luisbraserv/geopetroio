@@ -50,8 +50,15 @@ public class MonitoramentoController {
 	public ResponseEntity<MonitoramentoSerieDTO> consultarSerie(
 			@PathVariable @NotBlank String idSondaUnidade,
 
-			@Parameter(description = "Ex.: PESO_COLUNA_01, TORQUE_01, TORQUE_02, PRESSAO_01, VAZAO_01")
+			@Parameter(description = "Id do card, gerado como <TIPO>_<NN>. Ex.: PESO_01, TORQUE_02, "
+					+ "PRESSAO_01, CONTADOR_STROKE_01. O conjunto e por unidade, nao do sistema.")
 			@RequestParam @NotBlank String dispositivoId,
+
+			@Parameter(description = "Qual das series do dispositivo: stroke, vazao ou "
+					+ "volumeAcumulado num card CONTADOR_STROKE (RN-098). Omitir significa a serie "
+					+ "unica do dispositivo — nao 'todas as series': um card de stroke consultado "
+					+ "sem este parametro devolve vazio, em vez das tres misturadas.")
+			@RequestParam(required = false) String serie,
 
 			@Parameter(description = "Instante inicial, ISO-8601 em UTC (ex.: 2026-08-27T10:00:00Z)")
 			@RequestParam Instant inicio,
@@ -59,7 +66,7 @@ public class MonitoramentoController {
 			@Parameter(description = "Instante final, ISO-8601 em UTC")
 			@RequestParam Instant fim) {
 
-		return ResponseEntity.ok(service.consultar(idSondaUnidade, dispositivoId, inicio, fim));
+		return ResponseEntity.ok(service.consultar(idSondaUnidade, dispositivoId, serie, inicio, fim));
 	}
 
 	@GetMapping("/sondas/{idSondaUnidade}/existe")

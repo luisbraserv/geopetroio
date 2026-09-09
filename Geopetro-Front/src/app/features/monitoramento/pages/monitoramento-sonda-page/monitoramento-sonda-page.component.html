@@ -62,14 +62,26 @@
     </div>
 
     <div class="variaveis-panel">
-      @for (dispositivo of dispositivos(); track dispositivo.id) {
+      @if (carregandoCards()) {
+        <span class="variaveis-aviso">Lendo o que esta unidade mede...</span>
+      } @else if (unidadeSemCards()) {
+        <!-- RN-088: sem cards configurados a unidade nao le nada, e nao ha serie no historico. -->
+        <span class="variaveis-aviso">
+          Esta unidade ainda nao tem cards configurados, e por isso nao possui historico.
+          A configuracao e feita no Geopetro-Desktop instalado na propria unidade.
+        </span>
+      } @else if (!sondaSelecionada()) {
+        <span class="variaveis-aviso">Selecione uma sonda para ver as variaveis disponiveis.</span>
+      }
+
+      @for (grandeza of grandezas(); track grandeza.chave) {
         <label class="toggle-chip">
           <input
             type="checkbox"
-            [checked]="dispositivo.visivel"
-            (change)="alternarDispositivo(dispositivo.id, $any($event.target).checked)"
+            [checked]="estaSelecionada(grandeza.chave)"
+            (change)="alternarGrandeza(grandeza.chave, $any($event.target).checked)"
           />
-          <span>{{ dispositivo.label }}</span>
+          <span>{{ grandeza.rotulo }}</span>
         </label>
       }
     </div>
@@ -93,11 +105,13 @@
       </div>
     } @else if (series().length) {
       <div class="graficos-grid">
-        @for (serie of series(); track serie.dispositivoId) {
+        <!-- Rastreado pela chave, nao pelo dispositivoId: as tres series de um contador de stroke
+             compartilham o mesmo id (RN-098) e colidiriam. -->
+        @for (item of series(); track item.chave) {
           <app-grafico-monitoramento
-            [serie]="serie"
-            [titulo]="nomeDispositivo(serie.dispositivoId)"
-            [unidade]="unidadeDispositivo(serie.dispositivoId)"
+            [serie]="item.serie"
+            [titulo]="item.grandeza.rotulo"
+            [unidade]="item.grandeza.unidade"
           />
         }
       </div>

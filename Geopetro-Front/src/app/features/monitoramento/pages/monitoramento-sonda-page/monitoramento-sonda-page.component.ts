@@ -5,14 +5,16 @@ import { TuiButton, TuiIcon } from '@taiga-ui/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MonitoramentoSondaService, MonitoramentoSerie, SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { CardsUnidadeService } from '../../services/cards-unidade.service';
+import { ConfiguracaoCards, GrandezaDeCard, grandezasDe } from '../../services/grandezas-de-card';
 import { GraficoMonitoramentoComponent } from '../../components/grafico-monitoramento/grafico-monitoramento.component';
 import { environment } from '../../../../../environments/environment';
 
-interface DispositivoMonitoramento {
-  id: string;
-  label: string;
-  unidade: string;
-  visivel: boolean;
+/** Uma série pronta para desenhar, com a grandeza que a descreve. */
+interface SerieExibida {
+  chave: string;
+  grandeza: GrandezaDeCard;
+  serie: MonitoramentoSerie;
 }
 
 @Component({
@@ -24,6 +26,7 @@ interface DispositivoMonitoramento {
 })
 export class MonitoramentoSondaPageComponent implements OnInit {
   private readonly service = inject(MonitoramentoSondaService);
+  private readonly cardsService = inject(CardsUnidadeService);
 
   readonly sondas = signal<SondaDisponivel[]>([]);
   readonly sondaSelecionada = signal<SondaDisponivel | null>(null);
@@ -31,22 +34,33 @@ export class MonitoramentoSondaPageComponent implements OnInit {
   readonly inicioPeriodo = signal<string>('');
   readonly fimPeriodo = signal<string>('');
   readonly carregando = signal(false);
-  readonly series = signal<MonitoramentoSerie[]>([]);
+  readonly series = signal<SerieExibida[]>([]);
   readonly semDados = signal(false);
   readonly erro = signal<string | null>(null);
+
+  readonly configuracao = signal<ConfiguracaoCards | null>(null);
+  readonly carregandoCards = signal(false);
+
+  /** Chaves das grandezas marcadas para consulta. Vazio antes de os cards chegarem. */
+  private readonly selecionadas = signal<ReadonlySet<string>>(new Set());
 
   readonly demonstracaoAtiva = computed(() => {
     const demoId = environment.telemetriaDemoSondaId;
     return !!demoId && this.sondaSelecionada()?.idSondaUnidade === demoId;
   });
 
-  readonly dispositivos = signal<DispositivoMonitoramento[]>([
-    { id: 'PESO_COLUNA_01',  label: 'Peso da Coluna',          unidade: 'lbf',    visivel: true },
-    { id: 'TORQUE_01',       label: 'Torque Ch. Hid. Tubos',   unidade: 'lbf·ft', visivel: true },
-    { id: 'TORQUE_02',       label: 'Torque Ch. Flutuante',    unidade: 'lbf·ft', visivel: true },
-    { id: 'PRESSAO_01',      label: 'Pressao Bomba / ESCP',    unidade: 'psi',    visivel: true },
-    { id: 'VAZAO_01',        label: 'Vazao',                   unidade: 'bbl/min',visivel: true },
-  ]);
+  /**
+   * O que esta unidade mede — vindo do documento de cards, não de uma lista fixa.
+   *
+   * ⚠️ Até 2026-09-07 esta lista era constante no código: cinco dispositivos iguais em toda a
+   * frota. Com cards por unidade o conjunto varia, e um card de stroke traz **três** séries
+   * (RN-098). Ver `specs/features/cards-configuraveis.md`.
+   */
+  readonly grandezas = computed(() => grandezasDe(this.configuracao()?.cards));
+
+  readonly unidadeSemCards = computed(
+    () => !!this.configuracao() && this.grandezas().length === 0,
+  );
 
   readonly periodos = [
     { value: '15m', label: 'Ultimos 15 minutos' },
@@ -67,13 +81,13 @@ export class MonitoramentoSondaPageComponent implements OnInit {
   get fimPeriodoValue() { return this.fimPeriodo(); }
   set fimPeriodoValue(v: string) { this.fimPeriodo.set(v); }
 
-  readonly dispositivosSelecionados = computed(() =>
-    this.dispositivos().filter((dispositivo) => dispositivo.visivel)
+  readonly grandezasSelecionadas = computed(() =>
+    this.grandezas().filter((grandeza) => this.selecionadas().has(grandeza.chave))
   );
 
   readonly podeconsultar = computed(() =>
     !!this.sondaSelecionada() &&
-    this.dispositivosSelecionados().length > 0 &&
+    this.grandezasSelecionadas().length > 0 &&
     (this.periodo() !== 'custom' || (!!this.inicioPeriodo() && !!this.fimPeriodo()))
   );
 
@@ -85,7 +99,8 @@ export class MonitoramentoSondaPageComponent implements OnInit {
         const sondaDemo = demoId ? sondas.find((sonda) => sonda.idSondaUnidade === demoId) : undefined;
         if (sondaDemo) {
           this.sondaSelecionada.set(sondaDemo);
-          this.consultar();
+          // Só há o que consultar depois de saber o que a unidade mede.
+          this.carregarCards(sondaDemo, () => this.consultar());
         }
       },
       error: () => this.erro.set('Erro ao carregar sondas disponiveis.'),
@@ -96,15 +111,27 @@ export class MonitoramentoSondaPageComponent implements OnInit {
     this.series.set([]);
     this.semDados.set(false);
     this.erro.set(null);
+    this.configuracao.set(null);
+    this.selecionadas.set(new Set());
+
+    const sonda = this.sondaSelecionada();
+    if (sonda) {
+      this.carregarCards(sonda);
+    }
   }
 
-  alternarDispositivo(id: string, checked: boolean) {
-    this.dispositivos.update((dispositivos) =>
-      dispositivos.map((dispositivo) =>
-        dispositivo.id === id ? { ...dispositivo, visivel: checked } : dispositivo
-      )
-    );
-    this.series.update((series) => checked ? series : series.filter((serie) => serie.dispositivoId !== id));
+  estaSelecionada(chave: string): boolean {
+    return this.selecionadas().has(chave);
+  }
+
+  alternarGrandeza(chave: string, checked: boolean) {
+    this.selecionadas.update((atual) => {
+      const proximo = new Set(atual);
+      if (checked) proximo.add(chave);
+      else proximo.delete(chave);
+      return proximo;
+    });
+    this.series.update((series) => checked ? series : series.filter((item) => item.chave !== chave));
     this.semDados.set(false);
     this.erro.set(null);
   }
@@ -125,8 +152,8 @@ export class MonitoramentoSondaPageComponent implements OnInit {
 
   consultar() {
     const sonda = this.sondaSelecionada();
-    const dispositivos = this.dispositivosSelecionados();
-    if (!sonda || dispositivos.length === 0) return;
+    const grandezas = this.grandezasSelecionadas();
+    if (!sonda || grandezas.length === 0) return;
 
     this.carregando.set(true);
     this.series.set([]);
@@ -136,19 +163,33 @@ export class MonitoramentoSondaPageComponent implements OnInit {
     const { inicio, fim } = this.calcularPeriodo();
 
     forkJoin(
-      dispositivos.map((dispositivo) =>
-        this.service.consultarSerie(sonda.idSondaUnidade, dispositivo.id, inicio, fim).pipe(
-          catchError(() => of({ idSondaUnidade: sonda.idSondaUnidade, dispositivoId: dispositivo.id, pontos: [] }))
-        )
+      grandezas.map((grandeza) =>
+        this.service
+          // `grandeza.serie` separa as três de um card de stroke; é `null` nos demais tipos, e aí
+          // o parâmetro não é enviado.
+          .consultarSerie(sonda.idSondaUnidade, grandeza.dispositivoId, inicio, fim, grandeza.serie)
+          .pipe(
+            catchError(() => of({
+              idSondaUnidade: sonda.idSondaUnidade,
+              dispositivoId: grandeza.dispositivoId,
+              serie: grandeza.serie,
+              pontos: [],
+            } as MonitoramentoSerie))
+          )
       )
     ).subscribe({
       next: (resultados) => {
         this.carregando.set(false);
-        const seriesComDados = resultados.filter((serie) => serie.pontos?.length);
-        if (seriesComDados.length === 0) {
+        // O índice casa resultado com grandeza: `forkJoin` preserva a ordem das entradas, e
+        // casar por `dispositivoId` juntaria as três séries de um mesmo contador de stroke.
+        const comDados = resultados
+          .map((serie, indice) => ({ chave: grandezas[indice].chave, grandeza: grandezas[indice], serie }))
+          .filter((item) => item.serie.pontos?.length);
+
+        if (comDados.length === 0) {
           this.semDados.set(true);
         } else {
-          this.series.set(seriesComDados);
+          this.series.set(comDados);
         }
       },
       error: (err) => {
@@ -164,11 +205,28 @@ export class MonitoramentoSondaPageComponent implements OnInit {
     });
   }
 
-  nomeDispositivo(dispositivoId: string): string {
-    return this.dispositivos().find((dispositivo) => dispositivo.id === dispositivoId)?.label ?? dispositivoId;
-  }
-
-  unidadeDispositivo(dispositivoId: string): string {
-    return this.dispositivos().find((dispositivo) => dispositivo.id === dispositivoId)?.unidade ?? '';
+  /**
+   * Lê o documento de cards da unidade e marca tudo como selecionado.
+   *
+   * Marcar tudo preserva o comportamento anterior — a tela abria com as cinco variáveis ligadas —
+   * agora sobre o conjunto que a unidade declara.
+   */
+  private carregarCards(sonda: SondaDisponivel, aoConcluir?: () => void): void {
+    this.carregandoCards.set(true);
+    this.cardsService.ler(sonda.id).subscribe({
+      next: (configuracao) => {
+        // Resposta atrasada de uma sonda que já não é a selecionada não pode sobrescrever a atual.
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.configuracao.set(configuracao);
+        this.selecionadas.set(new Set(grandezasDe(configuracao.cards).map((g) => g.chave)));
+        this.carregandoCards.set(false);
+        aoConcluir?.();
+      },
+      error: () => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.carregandoCards.set(false);
+        this.erro.set('Nao foi possivel ler a configuracao de cards desta unidade.');
+      },
+    });
   }
 }

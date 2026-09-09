@@ -22,16 +22,29 @@ public class MonitoramentoClient {
         this.webClient = monitoramentoWebClient;
     }
 
+    /**
+     * @param serie qual das series do dispositivo; {@code null} significa a serie unica.
+     *              ⚠️ Um card de stroke grava tres sob o mesmo {@code dispositivoId} (RN-098), e
+     *              omitir o filtro devolve vazio em vez das tres misturadas — ver o contrato em
+     *              specs/contracts/rest-monitoramento.md
+     */
     public Optional<MonitoramentoSerieDTO> consultarSerie(String idSondaUnidade, String dispositivoId,
-                                                           Instant inicio, Instant fim) {
+                                                           String serie, Instant inicio, Instant fim) {
         try {
             MonitoramentoSerieDTO result = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/api/monitoramentos/sondas/{idSondaUnidade}/series")
-                            .queryParam("dispositivoId", dispositivoId)
-                            .queryParam("inicio", inicio.toString())
-                            .queryParam("fim", fim.toString())
-                            .build(idSondaUnidade))
+                    .uri(uriBuilder -> {
+                        uriBuilder
+                                .path("/api/monitoramentos/sondas/{idSondaUnidade}/series")
+                                .queryParam("dispositivoId", dispositivoId)
+                                .queryParam("inicio", inicio.toString())
+                                .queryParam("fim", fim.toString());
+                        // Ausente e diferente de vazio: a Telemetria trata a ausencia como "a serie
+                        // unica", e uma string vazia filtraria por uma serie que ninguem gravou.
+                        if (serie != null && !serie.isBlank()) {
+                            uriBuilder.queryParam("serie", serie);
+                        }
+                        return uriBuilder.build(idSondaUnidade);
+                    })
                     .retrieve()
                     .bodyToMono(MonitoramentoSerieDTO.class)
                     .block();

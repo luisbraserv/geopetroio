@@ -5,26 +5,10 @@ import { TuiButton } from '@taiga-ui/core';
 
 import { ToastService } from '../../../../shared/toast/toast.service';
 import { GraficoTempoRealComponent } from '../../components/grafico-tempo-real/grafico-tempo-real.component';
+import { CardsUnidadeService } from '../../services/cards-unidade.service';
+import { ConfiguracaoCards, GrandezaDeCard, chaveGrandeza, grandezasDe } from '../../services/grandezas-de-card';
 import { MonitoramentoSondaService, SondaDisponivel } from '../../services/monitoramento-sonda.service';
 import { RealtimeService } from '../../services/realtime.service';
-
-type ChaveGrandeza =
-  | 'pesoColuna'
-  | 'torqueTubos'
-  | 'torqueFlutuante'
-  | 'pressaoBomba'
-  | 'vazao'
-  | 'strokeAtual';
-
-/** Um card do painel, com rótulo, unidade e casas decimais próprias. */
-interface CardTempoReal {
-  chave: ChaveGrandeza;
-  rotulo: string;
-  unidade: string;
-  casas: number;
-  /** Cor da curva no gráfico correspondente. */
-  cor: string;
-}
 
 /** Acima disto, o dado deixa de representar o "agora" e a tela avisa. */
 const LIMITE_DEFASAGEM_MS = 5000;
@@ -37,12 +21,17 @@ const LIMITE_DEFASAGEM_MS = 5000;
 })
 export class TempoRealPageComponent implements OnDestroy {
   private readonly sondaService = inject(MonitoramentoSondaService);
+  private readonly cardsService = inject(CardsUnidadeService);
   private readonly realtime = inject(RealtimeService);
   private readonly toast = inject(ToastService);
 
   protected readonly sondas = signal<SondaDisponivel[]>([]);
   protected readonly sondaSelecionada = signal<SondaDisponivel | null>(null);
   protected readonly carregandoSondas = signal(false);
+
+  protected readonly configuracao = signal<ConfiguracaoCards | null>(null);
+  protected readonly carregandoCards = signal(false);
+  protected readonly erroCards = signal<string | null>(null);
 
   protected readonly status = this.realtime.status;
   protected readonly estado = this.realtime.estado;
@@ -52,33 +41,54 @@ export class TempoRealPageComponent implements OnDestroy {
   private readonly agora = signal(Date.now());
   private readonly relogio: ReturnType<typeof setInterval>;
 
-  protected readonly cards: CardTempoReal[] = [
-    { chave: 'pesoColuna', rotulo: 'Peso da Coluna', unidade: 'lbf', casas: 0, cor: '#2563eb' },
-    { chave: 'torqueTubos', rotulo: 'Torque Ch. Hid. Tubos', unidade: 'lbf.ft', casas: 0, cor: '#7c3aed' },
-    { chave: 'torqueFlutuante', rotulo: 'Torque Ch. Flutuante', unidade: 'lbf.ft', casas: 0, cor: '#c026d3' },
-    { chave: 'pressaoBomba', rotulo: 'P. Bomba de Lama', unidade: 'psi', casas: 1, cor: '#dc2626' },
-    { chave: 'vazao', rotulo: 'Vazão', unidade: 'bbl/min', casas: 3, cor: '#0891b2' },
-    { chave: 'strokeAtual', rotulo: 'Stroke Atual', unidade: '', casas: 0, cor: '#059669' },
-  ];
+  /**
+   * O que esta unidade mede, na ordem configurada.
+   *
+   * ⚠️ **Vem do documento de cards, não de uma lista fixa.** Até 2026-09-07 eram sempre as mesmas
+   * cinco grandezas; hoje cada unidade declara as suas
+   * (`specs/features/cards-configuraveis.md`), e uma unidade recém-cadastrada não declara nenhuma.
+   */
+  protected readonly grandezas = computed(() => grandezasDe(this.configuracao()?.cards));
 
   /**
-   * Série de cada grandeza para os gráficos, derivada da janela deslizante.
+   * Grandezas que chegaram pelo canal mas não estão no documento lido aqui.
    *
-   * Um único `computed` por grandeza, calculado sob demanda: os seis gráficos leem daqui em vez de
-   * cada um percorrer o histórico por conta própria.
+   * Acontece quando o Desktop publica a partir de um cache mais novo — ou mais velho — que o
+   * documento vigente no servidor. Aparecem com o `dispositivoId` no lugar do rótulo: **esconder
+   * uma leitura real seria pior que exibi-la sem nome bonito.**
    */
-  protected readonly series = computed(() => {
-    const historico = this.realtime.historico();
-    const mapa = {} as Record<ChaveGrandeza, (number | null)[]>;
-    for (const card of this.cards) {
-      mapa[card.chave] = historico.map((estado) => estado[card.chave]);
-    }
-    return mapa;
+  protected readonly grandezasSemCard = computed<GrandezaDeCard[]>(() => {
+    const conhecidas = new Set(this.grandezas().map((g) => g.chave));
+    return (this.estado()?.leituras ?? [])
+      .filter((leitura) => !conhecidas.has(chaveGrandeza(leitura.dispositivoId, leitura.serie)))
+      .map((leitura) => ({
+        chave: chaveGrandeza(leitura.dispositivoId, leitura.serie),
+        dispositivoId: leitura.dispositivoId,
+        serie: leitura.serie ?? null,
+        tipo: leitura.tipo,
+        rotulo: leitura.serie ? `${leitura.dispositivoId} — ${leitura.serie}` : leitura.dispositivoId,
+        unidade: leitura.unidade ?? '',
+        casas: 2,
+        cor: '#64748b',
+      }));
   });
 
-  protected serieDe(card: CardTempoReal): (number | null)[] {
-    return this.series()[card.chave] ?? [];
-  }
+  /** O que a tela desenha: o configurado, mais o que chegou sem estar configurado. */
+  protected readonly grandezasVisiveis = computed(() => [
+    ...this.grandezas(),
+    ...this.grandezasSemCard(),
+  ]);
+
+  /**
+   * Unidade nunca configurada: revisão `0` e nenhum card.
+   *
+   * Não é erro nem pendência sinalizada — é o estado normal de quem ainda não recebeu a visita de
+   * configuração. Mas explica o que a tela vazia significa (RN-088).
+   */
+  protected readonly unidadeSemCards = computed(() => {
+    const configuracao = this.configuracao();
+    return !!configuracao && this.grandezas().length === 0;
+  });
 
   protected readonly conectado = computed(() => this.status() === 'Online');
   protected readonly podeConectar = computed(
@@ -119,6 +129,31 @@ export class TempoRealPageComponent implements OnDestroy {
 
   protected set sondaSelecionadaValue(sonda: SondaDisponivel | null) {
     this.sondaSelecionada.set(sonda);
+    this.aoTrocarSonda(sonda);
+  }
+
+  protected serieDe(grandeza: GrandezaDeCard): (number | null)[] {
+    return this.realtime.series().get(grandeza.chave) ?? [];
+  }
+
+  /**
+   * Unidade exibida.
+   *
+   * Prefere a que veio na mensagem — cada leitura se descreve (RN-097), e ela reflete o que a borda
+   * realmente converteu. O documento de cards é a reserva para antes da primeira leitura chegar.
+   */
+  protected unidadeDe(grandeza: GrandezaDeCard): string {
+    return this.realtime.leituras().get(grandeza.chave)?.unidade ?? grandeza.unidade;
+  }
+
+  protected valorCard(grandeza: GrandezaDeCard): string {
+    const leitura = this.realtime.leituras().get(grandeza.chave);
+    if (!leitura || !Number.isFinite(leitura.valor)) return '—';
+
+    return leitura.valor.toLocaleString('pt-BR', {
+      minimumFractionDigits: grandeza.casas,
+      maximumFractionDigits: grandeza.casas,
+    });
   }
 
   protected async conectar(): Promise<void> {
@@ -138,19 +173,6 @@ export class TempoRealPageComponent implements OnDestroy {
     this.realtime.desconectar();
   }
 
-  protected valorCard(card: CardTempoReal): string {
-    const estado = this.estado();
-    if (!estado) return '—';
-
-    const valor = estado[card.chave];
-    if (valor === null || valor === undefined) return '—';
-
-    return Number(valor).toLocaleString('pt-BR', {
-      minimumFractionDigits: card.casas,
-      maximumFractionDigits: card.casas,
-    });
-  }
-
   protected classeStatus(): string {
     switch (this.status()) {
       case 'Online':
@@ -168,6 +190,39 @@ export class TempoRealPageComponent implements OnDestroy {
     const estado = this.estado();
     if (!estado?.timestamp) return '—';
     return new Date(estado.timestamp).toLocaleTimeString('pt-BR');
+  }
+
+  /**
+   * Trocar de sonda troca o conjunto de grandezas, não só os valores.
+   *
+   * Por isso a configuração anterior é descartada antes de a nova chegar: manter os cards da sonda
+   * anterior na tela enquanto o documento novo carrega mostraria rótulos de uma unidade com
+   * leituras de outra.
+   */
+  private aoTrocarSonda(sonda: SondaDisponivel | null): void {
+    this.realtime.desconectar();
+    this.configuracao.set(null);
+    this.erroCards.set(null);
+
+    if (!sonda) return;
+    this.carregarCards(sonda);
+  }
+
+  private carregarCards(sonda: SondaDisponivel): void {
+    this.carregandoCards.set(true);
+    this.cardsService.ler(sonda.id).subscribe({
+      next: (configuracao) => {
+        // Resposta atrasada de uma sonda que já não é a selecionada não pode sobrescrever a atual.
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.configuracao.set(configuracao);
+        this.carregandoCards.set(false);
+      },
+      error: () => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.erroCards.set('Não foi possível ler a configuração de cards desta unidade.');
+        this.carregandoCards.set(false);
+      },
+    });
   }
 
   private carregarSondas(): void {

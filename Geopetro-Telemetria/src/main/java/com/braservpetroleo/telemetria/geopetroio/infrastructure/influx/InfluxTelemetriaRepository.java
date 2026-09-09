@@ -142,19 +142,24 @@ public class InfluxTelemetriaRepository {
 	/**
 	 * Consulta a serie de um dispositivo num intervalo.
 	 *
+	 * @param serie     qual das series do dispositivo; {@code null} significa a serie unica.
+	 *                  ⚠️ Um card de stroke grava tres series sob o mesmo {@code dispositivoId}
+	 *                  (RN-098): sem este filtro as tres voltariam misturadas na mesma linha do
+	 *                  tempo, produzindo um grafico que parece valido e nao e
 	 * @param maxPontos teto de pontos; acima disso agrega por janela em vez de devolver bruto
 	 * @param agregar   se false, nao agrega — o Influx apenas devolve o bruto do periodo
 	 */
-	public List<PontoSerie> consultarSerie(String idSondaUnidade, String dispositivoId,
+	public List<PontoSerie> consultarSerie(String idSondaUnidade, String dispositivoId, String serie,
 			Instant inicio, Instant fim, int maxPontos, boolean agregar) {
 
 		validarIdentificador("idSondaUnidade", idSondaUnidade);
 		validarIdentificador("dispositivoId", dispositivoId);
+		validarIdentificador("serie", tagDaSerie(serie));
 		if (inicio == null || fim == null || !inicio.isBefore(fim)) {
 			throw new IllegalArgumentException("intervalo invalido: inicio deve ser anterior a fim");
 		}
 
-		String flux = montarFlux(idSondaUnidade, dispositivoId, inicio, fim, maxPontos, agregar);
+		String flux = montarFlux(idSondaUnidade, dispositivoId, serie, inicio, fim, maxPontos, agregar);
 		log.debug("Flux: {}", flux);
 
 		List<FluxTable> tabelas = queryApi.query(flux);
@@ -222,7 +227,7 @@ public class InfluxTelemetriaRepository {
 		return escolhido;
 	}
 
-	private String montarFlux(String idSondaUnidade, String dispositivoId,
+	private String montarFlux(String idSondaUnidade, String dispositivoId, String serie,
 			Instant inicio, Instant fim, int maxPontos, boolean agregar) {
 
 		StringBuilder flux = new StringBuilder()
@@ -232,6 +237,8 @@ public class InfluxTelemetriaRepository {
 				.append(escapar(properties.getMeasurement())).append("\")\n")
 				.append("  |> filter(fn: (r) => r.idSondaUnidade == \"").append(idSondaUnidade).append("\")\n")
 				.append("  |> filter(fn: (r) => r.dispositivoId == \"").append(dispositivoId).append("\")\n")
+				// Espelha exatamente o que a escrita grava em LeituraTelemetria.serieTag().
+				.append("  |> filter(fn: (r) => r.serie == \"").append(tagDaSerie(serie)).append("\")\n")
 				.append("  |> filter(fn: (r) => r._field == \"valor\")\n");
 
 		Duration janela = janelaDeAgregacao(inicio, fim, maxPontos);
@@ -262,6 +269,19 @@ public class InfluxTelemetriaRepository {
 		}
 		long janelaSegundos = Math.max(1L, (long) Math.ceil((double) segundos / maxPontos));
 		return Duration.ofSeconds(janelaSegundos);
+	}
+
+	/**
+	 * Tag gravada para uma serie.
+	 *
+	 * <p>Ausente significa <b>a serie unica</b> do dispositivo, e nao "todas as series": e assim
+	 * que a escrita marca as leituras de um card de uma grandeza so
+	 * ({@code LeituraTelemetria.serieTag()}). A consequencia deliberada e que um card de stroke
+	 * consultado sem {@code serie} devolve <b>vazio</b> — nao as tres misturadas. Vazio se ve;
+	 * uma curva com tres grandezas sobrepostas, nao.
+	 */
+	private static String tagDaSerie(String serie) {
+		return serie == null || serie.isBlank() ? "unica" : serie;
 	}
 
 	private static void validarIdentificador(String campo, String valor) {

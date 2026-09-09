@@ -20,6 +20,13 @@ export interface MonitoramentoPonto {
 export interface MonitoramentoSerie {
   idSondaUnidade: string;
   dispositivoId: string;
+  /**
+   * Distingue as três grandezas de um card de stroke — RN-098. Ausente nas demais.
+   *
+   * Acompanha o eco do filtro: sem ela, duas séries do mesmo contador voltariam indistinguíveis
+   * na resposta, e a tela não saberia qual gráfico é qual.
+   */
+  serie?: string | null;
   pontos: MonitoramentoPonto[];
 }
 
@@ -36,16 +43,28 @@ export class MonitoramentoSondaService {
     return this.http.get<SondaDisponivel[]>(`${this.sondasUrl}/minhas`);
   }
 
+  /**
+   * Série histórica de uma grandeza.
+   *
+   * ⚠️ **`serie` não é opcional por conveniência.** Um card `CONTADOR_STROKE` grava três séries
+   * sob o mesmo `dispositivoId` (RN-098); consultá-lo sem o filtro devolve as três misturadas na
+   * mesma linha do tempo — um gráfico que parece válido e não é. Para os demais tipos o campo não
+   * existe, e enviá-lo vazio filtraria por uma série que ninguém gravou.
+   */
   consultarSerie(
     idSondaUnidade: string,
     dispositivoId: string,
     inicio: string,
-    fim: string
+    fim: string,
+    serie?: string | null
   ): Observable<MonitoramentoSerie> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('dispositivoId', dispositivoId)
       .set('inicio', inicio)
       .set('fim', fim);
+    if (serie) {
+      params = params.set('serie', serie);
+    }
     return this.http.get<MonitoramentoSerie>(
       `${this.sondasUrl}/${encodeURIComponent(idSondaUnidade)}/monitoramentos/series`,
       { params }

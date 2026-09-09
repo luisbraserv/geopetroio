@@ -43,7 +43,7 @@ export class AuthService {
           ...response,
           // Fallback para INTERNO: a role base de qualquer funcionário, e a que menos
           // concede acesso. 'USER' não existe no enum do backend.
-          role: response.roles[0] ?? 'INTERNO',
+          role: response.roles?.[0] ?? 'INTERNO',
           roles: response.roles ?? [],
         })),
         catchError((error) => throwError(() => new AuthException(parseApiError(error)))),

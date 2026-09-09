@@ -491,10 +491,16 @@ sempre nesta base, o número sai plausível. A tela avisa; o código ainda não 
    parâmetros trocando conforme o tipo, painel de conexão do CLP e rodapé fixo.
    ⚠️ **Não há botão de excluir** (RN-091) e **não há leitura ao vivo do endereço** (§10)
 7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
-8. **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade.
-   ⚠️ **Deixou de ser opcional:** o canal de tempo real passa a mandar lista de leituras em vez dos
-   campos fixos, então o Angular atual **para de funcionar** até este passo
-   ([websocket-realtime §3](../contracts/websocket-realtime.md#os-campos-fixos-saíram--isto-quebra-o-angular))
+8. ✅ **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade.
+   Entregue em 2026-09-08. As duas telas leem `GET /api/sondas/{id}/cards` e derivam as grandezas em
+   `services/grandezas-de-card.ts` — único ponto do front que sabe que um card de stroke rende três
+   séries. Unidade sem cards mostra o motivo em vez de uma tela vazia (RN-088).
+
+   ⚠️ **Junto veio o filtro `serie` no caminho de leitura do histórico**, nos três projetos: sem ele
+   uma consulta a um card de stroke devolvia as três séries misturadas na mesma linha do tempo. Era a
+   pendência que [mqtt-telemetria §4](../contracts/mqtt-telemetria.md#as-três-séries-do-contador-de-stroke)
+   apontava, e o contrato de leitura agora a expõe
+   ([rest-monitoramento §2](../contracts/rest-monitoramento.md#o-filtro-serie--fato-2026-09-08)).
 
 ⚠️ O passo 3 é o de maior risco: troca o caminho de leitura de toda a frota. Como a frota nasce vazia
 (§10), o comportamento observável **vai** mudar no dia do deploy — a telemetria só volta unidade a

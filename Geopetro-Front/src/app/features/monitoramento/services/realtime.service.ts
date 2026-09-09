@@ -1,20 +1,45 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Store } from '@ngxs/store';
 
 import { environment } from '../../../../environments/environment';
 import { AuthState } from '../../auth/state/auth.state';
+import { TipoCard, chaveGrandeza } from './grandezas-de-card';
 import { StompClient } from './stomp-client';
 
-/** Estado instantâneo de uma Unidade/Sonda, recebido pelo canal de tempo real. */
+/**
+ * Uma leitura, na mesma forma do MQTT (`mqtt-telemetria.md §3`).
+ *
+ * **A mensagem se descreve** (RN-097): tipo e unidade viajam junto do valor. É isso que permite um
+ * card de um tipo novo aparecer na tela sem que o front conheça a unidade de antemão.
+ */
+export interface LeituraRealtime {
+  dispositivoId: string;
+  /** Distingue as três grandezas de um card de stroke — RN-098. Ausente nas demais. */
+  serie?: string | null;
+  tipo: TipoCard;
+  unidade: string;
+  /** Onde foi lido neste ciclo, como `DBW10`. Rastreabilidade, não exibição. */
+  enderecoDb?: string;
+  valor: number;
+  valorBruto?: number;
+}
+
+/**
+ * Estado instantâneo de uma Unidade/Sonda, recebido pelo canal de tempo real.
+ *
+ * ⚠️ **Reescrito em 2026-09-08.** Os campos fixos — `pesoColuna`, `torqueTubos`, `torqueFlutuante`,
+ * `pressaoBomba`, `vazao`, `strokeAtual` — deixaram de existir. Com cards por unidade, o conjunto
+ * varia de sonda para sonda: uma unidade com dois torques e uma temperatura não cabia neles, e
+ * campos fixos seriam uma verdade parcial se passando por completa
+ * (`specs/contracts/websocket-realtime.md §3`).
+ *
+ * **Só vêm grandezas com valor.** Um card sem calibração não publica nada naquele ciclo (RN-099):
+ * a ausência é lacuna honesta, e zero seria um número que passaria por medição real.
+ */
 export interface EstadoRealtime {
   unidadeSondaId: number;
   timestamp: string;
-  pesoColuna: number | null;
-  torqueTubos: number | null;
-  torqueFlutuante: number | null;
-  pressaoBomba: number | null;
-  vazao: number | null;
-  strokeAtual: number | null;
+  leituras: LeituraRealtime[];
 }
 
 export type StatusConexao = 'Offline' | 'Conectando' | 'Online' | 'Reconectando';
@@ -54,6 +79,56 @@ export class RealtimeService {
    * (ver `websocket-realtime.md`). Para série histórica de verdade, use o Monitoramento.
    */
   readonly historico = signal<EstadoRealtime[]>([]);
+
+  /**
+   * Leituras da última mensagem, indexadas pela chave da grandeza.
+   *
+   * A chave inclui a série porque as três de um contador de stroke compartilham o
+   * `dispositivoId` (RN-098) — indexar só por ele faria vazão sobrescrever stroke.
+   */
+  readonly leituras = computed(() => {
+    const mapa = new Map<string, LeituraRealtime>();
+    for (const leitura of this.estado()?.leituras ?? []) {
+      mapa.set(chaveGrandeza(leitura.dispositivoId, leitura.serie), leitura);
+    }
+    return mapa;
+  });
+
+  /**
+   * Série de cada grandeza ao longo da janela, para os gráficos.
+   *
+   * Um ciclo sem determinada grandeza vira `null` na posição, não um ponto omitido: a leitura pode
+   * faltar por falta de calibração (RN-099), e comprimir a lacuna deslocaria todo o resto da curva
+   * como se o tempo não tivesse passado.
+   *
+   * As chaves saem das próprias mensagens, não de uma lista fixa — é o que permite a tela
+   * acompanhar um documento de cards que mudou enquanto ela estava aberta.
+   */
+  readonly series = computed(() => {
+    const janela = this.historico();
+    const mapa = new Map<string, (number | null)[]>();
+
+    for (const [posicao, estado] of janela.entries()) {
+      for (const leitura of estado.leituras ?? []) {
+        const chave = chaveGrandeza(leitura.dispositivoId, leitura.serie);
+        let valores = mapa.get(chave);
+        if (!valores) {
+          // Chave vista pela primeira vez: os ciclos anteriores não a tinham.
+          valores = new Array<number | null>(posicao).fill(null);
+          mapa.set(chave, valores);
+        }
+        // Posição fixa em vez de `push`: uma chave repetida no mesmo ciclo sobrescreve o valor,
+        // em vez de deslocar a série inteira em relação às demais.
+        valores[posicao] = Number.isFinite(leitura.valor) ? leitura.valor : null;
+      }
+      // Completa quem não veio neste ciclo, para todas as séries manterem o mesmo comprimento.
+      for (const valores of mapa.values()) {
+        while (valores.length <= posicao) valores.push(null);
+      }
+    }
+
+    return mapa;
+  });
 
   private client: StompClient | null = null;
   private assinaturaId: string | null = null;
@@ -151,6 +226,12 @@ export class RealtimeService {
       // Descarta mensagem de outra unidade: pode chegar no intervalo entre trocar de sonda e o
       // servidor processar o UNSUBSCRIBE.
       if (this.unidadeAtual !== null && estado.unidadeSondaId !== this.unidadeAtual) {
+        return;
+      }
+      // Mensagem sem a lista é de um produtor no formato antigo (campos fixos, até 2026-09-07).
+      // Aceitá-la produziria uma tela sem nenhum card e sem explicar por quê.
+      if (!Array.isArray(estado.leituras)) {
+        this.erro.set('A sonda está publicando num formato que esta versão não entende.');
         return;
       }
       this.estado.set(estado);

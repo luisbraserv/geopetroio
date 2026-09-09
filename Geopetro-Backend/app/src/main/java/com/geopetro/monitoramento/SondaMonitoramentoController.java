@@ -58,8 +58,16 @@ public class SondaMonitoramentoController {
             @Parameter(description = "ID da sonda/unidade; corresponde ao nome cadastrado da sonda", example = "UC-01")
             @PathVariable String idSondaUnidade,
 
-            @Parameter(description = "ID do dispositivo", example = "PRESSAO-01")
+            @Parameter(description = "ID do card, gerado como <TIPO>_<NN>", example = "PRESSAO_01")
             @RequestParam String dispositivoId,
+
+            @Parameter(description = """
+                    Qual das séries do dispositivo: stroke, vazao ou volumeAcumulado num card
+                    CONTADOR_STROKE (RN-098). Omitir significa a série única do dispositivo — não
+                    "todas": um card de stroke consultado sem este parâmetro devolve vazio, em vez
+                    das três misturadas na mesma linha do tempo.
+                    """, example = "vazao")
+            @RequestParam(required = false) String serie,
 
             @Parameter(description = "Início (ISO-8601 UTC)", example = "2026-05-29T07:00:00Z")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant inicio,
@@ -69,7 +77,7 @@ public class SondaMonitoramentoController {
 
             Authentication authentication
     ) {
-        return service.consultarSerie(authentication.getName(), idSondaUnidade, dispositivoId, inicio, fim)
+        return service.consultarSerie(authentication.getName(), idSondaUnidade, dispositivoId, serie, inicio, fim)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> {
                     if (!service.usuarioPossuiAcessoASonda(authentication.getName(), idSondaUnidade)) {

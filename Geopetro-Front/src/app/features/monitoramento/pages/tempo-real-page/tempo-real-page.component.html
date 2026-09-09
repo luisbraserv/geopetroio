@@ -42,6 +42,10 @@
     <div class="alerta alerta--erro">{{ erro() }}</div>
   }
 
+  @if (erroCards()) {
+    <div class="alerta alerta--erro">{{ erroCards() }}</div>
+  }
+
   @if (conectado() && dadoDefasado()) {
     <!-- Conexão viva mas sem dados novos: a sonda parou de publicar. Sem este aviso,
          os cards ficariam congelados aparentando normalidade. -->
@@ -56,39 +60,59 @@
     </div>
   }
 
+  @if (carregandoCards()) {
+    <div class="vazio">Lendo a configuração desta unidade…</div>
+  }
+
+  @if (unidadeSemCards()) {
+    <!-- RN-088: sem cards configurados a unidade não lê nada. É estado normal de quem ainda não
+         recebeu a visita de configuração — mas a tela vazia precisa dizer o que significa. -->
+    <div class="vazio">
+      Esta unidade ainda não tem cards configurados, e por isso não produz telemetria.
+      A configuração é feita no Geopetro-Desktop instalado na própria unidade.
+    </div>
+  }
+
   <div class="cards" [class.cards--inativo]="!conectado()">
-    @for (card of cards; track card.chave) {
+    @for (grandeza of grandezasVisiveis(); track grandeza.chave) {
       <article class="card">
-        <span class="card__rotulo">{{ card.rotulo }}</span>
-        <span class="card__valor">{{ valorCard(card) }}</span>
-        @if (card.unidade) {
-          <span class="card__unidade">{{ card.unidade }}</span>
+        <span class="card__rotulo">{{ grandeza.rotulo }}</span>
+        <span class="card__valor">{{ valorCard(grandeza) }}</span>
+        @if (unidadeDe(grandeza)) {
+          <span class="card__unidade">{{ unidadeDe(grandeza) }}</span>
         }
       </article>
     }
   </div>
 
   <!-- Gráficos da janela deslizante: mostram a tendência que os cards, sozinhos, não revelam. -->
-  <section class="graficos-secao">
-    <h2 class="secao-titulo">Tendência — últimos 2 minutos</h2>
+  @if (grandezasVisiveis().length) {
+    <section class="graficos-secao">
+      <h2 class="secao-titulo">Tendência — últimos 2 minutos</h2>
 
-    <div class="graficos" [class.graficos--inativo]="!conectado()">
-      @for (card of cards; track card.chave) {
-        <app-grafico-tempo-real
-          [titulo]="card.rotulo"
-          [valores]="serieDe(card)"
-          [unidade]="card.unidade"
-          [casas]="card.casas"
-          [cor]="card.cor"
-        />
-      }
-    </div>
-  </section>
+      <div class="graficos" [class.graficos--inativo]="!conectado()">
+        @for (grandeza of grandezasVisiveis(); track grandeza.chave) {
+          <app-grafico-tempo-real
+            [titulo]="grandeza.rotulo"
+            [valores]="serieDe(grandeza)"
+            [unidade]="unidadeDe(grandeza)"
+            [casas]="grandeza.casas"
+            [cor]="grandeza.cor"
+          />
+        }
+      </div>
+    </section>
+  }
 
   <footer class="rodape">
     <span>Última leitura: <strong>{{ horaUltimaLeitura() }}</strong></span>
     @if (sondaSelecionada(); as sonda) {
       <span>Sonda: <strong>{{ sonda.nome }}</strong></span>
+    }
+    @if (configuracao(); as configuracao) {
+      <!-- A revisão diz qual versão do documento a tela está desenhando: sem ela, um rótulo
+           desatualizado seria indistinguível de um rótulo errado. -->
+      <span>Cards: <strong>revisão {{ configuracao.revisao }}</strong></span>
     }
   </footer>
 </section>

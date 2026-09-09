@@ -115,9 +115,9 @@ class SondaMonitoramentoServiceTest {
 	void consultaBloqueadaSemAcesso() {
 		darUsuario(cliente("cliente", unidade(1L, "SPT-144")));
 
-		assertThat(service.consultarSerie("cliente", "UC-01", "VAZAO_01", null, null)).isEmpty();
+		assertThat(service.consultarSerie("cliente", "UC-01", "PRESSAO_01", null, null, null)).isEmpty();
 		// Nao pode nem chegar a bater no servico de telemetria.
-		verify(monitoramentoClient, never()).consultarSerie(any(), any(), any(), any());
+		verify(monitoramentoClient, never()).consultarSerie(any(), any(), any(), any(), any());
 	}
 
 	@Test

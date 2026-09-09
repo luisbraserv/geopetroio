@@ -1,6 +1,7 @@
 package com.braservpetroleo.telemetria.geopetroio.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,14 +30,14 @@ class ConsultaSerieServiceTest {
 	@DisplayName("mapeia os pontos preservando instante e valor")
 	void mapeiaPontos() {
 		Instant t = Instant.parse("2026-08-27T17:00:00Z");
-		when(repository.consultarSerie(eq("SPT-144"), eq("VAZAO_01"), eq(t), eq(t.plusSeconds(60)),
+		when(repository.consultarSerie(eq("SPT-144"), eq("PRESSAO_01"), any(), eq(t), eq(t.plusSeconds(60)),
 				anyInt(), anyBoolean()))
 				.thenReturn(List.of(new PontoSerie(t, 1.5), new PontoSerie(t.plusSeconds(1), 2.5)));
 
-		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "VAZAO_01", t, t.plusSeconds(60));
+		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "PRESSAO_01", null, t, t.plusSeconds(60));
 
 		assertThat(serie.idSondaUnidade()).isEqualTo("SPT-144");
-		assertThat(serie.dispositivoId()).isEqualTo("VAZAO_01");
+		assertThat(serie.dispositivoId()).isEqualTo("PRESSAO_01");
 		assertThat(serie.pontos()).hasSize(2);
 		assertThat(serie.pontos().get(0).dataHora()).isEqualTo(t);
 		assertThat(serie.pontos().get(0).valor()).isEqualTo(1.5);
@@ -46,11 +47,11 @@ class ConsultaSerieServiceTest {
 	@DisplayName("serie vazia e resposta legitima, nao erro")
 	void serieVazia() {
 		Instant t = Instant.parse("2026-08-27T17:00:00Z");
-		when(repository.consultarSerie(eq("SPT-144"), eq("VAZAO_01"), eq(t), eq(t.plusSeconds(60)),
+		when(repository.consultarSerie(eq("SPT-144"), eq("PRESSAO_01"), any(), eq(t), eq(t.plusSeconds(60)),
 				anyInt(), anyBoolean()))
 				.thenReturn(List.of());
 
-		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "VAZAO_01", t, t.plusSeconds(60));
+		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "PRESSAO_01", null, t, t.plusSeconds(60));
 
 		assertThat(serie.pontos()).isEmpty();
 		assertThat(serie.idSondaUnidade()).isEqualTo("SPT-144");
@@ -61,12 +62,32 @@ class ConsultaSerieServiceTest {
 	void repassaTetoConfigurado() {
 		properties.setMaxPontosPorSerie(500);
 		Instant t = Instant.parse("2026-08-27T17:00:00Z");
-		when(repository.consultarSerie(eq("SPT-144"), eq("VAZAO_01"), eq(t), eq(t.plusSeconds(60)),
+		when(repository.consultarSerie(eq("SPT-144"), eq("PRESSAO_01"), any(), eq(t), eq(t.plusSeconds(60)),
 				anyInt(), anyBoolean()))
 				.thenReturn(List.of());
 
-		service.consultar("SPT-144", "VAZAO_01", t, t.plusSeconds(60));
+		service.consultar("SPT-144", "PRESSAO_01", null, t, t.plusSeconds(60));
 
-		verify(repository).consultarSerie("SPT-144", "VAZAO_01", t, t.plusSeconds(60), 500, true);
+		verify(repository).consultarSerie("SPT-144", "PRESSAO_01", null, t, t.plusSeconds(60), 500, true);
+	}
+
+	@Test
+	@DisplayName("repassa a serie pedida ao repositorio — RN-098")
+	void repassaSerie() {
+		// Um card de stroke grava tres series sob o mesmo dispositivoId. Sem repassar o filtro, a
+		// consulta de vazao devolveria stroke e volume acumulado junto, na mesma linha do tempo.
+		Instant t = Instant.parse("2026-09-08T17:00:00Z");
+		when(repository.consultarSerie(eq("SPT-144"), eq("CONTADOR_STROKE_01"), eq("vazao"), eq(t),
+				eq(t.plusSeconds(60)), anyInt(), anyBoolean()))
+				.thenReturn(List.of(new PontoSerie(t, 1.52)));
+
+		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "CONTADOR_STROKE_01", "vazao", t,
+				t.plusSeconds(60));
+
+		verify(repository).consultarSerie(eq("SPT-144"), eq("CONTADOR_STROKE_01"), eq("vazao"), eq(t),
+				eq(t.plusSeconds(60)), anyInt(), anyBoolean());
+		// A serie volta no eco: sem ela o chamador nao distingue duas respostas do mesmo card.
+		assertThat(serie.serie()).isEqualTo("vazao");
+		assertThat(serie.pontos()).hasSize(1);
 	}
 }
