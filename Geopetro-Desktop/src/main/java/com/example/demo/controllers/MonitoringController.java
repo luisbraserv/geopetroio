@@ -28,6 +28,8 @@ import org.springframework.stereotype.Controller;
 
 import java.io.IOException;
 import com.example.demo.models.CardsDaUnidade;
+import com.example.demo.services.AlarmesLocais;
+import com.example.demo.services.AvaliadorLocalDeAlarme;
 import com.example.demo.services.ConversaoTanque;
 import com.example.demo.services.ConversaoTemperatura;
 import com.example.demo.services.LeituraDeCards;
@@ -51,6 +53,7 @@ public class MonitoringController {
     @Autowired private SettingsService settingsService;
     @Autowired private ApplicationContext applicationContext;
     @Autowired private TelemetriaRealtimeService telemetriaRealtimeService;
+    @Autowired private AlarmesLocais alarmesLocais;
 
     @FXML private FlowPane cardsPane;
 
@@ -69,7 +72,8 @@ public class MonitoringController {
      *
      * @param visual termômetro ou tanque, quando o tipo tem desenho próprio; senão {@code null}
      */
-    private record CardDinamico(Node no, Label valor, Label bruto, Label estado, Node visual) {
+    private record CardDinamico(Node no, Label valor, Label bruto, Label estado, Node visual,
+                                Label alarme) {
     }
 
     /** Chave de um card: o dispositivo mais a série, porque o stroke produz três. */
@@ -113,13 +117,20 @@ public class MonitoringController {
         estado.setVisible(false);
         estado.setManaged(false);
 
+        // ⚠️ O nivel vai ESCRITO, e nao so na cor da borda: numa sonda quem olha a tela pode estar
+        // de oculos de seguranca, sob sol, ou nao distinguir vermelho de ambar.
+        Label alarme = new Label();
+        alarme.getStyleClass().add("card-grandeza-alarme");
+        alarme.setVisible(false);
+        alarme.setManaged(false);
+
         Node visual = visualDe(g);
         Button engrenagem = new Button("⚙");
         engrenagem.setOnAction(e -> abrirCalibracaoDoCard(g, engrenagem));
 
         Node no = buildCardDinamico(rotulo(g), g.unidade(), visual, iconeDe(g.tipo()),
-                valor, estado, engrenagem, bruto);
-        return new CardDinamico(no, valor, bruto, estado, visual);
+                valor, estado, engrenagem, bruto, alarme);
+        return new CardDinamico(no, valor, bruto, estado, visual, alarme);
     }
 
     /** O nome do card é o rótulo; a série entra entre parênteses quando há mais de uma. */
@@ -190,6 +201,35 @@ public class MonitoringController {
         } else if (card.visual() instanceof TanqueView tanque) {
             atualizarTanque(tanque, g);
         }
+
+        aplicarAlarme(card, alarmesLocais.severidadeDe(g));
+    }
+
+    /**
+     * O destaque do alarme local — passo 3 de {@code specs/features/alarmes.md}.
+     *
+     * <p>⚠️ Isto <b>sinaliza</b> e nao registra: o historico de eventos tem um produtor so, o
+     * Backend. Aqui o objetivo e chamar quem esta ao lado do equipamento, inclusive sem rede.
+     */
+    private void aplicarAlarme(CardDinamico card, AvaliadorLocalDeAlarme.Severidade severidade) {
+        var classes = card.no().getStyleClass();
+        classes.removeAll("card-grandeza-atencao", "card-grandeza-critico");
+        card.alarme().getStyleClass()
+                .removeAll("card-grandeza-alarme-atencao", "card-grandeza-alarme-critico");
+
+        if (severidade == null) {
+            card.alarme().setVisible(false);
+            card.alarme().setManaged(false);
+            return;
+        }
+
+        boolean critico = severidade == AvaliadorLocalDeAlarme.Severidade.CRITICO;
+        classes.add(critico ? "card-grandeza-critico" : "card-grandeza-atencao");
+        card.alarme().getStyleClass()
+                .add(critico ? "card-grandeza-alarme-critico" : "card-grandeza-alarme-atencao");
+        card.alarme().setText(critico ? "CRÍTICO" : "ATENÇÃO");
+        card.alarme().setVisible(true);
+        card.alarme().setManaged(true);
     }
 
     private void atualizarTanque(TanqueView tanque, LeituraDeCards.Grandeza g) {
@@ -225,7 +265,7 @@ public class MonitoringController {
 
     private Node buildCard(String title, String symbol, String unit, String iconSvg,
                            Label valueLabel, Label statusLabel, Button gearButton) {
-        return buildCard(title, symbol, unit, iconSvg, valueLabel, statusLabel, gearButton, null);
+        return buildCard(title, symbol, unit, iconSvg, valueLabel, statusLabel, gearButton, null, null);
     }
 
     /**
@@ -239,9 +279,9 @@ public class MonitoringController {
      * card ja reservava aquele lugar para a identificacao visual da grandeza.
      */
     private Node buildCardDinamico(String titulo, String unidade, Node visual, String iconSvg,
-                                   Label valor, Label estado, Button engrenagem, Label bruto) {
+                                   Label valor, Label estado, Button engrenagem, Label bruto, Label alarme) {
         if (visual == null) {
-            return buildCard(titulo, "", unidade, iconSvg, valor, estado, engrenagem, bruto);
+            return buildCard(titulo, "", unidade, iconSvg, valor, estado, engrenagem, bruto, alarme);
         }
         styleValueLabel(valor);
 
@@ -258,7 +298,7 @@ public class MonitoringController {
 
         // Desenho a esquerda, numero a direita: o valor continua legivel de longe, e o desenho
         // responde a pergunta que o numero sozinho nao responde.
-        VBox numeros = new VBox(6, titulos, valor, unidades, estado);
+        VBox numeros = new VBox(6, titulos, valor, unidades, estado, alarme);
         numeros.setAlignment(Pos.CENTER);
         javafx.scene.layout.HBox corpo = new javafx.scene.layout.HBox(12, visual, numeros);
         corpo.setAlignment(Pos.CENTER);
@@ -275,7 +315,8 @@ public class MonitoringController {
     }
 
     private Node buildCard(String title, String symbol, String unit, String iconSvg,
-                           Label valueLabel, Label statusLabel, Button gearButton, Label rawLabel) {
+                           Label valueLabel, Label statusLabel, Button gearButton, Label rawLabel,
+                           Label alarmeLabel) {
         styleValueLabel(valueLabel);
 
         javafx.scene.shape.SVGPath icon = new javafx.scene.shape.SVGPath();
@@ -302,6 +343,7 @@ public class MonitoringController {
 
         VBox body = new VBox(10, iconBox, titleLabel, valueLabel, unitLabel);
         if (statusLabel != null) body.getChildren().add(statusLabel);
+        if (alarmeLabel != null) body.getChildren().add(alarmeLabel);
         body.setAlignment(Pos.CENTER);
 
         javafx.scene.layout.StackPane content = new javafx.scene.layout.StackPane(body, gearButton);

@@ -968,6 +968,15 @@ autoridades diferentes, e publicar os invisíveis contrariaria RN-037.
 **não o elimina**, e não existe na tela de cards do Desktop, que é onde a visibilidade é decidida.
 Quem torna um card invisível não é avisado de que está desligando a vigilância dele.
 
+✅ **[FATO 2026-09-09] A avaliação na borda cobre metade do buraco.** A estação lê **todos os cards
+ativos**, inclusive os invisíveis ([RN-104](business-rules.md#rn-104--a-estação-sinaliza-o-alarme-o-servidor-o-registra)),
+então o alarme **acende na sonda**.
+
+⚠️ **A outra metade continua aberta, e é a que importa para o público da feature.** Quem não está na
+sonda — supervisão e cliente, o motivo de o alarme existir — segue sem ver aquele episódio: ele não
+entra no histórico nem no destaque remoto. E enquanto a borda não chegar à frota (auto-update), nem
+essa metade existe.
+
 ### OQ-051 · Retenção do log de eventos de alarme
 **[ABERTA 2026-09-09]**
 

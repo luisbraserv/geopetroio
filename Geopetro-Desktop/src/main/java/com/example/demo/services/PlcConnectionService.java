@@ -42,6 +42,7 @@ public class PlcConnectionService {
     private final TelemetriaRealtimeService telemetriaRealtimeService;
     private final LeituraDeCards leituraDeCards;
     private final CalibracaoDeCards calibracoes;
+    private final AlarmesLocais alarmesLocais;
 
     private ScheduledExecutorService scheduler;
     private S7Client client;
@@ -57,7 +58,8 @@ public class PlcConnectionService {
             TelemetriaMqttService telemetriaMqttService,
             TelemetriaRealtimeService telemetriaRealtimeService,
             LeituraDeCards leituraDeCards,
-            CalibracaoDeCards calibracoes) {
+            CalibracaoDeCards calibracoes,
+            AlarmesLocais alarmesLocais) {
         this.settingsService = settingsService;
         this.strokeCalculatorService = strokeCalculatorService;
         this.flowRateCalculatorService = flowRateCalculatorService;
@@ -67,6 +69,7 @@ public class PlcConnectionService {
         this.telemetriaRealtimeService = telemetriaRealtimeService;
         this.leituraDeCards = leituraDeCards;
         this.calibracoes = calibracoes;
+        this.alarmesLocais = alarmesLocais;
     }
 
     /**
@@ -227,6 +230,7 @@ public class PlcConnectionService {
             // A tela recebe as grandezas ja convertidas e monta os cards a partir delas.
             sondaService.atualizarGrandezas(grandezas);
             gravarHistoricoLocal(grandezas);
+            avaliarAlarmeLocal(grandezas);
 
             List<LeituraPublicada> leituras = LeituraDeCards.paraPublicar(grandezas);
             if (leituras.isEmpty()) {
@@ -264,6 +268,25 @@ public class PlcConnectionService {
      * <p>Grava o que está <b>ativo</b>, não só o visível: visibilidade controla publicação, não
      * gravação (RN-037). O registro local é da estação.
      */
+    /**
+     * O alarme da estacao — passo 3 de {@code specs/features/alarmes.md}.
+     *
+     * <p>⚠️ <b>Sinaliza, nao registra.</b> O historico de eventos tem um produtor so, o Backend.
+     * Aqui a avaliacao existe para chamar quem esta ao lado do equipamento, e funciona sem rede
+     * porque os limites ficam em cache em disco.
+     *
+     * <p>Falha na avaliacao nao derruba o ciclo: perder o alarme local de um segundo e ruim, parar
+     * de ler o CLP por causa dele seria pior — e o MQTT e o tempo real ja teriam sido publicados.
+     */
+    private void avaliarAlarmeLocal(List<LeituraDeCards.Grandeza> grandezas) {
+        try {
+            alarmesLocais.avaliar(grandezas,
+                    telemetriaRealtimeService.getConfiguracaoSonda().orElse(null), Instant.now());
+        } catch (RuntimeException e) {
+            logger.warn("Alarme local nao avaliado neste ciclo; a leitura seguiu normal.", e);
+        }
+    }
+
     private void gravarHistoricoLocal(List<LeituraDeCards.Grandeza> grandezas) {
         LocalDateTime instante = LocalDateTime.now();
         List<LeituraLocal> linhas = grandezas.stream()

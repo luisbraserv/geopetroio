@@ -1254,3 +1254,36 @@ alarme ([RN-070](#rn-070--ausência-de-dado-não-é-alarme)), então nem o fim d
 
 ⚠️ **Isto não resolve o caso vizinho:** episódio de uma sonda que simplesmente parou de publicar
 continua aberto, e segue em aberto como questão — ver [alarmes §7](features/alarmes.md#continuam-abertos).
+
+### RN-104 · A estação sinaliza o alarme; o servidor o registra
+**[DECIDIDO 2026-09-09]** O Geopetro-Desktop avalia os limites localmente e **sinaliza** — destaque
+no card e aviso sonoro — mas **não gera evento**. O histórico tem um produtor só, o Backend
+([RN-102](#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)).
+
+**Por quê:** dois produtores do mesmo evento exigiriam deduplicação por janela de tempo, com relógios
+diferentes nos dois lados. O custo aceito é que uma excursão ocorrida com a sonda offline **alerta o
+operador local e não entra no histórico** — coerente com o histórico remoto viver do que chega ao
+servidor.
+
+**Funciona sem rede, e é esse o ponto.** Os limites ficam em cache em disco: uma sonda sem internet
+continua lendo o CLP, convertendo e alarmando — a situação em que o operador ao lado do equipamento é
+a única pessoa que pode agir.
+
+⚠️ **A estação vê mais que o servidor.** Ela avalia **todos os cards ativos**, inclusive os
+invisíveis; o servidor avalia pelo tempo real, que só carrega os visíveis
+([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). Um limite sobre card
+invisível dispara **na sonda** e não no servidor — reduz o alcance de
+[OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) sem resolvê-la.
+
+⚠️ **Leitura ausente não apaga o destaque.** Grandeza sem valor não é avaliada: não houve medição que
+desminta o alarme, e tratá-la como dentro da faixa apagaria o aviso por **falta de dado** — o oposto
+de [RN-099](#rn-099--grandeza-sem-valor-não-é-publicada).
+
+⚠️ **O som toca no agravamento, não enquanto o alarme durar.** Repetir a cada ciclo seria um bipe por
+segundo: o operador desligaria o som da estação, e o próximo alarme não avisaria ninguém. É o beep do
+sistema — **o volume é o do sistema operacional**, e uma estação com som desligado tem só a tela.
+
+⚠️ **A mesma regra existe escrita duas vezes.** Tempo mínimo e níveis precisam valer igual nos dois
+lados, ou o operador na sonda vê um estado e a supervisão vê outro. Os projetos são repositórios
+independentes, sem biblioteca comum: o que impede a deriva são os testes dos dois lados exercitando a
+**mesma** sequência de leituras.

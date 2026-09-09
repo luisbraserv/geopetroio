@@ -1,6 +1,6 @@
 # Alarmes de Telemetria — Spec de Feature
 
-> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Passos 1, 2 e 4 entregues: canal de configuração, motor de avaliação, log de eventos, ajuste de limites, destaque no tempo real e histórico na tela. Falta o passo 3 — avaliação na borda —, cujo bloqueio é de rollout: depende do auto-update do Desktop para chegar à frota.**
+> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Os quatro passos entregues em código**: canal de configuração, motor de avaliação, log de eventos, ajuste de limites, destaque no tempo real, histórico na tela e alarme local na sonda. ⚠️ **A avaliação na borda só chega à frota com o auto-update do Desktop**, que não existe — até lá é visita a cada unidade.
 >
 > Feature de nível de sistema: atravessa Geopetro-Desktop, Geopetro-Backend e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
@@ -44,7 +44,7 @@ isso gera?
 
 | Lado | Papel | Estado |
 |---|---|---|
-| **Desktop (borda)** | **Sinaliza localmente** — som e destaque na tela da sonda. **Não gera evento.** Funciona sem rede | Pendente — depende do auto-update (§8, passo 3) |
+| **Desktop (borda)** | **Sinaliza localmente** — som e destaque na tela da sonda. **Não gera evento.** Funciona sem rede | ✅ **Implementado 2026-09-09** ([RN-104](../business-rules.md#rn-104--a-estação-sinaliza-o-alarme-o-servidor-o-registra)) · ⚠️ na frota só com o auto-update |
 | **Backend (servidor)** | **Único produtor do histórico de eventos.** É o que a supervisão e o cliente consultam | ✅ **Implementado 2026-09-09** |
 
 ### ⚠️ De onde o servidor tira a leitura — **[DECIDIDO 2026-09-09]**
@@ -58,9 +58,11 @@ gatilho.
 
 1. ⚠️ **Sonda com a conexão de tempo real caída não alarma no servidor**, ainda que o MQTT siga
    gravando o histórico. Coerente com RN-070, mas não é o mesmo que dizer que nada se perde.
-2. ⚠️ **Card ativo e invisível nunca é avaliado** — o tempo real carrega só cards visíveis (RN-037).
-   Um limite sobre ele aparece salvo na tela e não dispara nunca:
-   [OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara).
+2. ⚠️ **Card ativo e invisível não é avaliado pelo servidor** — o tempo real carrega só cards
+   visíveis (RN-037). A **estação** o avalia, porque lê todos os cards ativos: o alarme acende na
+   sonda e a supervisão remota não o vê. Isso encolhe
+   [OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) sem resolvê-la —
+   e, enquanto a borda não chegar à frota, nem essa metade existe.
 
 **Por quê:** dois produtores do mesmo evento exigiriam deduplicação por janela de tempo, com relógios
 diferentes nos dois lados. O custo aceito é que uma excursão ocorrida com a sonda offline **alerta o
@@ -321,9 +323,14 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
    e `GET /api/sondas/{id}/alarmes` cobre o intervalo até a primeira mensagem e a sonda que não está
    publicando. Aviso no topo, com a lista do mais grave para o mais antigo, e o card da grandeza
    marcado — com o nível escrito, porque cor sozinha não informa quem não a distingue.
-3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update.
-   ⚠️ **O bloqueio é de *rollout*, não de implementação**: o código pode ser escrito e testado, mas
-   chegar à frota exige visita a cada unidade enquanto o auto-update não existir
+3. ✅ **Avaliação na borda** — entregue em 2026-09-09.
+   `AvaliadorLocalDeAlarme` (a regra, função pura), `AlarmesLocais` (estado e som) e o destaque no
+   card do dashboard. **Sinaliza, não registra** ([RN-104](../business-rules.md#rn-104--a-estação-sinaliza-o-alarme-o-servidor-o-registra)):
+   sem `episodioId`, sem os quatro fatos, sem gravação — só que severidade vale agora.
+
+   ⚠️ **O bloqueio era de *rollout*, e continua de pé.** O código está escrito e testado; chegar à
+   frota exige visita a cada unidade enquanto o auto-update não existir
+   ([product-context §8](../product-context.md#8-capacidades-decididas-que-ainda-não-existem), item 6).
 4. ✅ **Histórico na tela** — entregue em 2026-09-09, em `/app/historico-alarmes`.
    `GET /api/sondas/{id}/alarmes/historico` devolve **excursões**, não linhas de log: um episódio que
    abriu em atenção, escalou e fechou são três fatos e uma excursão

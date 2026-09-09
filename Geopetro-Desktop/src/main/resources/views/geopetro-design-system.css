@@ -464,3 +464,36 @@
     -fx-background-radius: 5;
     -fx-text-fill: #ffffff;
 }
+
+/* =====================================================================
+   Alarme local — passo 3 de specs/features/alarmes.md.
+   A estacao SINALIZA; quem registra o evento e o Backend.
+
+   ATENCAO: a borda grossa e o rotulo carregam a informacao junto com a
+   cor. Numa sonda, quem olha a tela pode estar de oculos de seguranca,
+   sob sol, ou nao distinguir vermelho de ambar — cor sozinha nao avisa.
+   ===================================================================== */
+.card-grandeza-atencao {
+    -fx-background-color: #fffbeb;
+    -fx-border-color: #f0a500;
+    -fx-border-width: 2;
+}
+
+.card-grandeza-critico {
+    -fx-background-color: #fef2f2;
+    -fx-border-color: #d92d20;
+    -fx-border-width: 3;
+}
+
+.card-grandeza-alarme {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.card-grandeza-alarme-atencao {
+    -fx-text-fill: #92400e;
+}
+
+.card-grandeza-alarme-critico {
+    -fx-text-fill: #b42318;
+}
