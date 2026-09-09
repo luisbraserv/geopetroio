@@ -426,23 +426,31 @@ perdeu; está onde sempre esteve.
 está preenchida, e traz o botão **Abrir calibração**, que abre o mesmo editor que a engrenagem do
 dashboard já abria. O que era silêncio virou o valor à vista.
 
-### ⚠️ A ligação card → calibração é posicional
+### ✅ A ligação card → calibração deixou de ser posicional
 
-**[FATO]** Como sempre foi, e agora dito na tela em vez de escondido:
+**[FATO 2026-09-08]** Resolvido no passo 3b. Era assim, por posição:
 
 | Card | Calibração usada |
 |---|---|
 | Card de peso | `pesoColuna` |
 | **Primeiro** card de torque | `chaveTubos` |
 | **Segundo** card de torque | `chaveFlutuante` |
-| Terceiro em diante | ⚠️ Nenhuma própria — a da flutuante acaba reaproveitada |
+| Terceiro em diante | ⚠️ Nenhuma própria — a da flutuante acabava reaproveitada |
 
 Com endereços fixos isso bastava: havia exatamente um card de peso e dois de torque. Com cards
-configuráveis, não basta mais — e é **o passo 3b que precisa resolver**, provavelmente guardando a
-calibração por `dispositivoId` em vez de por posição, com migração dos três valores de hoje.
+configuráveis a posição deixa de identificar coisa alguma — um terceiro card de torque não tem slot,
+e reordenar a tela trocaria a calibração de lugar. O desfecho seria o mais caro desta base: **um
+número plausível e errado**, porque a conversão continua rodando.
 
-⚠️ Enquanto não resolver, **um terceiro card de torque converte com a calibração errada** — e, como
-sempre nesta base, o número sai plausível. A tela avisa; o código ainda não impede.
+**Agora a calibração é guardada por `dispositivoId`**, em `config/calibracao-cards.json` — arquivo
+próprio, e não dentro de `app-settings.json`, que é lido e escrito com regex. A migração dos valores
+de hoje roda uma vez por card sem entrada própria, e a regra é **por endereço**: o card que lê o byte
+que o código antigo lia para o peso recebe a calibração do peso.
+
+⚠️ **A migração não apaga nada do `app-settings.json`.** Se ela errar, o original continua disponível
+para conferência — calibração medida em campo não se descarta por conveniência de código. Card cujo
+endereço não era usado no mapeamento antigo **nasce sem calibração**, e a tela mostra "ainda não
+calibrado" em vez de converter com a de outro ([RN-099](../business-rules.md#rn-099--grandeza-sem-valor-não-é-publicada)).
 
 ## 11. Pontos que continuam em aberto
 
@@ -450,7 +458,7 @@ sempre nesta base, o número sai plausível. A tela avisa; o código ainda não 
 |---|---|---|
 | 1 | ⚠️ **A configuração `−50..750` é assumida igual em todo canal.** A escala em si foi confirmada em 2026-08-31 e o código reescrito; o que segue sem conferência de campo, com calibrador de laço, é se **cada amplificador** está assim. Com cards configuráveis isso deixa de valer para 4 canais e passa a valer para todos os que a frota declarar | [OQ-016](../open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
 | 2 | Validação do alcance do DB ao configurar | [OQ-048](../open-questions.md#oq-048--validação-de-endereço) |
-| 2b | ⚠️ **A ligação card → calibração de peso/torque é posicional** e só comporta três slots | §6b, abaixo |
+| ~~2b~~ | ✅ **Resolvido 2026-09-08** — a calibração de peso/torque passou a ser guardada por `dispositivoId`, com migração por endereço dos três slots antigos | §10b, acima |
 | ~~3~~ | ✅ **Resolvido 2026-09-08** — a mensagem se descreve e o `CatalogoDispositivos` deixa de existir ([RN-097](../business-rules.md#rn-097--a-mensagem-de-telemetria-se-descreve)) | [mqtt-telemetria §4](../contracts/mqtt-telemetria.md#4-o-conjunto-de-dispositivos-é-por-unidade) |
 | 4 | Vazão somada entre bombas, se um dia entrar | §3 |
 
@@ -479,8 +487,10 @@ sempre nesta base, o número sai plausível. A tela avisa; o código ainda não 
    documento é migração de valores calibrados, não acréscimo de campo. O card diz **onde ler**; o
    Desktop aplica a calibração que já tem
 2. ✅ **Cache persistente no Desktop** (§8) — antes de qualquer card depender dele
-3. **Leitura em bloco dirigida por configuração** — 🔶 metade feita: `BlocoDeLeitura` já lê a faixa
-   de uma vez e fatia. Falta trocar a origem dos endereços, das constantes para o documento de cards
+3. ✅ **Leitura em bloco dirigida por configuração** — entregue em 2026-09-08. `BlocoDeLeitura` lê a
+   faixa de uma vez e fatia; `LeituraDeCards` decide **quais** endereços entram nela, a partir do
+   documento em vez das constantes. Card desativado não entra na faixa — o que também encolhe a
+   leitura quando alguém desativa o card do endereço mais alto
 4. ✅ **Estado de stroke e vazão por card** (§3) — entregue em 2026-09-07, antes de existir
    configuração que declare duas bombas: é refatoração sem mudança de comportamento
 5. ✅ **Role `SUPORTE` + sessão de configuração no Desktop** (§9) — entregues
@@ -490,7 +500,16 @@ sempre nesta base, o número sai plausível. A tela avisa; o código ainda não 
    *unidade* lê, só por ADMIN ou SUPORTE, com login. Lista à esquerda, formulário à direita com os
    parâmetros trocando conforme o tipo, painel de conexão do CLP e rodapé fixo.
    ⚠️ **Não há botão de excluir** (RN-091) e **não há leitura ao vivo do endereço** (§10)
-7. **Temperatura e nível de tanque** — conversão, e os dois desenhos novos
+7. ✅ **Temperatura e nível de tanque** — entregue em 2026-09-08, em duas metades: a conversão
+   (`ConversaoTemperatura`, `ConversaoTanque`) e depois os desenhos (`TermometroView`, `TanqueView`),
+   que traçam a **escala configurada** e não uma fixa — um sensor de motor (0..150) e um de lama
+   (−20..80) desenham diferente para a mesma temperatura
+
+   ⚠️ **Junto veio a virada do H2 local.** `SondaReading`, de colunas fixas, deu lugar a uma linha
+   por grandeza ([RN-100](../business-rules.md#rn-100--o-histórico-local-é-por-grandeza-e-tem-prazo)):
+   a tabela antiga não conseguia representar um terceiro card de torque, um de temperatura ou um de
+   tanque. E como uma linha por grandeza multiplica o crescimento pelo número de cards, entrou
+   **retenção de 180 dias**, configurável. ⚠️ **Isso apaga dado local** passado o prazo
 8. ✅ **Front dinâmico** — monitoramento e tempo real montados a partir da configuração da unidade.
    Entregue em 2026-09-08. As duas telas leem `GET /api/sondas/{id}/cards` e derivam as grandezas em
    `services/grandezas-de-card.ts` — único ponto do front que sabe que um card de stroke rende três
