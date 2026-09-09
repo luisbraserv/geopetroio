@@ -9,7 +9,7 @@
 | Backend `/actuator/health` | `200` · `UP`, com liveness e readiness |
 | Telemetria `/actuator/health` | `200` · `UP`, com **InfluxDB acessível** e **MQTT conectado** |
 | Front na 4200 | `200` |
-| `deploy/dev/audit-endpoints.ps1` | **33 verificações, todas passaram** — inclui as três rotas novas |
+| `deploy/dev/audit-endpoints.ps1` | **33 verificações, todas passaram** — inclui as três rotas novas. Resultado em `deploy/dev/audit-endpoints-result.txt` |
 | Flyway | 11 migrations validadas; schema em `2026.09.09.1`, a do log de eventos |
 | Rotas novas no OpenAPI | `/api/sondas/prontidao`, `/api/sondas/{id}/alarmes` e `/api/sondas/{id}/alarmes/historico` |
 
@@ -44,9 +44,11 @@ continua aberto.
 ## Resultado da nova tentativa — 2026-09-09, 07:07
 
 **Backend e telemetria atualizados e em execução; ambos com health HTTP 200 / UP.**
-O frontend responde HTTP 200 na porta 4200. Todas as 27 verificações do script
-`deploy/dev/audit-endpoints.ps1` passaram; resultado em
-`deploy/dev/audit-endpoints-result.txt`.
+O frontend responde HTTP 200 na porta 4200. Todas as **27** verificações do script
+`deploy/dev/audit-endpoints.ps1` passaram.
+
+⚠️ **O arquivo `deploy/dev/audit-endpoints-result.txt` não guarda mais este resultado** — ele foi
+sobrescrito pela execução das 15:20, com 33 verificações. É um arquivo só, sempre da última corrida.
 
 - Backend: reactor completo compilado e empacotado; **203 testes**, nenhuma
   falha, erro ou teste pulado. Inclui migrations em MySQL de teste e segurança HTTP.
