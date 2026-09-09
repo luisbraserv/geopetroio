@@ -191,6 +191,62 @@ function seriesDe(tipo: TipoCard): (string | null)[] {
  * Uma unidade sem cards devolve lista vazia — e isso é estado normal, não erro: ela ainda não foi
  * configurada e por isso não lê nada (RN-088).
  */
+/**
+ * Uma grandeza na tela de limites, com o motivo de ela poder não estar sendo vigiada.
+ *
+ * A tela de gráficos pergunta "o que desenhar?" e a de limites pergunta "o que **existe** para
+ * vigiar?" — e as respostas são diferentes. Um card desativado ou invisível some da primeira e
+ * precisa aparecer na segunda, porque o limite dele continua no documento.
+ */
+export interface GrandezaVigiavel extends GrandezaDeCard {
+  /** Card desativado não é lido: o limite **hiberna** junto, sem ser apagado (RN-091). */
+  cardAtivo: boolean;
+  /**
+   * ⚠️ Card invisível não chega ao servidor pelo tempo real (RN-037), e é por ali que a avaliação
+   * roda (RN-102) — então o limite fica salvo e **nunca dispara**. Ver OQ-050.
+   */
+  cardVisivel: boolean;
+}
+
+/**
+ * Tudo o que a unidade declara, ativo ou não — o vocabulário de limites (RN-101).
+ *
+ * ⚠️ **Não reaproveita `grandezasDe`** de propósito. Aquela função escolhe a variante de cor pelo
+ * índice do card **entre os publicados**; incluir os desativados aqui deslocaria esse índice e
+ * repintaria os gráficos da outra tela.
+ */
+export function grandezasVigiaveis(
+  cards: readonly CardUnidade[] | null | undefined,
+): GrandezaVigiavel[] {
+  if (!cards?.length) return [];
+
+  const declarados = cards
+    .filter((card) => card?.tipo && card?.dispositivoId)
+    .slice()
+    .sort((a, b) => a.ordem - b.ordem || a.dispositivoId.localeCompare(b.dispositivoId));
+
+  const grandezas: GrandezaVigiavel[] = [];
+  for (const card of declarados) {
+    const paleta = CORES[card.tipo];
+    for (const [posicao, serie] of seriesDe(card.tipo).entries()) {
+      const sufixo = serie ? SUFIXO_SERIE[serie] : null;
+      grandezas.push({
+        chave: chaveGrandeza(card.dispositivoId, serie),
+        dispositivoId: card.dispositivoId,
+        serie,
+        tipo: card.tipo,
+        rotulo: sufixo ? `${card.nome} — ${sufixo}` : card.nome,
+        unidade: unidadeDe(card.tipo, serie, card.parametros),
+        casas: casasDe(card.tipo, serie),
+        cor: paleta[posicao % paleta.length],
+        cardAtivo: !!card.ativo,
+        cardVisivel: !!card.visivel,
+      });
+    }
+  }
+  return grandezas;
+}
+
 export function grandezasDe(cards: readonly CardUnidade[] | null | undefined): GrandezaDeCard[] {
   if (!cards?.length) return [];
 

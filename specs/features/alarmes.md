@@ -1,6 +1,6 @@
 # Alarmes de Telemetria — Spec de Feature
 
-> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Canal de configuração, motor de avaliação e log de eventos implementados no servidor. As interfaces — ajuste de limites e histórico na tela — continuam pendentes.**
+> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Canal de configuração, motor de avaliação, log de eventos e tela de ajuste de limites implementados. Continuam pendentes: expor a projeção do que está alarmando, o histórico na tela e a avaliação na borda.**
 >
 > Feature de nível de sistema: atravessa Geopetro-Desktop, Geopetro-Backend e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
@@ -280,8 +280,12 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
    ✅ **Avaliação no servidor e log de eventos** — `AvaliadorDeAlarme` (a regra, função pura),
    `MotorDeAlarmes` (estado, gravação e projeção) e a tabela `evento_alarme`.
 
-   ⏳ **Falta a interface**: a tela de ajuste de limites e a rota que expõe a projeção. Sem elas o
-   alarme funciona e **ninguém o vê nem o configura pela web** — o limite só chega por API.
+   ✅ **Tela de ajuste de limites**, em `/app/limites-alarme`, com os perfis de monitoramento —
+   inclusive `CLIENTE` (RN-069), e não os de configuração. Monta-se a partir do documento de cards
+   da unidade, valida do lado do cliente as mesmas regras do servidor e trata o `409` recarregando.
+
+   ⏳ **Falta expor a projeção**: `MotorDeAlarmes.ativos()` existe e nenhuma rota o consome, então
+   o tempo real ainda não destaca o que está alarmando — que é o canal de alarme decidido em §2.
 3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update
 4. **Histórico na tela**
 

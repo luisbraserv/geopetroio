@@ -951,16 +951,22 @@ visibilidade controla, sem dizer, o que é vigiado.
 As duas regras estão certas isoladamente: visibilidade é decisão de tela, e o canal de tempo real
 existe para alimentar tela. O encontro delas é que produz o silêncio.
 
-**Caminhos possíveis, nenhum decidido:**
+**Caminhos possíveis:**
 
-| Caminho | Custo |
-|---|---|
-| Recusar limite sobre card invisível | Honesto, mas acopla duas configurações de autoridades diferentes: quem ajusta o limite (inclusive `CLIENTE`) não pode mexer no card |
-| Avisar na tela de limites, sem recusar | Barato e não acopla. Deixa a decisão com quem configura |
-| Publicar cards invisíveis no tempo real, marcados | Resolve na raiz e contraria RN-037 — a tela teria de filtrar |
+| Caminho | Custo | Estado |
+|---|---|---|
+| Recusar limite sobre card invisível | Honesto, mas acopla duas configurações de autoridades diferentes: quem ajusta o limite (inclusive `CLIENTE`) não pode mexer no card | Não adotado |
+| Avisar na tela de limites, sem recusar | Barato e não acopla. Deixa a decisão com quem configura | ✅ **Adotado 2026-09-09** |
+| Publicar cards invisíveis no tempo real, marcados | Resolve na raiz e contraria RN-037 — a tela teria de filtrar | Não adotado |
 
-⚠️ **Enquanto não se decide, o aviso não existe em lugar nenhum:** nem na tela de cards do Desktop,
-nem na de limites.
+✅ **[DECIDIDO 2026-09-09] A tela de limites avisa e não recusa.** A grandeza de um card invisível
+aparece na lista, aceita limite e traz a marca *"o limite é salvo, mas não é avaliado enquanto o card
+não aparecer no dashboard da unidade"*. Foi o caminho mínimo: recusar acoplaria duas configurações de
+autoridades diferentes, e publicar os invisíveis contrariaria RN-037.
+
+⚠️ **A questão continua aberta na raiz.** O aviso torna o silêncio visível para quem ajusta o limite —
+**não o elimina**, e não existe na tela de cards do Desktop, que é onde a visibilidade é decidida.
+Quem torna um card invisível não é avisado de que está desligando a vigilância dele.
 
 ### OQ-051 · Retenção do log de eventos de alarme
 **[ABERTA 2026-09-09]**

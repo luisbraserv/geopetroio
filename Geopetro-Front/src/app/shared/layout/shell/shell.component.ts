@@ -63,6 +63,15 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         route: '/app/tempo-real',
         roles: ROLES_MONITORAMENTO,
       },
+      {
+        // Fica com o monitoramento, e nao com Configuracoes: quem enxerga a sonda ajusta o alarme
+        // dela (RN-069). Sob Configuracoes so entrariam ADMIN e SUPORTE.
+        kind: 'leaf',
+        label: 'Limites de Alarme',
+        icon: '@tui.bell',
+        route: '/app/limites-alarme',
+        roles: ROLES_MONITORAMENTO,
+      },
     ],
   },
   {

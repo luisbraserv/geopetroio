@@ -1,0 +1,218 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { environment } from '../../../../../environments/environment';
+import { CardUnidade } from '../../services/grandezas-de-card';
+import { LimiteAlarme } from '../../services/limites-alarme.service';
+import { SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { LimitesAlarmePageComponent } from './limites-alarme-page.component';
+
+const SONDA: SondaDisponivel = { id: 7, idSondaUnidade: 'SPT-145', nome: 'SPT-145', apelido: 'Sonda 7' };
+
+function card(parcial: Partial<CardUnidade>): CardUnidade {
+  return {
+    dispositivoId: 'PRESSAO_01',
+    nome: 'Pressão da bomba',
+    tipo: 'PRESSAO',
+    byteInicial: 10,
+    ativo: true,
+    visivel: true,
+    ordem: 0,
+    parametros: null,
+    ...parcial,
+  };
+}
+
+function limite(parcial: Partial<LimiteAlarme> = {}): LimiteAlarme {
+  return {
+    dispositivoId: 'PRESSAO_01',
+    serie: null,
+    minimoAtencao: null,
+    maximoAtencao: 100,
+    minimoCritico: null,
+    maximoCritico: 120,
+    segundosParaAbrir: 3,
+    segundosParaFechar: 5,
+    ativo: true,
+    ...parcial,
+  };
+}
+
+/**
+ * A tela cruza dois documentos com autoridades diferentes: os cards dizem o que existe para vigiar
+ * (só o Desktop grava) e os limites dizem como (quem enxerga a sonda grava, RN-069). Errar o
+ * cruzamento produz um limite que parece configurado e não vigia nada.
+ */
+describe('LimitesAlarmePageComponent', () => {
+  let fixture: ComponentFixture<LimitesAlarmePageComponent>;
+  let componente: LimitesAlarmePageComponent;
+  let http: HttpTestingController;
+
+  const urlSondas = `${environment.apiUrl}/api/sondas/minhas`;
+  const urlCards = `${environment.apiUrl}/api/sondas/7/cards`;
+  const urlLimites = `${environment.apiUrl}/api/sondas/7/configuracao`;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [LimitesAlarmePageComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LimitesAlarmePageComponent);
+    componente = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
+
+    fixture.detectChanges();
+    http.expectOne(urlSondas).flush([SONDA]);
+  });
+
+  afterEach(() => http.verify());
+
+  /** Seleciona a sonda e responde os dois documentos, na ordem em que a tela os pede. */
+  function selecionar(cards: CardUnidade[], limites: LimiteAlarme[], revisao = 1) {
+    componente.sondaSelecionadaValue = SONDA;
+    componente.onSondaChange();
+
+    http.expectOne(urlCards).flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards,
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
+    });
+    http.expectOne(urlLimites).flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao, limites,
+      atualizadoPor: revisao > 0 ? 'ana' : null,
+      atualizadoEm: revisao > 0 ? '2026-09-09T12:00:00Z' : null,
+    });
+  }
+
+  it('monta uma linha por grandeza declarada e preenche o limite gravado', () => {
+    selecionar([card({})], [limite()]);
+
+    expect(componente.linhas()).toHaveLength(1);
+    expect(componente.linhas()[0].maximoAtencao).toBe(100);
+    expect(componente.linhas()[0].segundosParaFechar).toBe(5);
+    expect(componente.linhas()[0].ativo).toBe(true);
+  });
+
+  it('um card de stroke rende três linhas, e cada série recebe o seu limite', () => {
+    // RN-098: sem a série na chave, o limite de vazão cairia na linha de volume acumulado.
+    selecionar(
+      [card({ dispositivoId: 'CONTADOR_STROKE_01', tipo: 'CONTADOR_STROKE', nome: 'Bomba 1' })],
+      [limite({ dispositivoId: 'CONTADOR_STROKE_01', serie: 'vazao', maximoAtencao: 8, maximoCritico: 10 })],
+    );
+
+    const linhas = componente.linhas();
+    expect(linhas.map((l) => l.grandeza.serie)).toEqual(['stroke', 'vazao', 'volumeAcumulado']);
+    expect(linhas[1].maximoAtencao).toBe(8);
+    expect(linhas[0].maximoAtencao).toBeNull();
+    expect(linhas[2].maximoAtencao).toBeNull();
+  });
+
+  it('unidade sem cards não oferece limite, e diz por quê — RN-088', () => {
+    selecionar([], [], 0);
+
+    expect(componente.unidadeSemCards()).toBe(true);
+    expect(componente.linhas()).toEqual([]);
+  });
+
+  it('limite gravado sem card que o explique aparece como órfão, e não some calado', () => {
+    // O caso real: um id do vocabulário fixo antigo, gravado antes de o limite passar a valer
+    // sobre a grandeza que a unidade declara (RN-101).
+    selecionar([card({})], [limite(), limite({ dispositivoId: 'VAZAO_01', serie: null })]);
+
+    expect(componente.orfaos().map((o) => o.chave)).toEqual(['VAZAO_01']);
+    expect(componente.linhas()).toHaveLength(1);
+  });
+
+  it('não salva enquanto houver linha inválida', () => {
+    selecionar([card({})], [limite()]);
+
+    componente.atualizar(0, 'maximoCritico', 50);
+    expect(componente.errosPorLinha()[0]).toContain('críticos devem ficar fora');
+    expect(componente.podeSalvar()).toBe(false);
+
+    componente.salvar();
+    http.expectNone(urlLimites);
+  });
+
+  it('linha sem limiar nenhum não é enviada: é assim que se apaga um limite', () => {
+    selecionar([card({})], [limite()]);
+
+    for (const campo of ['maximoAtencao', 'maximoCritico'] as const) {
+      componente.atualizar(0, campo, null);
+    }
+    componente.atualizar(0, 'ativo', false);
+    componente.salvar();
+
+    const requisicao = http.expectOne(urlLimites);
+    expect(requisicao.request.body.limites).toEqual([]);
+    requisicao.flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao: 2, limites: [],
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-09T13:00:00Z',
+    });
+    expect(componente.salvo()).toContain('Revisão 2');
+  });
+
+  it('envia a revisão lida, que é o que impede sobrescrever o ajuste de outra pessoa', () => {
+    selecionar([card({})], [limite()], 4);
+
+    componente.atualizar(0, 'maximoAtencao', 90);
+    componente.salvar();
+
+    const requisicao = http.expectOne(urlLimites);
+    expect(requisicao.request.body.revisao).toBe(4);
+    expect(requisicao.request.body.limites[0].maximoAtencao).toBe(90);
+    requisicao.flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao: 5, limites: [limite({ maximoAtencao: 90 })],
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-09T13:00:00Z',
+    });
+  });
+
+  /**
+   * ⚠️ Conflito descarta o que estava digitado e recarrega.
+   *
+   * Manter o formulário e apenas atualizar a revisão faria o próximo clique sobrescrever, sem ver,
+   * o ajuste que a outra pessoa acabou de fazer.
+   */
+  it('no conflito de revisão, recarrega do servidor e avisa que descartou', () => {
+    selecionar([card({})], [limite()], 4);
+
+    componente.atualizar(0, 'maximoAtencao', 90);
+    componente.salvar();
+    http.expectOne(urlLimites).flush(
+      { message: 'A configuracao foi alterada. Recarregue antes de salvar.' },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    expect(componente.aviso()).toContain('descartado');
+
+    http.expectOne(urlCards).flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards: [card({})],
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
+    });
+    http.expectOne(urlLimites).flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao: 5, limites: [limite({ maximoAtencao: 70 })],
+      atualizadoPor: 'bruno', atualizadoEm: '2026-09-09T13:05:00Z',
+    });
+
+    expect(componente.linhas()[0].maximoAtencao).toBe(70);
+    expect(componente.documento()?.revisao).toBe(5);
+  });
+
+  it('resposta atrasada de outra sonda não sobrescreve a selecionada', () => {
+    componente.sondaSelecionadaValue = SONDA;
+    componente.onSondaChange();
+    const cardsAtrasado = http.expectOne(urlCards);
+
+    componente.sondaSelecionadaValue = null;
+    componente.onSondaChange();
+
+    cardsAtrasado.flush({
+      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards: [card({})],
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
+    });
+
+    expect(componente.linhas()).toEqual([]);
+    http.expectNone(urlLimites);
+  });
+});

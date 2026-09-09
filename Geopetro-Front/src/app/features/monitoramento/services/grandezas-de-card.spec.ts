@@ -5,6 +5,7 @@ import {
   SERIE_VOLUME,
   chaveGrandeza,
   grandezasDe,
+  grandezasVigiaveis,
 } from './grandezas-de-card';
 
 /**
@@ -160,5 +161,77 @@ describe('chaveGrandeza', () => {
 
   it('com série, a chave as separa', () => {
     expect(chaveGrandeza('CONTADOR_STROKE_01', 'vazao')).toBe('CONTADOR_STROKE_01|vazao');
+  });
+});
+
+/**
+ * A tela de gráficos pergunta "o que desenhar?"; a de limites, "o que existe para vigiar?".
+ * Responder as duas com a mesma função esconderia justamente as grandezas cujo limite não está
+ * sendo avaliado — que é o que o operador precisa ver.
+ */
+describe('grandezasVigiaveis', () => {
+  function card(parcial: Partial<CardUnidade>): CardUnidade {
+    return {
+      dispositivoId: 'PESO_01',
+      nome: 'Peso da Coluna',
+      tipo: 'PESO',
+      byteInicial: 4,
+      ativo: true,
+      visivel: true,
+      ordem: 0,
+      parametros: null,
+      ...parcial,
+    };
+  }
+
+  it('inclui card desativado, porque o limite dele hiberna e não some (RN-091)', () => {
+    const grandezas = grandezasVigiaveis([
+      card({}),
+      card({ dispositivoId: 'PRESSAO_01', tipo: 'PRESSAO', nome: 'Pressão', ordem: 1, ativo: false }),
+    ]);
+
+    expect(grandezas.map((g) => g.chave)).toEqual(['PESO_01', 'PRESSAO_01']);
+    expect(grandezas[1].cardAtivo).toBe(false);
+    // A outra função esconde os dois casos, e é o comportamento correto para os gráficos.
+    expect(grandezasDe([card({ ativo: false })])).toEqual([]);
+  });
+
+  it('marca o card invisível, cujo limite salva e nunca dispara — OQ-050', () => {
+    const [grandeza] = grandezasVigiaveis([card({ visivel: false })]);
+
+    expect(grandeza.cardAtivo).toBe(true);
+    expect(grandeza.cardVisivel).toBe(false);
+  });
+
+  it('um contador de stroke oferece três limites, um por série', () => {
+    const grandezas = grandezasVigiaveis([
+      card({ dispositivoId: 'CONTADOR_STROKE_01', tipo: 'CONTADOR_STROKE', nome: 'Bomba 1' }),
+    ]);
+
+    expect(grandezas.map((g) => g.serie)).toEqual([SERIE_STROKE, SERIE_VAZAO, SERIE_VOLUME]);
+    expect(grandezas.map((g) => g.chave)).toEqual([
+      chaveGrandeza('CONTADOR_STROKE_01', SERIE_STROKE),
+      chaveGrandeza('CONTADOR_STROKE_01', SERIE_VAZAO),
+      chaveGrandeza('CONTADOR_STROKE_01', SERIE_VOLUME),
+    ]);
+  });
+
+  it('unidade sem cards não oferece limite nenhum — RN-088', () => {
+    expect(grandezasVigiaveis([])).toEqual([]);
+    expect(grandezasVigiaveis(null)).toEqual([]);
+    expect(grandezasVigiaveis(undefined)).toEqual([]);
+  });
+
+  /**
+   * ⚠️ Incluir os desativados desloca o índice de cor se as duas funções compartilharem a
+   * numeração — e os gráficos da outra tela seriam repintados por causa desta.
+   */
+  it('não altera as cores que a tela de gráficos já usa', () => {
+    const cards = [
+      card({ dispositivoId: 'TORQUE_01', tipo: 'TORQUE', nome: 'Tubos', ordem: 0, ativo: false }),
+      card({ dispositivoId: 'TORQUE_02', tipo: 'TORQUE', nome: 'Flutuante', ordem: 1 }),
+    ];
+
+    expect(grandezasDe(cards).map((g) => g.cor)).toEqual(grandezasDe([cards[1]]).map((g) => g.cor));
   });
 });

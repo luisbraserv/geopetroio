@@ -1,0 +1,284 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { TuiButton, TuiIcon } from '@taiga-ui/core';
+
+import { parseApiError } from '../../../../core/http/api-error';
+import { CardsUnidadeService } from '../../services/cards-unidade.service';
+import { GrandezaVigiavel, grandezasVigiaveis } from '../../services/grandezas-de-card';
+import {
+  ConfiguracaoLimites,
+  LimiteAlarme,
+  LimitesAlarmeService,
+  validarLimite,
+} from '../../services/limites-alarme.service';
+import { MonitoramentoSondaService, SondaDisponivel } from '../../services/monitoramento-sonda.service';
+
+/** Uma linha do formulário: a grandeza e os seis números que a vigiam. */
+interface LinhaLimite {
+  grandeza: GrandezaVigiavel;
+  ativo: boolean;
+  minimoCritico: number | null;
+  minimoAtencao: number | null;
+  maximoAtencao: number | null;
+  maximoCritico: number | null;
+  segundosParaAbrir: number;
+  segundosParaFechar: number;
+}
+
+/** Um limite gravado para grandeza que a unidade não declara mais. */
+interface LimiteOrfao {
+  chave: string;
+  limite: LimiteAlarme;
+}
+
+const LINHA_VAZIA = {
+  ativo: false,
+  minimoCritico: null,
+  minimoAtencao: null,
+  maximoAtencao: null,
+  maximoCritico: null,
+  segundosParaAbrir: 0,
+  segundosParaFechar: 0,
+} as const;
+
+/**
+ * Ajuste dos limites de alarme de uma Unidade/Sonda — passo 2 de `specs/features/alarmes.md`.
+ *
+ * <h2>Por que a tela pergunta os cards antes de tudo</h2>
+ * Um limite só existe para uma grandeza que a unidade **declara** ([RN-101]). Não há mais lista
+ * fixa de cinco dispositivos: uma unidade com dois cards de torque e um de tanque oferece coisas
+ * diferentes de outra, e o servidor recusa limite de grandeza não declarada.
+ *
+ * <h2>⚠️ Três estados que a tela precisa distinguir, e o servidor não distingue</h2>
+ * <ul>
+ *   <li><b>Vigiada</b> — card ativo e visível. É o caso normal.</li>
+ *   <li><b>Não avaliada</b> — card ativo mas invisível. O limite salva e <b>nunca dispara</b>,
+ *       porque a avaliação roda sobre o tempo real e o tempo real só carrega cards visíveis
+ *       (RN-037 encontrando RN-102). Ver OQ-050 — a tela avisa, e não recusa.</li>
+ *   <li><b>Hibernando</b> — card desativado. O limite continua gravado e volta a valer quando o
+ *       card for reativado (RN-091).</li>
+ * </ul>
+ */
+@Component({
+  selector: 'app-limites-alarme-page',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TuiButton, TuiIcon],
+  templateUrl: './limites-alarme-page.component.html',
+  styleUrl: './limites-alarme-page.component.css',
+})
+export class LimitesAlarmePageComponent implements OnInit {
+  private readonly sondasService = inject(MonitoramentoSondaService);
+  private readonly cardsService = inject(CardsUnidadeService);
+  private readonly limitesService = inject(LimitesAlarmeService);
+
+  readonly sondas = signal<SondaDisponivel[]>([]);
+  readonly sondaSelecionada = signal<SondaDisponivel | null>(null);
+
+  readonly carregando = signal(false);
+  readonly salvando = signal(false);
+  readonly erro = signal<string | null>(null);
+  readonly aviso = signal<string | null>(null);
+  readonly salvo = signal<string | null>(null);
+
+  readonly documento = signal<ConfiguracaoLimites | null>(null);
+  readonly linhas = signal<LinhaLimite[]>([]);
+  readonly orfaos = signal<LimiteOrfao[]>([]);
+  /** `null` enquanto os cards não chegaram; distingue "carregando" de "unidade sem cards". */
+  readonly cardsLidos = signal(false);
+
+  readonly unidadeSemCards = computed(() => this.cardsLidos() && this.linhas().length === 0);
+
+  readonly autoria = computed(() => {
+    const doc = this.documento();
+    return doc?.atualizadoPor && doc?.atualizadoEm
+      ? { por: doc.atualizadoPor, em: new Date(doc.atualizadoEm) }
+      : null;
+  });
+
+  /** Erros por linha, na mesma ordem — o botão de salvar só libera com todas limpas. */
+  readonly errosPorLinha = computed(() =>
+    this.linhas().map((linha) => validarLimite(paraLimite(linha))),
+  );
+
+  readonly podeSalvar = computed(() =>
+    !!this.sondaSelecionada()
+    && !!this.documento()
+    && !this.salvando()
+    && this.errosPorLinha().every((erro) => erro === null),
+  );
+
+  get sondaSelecionadaValue() { return this.sondaSelecionada(); }
+  set sondaSelecionadaValue(valor: SondaDisponivel | null) { this.sondaSelecionada.set(valor); }
+
+  ngOnInit(): void {
+    this.sondasService.listarMinhas().subscribe({
+      next: (sondas) => this.sondas.set(sondas),
+      error: (falha) => this.erro.set(parseApiError(falha)),
+    });
+  }
+
+  onSondaChange(): void {
+    this.limparMensagens();
+    this.documento.set(null);
+    this.linhas.set([]);
+    this.orfaos.set([]);
+    this.cardsLidos.set(false);
+
+    const sonda = this.sondaSelecionada();
+    if (sonda) {
+      this.carregar(sonda);
+    }
+  }
+
+  /**
+   * Lê os dois documentos e cruza um com o outro.
+   *
+   * ⚠️ **Sequencial, não em paralelo**: os cards decidem quais linhas existem, e os limites só
+   * preenchem o que aquelas linhas comportam. Em paralelo, uma resposta atrasada de cards
+   * reconstruiria as linhas e apagaria os valores já preenchidos pelos limites.
+   */
+  private carregar(sonda: SondaDisponivel): void {
+    this.carregando.set(true);
+    this.cardsService.ler(sonda.id).subscribe({
+      next: (configuracao) => {
+        // Resposta atrasada de uma sonda que ja nao e a selecionada nao pode sobrescrever a atual.
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        const grandezas = grandezasVigiaveis(configuracao.cards);
+        this.cardsLidos.set(true);
+        this.carregarLimites(sonda, grandezas);
+      },
+      error: (falha) => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.carregando.set(false);
+        this.erro.set(parseApiError(falha));
+      },
+    });
+  }
+
+  private carregarLimites(sonda: SondaDisponivel, grandezas: GrandezaVigiavel[]): void {
+    this.limitesService.ler(sonda.id).subscribe({
+      next: (documento) => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.carregando.set(false);
+        this.aplicar(documento, grandezas);
+      },
+      error: (falha) => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.carregando.set(false);
+        this.erro.set(parseApiError(falha));
+      },
+    });
+  }
+
+  private aplicar(documento: ConfiguracaoLimites, grandezas: GrandezaVigiavel[]): void {
+    const gravados = new Map(documento.limites.map((limite) => [chaveDe(limite), limite]));
+
+    this.linhas.set(grandezas.map((grandeza) => {
+      const limite = gravados.get(grandeza.chave);
+      gravados.delete(grandeza.chave);
+      return limite ? { grandeza, ...semIdentidade(limite) } : { grandeza, ...LINHA_VAZIA };
+    }));
+
+    // O que sobrou nao tem card que o explique — tipicamente um id do vocabulario fixo antigo.
+    this.orfaos.set([...gravados].map(([chave, limite]) => ({ chave, limite })));
+    this.documento.set(documento);
+  }
+
+  salvar(): void {
+    const sonda = this.sondaSelecionada();
+    const documento = this.documento();
+    if (!sonda || !documento || !this.podeSalvar()) return;
+
+    this.limparMensagens();
+    this.salvando.set(true);
+
+    // Linha sem limiar nenhum nao vira limite: e assim que se apaga um.
+    const limites = this.linhas().map(paraLimite).filter(temAlgumLimiar);
+
+    this.limitesService.salvar(sonda.id, documento.revisao, limites).subscribe({
+      next: (atualizado) => {
+        this.salvando.set(false);
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.aplicar(atualizado, this.linhas().map((linha) => linha.grandeza));
+        this.salvo.set(`Limites salvos. Revisão ${atualizado.revisao}.`);
+      },
+      error: (falha) => {
+        this.salvando.set(false);
+        if (falha?.status === 409) {
+          this.recarregarPorConflito(sonda);
+          return;
+        }
+        this.erro.set(parseApiError(falha));
+      },
+    });
+  }
+
+  /**
+   * Conflito de revisão: recarrega e **descarta** o que estava digitado.
+   *
+   * ⚠️ Manter o formulário e apenas atualizar a revisão faria o próximo clique sobrescrever, sem
+   * ver, o ajuste que a outra pessoa acabou de fazer — que é exatamente o que a revisão existe
+   * para impedir.
+   */
+  private recarregarPorConflito(sonda: SondaDisponivel): void {
+    this.aviso.set(
+      'Outra pessoa alterou os limites desta sonda enquanto você editava. '
+      + 'O que estava na tela foi descartado e os valores atuais foram recarregados.',
+    );
+    this.carregar(sonda);
+  }
+
+  private limparMensagens(): void {
+    this.erro.set(null);
+    this.aviso.set(null);
+    this.salvo.set(null);
+  }
+
+  /** Marcar como ativa uma grandeza sem limiar nenhum é o erro mais fácil de cometer aqui. */
+  atualizar(indice: number, campo: keyof Omit<LinhaLimite, 'grandeza'>, valor: unknown): void {
+    this.salvo.set(null);
+    this.linhas.update((linhas) => linhas.map((linha, posicao) =>
+      posicao === indice ? { ...linha, [campo]: normalizar(campo, valor) } : linha,
+    ));
+  }
+}
+
+function normalizar(campo: keyof Omit<LinhaLimite, 'grandeza'>, valor: unknown): unknown {
+  if (campo === 'ativo') return !!valor;
+  if (campo === 'segundosParaAbrir' || campo === 'segundosParaFechar') {
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? Math.trunc(numero) : 0;
+  }
+  if (valor === null || valor === undefined || valor === '') return null;
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+function chaveDe(limite: LimiteAlarme): string {
+  return limite.serie ? `${limite.dispositivoId}|${limite.serie}` : limite.dispositivoId;
+}
+
+function semIdentidade(limite: LimiteAlarme) {
+  const { dispositivoId, serie, ...resto } = limite;
+  return resto;
+}
+
+function paraLimite(linha: LinhaLimite): LimiteAlarme {
+  return {
+    dispositivoId: linha.grandeza.dispositivoId,
+    serie: linha.grandeza.serie,
+    minimoAtencao: linha.minimoAtencao,
+    maximoAtencao: linha.maximoAtencao,
+    minimoCritico: linha.minimoCritico,
+    maximoCritico: linha.maximoCritico,
+    segundosParaAbrir: linha.segundosParaAbrir,
+    segundosParaFechar: linha.segundosParaFechar,
+    ativo: linha.ativo,
+  };
+}
+
+function temAlgumLimiar(limite: LimiteAlarme): boolean {
+  return [limite.minimoAtencao, limite.maximoAtencao, limite.minimoCritico, limite.maximoCritico]
+    .some((valor) => valor !== null && valor !== undefined);
+}

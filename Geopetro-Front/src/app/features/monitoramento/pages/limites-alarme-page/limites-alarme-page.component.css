@@ -1,0 +1,208 @@
+.limites-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  color: var(--color-text-strong);
+}
+
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.eyebrow { margin: 0 0 0.25rem; color: var(--color-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-strong); }
+.page-header > div > span { font-size: 0.86rem; color: var(--color-text-secondary); max-width: 62ch; display: block; }
+
+.painel, .tabela-painel {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 260px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.autoria {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+select {
+  height: 2.45rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  padding: 0 0.7rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+select:focus, input:focus {
+  border-color: rgba(82, 140, 156, 0.72);
+  outline: 3px solid rgba(82, 140, 156, 0.16);
+}
+
+.alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+  border-radius: 6px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.alerta--erro { border: 1px solid #f2b8b5; background: #fdf2f2; color: #b42318; }
+.alerta--aviso { border: 1px solid #f4c96b; background: #fff8e6; color: #7a4b00; }
+.alerta--ok { border: 1px solid #a7d8b4; background: #f0faf3; color: #1c6b3c; }
+
+.legenda {
+  margin: 0 0 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  max-width: 78ch;
+}
+
+/* A tabela e larga por natureza: seis numeros por grandeza. Rola dentro do painel, e nao empurra
+   a pagina inteira para o lado. */
+.tabela-scroll { overflow-x: auto; }
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 900px;
+}
+
+.tabela th, .tabela td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.5rem 0.45rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.tabela thead th {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.col-grandeza { text-align: left; min-width: 260px; }
+.col-ativo { width: 4.5rem; }
+
+.rotulo { display: block; font-weight: 700; color: var(--color-text-strong); }
+.unidade { display: block; font-size: 0.74rem; color: var(--color-text-secondary); }
+
+.marca {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+  max-width: 40ch;
+}
+
+.marca--hibernando { color: #64748b; }
+/* Amarelo, e nao cinza: o limite parece configurado e nao dispara. Ver OQ-050. */
+.marca--nao-avaliada { color: #7a4b00; }
+
+.linha--inerte { background: #f8fafc; }
+
+.tabela input[type="number"] {
+  width: 6.5rem;
+  height: 2.2rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  padding: 0 0.5rem;
+  font: inherit;
+  text-align: right;
+}
+
+.tabela input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: #2563eb;
+}
+
+.linha-erro td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.35rem 0.45rem 0.6rem;
+  text-align: left;
+  color: #b42318;
+  font-size: 0.78rem;
+}
+
+.linha-erro tui-icon { vertical-align: -0.15rem; margin-right: 0.3rem; }
+
+.orfaos { align-items: flex-start; }
+.orfaos > div { display: flex; flex-direction: column; gap: 0.3rem; }
+.orfaos__lista { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.orfaos code {
+  background: rgba(122, 75, 0, 0.1);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.78rem;
+}
+
+.rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.rodape__nota {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  max-width: 60ch;
+}
+
+.estado-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--color-text-secondary);
+  padding: 3rem;
+  text-align: center;
+}
+
+.estado-vazio__icon { font-size: 2.5rem; opacity: 0.4; }
+.estado-vazio p { margin: 0; font-size: 0.9rem; }
+.estado-vazio__nota { font-size: 0.82rem; opacity: 0.85; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .limites-page { padding: 1rem; }
+  .topo { flex-direction: column; align-items: stretch; }
+  .field { min-width: 0; }
+}

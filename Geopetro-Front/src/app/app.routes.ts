@@ -195,6 +195,17 @@ export const routes: Routes = [
         data: { roles: ROLES_MONITORAMENTO },
       },
       {
+        // ROLES_MONITORAMENTO, e nao ROLES_CONFIGURACAO: quem enxerga a sonda ajusta o alarme dela,
+        // inclusive CLIENTE (RN-069). Restringir a ADMIN mataria o "ajustavel na hora".
+        path: 'limites-alarme',
+        loadComponent: () =>
+          import('./features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component').then(
+            (m) => m.LimitesAlarmePageComponent,
+          ),
+        canActivate: [authGuard],
+        data: { roles: ROLES_MONITORAMENTO },
+      },
+      {
         path: 'meu-usuario',
         loadComponent: () =>
           import('./features/usuarios/pages/meu-usuario-page/meu-usuario-page.component').then(
