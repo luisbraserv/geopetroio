@@ -55,6 +55,52 @@ class ConfiguracaoRemotaTest {
         assertEquals(2, received.size());
         listener.onClose(ws, 1000, "closed"); assertFalse(client.isConectado());
     }
+    private static final String LIMITE_TEMPERATURA =
+        "{\"dispositivoId\":\"TEMPERATURA_01\",\"serie\":null,\"minimoAtencao\":null,\"maximoAtencao\":80.0,"
+        + "\"minimoCritico\":null,\"maximoCritico\":95.0,\"segundosParaAbrir\":0,\"segundosParaFechar\":0,\"ativo\":true}";
+    private static final String LIMITE_VAZAO =
+        "{\"dispositivoId\":\"CONTADOR_STROKE_01\",\"serie\":\"vazao\",\"minimoAtencao\":null,\"maximoAtencao\":8.0,"
+        + "\"minimoCritico\":null,\"maximoCritico\":10.0,\"segundosParaAbrir\":2,\"segundosParaFechar\":4,\"ativo\":true}";
+    private static final String LIMITE_VOLUME =
+        "{\"dispositivoId\":\"CONTADOR_STROKE_01\",\"serie\":\"volumeAcumulado\",\"minimoAtencao\":null,"
+        + "\"maximoAtencao\":500.0,\"minimoCritico\":null,\"maximoCritico\":null,\"segundosParaAbrir\":0,"
+        + "\"segundosParaFechar\":0,\"ativo\":true}";
+
+    private String frameComLimites(long revision, String... limites) {
+        String json = "{\"schemaVersion\":1,\"unidadeSondaId\":7,\"revisao\":" + revision
+            + ",\"limites\":[" + String.join(",", limites)
+            + "],\"atualizadoPor\":\"ana\",\"atualizadoEm\":\"2026-09-07T12:00:00Z\"}";
+        return "MESSAGE\nsubscription:config-snapshot\ndestination:/app/config/unidades-sondas/7\n\n" + json + '\0';
+    }
+
+    /**
+     * ⚠️ O parser nao conhece mais o vocabulario de dispositivos.
+     *
+     * <p>Ate 2026-09-08 a lista fixa dos cinco ids vivia tambem aqui, e um limite de
+     * {@code TEMPERATURA_01} fazia o construtor recusar o snapshot <b>inteiro</b>: a estacao seguia
+     * com a configuracao anterior, em silencio. Os dois documentos chegam por canais independentes,
+     * com revisoes proprias, e o de limites pode chegar antes do de cards — um id desconhecido
+     * significa "card que ainda nao chegou", nao "documento corrompido".
+     *
+     * <p>As duas series do mesmo contador provam a outra metade: sem {@code serie} na chave elas
+     * colidiriam e uma sumiria.
+     */
+    @Test void limiteForaDaListaFixaAntigaChegaAEstacaoESeriesNaoColidem() throws Exception {
+        var recebidos = new ArrayList<ConfiguracaoSondaRemota>();
+        var client = new StompRealtimeClient("ws://localhost/ws", "unused", 7L, recebidos::add, cards -> {});
+        var listener = listener(client);
+        var ws = mock(WebSocket.class);
+        listener.onText(ws, CONECTADO, true);
+
+        listener.onText(ws, frameComLimites(1, LIMITE_TEMPERATURA, LIMITE_VAZAO, LIMITE_VOLUME), true);
+        assertEquals(1, recebidos.size(), "a lista fixa antiga descartaria o snapshot inteiro");
+        assertEquals(3, recebidos.get(0).limites().size(), "as duas series do contador sao limites distintos");
+
+        // A forma continua conferida: a mesma serie do mesmo contador duas vezes e documento invalido.
+        listener.onText(ws, frameComLimites(2, LIMITE_VAZAO, LIMITE_VAZAO), true);
+        assertEquals(1, recebidos.size(), "grandeza repetida continua invalidando o snapshot");
+    }
+
     @Test void oversizedFrameClosesTheSocket() throws Exception {
         var client = new StompRealtimeClient("ws://localhost/ws", "unused");
         var ws = mock(WebSocket.class);

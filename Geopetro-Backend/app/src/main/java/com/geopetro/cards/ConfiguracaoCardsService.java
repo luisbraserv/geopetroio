@@ -1,7 +1,6 @@
 package com.geopetro.cards;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.LoggerFactory;
@@ -101,7 +100,7 @@ public class ConfiguracaoCardsService {
 	}
 
 	private List<Card> cards(ConfiguracaoCardsEntity e) {
-		return Arrays.asList(JSON.readValue(e.cardsJson, Card[].class));
+		return CardsDeclarados.cards(e);
 	}
 
 	private ConfiguracaoCards dto(ConfiguracaoCardsEntity e) {

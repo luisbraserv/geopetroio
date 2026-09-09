@@ -4,6 +4,24 @@ import java.time.Instant;
 import java.util.*;
 
 
+/**
+ * Documento de limites de alarme vindo do Backend.
+ *
+ * <h2>⚠️ Esta classe não conhece mais o vocabulário de dispositivos</h2>
+ * Ela carregava a mesma lista fixa de cinco ids que o Backend carregava, e o construtor
+ * <b>rejeitava o snapshot inteiro</b> ao encontrar um id fora dela. Com cards por unidade, um
+ * limite de {@code TEMPERATURA_01} é normal — e a estação descartaria a configuração toda,
+ * mantendo em silêncio a anterior, como manda o contrato para payload inválido.
+ *
+ * <p>Validar o vocabulário aqui seria pior do que não validar: os dois documentos chegam por
+ * canais independentes, com revisões próprias, e o de limites pode chegar <b>antes</b> do de cards.
+ * Um id desconhecido significaria "card que ainda não chegou", não "documento corrompido". Quem
+ * tem como conferir é o Backend, que grava os dois e recusa limite de grandeza não declarada.
+ *
+ * <p>O que continua sendo validado aqui é a <b>forma</b>: números finitos, ordenação dos limiares,
+ * tempos não negativos e ausência de grandeza repetida — tudo verificável sem saber o que a
+ * unidade mede.
+ */
 public record ConfiguracaoSondaRemota(int schemaVersion, long unidadeSondaId, long revisao,
     List<Limite> limites, String atualizadoPor, String atualizadoEm) implements DocumentoDaUnidade {
     public ConfiguracaoSondaRemota {
@@ -16,16 +34,31 @@ public record ConfiguracaoSondaRemota(int schemaVersion, long unidadeSondaId, lo
         limites = List.copyOf(limites);
     }
     public record Alteracao(long revisao, List<Limite> limites) {}
-    public record Limite(String dispositivoId, Double minimoAtencao, Double maximoAtencao,
-        Double minimoCritico, Double maximoCritico, int segundosParaAbrir, int segundosParaFechar, boolean ativo) {}
-    private static final Set<String> DISPOSITIVOS = Set.of("VAZAO_01", "PESO_COLUNA_01", "TORQUE_01", "TORQUE_02", "PRESSAO_01");
+
+    /**
+     * @param serie qual das séries de um card de stroke (RN-098); {@code null} nos demais tipos
+     */
+    public record Limite(String dispositivoId, String serie, Double minimoAtencao, Double maximoAtencao,
+        Double minimoCritico, Double maximoCritico, int segundosParaAbrir, int segundosParaFechar, boolean ativo) {
+
+        /**
+         * ⚠️ As três séries de um contador compartilham o {@code dispositivoId}. Chavear só por ele
+         * faria o limite de vazão e o de volume acumulado colidirem — e um deles sumiria.
+         */
+        public String chave() {
+            return serie == null || serie.isBlank() ? dispositivoId : dispositivoId + "|" + serie;
+        }
+    }
+
     public static void validar(Alteracao update) {
-        if (update == null || update.revisao < 0 || update.limites == null || update.limites.size() > 5)
+        if (update == null || update.revisao < 0 || update.limites == null)
             throw new IllegalArgumentException("Configuracao de sonda invalida.");
-        var ids = new HashSet<String>();
+        var chaves = new HashSet<String>();
         for (var limit : update.limites) {
-            if (limit == null || limit.dispositivoId == null || !DISPOSITIVOS.contains(limit.dispositivoId) || !ids.add(limit.dispositivoId))
-                throw new IllegalArgumentException("Dispositivo desconhecido ou repetido.");
+            if (limit == null || limit.dispositivoId == null || limit.dispositivoId.isBlank())
+                throw new IllegalArgumentException("Limite sem dispositivo.");
+            if (!chaves.add(limit.chave()))
+                throw new IllegalArgumentException("Grandeza repetida: " + limit.chave() + ".");
             if (limit.segundosParaAbrir < 0 || limit.segundosParaFechar < 0)
                 throw new IllegalArgumentException("Os tempos devem ser inteiros nao negativos em segundos.");
             var values = Arrays.asList(limit.minimoAtencao, limit.maximoAtencao, limit.minimoCritico, limit.maximoCritico);

@@ -1,5 +1,8 @@
 package com.geopetro.configuracaosonda;
 
+import com.geopetro.cards.ConfiguracaoCards;
+import com.geopetro.cards.ConfiguracaoCardsAccess;
+import com.geopetro.cards.ConfiguracaoCardsService;
 import com.geopetro.monitoramento.SondaMonitoramentoService;
 import com.geopetro.security.application.port.out.TokenPort;
 import java.net.URI;
@@ -28,8 +31,10 @@ class ConfiguracaoSondaWebSocketTest {
     @MockitoBean TokenPort tokens;
     @MockitoBean SondaMonitoramentoService monitoramento;
     @MockitoBean ConfiguracaoSondaAccess access;
+    @MockitoBean ConfiguracaoCardsAccess cardsAccess;
     @Autowired ConfiguracaoSondaService service;
     @Autowired ConfiguracaoSondaRepository repository;
+    @Autowired ConfiguracaoCardsService cardsService;
     @Autowired SimpMessagingTemplate messages;
     @BeforeEach void setup() {
         repository.deleteAll();
@@ -37,6 +42,21 @@ class ConfiguracaoSondaWebSocketTest {
         when(tokens.extrairUsername("test-token")).thenReturn("ana");
         when(monitoramento.usuarioPossuiAcessoAUnidade("ana", 7L)).thenReturn(true);
         when(access.permite("ana", 7)).thenReturn(true);
+        declararCardDePressao();
+    }
+    /**
+     * O limite so existe para uma grandeza que a unidade declara — RN-089. Sem o card, o
+     * {@code service.salvar} abaixo seria recusado antes de chegar ao transporte, que e o que este
+     * teste examina.
+     */
+    private void declararCardDePressao() {
+        if (!cardsService.ler("ana", 7).cards().isEmpty()) return;
+        var conexao = new ConfiguracaoCards.Conexao("10.0.0.5", 0, 1, 1, 1000);
+        var parametros = new ConfiguracaoCards.Parametros(250.0, null, null, null, null,
+            null, null, null, null, null, null, null);
+        var card = new ConfiguracaoCards.Card(null, "Pressao da bomba", ConfiguracaoCards.Tipo.PRESSAO,
+            10, true, true, 0, parametros);
+        cardsService.salvar("ana", 7, new ConfiguracaoCards.Alteracao(0, conexao, List.of(card)));
     }
     @Test void initialSnapshotLiveUpdateAndReconnectUseThePersistedRevision() throws Exception {
         try (var first = open()) {
@@ -45,7 +65,7 @@ class ConfiguracaoSondaWebSocketTest {
             String initial = first.next();
             assertTrue(initial.contains("destination:/app/config/unidades-sondas/7"), initial);
             assertTrue(initial.contains("\"revisao\":0"), initial);
-            var limit = new ConfiguracaoSonda.Limite("PRESSAO_01", null, 100.0, null, 120.0, 3, 5, true);
+            var limit = new ConfiguracaoSonda.Limite("PRESSAO_01", null, null, 100.0, null, 120.0, 3, 5, true);
             service.salvar("ana", 7, new ConfiguracaoSonda.Alteracao(0, List.of(limit)));
             String update = first.next();
             assertTrue(update.contains("subscription:updates"), update);

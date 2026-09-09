@@ -25,6 +25,7 @@
   "limites": [
     {
       "dispositivoId": "PRESSAO_01",
+      "serie": null,
       "minimoAtencao": null,
       "maximoAtencao": 100,
       "minimoCritico": null,
@@ -45,14 +46,45 @@
 
 **[FATO]** Persistência: um documento por unidade em `configuracao_sonda`, lock otimista JPA e FK para `unidades_sondas`. Migration `V2026.09.07.2__configuracao_sonda.sql`. A configuração vinculada impede exclusão da unidade conforme a guarda de cadastro; não há exclusão em cascata.
 
-| Dispositivo | Unidade dos limiares |
-|---|---|
-| `VAZAO_01` | bbl/min |
-| `PESO_COLUNA_01` | lbf |
-| `TORQUE_01`, `TORQUE_02` | lbf.ft |
-| `PRESSAO_01` | psi |
+### A grandeza que o limite vigia — **[FATO 2026-09-09]**
 
-**[FATO]** Validação: até cinco dispositivos sem repetição; valores finitos ou nulos; limite ativo exige ao menos um limiar. Mínimo crítico ≤ mínimo de atenção, máximo de atenção ≤ máximo crítico; todo mínimo informado deve ser menor que todo máximo informado. Tempos: inteiros não negativos em segundos (Java `int`), sem limite operacional adicional inventado. Falhas retornam HTTP `400`.
+**[FATO]** O par `dispositivoId` + `serie` identifica a grandeza. `serie` é `null` para card de uma
+grandeza só e obrigatória num card `CONTADOR_STROKE`, que publica três séries — `stroke`, `vazao` e
+`volumeAcumulado` — sob o mesmo `dispositivoId` ([RN-098](../business-rules.md#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)).
+
+⚠️ **Sem `serie` o limite seria ambíguo.** "Acima de 8" é alarme plausível para vazão e não quer
+dizer nada para volume acumulado, que só cresce: dispararia uma vez e nunca mais fecharia. É o mesmo
+motivo que obrigou o filtro `serie` na consulta ao histórico
+([rest-monitoramento §2](rest-monitoramento.md#o-filtro-serie--fato-2026-09-08)).
+
+**[FATO]** A unidade de engenharia de cada limiar **não está aqui** — vem do tipo do card, e o
+documento de cards é que o declara. A tabela fixa que este contrato trazia (`VAZAO_01` em bbl/min,
+`PESO_COLUNA_01` em lbf, `TORQUE_01/02` em lbf.ft, `PRESSAO_01` em psi) descrevia as cinco grandezas
+que toda sonda tinha, e deixou de existir com os cards por unidade.
+
+**[FATO 2026-09-09]** Validação: cada limite deve referir uma grandeza que **a unidade declara** no
+documento de cards, sem repetição de `dispositivoId` + `serie`. Não há mais teto de cinco — ele era a
+contagem daquelas cinco grandezas fixas, e o número de limites é naturalmente limitado pelo que a
+unidade declara. Valores finitos ou nulos; limite ativo exige ao menos um limiar. Mínimo crítico ≤
+mínimo de atenção, máximo de atenção ≤ máximo crítico; todo mínimo informado deve ser menor que todo
+máximo informado. Tempos: inteiros não negativos em segundos (Java `int`), sem limite operacional
+adicional inventado. Falhas retornam HTTP `400`.
+
+⚠️ **Limite de card desativado é aceito e preservado** — ele hiberna junto com o card
+([RN-091](../business-rules.md#rn-091--card-se-desativa-nunca-se-exclui)). Recusá-lo obrigaria a
+apagar o limite para salvar qualquer outro, e quem reativasse o card no dia seguinte encontraria a
+grandeza sem vigilância nenhuma.
+
+⚠️ **Unidade sem documento de cards não aceita limite algum**, com o motivo na resposta. É a resposta
+certa: não há grandeza para vigiar ([RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).
+A lista vazia continua sendo aceita, e é como se apagam os limites.
+
+⚠️ **A borda não confere o vocabulário, e isso é deliberado.** Os dois documentos chegam ao Desktop
+por canais independentes, com revisões próprias, e o de limites pode chegar **antes** do de cards —
+um id desconhecido ali significa "card que ainda não chegou", não "documento corrompido". Enquanto a
+lista fixa vivia também no Desktop, um limite de `TEMPERATURA_01` fazia a estação **descartar o
+snapshot inteiro** e seguir em silêncio com o anterior. O Desktop continua conferindo a **forma**:
+números finitos, ordenação dos limiares, tempos não negativos e ausência de grandeza repetida.
 
 ## 3. Sincronização do Desktop
 
@@ -161,14 +193,15 @@ recusa ([RN-094](../business-rules.md#rn-094--dois-cards-podem-ler-o-mesmo-ender
 
 ### O que isto muda neste contrato
 
-⚠️ **O teto de cinco dispositivos na lista de limites deixa de valer.** Aquele número era a contagem
-das cinco grandezas fixas. Passa a ser derivado: um limite só existe para um `dispositivoId` que a
-unidade declara no documento de cards, e um card desativado mantém o limite hibernando.
+✅ **[FATO 2026-09-09] Entregue.** O teto de cinco dispositivos e a tabela fixa de ids saíram dos dois
+projetos. Um limite só existe para uma grandeza que a unidade declara no documento de cards, um card
+desativado mantém o limite hibernando, e a chave passou a incluir `serie` — ver
+[§2](#a-grandeza-que-o-limite-vigia--fato-2026-09-09).
 
-⚠️ **A tabela de unidades do §2 deixa de ser fixa.** `VAZAO_01`, `PESO_COLUNA_01`, `TORQUE_01/02` e
-`PRESSAO_01` viram o vocabulário da configuração de cada unidade, não do sistema. Um card
-`CONTADOR_STROKE` passa a produzir **três** séries — stroke, vazão e volume acumulado
-([RN-090](../business-rules.md#rn-090--um-contador-de-stroke-produz-três-séries)).
+`VAZAO_01`, `PESO_COLUNA_01`, `TORQUE_01/02` e `PRESSAO_01` eram o vocabulário do **sistema**; agora
+o vocabulário é de **cada unidade**. Um card `CONTADOR_STROKE` produz **três** séries — stroke, vazão
+e volume acumulado ([RN-090](../business-rules.md#rn-090--um-contador-de-stroke-produz-três-séries)),
+e cada uma admite o seu próprio limite.
 
 ⚠️ **`SEND` recusado continua valendo, e ganha peso:** a configuração de cards decide o que a borda lê,
 e gravação segue só por HTTP, pelo `WebSocketInboundGuard`.
