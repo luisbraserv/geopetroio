@@ -54,6 +54,37 @@
     </div>
   }
 
+  @if (temAlarme()) {
+    <!-- O alarme é o motivo de a supervisão não precisar ficar olhando a tela: quando ele aparece,
+         precisa ser a primeira coisa lida. Fica acima dos cards, e não junto deles. -->
+    <div class="alarmes" role="alert">
+      <h2 class="alarmes__titulo">
+        {{ alarmesAtivos().length }}
+        {{ alarmesAtivos().length === 1 ? 'grandeza fora da faixa' : 'grandezas fora da faixa' }}
+      </h2>
+
+      <ul class="alarmes__lista">
+        @for (item of alarmesAtivos(); track item.alarme.episodioId) {
+          <li class="alarme" [class]="'alarme--' + item.alarme.severidadeAtual.toLowerCase()">
+            <span class="alarme__nivel">
+              {{ item.alarme.severidadeAtual === 'CRITICO' ? 'Crítico' : 'Atenção' }}
+            </span>
+            <span class="alarme__grandeza">{{ item.rotulo }}</span>
+            <span class="alarme__detalhe">
+              {{ item.alarme.limiteViolado === 'MIN' ? 'abaixo do mínimo' : 'acima do máximo' }}
+              @if (item.alarme.valorExtremo !== null) {
+                — extremo {{ item.alarme.valorExtremo }} {{ item.unidade }}
+              }
+            </span>
+            <!-- `desde` é a abertura da excursão, e não a escalada: uma excursão que passou de
+                 atenção para crítica é um episódio só. -->
+            <span class="alarme__desde">desde {{ item.alarme.desde | date: 'HH:mm:ss' }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
   @if (sondas().length === 0 && !carregandoSondas()) {
     <div class="vazio">
       Nenhuma Unidade/Sonda disponível para o seu usuário.
@@ -75,11 +106,16 @@
 
   <div class="cards" [class.cards--inativo]="!conectado()">
     @for (grandeza of grandezasVisiveis(); track grandeza.chave) {
-      <article class="card">
+      <article class="card" [class.card--atencao]="severidadeDe(grandeza) === 'ATENCAO'"
+        [class.card--critico]="severidadeDe(grandeza) === 'CRITICO'">
         <span class="card__rotulo">{{ grandeza.rotulo }}</span>
         <span class="card__valor">{{ valorCard(grandeza) }}</span>
         @if (unidadeDe(grandeza)) {
           <span class="card__unidade">{{ unidadeDe(grandeza) }}</span>
+        }
+        @if (severidadeDe(grandeza); as severidade) {
+          <!-- A cor sozinha nao basta: quem nao a distingue precisa ler o nivel. -->
+          <span class="card__alarme">{{ severidade === 'CRITICO' ? 'Crítico' : 'Atenção' }}</span>
         }
       </article>
     }

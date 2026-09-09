@@ -118,3 +118,57 @@ describe('RealtimeService — leituras e séries', () => {
     expect(service.series().size).toBe(0);
   });
 });
+
+/**
+ * A projeção do alarme viaja dentro da mesma mensagem das leituras, e é isso que garante que o
+ * destaque descreva os números que estão na tela.
+ */
+describe('RealtimeService — alarmes na mensagem', () => {
+  let service: RealtimeService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        RealtimeService,
+        { provide: Store, useValue: { selectSnapshot: () => null } },
+      ],
+    });
+    service = TestBed.inject(RealtimeService);
+  });
+
+  function comAlarmes(alarmes: EstadoRealtime['alarmes']): EstadoRealtime {
+    return {
+      unidadeSondaId: 7,
+      timestamp: '2026-09-09T12:00:00Z',
+      leituras: [{ dispositivoId: 'PRESSAO_01', tipo: 'PRESSAO', unidade: 'psi', valor: 130 }],
+      alarmes,
+    };
+  }
+
+  it('indexa os alarmes da mensagem pela chave da grandeza', () => {
+    service.estado.set(comAlarmes([{
+      unidadeSondaId: 7,
+      dispositivoId: 'PRESSAO_01',
+      serie: null,
+      episodioId: 'ep-1',
+      severidadeAtual: 'CRITICO',
+      desde: '2026-09-09T11:59:00Z',
+      valorExtremo: 130,
+      limiteViolado: 'MAX',
+    }]));
+
+    expect(service.alarmes().get('PRESSAO_01')?.severidadeAtual).toBe('CRITICO');
+  });
+
+  it('mensagem sem o campo não quebra a tela — servidor anterior a 2026-09-09', () => {
+    service.estado.set(comAlarmes(undefined));
+    expect(service.alarmes().size).toBe(0);
+
+    service.estado.set(comAlarmes(null));
+    expect(service.alarmes().size).toBe(0);
+  });
+
+  it('sem mensagem nenhuma, nenhum alarme — quem responde então é o REST', () => {
+    expect(service.alarmes().size).toBe(0);
+  });
+});

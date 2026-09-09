@@ -1,6 +1,6 @@
 # Alarmes de Telemetria — Spec de Feature
 
-> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Canal de configuração, motor de avaliação, log de eventos e tela de ajuste de limites implementados. Continuam pendentes: expor a projeção do que está alarmando, o histórico na tela e a avaliação na borda.**
+> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Passo 2 concluído: canal de configuração, motor de avaliação, log de eventos, tela de ajuste de limites e destaque no tempo real. Continuam pendentes o histórico na tela (passo 4) e a avaliação na borda (passo 3, que depende do auto-update).**
 >
 > Feature de nível de sistema: atravessa Geopetro-Desktop, Geopetro-Backend e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
@@ -73,7 +73,7 @@ fato. Ver [OQ-031](../open-questions.md#oq-031--o-consumidor-tolera-telemetria-f
 
 ## 4. Modelo de dados proposto
 
-**[FATO 2026-09-09]** Configuração, limites, **avaliação e log de eventos** estão implementados; ver [contrato implementado](../contracts/configuracao-sonda.md). Falta a projeção chegar à tela.
+**[FATO 2026-09-09]** Configuração, limites, **avaliação, log de eventos e a projeção na tela** estão implementados; ver [contrato implementado](../contracts/configuracao-sonda.md) e [websocket-realtime §3](../contracts/websocket-realtime.md#alarmes-é-a-única-coisa-que-o-servidor-acrescenta--decidido-2026-09-09).
 
 ### Limite
 
@@ -156,7 +156,15 @@ faria a próxima leitura abrir um **segundo** episódio para a mesma excursão �
 duas vezes no histórico. Falha na reconstrução não impede a aplicação de subir: vira `ERROR` no log, e
 o motor volta sem os episódios abertos.
 
-⚠️ **A projeção ainda não sai do servidor** — nenhuma rota a expõe. É o que falta do passo 2.
+✅ **[FATO 2026-09-09] A projeção chega à tela por dois caminhos, e são complementares:**
+
+| Caminho | Quando responde |
+|---|---|
+| Dentro da mensagem de tempo real | Sempre que a sonda publica — e aí o destaque descreve **estes** números |
+| `GET /api/sondas/{id}/alarmes` | Ao abrir a tela, antes da primeira mensagem, e quando a sonda **não está publicando** |
+
+⚠️ **O segundo não é redundância.** Um episódio aberto de uma sonda que caiu continua sendo verdade, e
+sem a rota ele ficaria invisível justamente quando ninguém está olhando o CLP.
 
 ### Por que aqui, e só aqui
 
@@ -271,7 +279,7 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
 ## 8. Ordem de implementação sugerida
 
 1. ✅ **Canal de configuração** (§5) — **implementado em 2026-09-07**, incluindo persistência e transporte dos limites; distribuição à frota pendente
-2. 🔶 **Interface de limites + avaliação no servidor + evento** — **metade entregue em 2026-09-09**:
+2. ✅ **Interface de limites + avaliação no servidor + evento** — **entregue em 2026-09-09**:
 
    ✅ **O limite passou a valer sobre a grandeza que a unidade declara** ([RN-101](../business-rules.md#rn-101--o-limite-de-alarme-só-existe-para-uma-grandeza-que-a-unidade-declara)).
    Era pré-requisito e não estava previsto aqui: com a lista fixa de cinco ids, a tela de limites não
@@ -284,8 +292,11 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
    inclusive `CLIENTE` (RN-069), e não os de configuração. Monta-se a partir do documento de cards
    da unidade, valida do lado do cliente as mesmas regras do servidor e trata o `409` recarregando.
 
-   ⏳ **Falta expor a projeção**: `MotorDeAlarmes.ativos()` existe e nenhuma rota o consome, então
-   o tempo real ainda não destaca o que está alarmando — que é o canal de alarme decidido em §2.
+   ✅ **Destaque na tela de tempo real** — o canal decidido em §2. A projeção viaja **dentro da
+   mensagem de leituras** ([websocket-realtime §3](../contracts/websocket-realtime.md#alarmes-é-a-única-coisa-que-o-servidor-acrescenta--decidido-2026-09-09)),
+   e `GET /api/sondas/{id}/alarmes` cobre o intervalo até a primeira mensagem e a sonda que não está
+   publicando. Aviso no topo, com a lista do mais grave para o mais antigo, e o card da grandeza
+   marcado — com o nível escrito, porque cor sozinha não informa quem não a distingue.
 3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update
 4. **Histórico na tela**
 

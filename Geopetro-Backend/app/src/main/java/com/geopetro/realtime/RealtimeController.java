@@ -2,6 +2,7 @@ package com.geopetro.realtime;
 
 import java.security.Principal;
 import java.time.Instant;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import com.geopetro.alarmes.AlarmeAtivo;
 import com.geopetro.alarmes.MotorDeAlarmes;
 import com.geopetro.monitoramento.SondaMonitoramentoService;
 import com.geopetro.realtime.dto.EstadoRealtimeDTO;
@@ -57,47 +59,41 @@ public class RealtimeController {
 
 		// Carimba o instante de recepcao se o produtor nao informou — a tela precisa saber
 		// quao recente e o dado para sinalizar defasagem.
-		EstadoRealtimeDTO paraEnviar = estado.timestamp() != null
-				? estado
-				: comTimestamp(estado, Instant.now());
+		Instant timestamp = estado.timestamp() != null ? estado.timestamp() : Instant.now();
+
+		EstadoRealtimeDTO paraEnviar = new EstadoRealtimeDTO(estado.unidadeSondaId(), timestamp,
+				estado.leituras(), avaliarAlarmes(estado));
 
 		messagingTemplate.convertAndSend(TOPICO_BASE + estado.unidadeSondaId(), paraEnviar);
 
 		if (log.isTraceEnabled()) {
-			log.trace("Estado retransmitido: unidade={} timestamp={}",
-					paraEnviar.unidadeSondaId(), paraEnviar.timestamp());
+			log.trace("Estado retransmitido: unidade={} timestamp={} alarmes={}",
+					paraEnviar.unidadeSondaId(), paraEnviar.timestamp(), paraEnviar.alarmes().size());
 		}
-
-		avaliarAlarmes(paraEnviar);
 	}
 
 	/**
-	 * O servidor avalia depois de retransmitir, e nunca deixa o alarme derrubar a tela.
+	 * Avalia antes de retransmitir, e nunca deixa o alarme derrubar a tela.
 	 *
-	 * <p>São duas responsabilidades com criticidades diferentes: a retransmissão e o que faz a tela
-	 * de tempo real existir; a avaliação produz histórico. Avaliar antes atrasaria cada ciclo pelo
-	 * tempo de uma consulta ao banco, e propagar a exceção faria uma falha do motor — banco fora,
-	 * limite corrompido — apagar a tela de quem está olhando a sonda.
+	 * <h2>Por que antes, e não depois</h2>
+	 * O destaque descreve <b>estas</b> leituras. Avaliar depois obrigaria a mandar o alarme por
+	 * fora, e a tela mostraria um valor com o destaque do ciclo anterior — um alarme aceso sobre um
+	 * número que já voltou à faixa. O custo é a consulta de limites entrar no caminho do ciclo, e
+	 * ela é uma busca por chave primária.
 	 *
-	 * <p>⚠️ O preço é assumido: uma falha aqui vira linha de log e o episódio não é registrado.
+	 * <h2>⚠️ Falha do motor não apaga a tela</h2>
+	 * Retransmitir é o que faz a tela de tempo real existir; avaliar produz histórico. Uma exceção
+	 * aqui — banco fora, limite corrompido — vira linha de log, e a mensagem segue com a última
+	 * projeção conhecida em vez de nenhuma: o alarme que já estava aceso continua aceso, que é mais
+	 * próximo da verdade do que apagá-lo por causa de uma falha de escrita.
 	 */
-	private void avaliarAlarmes(EstadoRealtimeDTO estado) {
+	private List<AlarmeAtivo> avaliarAlarmes(EstadoRealtimeDTO estado) {
 		try {
-			alarmes.avaliar(estado.unidadeSondaId(), estado.leituras());
+			return alarmes.avaliar(estado.unidadeSondaId(), estado.leituras());
 		} catch (RuntimeException e) {
 			log.error("Alarmes nao avaliados para a unidade={}; a retransmissao seguiu normal.",
 					estado.unidadeSondaId(), e);
+			return alarmes.ativos(estado.unidadeSondaId());
 		}
-	}
-
-	/**
-	 * ⚠️ Com a lista de leituras, este metodo deixou de precisar conhecer as grandezas.
-	 *
-	 * <p>Antes ele repetia os seis campos fixos so para trocar o timestamp — e cada card novo
-	 * exigiria mexer aqui. Agora as leituras passam intactas: o backend valida a origem e o acesso,
-	 * e retransmite.
-	 */
-	private EstadoRealtimeDTO comTimestamp(EstadoRealtimeDTO estado, Instant timestamp) {
-		return new EstadoRealtimeDTO(estado.unidadeSondaId(), timestamp, estado.leituras());
 	}
 }

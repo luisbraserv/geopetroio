@@ -218,6 +218,80 @@ h1 {
   color: #94a3b8;
 }
 
+/* --- Alarme --- */
+
+/* Fica acima dos cards de propósito: o alarme existe para ser lido por quem não estava olhando a
+   tela, e um destaque só nos cards obrigaria a varrer a grade para descobrir onde ele está. */
+.alarmes {
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  padding: 14px 16px;
+}
+
+.alarmes__titulo {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.alarmes__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alarme {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 13px;
+  border-left: 3px solid currentcolor;
+  padding-left: 10px;
+}
+
+.alarme--critico { color: #b91c1c; }
+.alarme--atencao { color: #92400e; }
+
+.alarme__nivel {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.alarme__grandeza { font-weight: 600; color: #0f172a; }
+.alarme__detalhe { color: #475569; }
+.alarme__desde { color: #94a3b8; margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* A borda e o rótulo carregam a informação junto com a cor: quem não distingue vermelho de âmbar
+   ainda lê "Crítico" e "Atenção" no card. */
+.card--atencao {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.card--critico {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.card__alarme {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.card--atencao .card__alarme { color: #92400e; }
+.card--critico .card__alarme { color: #b91c1c; }
+
 .rodape {
   display: flex;
   gap: 24px;

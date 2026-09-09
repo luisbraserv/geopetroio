@@ -3,6 +3,8 @@ package com.geopetro.realtime.dto;
 import java.time.Instant;
 import java.util.List;
 
+import com.geopetro.alarmes.AlarmeAtivo;
+
 /**
  * Estado instantaneo de uma Unidade/Sonda, retransmitido em tempo real.
  *
@@ -24,14 +26,26 @@ import java.util.List;
  * entao nao ha aqui vocabulario de dispositivo nenhum para manter — e um card de um tipo novo
  * atravessa sem que este arquivo mude.
  *
+ * <h2>O que esta alarmando viaja junto — 2026-09-09</h2>
+ * O campo {@code alarmes} <b>nao vem do Desktop</b>: e o servidor que o acrescenta ao retransmitir,
+ * a partir da avaliacao deste mesmo ciclo. O Desktop publica sem ele, e o valor recebido de um
+ * produtor e ignorado — quem decide o que alarma e quem tem os limites.
+ *
+ * <p>⚠️ <b>Por que junto, e nao num topico proprio.</b> O destaque descreve <b>estes</b> numeros.
+ * Em canais separados os dois chegariam em ordens diferentes, e a tela mostraria um valor com o
+ * destaque do ciclo anterior — um alarme aceso sobre um numero que ja voltou a faixa, ou pior, o
+ * contrario.
+ *
  * @param unidadeSondaId id da Unidade/Sonda no cadastro — identifica a origem e o topico de destino
  * @param timestamp      instante da leitura no CLP, em UTC
  * @param leituras       so cards visiveis, e so grandezas com valor (RN-037, RN-099)
+ * @param alarmes        episodios abertos apos este ciclo; preenchido pelo servidor, nulo no envio
  */
 public record EstadoRealtimeDTO(
 		Long unidadeSondaId,
 		Instant timestamp,
-		List<LeituraRealtimeDTO> leituras) {
+		List<LeituraRealtimeDTO> leituras,
+		List<AlarmeAtivo> alarmes) {
 
 	/**
 	 * Uma leitura, na mesma forma do MQTT ({@code mqtt-telemetria.md §3}).

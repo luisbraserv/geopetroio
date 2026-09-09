@@ -76,9 +76,12 @@ public class MotorDeAlarmes {
 	 *
 	 * <p>Um ciclo é uma mensagem, e as mensagens de uma sessão chegam em ordem
 	 * ({@code setPreserveReceiveOrder}), então a avaliação de uma unidade não corre contra ela mesma.
+	 *
+	 * @return o que está alarmando <b>depois</b> deste ciclo — é o que viaja junto das leituras que
+	 *         o provocaram, para o destaque na tela nunca descrever a leitura anterior
 	 */
 	@Transactional
-	public void avaliar(long unidadeSondaId, List<LeituraRealtimeDTO> leituras) {
+	public List<AlarmeAtivo> avaliar(long unidadeSondaId, List<LeituraRealtimeDTO> leituras) {
 		Map<Chave, Limite> vigiadas = vigiadas(unidadeSondaId);
 		Instant agora = Instant.now();
 		var registrados = new ArrayList<EventoAlarme>();
@@ -103,6 +106,7 @@ public class MotorDeAlarmes {
 		}
 		encerrarOrfaos(unidadeSondaId, vigiadas, agora, registrados, atualizados);
 		gravar(registrados, atualizados);
+		return ativos(unidadeSondaId);
 	}
 
 	/**

@@ -3,6 +3,7 @@ import { Store } from '@ngxs/store';
 
 import { environment } from '../../../../environments/environment';
 import { AuthState } from '../../auth/state/auth.state';
+import { AlarmeAtivo, alarmesPorGrandeza } from './alarme-ativo';
 import { TipoCard, chaveGrandeza } from './grandezas-de-card';
 import { StompClient } from './stomp-client';
 
@@ -40,6 +41,16 @@ export interface EstadoRealtime {
   unidadeSondaId: number;
   timestamp: string;
   leituras: LeituraRealtime[];
+  /**
+   * Episódios abertos depois deste ciclo — acrescentado **pelo servidor**, não pela sonda.
+   *
+   * ⚠️ **Viaja junto das leituras de propósito.** O destaque descreve *estes* números; num canal
+   * separado os dois chegariam em ordens diferentes e a tela mostraria um valor com o destaque do
+   * ciclo anterior — um alarme aceso sobre um número que já voltou à faixa.
+   *
+   * Ausente em mensagem de um servidor anterior a 2026-09-09; a tela trata como lista vazia.
+   */
+  alarmes?: AlarmeAtivo[] | null;
 }
 
 export type StatusConexao = 'Offline' | 'Conectando' | 'Online' | 'Reconectando';
@@ -93,6 +104,14 @@ export class RealtimeService {
     }
     return mapa;
   });
+
+  /**
+   * Alarmes abertos na última mensagem, indexados pela chave da grandeza.
+   *
+   * Vazio enquanto nenhuma mensagem chegou — e aí quem responde é a rota REST, porque um episódio
+   * aberto de sonda que parou de publicar continua sendo verdade.
+   */
+  readonly alarmes = computed(() => alarmesPorGrandeza(this.estado()?.alarmes));
 
   /**
    * Série de cada grandeza ao longo da janela, para os gráficos.

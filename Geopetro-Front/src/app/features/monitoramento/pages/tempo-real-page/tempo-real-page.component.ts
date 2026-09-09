@@ -5,10 +5,20 @@ import { TuiButton } from '@taiga-ui/core';
 
 import { ToastService } from '../../../../shared/toast/toast.service';
 import { GraficoTempoRealComponent } from '../../components/grafico-tempo-real/grafico-tempo-real.component';
+import { AlarmeAtivo, SeveridadeAlarme, alarmesPorGrandeza, ordenarPorGravidade } from '../../services/alarme-ativo';
+import { AlarmesService } from '../../services/alarmes.service';
 import { CardsUnidadeService } from '../../services/cards-unidade.service';
 import { ConfiguracaoCards, GrandezaDeCard, chaveGrandeza, grandezasDe } from '../../services/grandezas-de-card';
 import { MonitoramentoSondaService, SondaDisponivel } from '../../services/monitoramento-sonda.service';
 import { RealtimeService } from '../../services/realtime.service';
+
+/** Um alarme aberto, já com o rótulo que a tela usa para a grandeza. */
+export interface AlarmeExibido {
+  alarme: AlarmeAtivo;
+  chave: string;
+  rotulo: string;
+  unidade: string;
+}
 
 /** Acima disto, o dado deixa de representar o "agora" e a tela avisa. */
 const LIMITE_DEFASAGEM_MS = 5000;
@@ -22,6 +32,7 @@ const LIMITE_DEFASAGEM_MS = 5000;
 export class TempoRealPageComponent implements OnDestroy {
   private readonly sondaService = inject(MonitoramentoSondaService);
   private readonly cardsService = inject(CardsUnidadeService);
+  private readonly alarmesService = inject(AlarmesService);
   private readonly realtime = inject(RealtimeService);
   private readonly toast = inject(ToastService);
 
@@ -90,6 +101,45 @@ export class TempoRealPageComponent implements OnDestroy {
     return !!configuracao && this.grandezas().length === 0;
   });
 
+  /**
+   * Alarmes abertos lidos por REST ao selecionar a sonda.
+   *
+   * Cobre o intervalo até a primeira mensagem e o caso da sonda que **não está publicando** — um
+   * episódio aberto de uma sonda que caiu continua sendo verdade, e ficaria invisível justamente
+   * quando ninguém está olhando o CLP.
+   */
+  private readonly alarmesIniciais = signal<AlarmeAtivo[]>([]);
+
+  /**
+   * O que está alarmando, por grandeza.
+   *
+   * ⚠️ **Assim que a primeira mensagem chega, ela manda.** A projeção viaja dentro do próprio ciclo
+   * de leituras, então o destaque descreve os números que estão na tela. Continuar preferindo o
+   * REST deixaria um alarme aceso sobre um valor que já voltou à faixa.
+   */
+  protected readonly alarmesPorChave = computed(() =>
+    this.estado() ? this.realtime.alarmes() : alarmesPorGrandeza(this.alarmesIniciais()),
+  );
+
+  /** Lista para o aviso do topo, do mais grave para o mais antigo. */
+  protected readonly alarmesAtivos = computed<AlarmeExibido[]>(() => {
+    const rotulos = new Map(this.grandezasVisiveis().map((g) => [g.chave, g]));
+    return ordenarPorGravidade([...this.alarmesPorChave().values()]).map((alarme) => {
+      const chave = chaveGrandeza(alarme.dispositivoId, alarme.serie);
+      const grandeza = rotulos.get(chave);
+      return {
+        alarme,
+        chave,
+        // Sem card que a descreva, o id cru: esconder um alarme real seria pior que exibi-lo sem
+        // nome bonito — a mesma regra das leituras sem card.
+        rotulo: grandeza?.rotulo ?? chave,
+        unidade: grandeza?.unidade ?? '',
+      };
+    });
+  });
+
+  protected readonly temAlarme = computed(() => this.alarmesAtivos().length > 0);
+
   protected readonly conectado = computed(() => this.status() === 'Online');
   protected readonly podeConectar = computed(
     () => !!this.sondaSelecionada() && this.status() !== 'Conectando',
@@ -134,6 +184,11 @@ export class TempoRealPageComponent implements OnDestroy {
 
   protected serieDe(grandeza: GrandezaDeCard): (number | null)[] {
     return this.realtime.series().get(grandeza.chave) ?? [];
+  }
+
+  /** `null` quando a grandeza não tem episódio aberto — o caso normal. */
+  protected severidadeDe(grandeza: GrandezaDeCard): SeveridadeAlarme | null {
+    return this.alarmesPorChave().get(grandeza.chave)?.severidadeAtual ?? null;
   }
 
   /**
@@ -203,9 +258,31 @@ export class TempoRealPageComponent implements OnDestroy {
     this.realtime.desconectar();
     this.configuracao.set(null);
     this.erroCards.set(null);
+    this.alarmesIniciais.set([]);
 
     if (!sonda) return;
     this.carregarCards(sonda);
+    this.carregarAlarmes(sonda);
+  }
+
+  /**
+   * Alarme aberto aparece antes de a sonda publicar — inclusive se ela não publicar.
+   *
+   * Falha aqui não vira erro na tela: é informação complementar, e a primeira mensagem do canal
+   * traz a projeção de qualquer forma. Um alerta vermelho por causa dela esconderia os erros que
+   * realmente impedem a tela de funcionar.
+   */
+  private carregarAlarmes(sonda: SondaDisponivel): void {
+    this.alarmesService.ativos(sonda.id).subscribe({
+      next: (alarmes) => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.alarmesIniciais.set(alarmes);
+      },
+      error: () => {
+        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        this.alarmesIniciais.set([]);
+      },
+    });
   }
 
   private carregarCards(sonda: SondaDisponivel): void {

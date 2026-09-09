@@ -74,12 +74,40 @@ mas evita reproduzir a mesma fragilidade num canal novo.
     { "dispositivoId": "CONTADOR_STROKE_01", "serie": "vazao",
       "tipo": "CONTADOR_STROKE", "unidade": "bbl/min",
       "enderecoDb": "DBD0", "valor": 1.52, "valorBruto": 148320 }
+  ],
+  "alarmes": [
+    { "unidadeSondaId": 144, "dispositivoId": "PESO_01", "serie": null,
+      "episodioId": "6f1c…", "severidadeAtual": "CRITICO",
+      "desde": "2026-09-08T16:30:10.400Z", "valorExtremo": 190100.0,
+      "limiteViolado": "MAX" }
   ]
 }
 ```
 
 **[FATO]** `unidadeSondaId` e `timestamp` são **obrigatórios**. Se o timestamp vier ausente, o
 backend carimba o instante de recepção — mas isso é rede de segurança, não o caminho esperado.
+
+### `alarmes` é a única coisa que o servidor acrescenta — **[DECIDIDO 2026-09-09]**
+
+**[FATO]** O Desktop **não envia** este campo, e o valor que um produtor mandasse é ignorado: quem
+decide o que alarma é quem tem os limites. O backend avalia o ciclo recebido
+([RN-102](../business-rules.md#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)) e
+retransmite a mensagem com os episódios abertos **depois** dela. Lista vazia é o normal.
+
+⚠️ **Por que junto, e não num tópico próprio.** O destaque descreve **estes** números. Em canais
+separados os dois chegariam em ordens diferentes, e a tela mostraria um valor com o destaque do ciclo
+anterior — um alarme aceso sobre um número que já voltou à faixa, ou o contrário. O preço é a consulta
+de limites entrar no caminho do ciclo; é uma busca por chave primária.
+
+⚠️ **Falha do motor não apaga a tela.** Retransmitir é o que faz a tela existir; avaliar produz
+histórico. Uma exceção na avaliação vira log, e a mensagem segue com a **última projeção conhecida**
+em vez de nenhuma: o alarme que já estava aceso continua aceso, que é mais próximo da verdade do que
+apagá-lo por causa de uma falha de escrita.
+
+**[FATO]** Antes da primeira mensagem — e enquanto a sonda **não publica** — quem responde é
+`GET /api/sondas/{id}/alarmes`, com a mesma autorização dos limites
+([RN-069](../business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)). Sem essa rota, um
+episódio aberto de uma sonda que caiu ficaria invisível justamente quando ninguém está olhando o CLP.
 
 ### Mesma forma que o MQTT, de propósito
 
