@@ -10,6 +10,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import com.geopetro.alarmes.MotorDeAlarmes;
 import com.geopetro.monitoramento.SondaMonitoramentoService;
 import com.geopetro.realtime.dto.EstadoRealtimeDTO;
 
@@ -27,11 +28,13 @@ public class RealtimeController {
 
 	private final SimpMessagingTemplate messagingTemplate;
 	private final SondaMonitoramentoService monitoramentoService;
+	private final MotorDeAlarmes alarmes;
 
 	public RealtimeController(SimpMessagingTemplate messagingTemplate,
-			SondaMonitoramentoService monitoramentoService) {
+			SondaMonitoramentoService monitoramentoService, MotorDeAlarmes alarmes) {
 		this.messagingTemplate = messagingTemplate;
 		this.monitoramentoService = monitoramentoService;
+		this.alarmes = alarmes;
 	}
 
 	@MessageMapping("/realtime/estado")
@@ -63,6 +66,27 @@ public class RealtimeController {
 		if (log.isTraceEnabled()) {
 			log.trace("Estado retransmitido: unidade={} timestamp={}",
 					paraEnviar.unidadeSondaId(), paraEnviar.timestamp());
+		}
+
+		avaliarAlarmes(paraEnviar);
+	}
+
+	/**
+	 * O servidor avalia depois de retransmitir, e nunca deixa o alarme derrubar a tela.
+	 *
+	 * <p>São duas responsabilidades com criticidades diferentes: a retransmissão e o que faz a tela
+	 * de tempo real existir; a avaliação produz histórico. Avaliar antes atrasaria cada ciclo pelo
+	 * tempo de uma consulta ao banco, e propagar a exceção faria uma falha do motor — banco fora,
+	 * limite corrompido — apagar a tela de quem está olhando a sonda.
+	 *
+	 * <p>⚠️ O preço é assumido: uma falha aqui vira linha de log e o episódio não é registrado.
+	 */
+	private void avaliarAlarmes(EstadoRealtimeDTO estado) {
+		try {
+			alarmes.avaliar(estado.unidadeSondaId(), estado.leituras());
+		} catch (RuntimeException e) {
+			log.error("Alarmes nao avaliados para a unidade={}; a retransmissao seguiu normal.",
+					estado.unidadeSondaId(), e);
 		}
 	}
 

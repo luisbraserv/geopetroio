@@ -1,6 +1,6 @@
 # Alarmes de Telemetria — Spec de Feature
 
-> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-07] Canal de configuração implementado; motor e interfaces de alarmes pendentes.**
+> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Canal de configuração, motor de avaliação e log de eventos implementados no servidor. As interfaces — ajuste de limites e histórico na tela — continuam pendentes.**
 >
 > Feature de nível de sistema: atravessa Geopetro-Desktop, Geopetro-Backend e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
@@ -40,12 +40,27 @@ integração externa nova, com custo por mensagem.
 não está na sonda**. Mas cria a pergunta: se os dois lados avaliam a mesma excursão, quantos eventos
 isso gera?
 
-**[PENDENTE — proposta a confirmar]** Uma única fonte de verdade para o histórico:
+**[DECIDIDO 2026-09-09]** Uma única fonte de verdade para o histórico:
 
-| Lado | Papel |
-|---|---|
-| **Desktop (borda)** | **Sinaliza localmente** — som e destaque na tela da sonda. **Não gera evento.** Funciona sem rede |
-| **Backend (servidor)** | **Único produtor do histórico de eventos.** É o que a supervisão e o cliente consultam |
+| Lado | Papel | Estado |
+|---|---|---|
+| **Desktop (borda)** | **Sinaliza localmente** — som e destaque na tela da sonda. **Não gera evento.** Funciona sem rede | Pendente — depende do auto-update (§8, passo 3) |
+| **Backend (servidor)** | **Único produtor do histórico de eventos.** É o que a supervisão e o cliente consultam | ✅ **Implementado 2026-09-09** |
+
+### ⚠️ De onde o servidor tira a leitura — **[DECIDIDO 2026-09-09]**
+
+Do **canal de tempo real** ([RN-102](../business-rules.md#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)),
+que é o único caminho por onde o Backend recebe leitura sem pedir. O histórico vai por MQTT direto à
+Telemetria, e o Backend só o consulta sob demanda — esperar por ali transformaria uma consulta em
+gatilho.
+
+**Isso tem duas consequências que não estavam à vista quando a avaliação dupla foi decidida:**
+
+1. ⚠️ **Sonda com a conexão de tempo real caída não alarma no servidor**, ainda que o MQTT siga
+   gravando o histórico. Coerente com RN-070, mas não é o mesmo que dizer que nada se perde.
+2. ⚠️ **Card ativo e invisível nunca é avaliado** — o tempo real carrega só cards visíveis (RN-037).
+   Um limite sobre ele aparece salvo na tela e não dispara nunca:
+   [OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara).
 
 **Por quê:** dois produtores do mesmo evento exigiriam deduplicação por janela de tempo, com relógios
 diferentes nos dois lados. O custo aceito é que uma excursão ocorrida com a sonda offline **alerta o
@@ -58,16 +73,19 @@ fato. Ver [OQ-031](../open-questions.md#oq-031--o-consumidor-tolera-telemetria-f
 
 ## 4. Modelo de dados proposto
 
-**[FATO 2026-09-07]** Configuração e limites já são persistidos por unidade; ver [contrato implementado](../contracts/configuracao-sonda.md). Eventos e avaliação abaixo continuam propostos.
+**[FATO 2026-09-09]** Configuração, limites, **avaliação e log de eventos** estão implementados; ver [contrato implementado](../contracts/configuracao-sonda.md). Falta a projeção chegar à tela.
 
 ### Limite
 
 **[FATO 2026-09-07]** Um documento por **Unidade/Sonda**, com até um limite por grandeza, no MySQL do Geopetro-Backend. A lista é substituída integralmente e a autoria corresponde à última gravação do documento. A proposta original previa um registro por Unidade/Sonda × grandeza.
 
+⚠️ **[FATO 2026-09-09] O `dispositivoId` sozinho não identifica a grandeza.** O vocabulário deixou de ser fechado e passou a ser o que cada unidade declara no documento de cards, e a chave ganhou `serie` — [RN-101](../business-rules.md#rn-101--o-limite-de-alarme-só-existe-para-uma-grandeza-que-a-unidade-declara).
+
 ```
 LimiteAlarme
   unidadeSondaId       (FK)
-  dispositivoId        (vocabulário fechado — mqtt-telemetria.md §4)
+  dispositivoId        (o que a unidade declara em /api/sondas/{id}/cards — RN-101)
+  serie                (stroke | vazao | volumeAcumulado num contador; nula nos demais — RN-098)
   minimoAtencao        (opcional)
   maximoAtencao        (opcional)
   minimoCritico        (opcional)
@@ -106,25 +124,39 @@ deliberadamente **não conhece usuários** ([spec do Geopetro-Telemetria](../../
 não como linha mutável. Uma excursão que atravessa a atenção e chega à crítica é **um episódio que
 escala** — a escalada é mais um fato, não um `UPDATE`.
 
+✅ **[FATO 2026-09-09] Implementado**, na tabela `evento_alarme` (migration `V2026.09.09.1`):
+
 ```
 EventoAlarme  (append-only)
   episodioId       (agrupa os fatos da mesma excursão)
-  unidadeSondaId · dispositivoId
+  unidadeSondaId · dispositivoId · serie
   tipo             (ABRIU | ESCALOU | REDUZIU | FECHOU)
-  severidade       (ATENCAO | CRITICO)
-  ocorridoEm
+  severidade       (ATENCAO | CRITICO; no FECHOU, a que o episódio tinha ao terminar)
+  ocorridoEm       (instante de recepção no servidor — RN-102)
   valor            (leitura que provocou o fato)
   limiteViolado    (MIN | MAX)
 ```
+
+**Abrir direto em crítico é um fato só.** Uma pressão que salta da faixa para além do limite crítico
+produz **um** `ABRIU` com severidade `CRITICO` — não um `ABRIU` em atenção seguido de `ESCALOU`.
+Inventar a escalada registraria um fato que não houve.
 
 **Projeção para a tela** — derivada, reconstruível a partir do log:
 
 ```
 AlarmeAtivo  (projeção)
-  unidadeSondaId · dispositivoId
+  unidadeSondaId · dispositivoId · serie
   episodioId · severidadeAtual
-  desde · valorExtremo
+  desde · valorExtremo · limiteViolado
 ```
+
+✅ **[FATO 2026-09-09]** A projeção vive **em memória** e é reconstruída no `ApplicationReadyEvent` a
+partir dos episódios que nunca fecharam. ⚠️ Sem essa reconstrução, um reinício no meio de uma excursão
+faria a próxima leitura abrir um **segundo** episódio para a mesma excursão — a mesma coisa contada
+duas vezes no histórico. Falha na reconstrução não impede a aplicação de subir: vira `ERROR` no log, e
+o motor volta sem os episódios abertos.
+
+⚠️ **A projeção ainda não sai do servidor** — nenhuma rota a expõe. É o que falta do passo 2.
 
 ### Por que aqui, e só aqui
 
@@ -217,11 +249,20 @@ telemetria segue exclusiva de sonda.
 (§4); **sem perfil padrão** — cada sonda é configurada; sonda sem limite **não alarma**, e isso é estado
 normal; o limite vale **até alguém trocar**.
 
+✅ **Resolvido em 2026-09-09 pela implementação:** a **reconstrução da projeção** (item 2) — ela é
+sempre refeita do zero a partir do log, no arranque. A projeção não tem persistência própria, então
+não há como divergir: ou o log diz, ou não é verdade.
+
+✅ **Parcialmente resolvido:** o **episódio que nunca fecha** (item 3) deixou de valer para o caso do
+limite desativado, que agora fecha na hora
+([RN-103](../business-rules.md#rn-103--limite-desativado-fecha-o-episódio-aberto)). O caso da sonda
+que simplesmente para de publicar continua aberto.
+
 | # | Questão que continua aberta | Por que importa |
 |---|---|---|
-| 1 | **Retenção do log de eventos** | O log é append-only e cresce sem parar. Precisa de política própria — a de 5 anos vale para a série, não foi discutida para alarmes |
-| 2 | **Reconstrução da projeção** | Quando `AlarmeAtivo` diverge do log (bug, deploy no meio de um episódio), reconstrói-se do zero? Um log pequeno permite; convém decidir antes de crescer |
-| 3 | **Episódio que nunca fecha** | Sonda que para de publicar durante uma excursão deixa o episódio aberto para sempre — e silêncio **não é alarme** ([RN-070](../business-rules.md#rn-070--ausência-de-dado-não-é-alarme)), então nada o encerra |
+| 1 | **Retenção do log de eventos** — agora com a tabela existindo: [OQ-051](../open-questions.md#oq-051--retenção-do-log-de-eventos-de-alarme) | O log é append-only e cresce sem parar. Precisa de política própria — a de 5 anos vale para a série, não foi discutida para alarmes |
+| 3 | **Episódio que nunca fecha por silêncio da sonda** | Sonda que para de publicar durante uma excursão deixa o episódio aberto para sempre — e silêncio **não é alarme** ([RN-070](../business-rules.md#rn-070--ausência-de-dado-não-é-alarme)), então nada o encerra |
+| 4 | **Limite sobre card invisível nunca dispara**: [OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) | Nasceu do encontro de duas regras certas — RN-037 e RN-102. Hoje a visibilidade decide, sem dizer, o que é vigiado |
 
 **O item 4 é consequência direta** de o limite ser por sonda e ajustável na hora, sem entidade que
 delimite a operação: o valor ajustado para o trabalho de hoje continua valendo semana que vem, para
@@ -229,8 +270,18 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
 
 ## 8. Ordem de implementação sugerida
 
-1. **Canal de configuração** (§5) — **implementado em código em 2026-09-07**, incluindo persistência e transporte dos limites; distribuição à frota pendente
-2. **Interface de limites + avaliação no servidor + evento** — próxima etapa; entrega alarme para supervisão e cliente
+1. ✅ **Canal de configuração** (§5) — **implementado em 2026-09-07**, incluindo persistência e transporte dos limites; distribuição à frota pendente
+2. 🔶 **Interface de limites + avaliação no servidor + evento** — **metade entregue em 2026-09-09**:
+
+   ✅ **O limite passou a valer sobre a grandeza que a unidade declara** ([RN-101](../business-rules.md#rn-101--o-limite-de-alarme-só-existe-para-uma-grandeza-que-a-unidade-declara)).
+   Era pré-requisito e não estava previsto aqui: com a lista fixa de cinco ids, a tela de limites não
+   teria o que oferecer a uma unidade com card de temperatura ou de tanque.
+
+   ✅ **Avaliação no servidor e log de eventos** — `AvaliadorDeAlarme` (a regra, função pura),
+   `MotorDeAlarmes` (estado, gravação e projeção) e a tabela `evento_alarme`.
+
+   ⏳ **Falta a interface**: a tela de ajuste de limites e a rota que expõe a projeção. Sem elas o
+   alarme funciona e **ninguém o vê nem o configura pela web** — o limite só chega por API.
 3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update
 4. **Histórico na tela**
 

@@ -935,3 +935,41 @@ sem como conferir — e uma unidade esquecida fica sem telemetria sem que nada a
 | Relatório no deploy | Uma foto, não um acompanhamento |
 
 Ver [mqtt-telemetria §10](contracts/mqtt-telemetria.md#10-o-que-a-virada-quebra).
+
+### OQ-050 · Limite sobre card invisível nunca dispara
+**[ABERTA 2026-09-09]**
+
+O servidor avalia o alarme pelo canal de tempo real
+([RN-102](business-rules.md#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)), e o tempo
+real carrega **só cards visíveis**
+([RN-037](business-rules.md#rn-037---visibilidade-de-card-controla-publicação-não-gravação)).
+
+⚠️ **Um card ativo e invisível é lido, convertido e gravado na borda — e nunca chega ao servidor.** Um
+limite sobre ele pode ser configurado, aparece salvo na tela e **não dispara nunca**. Hoje a
+visibilidade controla, sem dizer, o que é vigiado.
+
+As duas regras estão certas isoladamente: visibilidade é decisão de tela, e o canal de tempo real
+existe para alimentar tela. O encontro delas é que produz o silêncio.
+
+**Caminhos possíveis, nenhum decidido:**
+
+| Caminho | Custo |
+|---|---|
+| Recusar limite sobre card invisível | Honesto, mas acopla duas configurações de autoridades diferentes: quem ajusta o limite (inclusive `CLIENTE`) não pode mexer no card |
+| Avisar na tela de limites, sem recusar | Barato e não acopla. Deixa a decisão com quem configura |
+| Publicar cards invisíveis no tempo real, marcados | Resolve na raiz e contraria RN-037 — a tela teria de filtrar |
+
+⚠️ **Enquanto não se decide, o aviso não existe em lugar nenhum:** nem na tela de cards do Desktop,
+nem na de limites.
+
+### OQ-051 · Retenção do log de eventos de alarme
+**[ABERTA 2026-09-09]**
+
+A tabela `evento_alarme` é *append-only* e **não tem política de retenção**. A de 5 anos vale para a
+série de telemetria no InfluxDB e nunca foi discutida para alarmes.
+
+O log cresce por **transição**, não por leitura ([RN-056](business-rules.md#rn-056--um-evento-por-excursão-não-por-leitura)),
+então o crescimento é modesto — o que torna a questão pouco urgente e fácil de esquecer. Convém
+decidir antes de a tabela ficar grande, quando apagar passa a ser uma operação e não uma linha de SQL.
+
+Era o item 1 de [alarmes §7](features/alarmes.md#continuam-abertos), agora com a tabela existindo.

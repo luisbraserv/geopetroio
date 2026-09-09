@@ -1196,3 +1196,61 @@ desliga e restaura o comportamento anterior.
 ⚠️ **Isto apaga dado de medição.** Uma carta de operação de um poço de seis meses atrás deixa de
 poder ser gerada *nesta estação* depois do prazo. O histórico longo vive no InfluxDB, com 5 anos, e
 chega ao Front pelo REST — mas o Desktop lê o H2 local, não o InfluxDB.
+
+### RN-101 · O limite de alarme só existe para uma grandeza que a unidade declara
+**[DECIDIDO 2026-09-09]** Um limite refere um par `dispositivoId` + `serie` presente no documento de
+cards da unidade. Não há mais vocabulário do sistema — `VAZAO_01`, `PESO_COLUNA_01`, `TORQUE_01/02` e
+`PRESSAO_01` eram as cinco grandezas que *toda* sonda tinha, e o teto de cinco limites era a contagem
+delas.
+
+⚠️ **A série faz parte da identidade, não é detalhe de exibição.** As três séries de um
+`CONTADOR_STROKE` compartilham o `dispositivoId`
+([RN-098](#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)): sem ela, "acima de
+8" não diria se fala de **vazão** — alarme plausível — ou de **volume acumulado**, que só cresce e
+dispararia uma vez para nunca mais fechar.
+
+**Limite de card desativado é aceito e preservado**, hibernando junto com o card
+([RN-091](#rn-091--card-se-desativa-nunca-se-exclui)). Recusá-lo obrigaria a apagá-lo para salvar
+qualquer outro, e quem reativasse o card encontraria a grandeza sem vigilância.
+
+⚠️ **Unidade sem documento de cards não aceita limite nenhum**, com o motivo na resposta — não há
+grandeza para vigiar ([RN-088](#rn-088--sem-configuração-a-unidade-não-lê-nada)).
+
+**A borda não confere o vocabulário.** Os dois documentos chegam ao Desktop por canais independentes,
+e o de limites pode chegar **antes** do de cards: ali um id desconhecido significa "card que ainda não
+chegou". Enquanto a lista fixa vivia também no Desktop, um limite de `TEMPERATURA_01` fazia a estação
+descartar o snapshot inteiro e seguir em silêncio com o anterior.
+
+### RN-102 · O servidor avalia o alarme pelo canal de tempo real
+**[DECIDIDO 2026-09-09]** A avaliação do servidor roda sobre o que o Desktop publica em
+`/app/realtime/estado` — o **único caminho por onde o Backend recebe leitura sem pedir**. O histórico
+vai por MQTT direto à Telemetria, e o Backend só o consulta sob demanda: esperar por ali transformaria
+uma consulta em gatilho.
+
+⚠️ **Duas consequências, assumidas:**
+
+| Consequência | Por quê |
+|---|---|
+| Sonda com a conexão de tempo real caída **não alarma no servidor**, ainda que o MQTT siga gravando | O canal é declaradamente com perda. Coerente com [RN-070](#rn-070--ausência-de-dado-não-é-alarme), mas não é o mesmo que dizer que nada se perde |
+| Card **ativo e invisível** nunca é avaliado | O tempo real carrega só cards visíveis ([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). Hoje a visibilidade controla, sem dizer, o que é vigiado — ver [OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) |
+
+**O relógio é o do servidor.** `ocorridoEm` e a contagem dos tempos mínimos usam o instante de
+recepção, não o `timestamp` da mensagem: o histórico tem um relógio só, e uma estação com a hora
+errada não embaralha a ordem dos eventos da frota nem faz um tempo mínimo vencer na hora. O preço é o
+atraso de rede embutido no instante do fato — pequeno num canal de "agora".
+
+**A avaliação nunca derruba a tela.** Ela roda depois da retransmissão, e uma falha vira linha de log:
+uma exceção do motor — banco fora, limite corrompido — não pode apagar a tela de quem está olhando a
+sonda.
+
+### RN-103 · Limite desativado fecha o episódio aberto
+**[DECIDIDO 2026-09-09]** Desativar ou apagar um limite com alarme aberto **fecha o episódio na
+hora**, sem esperar tempo mínimo nenhum. O `FECHOU` registra o valor extremo do episódio, não uma
+leitura nova — não houve leitura: o que mudou foi a configuração.
+
+⚠️ **A alternativa era deixá-lo aberto para sempre.** Ele apareceria na tela de alarmes ativos
+indefinidamente, sobre um limite que já não existe, e **nada no sistema o fecharia** — silêncio não é
+alarme ([RN-070](#rn-070--ausência-de-dado-não-é-alarme)), então nem o fim das leituras o encerraria.
+
+⚠️ **Isto não resolve o caso vizinho:** episódio de uma sonda que simplesmente parou de publicar
+continua aberto, e segue em aberto como questão — ver [alarmes §7](features/alarmes.md#continuam-abertos).

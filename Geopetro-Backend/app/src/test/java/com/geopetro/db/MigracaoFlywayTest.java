@@ -73,11 +73,15 @@ class MigracaoFlywayTest {
 	void baseVaziaMigraDoZero() throws SQLException {
 		flyway().migrate();
 
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
         assertThat(existeTabela("recuperacao_senha")).isTrue();
         assertThat(existeTabela("configuracao_smtp")).isTrue();
         assertThat(existeTabela("configuracao_sonda")).isTrue();
+        assertThat(existeTabela("evento_alarme")).isTrue();
+        // serie e nula para card de uma grandeza so: NOT NULL aqui impediria todo evento que nao
+        // viesse de um contador de stroke (RN-098).
+        assertThat(colunaAceitaNulo("evento_alarme", "serie")).isTrue();
 		assertThat(existeColuna("unidades_sondas", "tipo")).isTrue();
 		assertThat(colunaAceitaNulo("unidades_sondas", "tipo")).isFalse();
 		assertThat(existeColuna("simulador_cenarios", "poco_id")).isTrue();
@@ -168,7 +172,7 @@ class MigracaoFlywayTest {
 
 		// Se o baseline tivesse sido executado, os CREATE TABLE teriam colidido e a migracao
 		// falharia. Ele entra so como registro.
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1");
 		assertThat(tipoDoRegistro("2026.09.04")).isEqualTo("BASELINE");
 		assertThat(tipoDoRegistro("2026.09.05")).isEqualTo("SQL");
 
