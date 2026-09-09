@@ -60,9 +60,12 @@ gatilho.
    gravando o histórico. Coerente com RN-070, mas não é o mesmo que dizer que nada se perde.
 2. ⚠️ **Card ativo e invisível não é avaliado pelo servidor** — o tempo real carrega só cards
    visíveis (RN-037). A **estação** o avalia, porque lê todos os cards ativos: o alarme acende na
-   sonda e a supervisão remota não o vê. Isso encolhe
-   [OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) sem resolvê-la —
-   e, enquanto a borda não chegar à frota, nem essa metade existe.
+   sonda e a supervisão remota não o vê.
+
+   ✅ **[FATO 2026-09-09]** As duas telas onde a decisão é tomada avisam disso — a de **Cards**, no
+   Desktop, ao deixar um card ativo e invisível, e a de **Limites**, ao ajustar o limite dele
+   ([OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara)). ⚠️ O aviso
+   torna a consequência visível para quem escolhe; **a assimetria permanece**, por desenho.
 
 **Por quê:** dois produtores do mesmo evento exigiriam deduplicação por janela de tempo, com relógios
 diferentes nos dois lados. O custo aceito é que uma excursão ocorrida com a sonda offline **alerta o
@@ -302,11 +305,15 @@ que simplesmente para de publicar continua aberto.
 |---|---|---|
 | 1 | **Retenção do log de eventos** — agora com a tabela existindo: [OQ-051](../open-questions.md#oq-051--retenção-do-log-de-eventos-de-alarme) | O log é append-only e cresce sem parar. Precisa de política própria — a de 5 anos vale para a série, não foi discutida para alarmes |
 | 3 | **Episódio que nunca fecha por silêncio da sonda** | Sonda que para de publicar durante uma excursão deixa o episódio aberto para sempre — e silêncio **não é alarme** ([RN-070](../business-rules.md#rn-070--ausência-de-dado-não-é-alarme)), então nada o encerra |
-| 4 | **Limite sobre card invisível nunca dispara**: [OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) | Nasceu do encontro de duas regras certas — RN-037 e RN-102. Hoje a visibilidade decide, sem dizer, o que é vigiado |
+| 4 | **O limite não expira** | Sendo por sonda e ajustável na hora, sem entidade que delimite a operação, o valor ajustado para o trabalho de hoje continua valendo semana que vem, para outro trabalho, até alguém lembrar de mudar. **Não há "fim do trabalho" que o sistema reconheça** — o registro de autoria (§6) é o que permite entender depois por que o limite era aquele |
 
-**O item 4 é consequência direta** de o limite ser por sonda e ajustável na hora, sem entidade que
-delimite a operação: o valor ajustado para o trabalho de hoje continua valendo semana que vem, para
-outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o sistema reconheça.
+✅ **Decidido em 2026-09-09:** o **limite sobre card invisível**
+([OQ-050](../open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara)) — nascido do
+encontro de RN-037 com RN-102 — é **avisado e não impedido**, nas duas telas onde a decisão é tomada:
+a de Cards, no Desktop, e a de Limites, no Front.
+
+⚠️ **O aviso torna a consequência visível para quem escolhe; a assimetria continua.** Quem não está
+na sonda segue sem ver aquele alarme, e é esse o público da feature.
 
 ## 8. Ordem de implementação sugerida
 

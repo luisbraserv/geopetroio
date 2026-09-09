@@ -112,6 +112,7 @@ public class CardsConfigController {
 	@FXML private Label lblEndereco;
 	@FXML private CheckBox chkAtivo;
 	@FXML private CheckBox chkVisivel;
+	@FXML private Label lblAvisoInvisivel;
 
 	@FXML private VBox paramCalibracaoLocal;
 	@FXML private Label lblCalibracaoAlvo;
@@ -243,8 +244,14 @@ public class CardsConfigController {
 				txtDistanciaMinima, txtDistanciaMaxima, txtConstanteBomba);
 		campos.forEach(campo -> campo.textProperty().addListener((obs, a, b) -> aplicarNoSelecionado()));
 
-		chkAtivo.selectedProperty().addListener((obs, a, b) -> aplicarNoSelecionado());
-		chkVisivel.selectedProperty().addListener((obs, a, b) -> aplicarNoSelecionado());
+		chkAtivo.selectedProperty().addListener((obs, a, b) -> {
+			atualizarAvisoDeInvisivel();
+			aplicarNoSelecionado();
+		});
+		chkVisivel.selectedProperty().addListener((obs, a, b) -> {
+			atualizarAvisoDeInvisivel();
+			aplicarNoSelecionado();
+		});
 		cbUnidadeTemperatura.valueProperty().addListener((obs, a, b) -> aplicarNoSelecionado());
 
 		cbTipo.valueProperty().addListener((obs, anterior, atual) -> {
@@ -334,6 +341,9 @@ public class CardsConfigController {
 			txtByteInicial.setText(String.valueOf(card.byteInicial()));
 			chkAtivo.setSelected(card.ativo());
 			chkVisivel.setSelected(card.visivel());
+			// Explicito: trocar para um card com os MESMOS dois valores nao dispara listener nenhum,
+			// e o aviso ficaria com o estado do card anterior.
+			atualizarAvisoDeInvisivel();
 
 			Parametros p = card.parametros() == null ? Parametros.vazio() : card.parametros();
 			txtRangeBar.setText(numero(p.rangeSensorBar()));
@@ -565,6 +575,34 @@ public class CardsConfigController {
 	private static void exibir(Node no, boolean visivel) {
 		no.setVisible(visivel);
 		no.setManaged(visivel);
+	}
+
+	/**
+	 * Avisa quando o card fica <b>ativo e invisível</b> — OQ-050.
+	 *
+	 * <h2>O silêncio que duas regras certas produzem juntas</h2>
+	 * Visibilidade controla <b>publicação</b>, não leitura (RN-037): o card invisível continua sendo
+	 * lido e gravado nesta estação. Só que a avaliação de alarme do servidor roda sobre o canal de
+	 * tempo real (RN-102), que carrega apenas os visíveis — então <b>o limite dele nunca dispara
+	 * para a supervisão</b>. As duas regras estão certas isoladamente; o encontro delas é que
+	 * desliga a vigilância remota sem dizer.
+	 *
+	 * <p>⚠️ <b>Avisa e não impede.</b> Esconder um card do dashboard é escolha legítima de quem
+	 * configura, e recusá-la aqui acoplaria esta tela — de {@code ADMIN}/{@code SUPORTE} — à de
+	 * limites, que é de quem enxerga a sonda, inclusive {@code CLIENTE} (RN-069).
+	 *
+	 * <p>Card <b>desativado</b> não recebe aviso: ele não é lido nem publicado, e a tela já diz o que
+	 * desativar significa.
+	 */
+	private void atualizarAvisoDeInvisivel() {
+		boolean lidoESemPublicar = chkAtivo.isSelected() && !chkVisivel.isSelected();
+		if (lidoESemPublicar) {
+			lblAvisoInvisivel.setText("""
+					⚠️ Card ativo e invisível: continua sendo lido e gravado nesta estação, e não é \
+					enviado ao monitoramento. Um limite de alarme sobre ele acende aqui na sonda e \
+					não chega à supervisão.""");
+		}
+		exibir(lblAvisoInvisivel, lidoESemPublicar);
 	}
 
 	// ===================================================================== edição da lista

@@ -960,7 +960,9 @@ O escopo é o do monitoramento (RN-047): `CLIENTE` vê a prontidão só das sond
 Ver [mqtt-telemetria §10](contracts/mqtt-telemetria.md#10-o-que-a-virada-quebra).
 
 ### OQ-050 · Limite sobre card invisível nunca dispara
-**[ABERTA 2026-09-09]**
+**[ABERTA 2026-09-09]** · ✅ **DECIDIDA 2026-09-09** — avisar dos dois lados, sem impedir. O aviso
+existe na tela de **Cards do Desktop**, onde a visibilidade é escolhida, e na de **Limites**, onde o
+limite é ajustado.
 
 O servidor avalia o alarme pelo canal de tempo real
 ([RN-102](business-rules.md#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)), e o tempo
@@ -995,10 +997,23 @@ Quem torna um card invisível não é avisado de que está desligando a vigilân
 ativos**, inclusive os invisíveis ([RN-104](business-rules.md#rn-104--a-estação-sinaliza-o-alarme-o-servidor-o-registra)),
 então o alarme **acende na sonda**.
 
-⚠️ **A outra metade continua aberta, e é a que importa para o público da feature.** Quem não está na
-sonda — supervisão e cliente, o motivo de o alarme existir — segue sem ver aquele episódio: ele não
-entra no histórico nem no destaque remoto. E enquanto a borda não chegar à frota (auto-update), nem
-essa metade existe.
+✅ **[FATO 2026-09-09] O aviso passou a existir nos dois lugares onde a decisão é tomada.** A tela de
+**Cards do Desktop** — onde a visibilidade é escolhida — mostra, ao deixar um card *ativo e
+invisível*: "continua sendo lido e gravado nesta estação, e não é enviado ao monitoramento. Um limite
+de alarme sobre ele acende aqui na sonda e não chega à supervisão." A tela de **Limites** avisa do
+outro lado, para quem ajusta o limite.
+
+⚠️ **Avisa e não impede, nos dois lugares.** Esconder um card do dashboard é escolha legítima de quem
+configura; recusá-la acoplaria a tela de Cards (`ADMIN`/`SUPORTE`) à de limites (quem enxerga a
+sonda, inclusive `CLIENTE` — RN-069).
+
+### ⚠️ O que continua verdade, e não é o aviso que resolve
+
+**Quem não está na sonda segue sem ver aquele episódio** — e é esse o público da feature. O alarme de
+card invisível não entra no histórico nem no destaque remoto. As duas telas tornam a consequência
+**visível para quem escolhe**; a assimetria entre borda e servidor permanece, por desenho.
+
+Encerrada como **decidida** — a pergunta era o que fazer, e a resposta foi avisar dos dois lados.
 
 ### OQ-051 · Retenção do log de eventos de alarme
 **[ABERTA 2026-09-09]**

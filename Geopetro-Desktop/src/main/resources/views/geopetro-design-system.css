@@ -497,3 +497,22 @@
 .card-grandeza-alarme-critico {
     -fx-text-fill: #b42318;
 }
+
+/* =====================================================================
+   Aviso de configuracao: uma escolha valida que tem consequencia nao
+   obvia. Nao e erro -- o campo continua aceitando o valor.
+
+   Usado em Cards para o card ATIVO e INVISIVEL: ele e lido e gravado na
+   borda, e nao chega ao servidor (RN-037), entao o limite de alarme
+   sobre ele nunca dispara remotamente -- OQ-050.
+   ===================================================================== */
+.aviso-configuracao {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7a4b00;
+    -fx-background-color: #fff8e6;
+    -fx-border-color: #f0a500;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 6 8 6 8;
+    -fx-wrap-text: true;
+}

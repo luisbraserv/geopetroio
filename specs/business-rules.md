@@ -1272,8 +1272,10 @@ a única pessoa que pode agir.
 ⚠️ **A estação vê mais que o servidor.** Ela avalia **todos os cards ativos**, inclusive os
 invisíveis; o servidor avalia pelo tempo real, que só carrega os visíveis
 ([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). Um limite sobre card
-invisível dispara **na sonda** e não no servidor — reduz o alcance de
-[OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) sem resolvê-la.
+invisível dispara **na sonda** e não no servidor. A assimetria é **avisada nas duas telas onde a
+decisão é tomada** — Cards, no Desktop, e Limites, no Front —, e não impedida
+([OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara)): recusar acoplaria
+configurações de autoridades diferentes.
 
 ⚠️ **Leitura ausente não apaga o destaque.** Grandeza sem valor não é avaliada: não houve medição que
 desminta o alarme, e tratá-la como dentro da faixa apagaria o aviso por **falta de dado** — o oposto

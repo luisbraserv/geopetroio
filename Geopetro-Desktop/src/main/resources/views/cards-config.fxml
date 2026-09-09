@@ -123,6 +123,15 @@
                   <CheckBox fx:id="chkVisivel" text="Visível no dashboard" />
                </HBox>
 
+               <!--
+                  OQ-050: card ativo e invisivel e lido e gravado aqui, e NAO chega ao servidor
+                  (RN-037). Como a avaliacao remota roda sobre o tempo real (RN-102), o limite de
+                  alarme dele nunca dispara para a supervisao. Quem desmarca precisa saber disso.
+                  O controller mostra e esconde conforme os dois checkboxes.
+               -->
+               <Label fx:id="lblAvisoInvisivel" styleClass="aviso-configuracao" wrapText="true"
+                      maxWidth="Infinity" managed="false" visible="false" />
+
                <Separator />
 
                <!-- ===== Parametros por tipo: o controller mostra um de cada vez ===== -->
