@@ -1,7 +1,10 @@
 package com.geopetro.alarmes;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,4 +43,25 @@ public interface EventoAlarmeRepository extends JpaRepository<EventoAlarmeEntity
 	}
 
 	boolean existsByUnidadeSondaId(Long unidadeSondaId);
+
+	/**
+	 * Episódios com algum fato na janela, do mais recente para o mais antigo.
+	 *
+	 * <p>Ordena por {@code MAX(ocorridoEm)} — o fato mais recente do episódio — e não pela abertura:
+	 * uma excursão que abriu ontem e escalou agora interessa mais que uma que abriu e fechou de manhã.
+	 *
+	 * <p>⚠️ Devolve <b>ids</b>, não fatos. Os fatos vêm depois, do episódio inteiro: filtrar os fatos
+	 * pela janela faria um episódio que abriu antes dela aparecer começando por {@code ESCALOU}.
+	 */
+	@Query("""
+			SELECT e.episodioId FROM EventoAlarmeEntity e
+			WHERE e.unidadeSondaId = :unidade
+			  AND e.ocorridoEm >= :inicio AND e.ocorridoEm <= :fim
+			GROUP BY e.episodioId
+			ORDER BY MAX(e.ocorridoEm) DESC
+			""")
+	List<String> episodiosNaJanela(@Param("unidade") long unidade, @Param("inicio") Instant inicio,
+			@Param("fim") Instant fim, Pageable pagina);
+
+	List<EventoAlarmeEntity> findByEpisodioIdInOrderByIdAsc(Collection<String> episodioIds);
 }

@@ -1,0 +1,181 @@
+.historico-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  color: var(--color-text-strong);
+}
+
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.eyebrow { margin: 0 0 0.25rem; color: var(--color-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-strong); }
+.page-header > div > span { font-size: 0.86rem; color: var(--color-text-secondary); max-width: 62ch; display: block; }
+
+.painel {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.8fr) auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.field--action { display: flex; align-items: flex-end; }
+
+select, input[type="datetime-local"] {
+  height: 2.45rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  padding: 0 0.7rem;
+  font: inherit;
+}
+
+select:focus, input:focus {
+  border-color: rgba(82, 140, 156, 0.72);
+  outline: 3px solid rgba(82, 140, 156, 0.16);
+}
+
+.alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+  border-radius: 6px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.alerta--erro { border: 1px solid #f2b8b5; background: #fdf2f2; color: #b42318; }
+.alerta--aviso { border: 1px solid #f4c96b; background: #fff8e6; color: #7a4b00; }
+
+.lista { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.episodio {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  box-shadow: var(--shadow-card);
+}
+
+.episodio--critico { border-left-color: #ef4444; }
+.episodio--atencao { border-left-color: #fbbf24; }
+
+.episodio__resumo {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* O nivel vai escrito, e nao so na cor da borda: quem nao distingue vermelho de ambar ainda le. */
+.episodio__nivel {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.episodio--critico .episodio__nivel { color: #b91c1c; }
+.episodio--atencao .episodio__nivel { color: #92400e; }
+
+.episodio__grandeza { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.episodio__rotulo { font-size: 0.86rem; font-weight: 700; color: var(--color-text-strong); }
+.episodio__lado { font-size: 0.76rem; color: var(--color-text-secondary); }
+
+.episodio__tempo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.episodio__duracao { font-weight: 700; color: var(--color-text-primary); }
+/* Em curso e um estado, nao uma duracao: a cor separa os dois sem exigir leitura atenta. */
+.episodio__duracao--aberto { color: #b91c1c; }
+
+.episodio__detalhe {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.episodio__detalhe:hover { background: #f8fafc; }
+
+.fatos {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0.7rem 0 0;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fato {
+  display: grid;
+  grid-template-columns: 9rem 5rem 5rem minmax(0, 1fr);
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.fato__tipo { font-weight: 700; color: var(--color-text-strong); }
+.fato__valor { color: var(--color-text-primary); }
+
+.estado-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--color-text-secondary);
+  padding: 3rem;
+  text-align: center;
+}
+
+.estado-vazio__icon { font-size: 2.5rem; opacity: 0.4; }
+.estado-vazio p { margin: 0; font-size: 0.9rem; }
+.estado-vazio__nota { font-size: 0.82rem; opacity: 0.85; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .historico-page { padding: 1rem; }
+  .filtros { grid-template-columns: 1fr; }
+  .episodio__resumo { grid-template-columns: 1fr; align-items: flex-start; }
+  .episodio__tempo { align-items: flex-start; }
+  .fato { grid-template-columns: 1fr 1fr; }
+}

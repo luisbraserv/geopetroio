@@ -33,16 +33,20 @@ import com.geopetro.core.exception.BusinessException;
 class AlarmesControllerTest {
 
 	private MotorDeAlarmes motor;
+	private HistoricoDeAlarmes historico;
 	private ConfiguracaoSondaAccess access;
 	private AlarmesController controller;
 
 	private static final Principal ANA = () -> "ana";
+	private static final Instant INICIO = Instant.parse("2026-09-09T00:00:00Z");
+	private static final Instant FIM = Instant.parse("2026-09-09T23:59:59Z");
 
 	@BeforeEach
 	void setup() {
 		motor = mock(MotorDeAlarmes.class);
+		historico = mock(HistoricoDeAlarmes.class);
 		access = mock(ConfiguracaoSondaAccess.class);
-		controller = new AlarmesController(motor, access);
+		controller = new AlarmesController(motor, historico, access);
 	}
 
 	@Test
@@ -70,5 +74,25 @@ class AlarmesControllerTest {
 	void sondaSemAlarmeDevolveListaVazia() {
 		when(motor.ativos(7)).thenReturn(List.of());
 		assertThat(controller.ativos(7, ANA)).isEmpty();
+	}
+
+	@Test
+	void oHistoricoRepassaAJanelaDepoisDeExigirAcesso() {
+		var pagina = new HistoricoDeAlarmes.Pagina(List.of(), false);
+		when(historico.consultar(7, INICIO, FIM)).thenReturn(pagina);
+
+		assertThat(controller.historico(7, INICIO, FIM, ANA)).isSameAs(pagina);
+		verify(access).exigir("ana", 7);
+	}
+
+	/** A mesma autorizacao das duas pontas: o historico da sonda e tao restrito quanto o estado dela. */
+	@Test
+	void semAcessoNaoChegaAConsultarOHistorico() {
+		doThrow(new BusinessException("Sem acesso a esta Unidade/Sonda.", HttpStatus.FORBIDDEN))
+				.when(access).exigir(anyString(), anyLong());
+
+		assertThatThrownBy(() -> controller.historico(7, INICIO, FIM, ANA))
+				.isInstanceOf(BusinessException.class);
+		verifyNoInteractions(historico);
 	}
 }

@@ -72,6 +72,13 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         route: '/app/limites-alarme',
         roles: ROLES_MONITORAMENTO,
       },
+      {
+        kind: 'leaf',
+        label: 'Histórico de Alarmes',
+        icon: '@tui.history',
+        route: '/app/historico-alarmes',
+        roles: ROLES_MONITORAMENTO,
+      },
     ],
   },
   {

@@ -1,0 +1,151 @@
+<div class="historico-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Telemetria</p>
+      <h1>Histórico de Alarmes</h1>
+      <span>
+        Cada linha é uma excursão inteira — da abertura ao fechamento, com as escaladas pelo meio.
+      </span>
+    </div>
+  </header>
+
+  <section class="painel">
+    <div class="filtros">
+      <label class="field">
+        <span>Sonda / Unidade</span>
+        <select [(ngModel)]="sondaSelecionadaValue" (ngModelChange)="onSondaChange()">
+          <option [ngValue]="null" disabled selected>Selecione uma sonda</option>
+          @for (sonda of sondas(); track sonda.id) {
+            <option [ngValue]="sonda">{{ sonda.apelido || sonda.nome }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Período</span>
+        <select [(ngModel)]="periodoValue">
+          @for (p of periodos; track p.value) {
+            <option [value]="p.value">{{ p.label }}</option>
+          }
+        </select>
+      </label>
+
+      @if (periodo() === 'custom') {
+        <label class="field">
+          <span>Início</span>
+          <input type="datetime-local" [(ngModel)]="inicioValue" />
+        </label>
+        <label class="field">
+          <span>Fim</span>
+          <input type="datetime-local" [(ngModel)]="fimValue" />
+        </label>
+      }
+
+      <div class="field field--action">
+        <button tuiButton type="button" appearance="primary" size="m"
+          [disabled]="!podeConsultar()" (click)="consultar()">
+          @if (carregando()) {
+            <tui-icon icon="@tui.loader-circle" class="spin"></tui-icon>
+            Consultando...
+          } @else {
+            <tui-icon icon="@tui.search"></tui-icon>
+            Consultar
+          }
+        </button>
+      </div>
+    </div>
+
+    @if (erro()) {
+      <div class="alerta alerta--erro" role="alert">
+        <tui-icon icon="@tui.alert-circle"></tui-icon>
+        <span>{{ erro() }}</span>
+      </div>
+    }
+
+    @if (truncado()) {
+      <!-- Uma lista incompleta que se apresenta como completa e pior que uma lista curta. -->
+      <div class="alerta alerta--aviso" role="alert">
+        <tui-icon icon="@tui.triangle-alert"></tui-icon>
+        <span>
+          Houve <strong>mais excursões</strong> neste período do que cabe numa consulta. A lista
+          mostra as mais recentes — estreite o período para ver o resto.
+        </span>
+      </div>
+    }
+  </section>
+
+  @if (carregando()) {
+    <div class="estado-vazio">
+      <tui-icon icon="@tui.loader-circle" class="spin estado-vazio__icon"></tui-icon>
+      <p>Consultando o histórico...</p>
+    </div>
+  } @else if (semEpisodios()) {
+    <div class="estado-vazio">
+      <tui-icon icon="@tui.bell-off" class="estado-vazio__icon"></tui-icon>
+      <p>Nenhuma excursão neste período.</p>
+      <p class="estado-vazio__nota">
+        Pode ser operação dentro dos limites — ou sonda sem limite configurado, que não alarma.
+      </p>
+    </div>
+  } @else if (!consultou()) {
+    <div class="estado-vazio">
+      <tui-icon icon="@tui.history" class="estado-vazio__icon"></tui-icon>
+      <p>Selecione uma sonda e um período para consultar.</p>
+    </div>
+  } @else {
+    <section class="lista">
+      @for (item of episodios(); track item.episodio.episodioId) {
+        <article class="episodio"
+          [class]="'episodio--' + item.episodio.severidadeMaxima.toLowerCase()">
+          <div class="episodio__resumo">
+            <span class="episodio__nivel">
+              {{ item.episodio.severidadeMaxima === 'CRITICO' ? 'Crítico' : 'Atenção' }}
+            </span>
+
+            <div class="episodio__grandeza">
+              <span class="episodio__rotulo">{{ item.rotulo }}</span>
+              <span class="episodio__lado">
+                {{ item.episodio.limiteViolado === 'MIN' ? 'abaixo do mínimo' : 'acima do máximo' }}
+                @if (item.episodio.valorExtremo !== null) {
+                  · extremo {{ item.episodio.valorExtremo }} {{ item.unidade }}
+                }
+              </span>
+            </div>
+
+            <div class="episodio__tempo">
+              <span>{{ item.episodio.abertoEm | date: 'dd/MM HH:mm:ss' }}</span>
+              <span class="episodio__duracao"
+                [class.episodio__duracao--aberto]="!item.episodio.fechadoEm">
+                {{ duracao(item.episodio) }}
+              </span>
+            </div>
+
+            <button type="button" class="episodio__detalhe"
+              (click)="alternarDetalhe(item.episodio.episodioId)"
+              [attr.aria-expanded]="expandido(item.episodio.episodioId)">
+              {{ expandido(item.episodio.episodioId) ? 'Ocultar' : 'Ver' }}
+              {{ item.episodio.fatos.length }}
+              {{ item.episodio.fatos.length === 1 ? 'fato' : 'fatos' }}
+            </button>
+          </div>
+
+          @if (expandido(item.episodio.episodioId)) {
+            <!-- A sequencia e a historia: quando escalou e quando recuou nao se deduz do resumo. -->
+            <ol class="fatos">
+              @for (fato of item.episodio.fatos; track fato.ocorridoEm + fato.tipo) {
+                <li class="fato">
+                  <span class="fato__hora">{{ fato.ocorridoEm | date: 'dd/MM HH:mm:ss' }}</span>
+                  <span class="fato__tipo">{{ rotuloFato(fato.tipo) }}</span>
+                  <span class="fato__severidade">
+                    {{ fato.severidade === 'CRITICO' ? 'crítico' : 'atenção' }}
+                  </span>
+                  <span class="fato__valor">{{ fato.valor }} {{ item.unidade }}</span>
+                </li>
+              }
+            </ol>
+          }
+        </article>
+      }
+    </section>
+  }
+</div>

@@ -206,6 +206,16 @@ export const routes: Routes = [
         data: { roles: ROLES_MONITORAMENTO },
       },
       {
+        // RN-069: ver o historico e ajustar o limite sao a mesma autoridade, inclusive CLIENTE.
+        path: 'historico-alarmes',
+        loadComponent: () =>
+          import('./features/monitoramento/pages/historico-alarmes-page/historico-alarmes-page.component').then(
+            (m) => m.HistoricoAlarmesPageComponent,
+          ),
+        canActivate: [authGuard],
+        data: { roles: ROLES_MONITORAMENTO },
+      },
+      {
         path: 'meu-usuario',
         loadComponent: () =>
           import('./features/usuarios/pages/meu-usuario-page/meu-usuario-page.component').then(

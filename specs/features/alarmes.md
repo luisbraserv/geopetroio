@@ -1,6 +1,6 @@
 # Alarmes de Telemetria — Spec de Feature
 
-> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Passo 2 concluído: canal de configuração, motor de avaliação, log de eventos, tela de ajuste de limites e destaque no tempo real. Continuam pendentes o histórico na tela (passo 4) e a avaliação na borda (passo 3, que depende do auto-update).**
+> **[DECIDIDO 2026-09-05]** · Spec-first · **[FATO 2026-09-09] Passos 1, 2 e 4 entregues: canal de configuração, motor de avaliação, log de eventos, ajuste de limites, destaque no tempo real e histórico na tela. Falta o passo 3 — avaliação na borda —, cujo bloqueio é de rollout: depende do auto-update do Desktop para chegar à frota.**
 >
 > Feature de nível de sistema: atravessa Geopetro-Desktop, Geopetro-Backend e Front. Por isso mora aqui, e
 > não dentro de um repositório — a mesma razão que colocou os contratos em [`../contracts/`](../contracts/).
@@ -73,7 +73,7 @@ fato. Ver [OQ-031](../open-questions.md#oq-031--o-consumidor-tolera-telemetria-f
 
 ## 4. Modelo de dados proposto
 
-**[FATO 2026-09-09]** Configuração, limites, **avaliação, log de eventos e a projeção na tela** estão implementados; ver [contrato implementado](../contracts/configuracao-sonda.md) e [websocket-realtime §3](../contracts/websocket-realtime.md#alarmes-é-a-única-coisa-que-o-servidor-acrescenta--decidido-2026-09-09).
+**[FATO 2026-09-09]** Configuração, limites, **avaliação, log de eventos, a projeção na tela e o histórico** estão implementados; ver [contrato implementado](../contracts/configuracao-sonda.md) e [websocket-realtime §3](../contracts/websocket-realtime.md#alarmes-é-a-única-coisa-que-o-servidor-acrescenta--decidido-2026-09-09).
 
 ### Limite
 
@@ -155,6 +155,30 @@ partir dos episódios que nunca fecharam. ⚠️ Sem essa reconstrução, um rei
 faria a próxima leitura abrir um **segundo** episódio para a mesma excursão — a mesma coisa contada
 duas vezes no histórico. Falha na reconstrução não impede a aplicação de subir: vira `ERROR` no log, e
 o motor volta sem os episódios abertos.
+
+### O episódio — a forma em que o histórico é lido
+
+✅ **[FATO 2026-09-09]** `GET /api/sondas/{id}/alarmes/historico?inicio=&fim=` devolve **excursões**,
+montadas a partir dos fatos:
+
+```
+EpisodioAlarme  (derivado do log, não persistido)
+  episodioId · unidadeSondaId · dispositivoId · serie
+  severidadeMaxima   (o pior que chegou a ser, não o que era ao fechar)
+  limiteViolado      (o lado por onde a excursão começou)
+  abertoEm · fechadoEm   (fechadoEm nulo = ainda aberto)
+  valorExtremo
+  fatos[]            (a sequência: tipo, severidade, instante, valor)
+```
+
+⚠️ **Por que agrupado, e não os fatos crus.** A supervisão pergunta "quantas vezes a pressão saiu da
+faixa no turno?". Um episódio que abriu em atenção, escalou e fechou são três linhas e **uma**
+excursão; devolver as três soltas faria cada tela reconstruir o agrupamento, e a primeira que errasse
+contaria três alarmes.
+
+⚠️ **Os fatos vêm inteiros, mesmo os anteriores à janela.** Recortá-los pelo período consultado faria
+uma excursão que abriu ontem aparecer começando por `ESCALOU` — uma escalada sem a abertura que a
+explica, e com o "desde" errado.
 
 ✅ **[FATO 2026-09-09] A projeção chega à tela por dois caminhos, e são complementares:**
 
@@ -297,8 +321,23 @@ outro trabalho, até alguém lembrar de mudar. Não há "fim do trabalho" que o 
    e `GET /api/sondas/{id}/alarmes` cobre o intervalo até a primeira mensagem e a sonda que não está
    publicando. Aviso no topo, com a lista do mais grave para o mais antigo, e o card da grandeza
    marcado — com o nível escrito, porque cor sozinha não informa quem não a distingue.
-3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update
-4. **Histórico na tela**
+3. **Avaliação na borda** — exige a frota atualizada, logo depende do auto-update.
+   ⚠️ **O bloqueio é de *rollout*, não de implementação**: o código pode ser escrito e testado, mas
+   chegar à frota exige visita a cada unidade enquanto o auto-update não existir
+4. ✅ **Histórico na tela** — entregue em 2026-09-09, em `/app/historico-alarmes`.
+   `GET /api/sondas/{id}/alarmes/historico` devolve **excursões**, não linhas de log: um episódio que
+   abriu em atenção, escalou e fechou são três fatos e uma excursão
+   ([RN-056](../business-rules.md#rn-056--um-evento-por-excursão-não-por-leitura)). Devolver os fatos
+   soltos faria cada tela reconstruir o agrupamento, e a primeira que errasse contaria três alarmes.
+
+   ⚠️ **A janela é obrigatória e o resultado tem teto declarado** — 200 excursões, período de até 92
+   dias. O log é *append-only* e não tem retenção ([OQ-051](../open-questions.md#oq-051--retenção-do-log-de-eventos-de-alarme)):
+   uma consulta sem limite funcionaria bem por meses e depois derrubaria a tela de uma sonda
+   movimentada. Quando corta, a tela **diz** — lista incompleta que se apresenta como completa é pior
+   que lista curta.
+
+   ⚠️ **Os fatos de um episódio vêm inteiros**, mesmo os anteriores à janela: recortá-los faria uma
+   excursão que abriu ontem aparecer começando por `ESCALOU`, sem a abertura que a explica.
 
 ⚠️ O passo 3 depende de **auto-update do Desktop**, que não existe
 ([product-context §4](../product-context.md#4-realidade-de-campo)). Os passos 1, 2 e 4 entregam valor

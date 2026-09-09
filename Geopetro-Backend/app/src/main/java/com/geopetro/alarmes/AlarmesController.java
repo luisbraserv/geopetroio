@@ -1,10 +1,13 @@
 package com.geopetro.alarmes;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
@@ -28,10 +31,13 @@ import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
 public class AlarmesController {
 
 	private final MotorDeAlarmes motor;
+	private final HistoricoDeAlarmes historico;
 	private final ConfiguracaoSondaAccess access;
 
-	public AlarmesController(MotorDeAlarmes motor, ConfiguracaoSondaAccess access) {
+	public AlarmesController(MotorDeAlarmes motor, HistoricoDeAlarmes historico,
+			ConfiguracaoSondaAccess access) {
 		this.motor = motor;
+		this.historico = historico;
 		this.access = access;
 	}
 
@@ -48,5 +54,25 @@ public class AlarmesController {
 	public List<AlarmeAtivo> ativos(@PathVariable long id, Principal principal) {
 		access.exigir(principal == null ? null : principal.getName(), id);
 		return motor.ativos(id);
+	}
+
+	/**
+	 * O histórico — <b>"o que aconteceu?"</b>, em excursões e não em linhas de log.
+	 *
+	 * <p>Um episódio que abriu em atenção, escalou e fechou são três fatos e <b>uma</b> excursão. A
+	 * resposta agrupa: devolver os fatos soltos obrigaria cada tela a reconstruir o agrupamento, e a
+	 * primeira que errasse contaria a mesma excursão como três alarmes.
+	 *
+	 * <p>⚠️ A janela é obrigatória e o resultado tem teto declarado — ver {@link HistoricoDeAlarmes}.
+	 * O log cresce sem política de retenção, e uma consulta sem limite funcionaria por meses antes de
+	 * derrubar a tela de uma sonda movimentada.
+	 */
+	@GetMapping("/api/sondas/{id}/alarmes/historico")
+	public HistoricoDeAlarmes.Pagina historico(@PathVariable long id,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant inicio,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant fim,
+			Principal principal) {
+		access.exigir(principal == null ? null : principal.getName(), id);
+		return historico.consultar(id, inicio, fim);
 	}
 }

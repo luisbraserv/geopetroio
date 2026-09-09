@@ -13,7 +13,8 @@ $checks = @(
 )
 $paths = @('/api/usuarios', '/api/empresas', '/api/regionais', '/api/setores',
     '/api/unidades-sondas', '/api/sondas/minhas', '/api/sondas/1/cards',
-    '/api/sondas/1/configuracao', '/api/sondas/1/alarmes', '/api/configuracoes/email',
+    '/api/sondas/1/configuracao', '/api/sondas/1/alarmes', '/api/sondas/1/alarmes/historico',
+    '/api/configuracoes/email',
     '/api/simulador/pocos', '/api/simulador/pastas', '/api/simulador/cenarios')
 foreach ($path in $paths) {
     $checks += @{ Url = "$BackendUrl$path"; Expected = 401 }

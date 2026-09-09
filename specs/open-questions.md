@@ -979,3 +979,8 @@ então o crescimento é modesto — o que torna a questão pouco urgente e fáci
 decidir antes de a tabela ficar grande, quando apagar passa a ser uma operação e não uma linha de SQL.
 
 Era o item 1 de [alarmes §7](features/alarmes.md#continuam-abertos), agora com a tabela existindo.
+
+⚠️ **[FATO 2026-09-09] A tela de histórico não espera essa decisão — ela se protege.** A consulta
+exige janela (máximo 92 dias) e devolve no máximo 200 excursões, dizendo quando cortou. Isso impede
+que a tela quebre com a tabela crescendo, **e não substitui a política**: os dados continuam lá para
+sempre, e nada os apaga.
