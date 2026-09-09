@@ -1,5 +1,46 @@
 # Auditoria da aplicação local — 2026-09-08
 
+## Verificação de 2026-09-09, 15:20 — o que os oito commits de alarmes deixaram de pé
+
+**Os três serviços sobem com o código atual e as três rotas novas estão registradas.**
+
+| Verificação | Resultado |
+|---|---|
+| Backend `/actuator/health` | `200` · `UP`, com liveness e readiness |
+| Telemetria `/actuator/health` | `200` · `UP`, com **InfluxDB acessível** e **MQTT conectado** |
+| Front na 4200 | `200` |
+| `deploy/dev/audit-endpoints.ps1` | **33 verificações, todas passaram** — inclui as três rotas novas |
+| Flyway | 11 migrations validadas; schema em `2026.09.09.1`, a do log de eventos |
+| Rotas novas no OpenAPI | `/api/sondas/prontidao`, `/api/sondas/{id}/alarmes` e `/api/sondas/{id}/alarmes/historico` |
+
+⚠️ **`401` no script não prova que a rota existe.** O matcher `/api/sondas/**` recusa antes de rotear,
+então rota inexistente responde igual. A prova veio de `/v3/api-docs`, que é `permitAll` e lista o que
+o Spring MVC mapeou de fato — as três aparecem lá.
+
+### O que **não** foi verificado
+
+- ⚠️ **Nenhum fluxo autenticado.** Login com credencial real segue sem validação, como nas auditorias
+  anteriores. Ninguém abriu a tela de limites, o histórico ou a prontidão com um usuário de verdade;
+  o que se provou é que as rotas existem e recusam anônimo.
+- ⚠️ **Nenhum alarme real.** O motor não foi exercitado com telemetria chegando: `ciclosRecebidos: 0`
+  no health da telemetria. Não houve episódio gravado, nem destaque na tela, nem beep na estação.
+- ⚠️ **O Desktop não foi executado.** O alarme de borda e o aviso de card invisível foram compilados e
+  testados, e **nenhum olho humano os viu na tela**.
+- **Suítes automatizadas**, estas sim rodadas: 236 no backend, 413 no Front (46 arquivos) e 207 no
+  Desktop (3 pulados, os de JavaFX). Sem falhas.
+
+### Correções de percurso
+
+O `spring-boot:run` precisa rodar **de dentro do módulo** (`-pl app`, sem `-am`) depois de um
+`install` dos módulos — com `-am` o goal cai no agregador raiz e falha com "Unable to find a suitable
+main class". O `start-dev.cmd` já fazia certo, e o comentário dele explica por quê.
+
+A telemetria não sobe sem `INFLUX_TOKEN`, `INFLUX_URL`, `INFLUX_ORG`, `INFLUX_BUCKET` e
+`MQTT_BROKER_URL`, que o `start-dev.cmd` injeta. ⚠️ **O token está versionado nesse arquivo** — é da
+mesma família de [SEC-007](security-findings.md#sec-007--senha-de-banco-em-texto-plano-versionada), e
+continua aberto.
+
+
 ## Resultado da nova tentativa — 2026-09-09, 07:07
 
 **Backend e telemetria atualizados e em execução; ambos com health HTTP 200 / UP.**
