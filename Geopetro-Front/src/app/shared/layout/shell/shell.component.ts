@@ -79,6 +79,13 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         route: '/app/historico-alarmes',
         roles: ROLES_MONITORAMENTO,
       },
+      {
+        kind: 'leaf',
+        label: 'Prontidão da Frota',
+        icon: '@tui.list-checks',
+        route: '/app/prontidao-frota',
+        roles: ROLES_MONITORAMENTO,
+      },
     ],
   },
   {

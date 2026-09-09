@@ -206,6 +206,16 @@ export const routes: Routes = [
         data: { roles: ROLES_MONITORAMENTO },
       },
       {
+        // OQ-049: escopo do monitoramento (RN-047) — cada um ve a prontidao das suas sondas.
+        path: 'prontidao-frota',
+        loadComponent: () =>
+          import('./features/monitoramento/pages/prontidao-frota-page/prontidao-frota-page.component').then(
+            (m) => m.ProntidaoFrotaPageComponent,
+          ),
+        canActivate: [authGuard],
+        data: { roles: ROLES_MONITORAMENTO },
+      },
+      {
         // RN-069: ver o historico e ajustar o limite sao a mesma autoridade, inclusive CLIENTE.
         path: 'historico-alarmes',
         loadComponent: () =>

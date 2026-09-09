@@ -555,7 +555,11 @@ unidade.
 
 Está registrado com o custo à vista em
 [`mqtt-telemetria.md §10`](../contracts/mqtt-telemetria.md#10-o-que-a-virada-quebra), com as
-alternativas recusadas e o motivo de cada uma. A mitigação que existe é a tela de configuração e a
-cópia entre unidades, entregues em 2026-09-07. A que **falta** é saber de fora quais unidades já
-viraram — [OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas).
+alternativas recusadas e o motivo de cada uma. As mitigações: a tela de configuração e a cópia entre
+unidades, entregues em 2026-09-07, e ✅ **saber de fora quais unidades já viraram**, entregue em
+2026-09-09 pela tela de prontidão da frota
+([OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas)).
+
+⚠️ **A prontidão fala de configuração, não de publicação.** Uma unidade configurada e com o CLP
+desligado aparece como pronta — a virada pode estar completa e a sonda, mesmo assim, muda.
 

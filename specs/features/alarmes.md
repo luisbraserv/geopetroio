@@ -110,7 +110,13 @@ porque ensina o operador a ignorar.
 configurada individualmente**, e os limites começam vazios.
 
 **Consequência aceita:** uma sonda recém-cadastrada **não alarma até alguém configurar** — e isso é
-estado normal, não pendência sinalizada. O sistema não avisa que uma sonda está sem alarme.
+estado normal, não pendência sinalizada.
+
+✅ **[FATO 2026-09-09] O sistema não *avisa*, mas passou a ser possível *perguntar*.** A tela
+**Prontidão da Frota** lista as unidades que leem e publicam e **nada as vigia**
+([OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas)). A
+decisão de não alertar sozinho continua de pé; o que deixou de existir é a impossibilidade de
+conferir.
 
 **[DECIDIDO 2026-09-05]** O limite ajustado vale **até alguém trocar**. Não expira, não volta a padrão
 nenhum. O valor definido para o trabalho de hoje continua valendo semana que vem, para outro trabalho —

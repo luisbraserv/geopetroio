@@ -918,7 +918,8 @@ apontar para o byte errado.
 e é barata, já que o Desktop está conectado ao CLP enquanto se configura.
 
 ### OQ-049 · Como saber quais unidades da frota já foram configuradas
-**[ABERTA 2026-09-08]**
+**[ABERTA 2026-09-08]** · ✅ **RESOLVIDA 2026-09-09** — tela **Prontidão da Frota**, em
+`/app/prontidao-frota`, sobre `GET /api/sondas/prontidao`.
 
 Com [RN-088](business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada) e a frota nascendo
 vazia, a virada dos cards deixa cada unidade muda até alguém configurá-la pela tela do Desktop.
@@ -926,13 +927,35 @@ vazia, a virada dos cards deixa cada unidade muda até alguém configurá-la pel
 ⚠️ **Não há como olhar de fora e saber quem já virou.** "A migração terminou" é hoje uma afirmação
 sem como conferir — e uma unidade esquecida fica sem telemetria sem que nada acuse.
 
-**Caminhos possíveis, nenhum decidido:**
+**Caminhos possíveis:**
 
-| Caminho | Custo |
-|---|---|
-| Tela no Front listando unidades com e sem cards | O backend já tem o dado: basta uma consulta por `configuracao_cards` |
-| Alerta quando uma unidade fica N horas sem publicar | Pega mais que falta de configuração — pega também sonda desligada, o que pode ser bom ou ruído |
-| Relatório no deploy | Uma foto, não um acompanhamento |
+| Caminho | Custo | Estado |
+|---|---|---|
+| Tela no Front listando unidades com e sem cards | O backend já tem o dado: basta uma consulta por `configuracao_cards` | ✅ **Adotado 2026-09-09** |
+| Alerta quando uma unidade fica N horas sem publicar | Pega mais que falta de configuração — pega também sonda desligada, o que pode ser bom ou ruído | Não adotado |
+| Relatório no deploy | Uma foto, não um acompanhamento | Não adotado |
+
+### ✅ O que a tela entrega — **[FATO 2026-09-09]**
+
+Ela distingue **quatro** situações, e não duas, porque exigem ações diferentes:
+
+| Situação | O que significa | O que fazer |
+|---|---|---|
+| **Nunca configurada** | Revisão `0`: ninguém esteve lá | Configurar os cards no Desktop da unidade |
+| **Sem card ativo** | Tem documento, e **todos os cards desativados** — tão muda quanto a anterior | Reativar pelo Desktop; não é falta de visita |
+| **Sem alarme** | Lê e publica, e **nada a vigia** | Ajustar os limites em *Limites de Alarme* |
+| **Pronta** | Lê, publica e tem alarme | — |
+
+⚠️ **"Sem card ativo" não estava previsto nesta questão** e é um engano de configuração plausível: o
+documento existe, alguém visitou a unidade, e mesmo assim ela não produz nada. Tratá-la junto com
+"nunca configurada" mandaria alguém à sonda para um problema que se resolve na tela de Cards.
+
+⚠️ **A tela cobre configuração, não disponibilidade.** Um CLP desligado, um cabo solto ou uma estação
+sem energia aparecem como **prontos** — e a tela diz isso onde poderia enganar. Quem responde "está
+chegando dado?" é o tempo real; o segundo caminho da tabela acima, o alerta por silêncio, continua
+não adotado.
+
+O escopo é o do monitoramento (RN-047): `CLIENTE` vê a prontidão só das sondas concedidas.
 
 Ver [mqtt-telemetria §10](contracts/mqtt-telemetria.md#10-o-que-a-virada-quebra).
 
