@@ -21,8 +21,8 @@
    Cards da unidade — passo 6 de specs/features/cards-configuraveis.md.
 
    Lista a esquerda, formulario do card selecionado a direita. Os parametros mudam com o tipo: cada
-   tipo tem seu painel, e o controller mostra um de cada vez. Peso e torque nao tem painel porque a
-   calibracao deles vive na configuracao local desta estacao — o card so diz ONDE ler.
+   tipo tem seu painel, e o controller mostra um de cada vez. Peso e torque exibem o range do
+   transmissor; a geometria e a sensibilidade ficam na calibracao local por dispositivo.
 
    Rodape fixo, como em settings.fxml: com os botoes dentro da area rolavel, "Salvar" saia de vista
    assim que a janela encolhia.
@@ -136,12 +136,15 @@
 
                <!-- ===== Parametros por tipo: o controller mostra um de cada vez ===== -->
 
-               <!--
-                  Peso e torque nao tem parametros NO DOCUMENTO, mas tem calibracao — ela vive na
-                  configuracao desta estacao porque e medida na unidade. Mostrar os valores aqui, com
-                  o botao que abre o editor de sempre, e o que impede a tela de parecer que a
-                  calibracao se perdeu.
-               -->
+               <!-- O range do transmissor vale para pressao, peso e torque. A geometria e local. -->
+               <VBox fx:id="paramPressao" spacing="5.0" visible="false" managed="false">
+                  <Label text="Range do sensor (bar)" styleClass="rotulo" />
+                  <TextField fx:id="txtRangeBar" promptText="Ex.: 250" maxWidth="Infinity" />
+                  <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
+                         text="Fundo de escala do transmissor 4-20 mA. 4 mA é zero; 20 mA é este valor." />
+               </VBox>
+
+               <!-- Calibracao medida nesta estacao, individual para cada dispositivo. -->
                <VBox fx:id="paramCalibracaoLocal" spacing="8.0" visible="false" managed="false">
                   <Label fx:id="lblCalibracaoAlvo" text="Calibração" styleClass="rotulo" />
                   <Label fx:id="lblCalibracaoValores" styleClass="mono" wrapText="true" maxWidth="Infinity" />
@@ -150,14 +153,7 @@
                      <Button fx:id="btnAbrirCalibracao" text="Abrir calibração" styleClass="botao-secundario" />
                   </HBox>
                   <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
-                         text="A calibração é medida na unidade e fica nesta estação, não no documento de cards. O card diz onde ler; o Desktop aplica a calibração que já tem." />
-               </VBox>
-
-               <VBox fx:id="paramPressao" spacing="5.0" visible="false" managed="false">
-                  <Label text="Range do sensor (bar)" styleClass="rotulo" />
-                  <TextField fx:id="txtRangeBar" promptText="Ex.: 250" maxWidth="Infinity" />
-                  <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
-                         text="Fundo de escala do transmissor 4-20 mA. 4 mA é zero; 20 mA é este valor." />
+                         text="A escala do sensor fica no card. A calibração mecânica e a sensibilidade ficam nesta estação, separadas por dispositivo. A engrenagem do card abre os mesmos ajustes." />
                </VBox>
 
                <VBox fx:id="paramTemperatura" spacing="10.0" visible="false" managed="false">
@@ -243,33 +239,14 @@
       </ScrollPane>
    </SplitPane>
 
-   <!-- ===================== Conexao com o CLP ===================== -->
-   <VBox spacing="8.0" styleClass="cartao">
-      <padding><Insets top="12.0" right="16.0" bottom="12.0" left="16.0" /></padding>
-      <Label text="Conexão com o CLP desta unidade" styleClass="cartao-titulo" />
-      <HBox spacing="12.0">
-         <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-            <Label text="IP" styleClass="rotulo" />
-            <TextField fx:id="txtIp" promptText="Ex.: 192.168.0.10" maxWidth="Infinity" />
-         </VBox>
-         <VBox spacing="5.0" prefWidth="76.0">
-            <Label text="Rack" styleClass="rotulo" />
-            <TextField fx:id="txtRack" />
-         </VBox>
-         <VBox spacing="5.0" prefWidth="76.0">
-            <Label text="Slot" styleClass="rotulo" />
-            <TextField fx:id="txtSlot" />
-         </VBox>
-         <VBox spacing="5.0" prefWidth="90.0">
-            <Label text="DB" styleClass="rotulo" />
-            <TextField fx:id="txtDbNumero" />
-         </VBox>
-         <VBox spacing="5.0" prefWidth="120.0">
-            <Label text="Intervalo (ms)" styleClass="rotulo" />
-            <TextField fx:id="txtIntervalo" />
-         </VBox>
-      </HBox>
-   </VBox>
+   <!--
+      O painel de conexao com o CLP saiu daqui em 2026-09-10 e foi para a engrenagem
+      (configuracao-da-estacao.md §4). Esta tela trata so de CARDS: nome, tipo, byte inicial,
+      ativo, visivel e parametros.
+
+      ⚠️ A conexao continua no MESMO documento, e por isso salvar aqui a devolve como o servidor a
+      tem neste instante — ver ConfiguracaoCardsClient.salvarCards.
+   -->
 
    <!-- ===================== Rodape fixo ===================== -->
    <HBox spacing="10.0" alignment="CENTER_LEFT" styleClass="rodape">

@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import com.example.demo.models.AppSettings;
-import com.example.demo.models.CardVisibilityConfig;
 import com.example.demo.models.UnidadeSondaOpcao;
 import com.example.demo.services.SettingsService;
 import com.example.demo.services.UnidadeSondaCatalogoService;
@@ -45,6 +44,24 @@ public class SettingsController {
     @Autowired
     private UnidadeSondaCatalogoService catalogoService;
 
+    @Autowired
+    private com.example.demo.services.SessaoConfiguracao sessao;
+
+    @Autowired
+    private org.springframework.context.ApplicationContext contexto;
+
+    @Autowired
+    private com.example.demo.services.ConfiguracaoCardsClient cardsClient;
+
+    /**
+     * O documento como esta tela o leu — a base da conferência de conflito ao gravar.
+     *
+     * <p>{@code null} enquanto a leitura não terminou ou quando ela falhou, e é por isso que ele
+     * também serve de trava: sem base lida não se grava conexão nenhuma, porque não haveria como
+     * saber se alguém a mudou no intervalo.
+     */
+    private com.example.demo.models.CardsDaUnidade documentoCarregado;
+
     @FXML private BorderPane raiz;
     @FXML private ScrollPane rolagem;
     @FXML private GridPane grade;
@@ -54,16 +71,26 @@ public class SettingsController {
     @FXML private VBox cartaoEquipamento;
     @FXML private VBox cartaoMqtt;
     @FXML private VBox cartaoTempoReal;
-    @FXML private VBox cartaoCards;
 
     @FXML private TextField txtPlcIp;
+    @FXML private TextField txtPlcRack;
+    @FXML private TextField txtPlcSlot;
+    @FXML private TextField txtPlcDb;
+    @FXML private TextField txtPlcIntervalo;
+    @FXML private CheckBox chkPlcTsap;
+    @FXML private TextField txtPlcTsapLocal;
+    @FXML private TextField txtPlcTsapRemoto;
+    @FXML private Label lblConexaoStatus;
     @FXML private ComboBox<UnidadeSondaOpcao> cmbUnidadeSonda;
     @FXML private Button btnRecarregar;
     @FXML private Label lblUnidadeStatus;
 
+    @FXML private CheckBox chkTelemetriaMqtt;
     @FXML private TextField txtTelemetriaUrl;
     @FXML private TextField txtTelemetriaUsuario;
     @FXML private PasswordField txtTelemetriaSenha;
+
+    @FXML private CheckBox chkTempoReal;
 
     @FXML private TextField txtBackendUrl;
     @FXML private TextField txtBackendUsuario;
@@ -72,21 +99,56 @@ public class SettingsController {
     @FXML private Button btnSave;
     @FXML private Button btnCancel;
 
-    @FXML private CheckBox chkPesoColuna;
-    @FXML private CheckBox chkChHidTubos;
-    @FXML private CheckBox chkChFlutuante;
-    @FXML private CheckBox chkBombaLama;
-    @FXML private CheckBox chkEscp;
-    @FXML private CheckBox chkVazao;
+    @FXML private javafx.scene.layout.HBox faixaPortao;
+    @FXML private Label lblPortao;
+    @FXML private Button btnDesbloquear;
 
     /** Duas colunas hoje? Guardado para so remontar a grade quando o estado realmente muda. */
     private boolean duasColunas = true;
+
+    /**
+     * A engrenagem inteira exige {@code ADMIN} ou {@code SUPORTE} —
+     * {@code configuracao-da-estacao.md §5}.
+     *
+     * <p><b>[DECIDIDO 2026-09-10]</b> Sem exceção: endereços e credenciais do Backend e do broker
+     * entraram no portão junto com o resto.
+     *
+     * <h2>⚠️ E o endereço do servidor mudou de lugar por causa disso</h2>
+     * O login acontece <b>contra</b> o Backend, cujo endereço mora nesta tela. Trancá-lo aqui
+     * fecharia a porta sobre si mesma — sem URL não há login, e sem login não se define a URL, e uma
+     * estação recém-instalada não teria por onde começar.
+     *
+     * <p>A saída foi levar o campo para a <b>janela de login</b>
+     * ({@link ConfiguracaoLoginController}), que é exatamente onde ele é necessário e por quem tem
+     * credencial. Aqui ele continua visível e editável <b>depois</b> da sessão aberta.
+     */
+    private void aplicarPortao() {
+        boolean liberado = sessao.liberada();
+
+        cartaoEquipamento.setDisable(!liberado);
+        cartaoMqtt.setDisable(!liberado);
+        cartaoTempoReal.setDisable(!liberado);
+
+        faixaPortao.setVisible(!liberado);
+        faixaPortao.setManaged(!liberado);
+        lblPortao.setText("Estas configurações exigem ADMIN ou SUPORTE. "
+                + "O endereço do servidor é pedido na própria tela de login.");
+    }
+
+    private void desbloquear() {
+        if (ConfiguracaoLoginController.exigirSessao(btnDesbloquear.getScene().getWindow(), contexto)) {
+            aplicarPortao();
+            // A conexao do CLP so pode ser lida com sessao aberta: agora da.
+            carregarConexao();
+        }
+    }
 
     @FXML
     public void initialize() {
         AppSettings settings = settingsService.loadSettings();
 
-        txtPlcIp.setText(settings.getPlcIp());
+        chkTelemetriaMqtt.setSelected(settings.isTelemetriaMqttAtiva());
+        chkTempoReal.setSelected(settings.isTempoRealAtivo());
         txtTelemetriaUrl.setText(settings.getTelemetriaUrl());
         txtTelemetriaUsuario.setText(settings.getTelemetriaUsuario());
         txtTelemetriaSenha.setText(settings.getTelemetriaSenha());
@@ -96,19 +158,144 @@ public class SettingsController {
 
         mostrarSelecaoSalva(settings);
 
-        CardVisibilityConfig vis = settings.getCardVisibility();
-        chkPesoColuna.setSelected(vis.isPesoColuna());
-        chkChHidTubos.setSelected(vis.isChHidTubos());
-        chkChFlutuante.setSelected(vis.isChFlutuante());
-        chkBombaLama.setSelected(vis.isBombaLama());
-        chkEscp.setSelected(vis.isEscp());
-        chkVazao.setSelected(vis.isVazao());
-
         btnSave.setOnAction(event -> saveSettings());
         btnCancel.setOnAction(event -> closeWindow());
+        btnDesbloquear.setOnAction(event -> desbloquear());
+        aplicarPortao();
         btnRecarregar.setOnAction(event -> carregarUnidades());
+        chkPlcTsap.selectedProperty().addListener((obs, antiga, nova) -> atualizarModoConexao());
 
+        // Trocar de unidade troca de documento: a conexao mostrada tem de ser a da unidade
+        // selecionada, ou salvar gravaria o CLP de uma sonda no documento de outra.
+        cmbUnidadeSonda.getSelectionModel().selectedItemProperty()
+                .addListener((obs, antiga, nova) -> carregarConexao());
+
+        carregarConexao();
         observarLargura();
+    }
+
+    // ------------------------------------------------------------------
+    // Conexao com o CLP — configuracao-da-estacao.md §4
+    // ------------------------------------------------------------------
+
+    /**
+     * Le a conexao do documento da unidade selecionada.
+     *
+     * <p>⚠️ <b>Ela nao mora em {@code app-settings.json}.</b> Rack, slot, DB e intervalo descrevem o
+     * modelo de CLP e sao copiados ao configurar uma sonda igual; torna-los locais tiraria esse
+     * ganho e obrigaria a redigitar unidade a unidade.
+     *
+     * <p>Sem sessao, sem unidade ou com o Backend fora do ar os campos ficam desligados: o valor
+     * verdadeiro esta no servidor, e mostrar campos editaveis com o documento nao lido convidaria a
+     * gravar por cima do que nao se leu.
+     */
+    private void carregarConexao() {
+        documentoCarregado = null;
+        UnidadeSondaOpcao unidade = cmbUnidadeSonda.getSelectionModel().getSelectedItem();
+
+        if (!sessao.liberada()) {
+            desligarConexao("Entre com ADMIN ou SUPORTE para ver a conexão do CLP.");
+            return;
+        }
+        if (unidade == null || unidade.id() == null) {
+            desligarConexao("Escolha a Unidade/Sonda para editar a conexão do CLP.");
+            return;
+        }
+
+        long unidadeSondaId = unidade.id();
+        desligarConexao("Lendo a conexão do CLP…");
+
+        Task<com.example.demo.models.CardsDaUnidade> tarefa = new Task<>() {
+            @Override
+            protected com.example.demo.models.CardsDaUnidade call() {
+                return cardsClient.ler(unidadeSondaId);
+            }
+        };
+        tarefa.setOnSucceeded(e -> {
+            // Outra troca de unidade pode ter acontecido enquanto esta leitura corria; a resposta
+            // atrasada nao pode sobrescrever a selecao atual.
+            UnidadeSondaOpcao agora = cmbUnidadeSonda.getSelectionModel().getSelectedItem();
+            if (agora == null || agora.id() == null || agora.id() != unidadeSondaId) {
+                return;
+            }
+            documentoCarregado = tarefa.getValue();
+            preencherConexao(documentoCarregado.conexao());
+            ligarConexao(documentoCarregado.cards().size());
+        });
+        tarefa.setOnFailed(e -> {
+            Throwable causa = tarefa.getException();
+            desligarConexao("Não foi possível ler a conexão do CLP: "
+                    + (causa == null ? "falha ao falar com o Backend." : causa.getMessage()));
+        });
+
+        Thread thread = new Thread(tarefa, "conexao-clp");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void preencherConexao(com.example.demo.models.CardsDaUnidade.Conexao conexao) {
+        var valores = conexao == null
+                ? com.example.demo.models.CardsDaUnidade.Conexao.padrao()
+                : conexao;
+        txtPlcIp.setText(valores.ip() == null ? "" : valores.ip());
+        txtPlcRack.setText(String.valueOf(valores.rack()));
+        txtPlcSlot.setText(String.valueOf(valores.slot()));
+        txtPlcDb.setText(String.valueOf(valores.dbNumero()));
+        txtPlcIntervalo.setText(String.valueOf(valores.intervaloLeituraMs()));
+        chkPlcTsap.setSelected(valores.usaTsap());
+        txtPlcTsapLocal.setText(TsapPlc.formatar(valores.tsapLocal(), 0x0300));
+        txtPlcTsapRemoto.setText(TsapPlc.formatar(valores.tsapRemoto(), 0x0200));
+    }
+
+    private void ligarConexao(int quantosCards) {
+        camposDaConexao().forEach(campo -> campo.setDisable(false));
+        chkPlcTsap.setDisable(false);
+        atualizarModoConexao();
+        lblConexaoStatus.setText(quantosCards == 0
+                ? "Unidade ainda sem cards. A conexão pode ser gravada assim mesmo."
+                : quantosCards + " card(s) nesta unidade — os cards não são alterados aqui.");
+    }
+
+    private void desligarConexao(String motivo) {
+        chkPlcTsap.setDisable(true);
+        camposDaConexao().forEach(campo -> {
+            campo.setDisable(true);
+            campo.clear();
+        });
+        lblConexaoStatus.setText(motivo);
+    }
+
+    private List<TextField> camposDaConexao() {
+        return List.of(txtPlcIp, txtPlcRack, txtPlcSlot, txtPlcDb, txtPlcIntervalo,
+                txtPlcTsapLocal, txtPlcTsapRemoto);
+    }
+
+    private void atualizarModoConexao() {
+        boolean disponivel = documentoCarregado != null && !chkPlcTsap.isDisabled();
+        txtPlcRack.setDisable(!disponivel || chkPlcTsap.isSelected());
+        txtPlcSlot.setDisable(!disponivel || chkPlcTsap.isSelected());
+        txtPlcTsapLocal.setDisable(!disponivel || !chkPlcTsap.isSelected());
+        txtPlcTsapRemoto.setDisable(!disponivel || !chkPlcTsap.isSelected());
+    }
+
+    private com.example.demo.models.CardsDaUnidade.Conexao conexaoDigitada() {
+        return new com.example.demo.models.CardsDaUnidade.Conexao(
+                texto(txtPlcIp),
+                inteiro(txtPlcRack, 0),
+                inteiro(txtPlcSlot, 1),
+                inteiro(txtPlcDb, 1),
+                inteiro(txtPlcIntervalo, 1000),
+                chkPlcTsap.isSelected() ? TsapPlc.ler(texto(txtPlcTsapLocal)) : null,
+                chkPlcTsap.isSelected() ? TsapPlc.ler(texto(txtPlcTsapRemoto)) : null);
+    }
+
+    /** Campo vazio ou com letra volta ao padrao em vez de derrubar a gravacao inteira. */
+    private int inteiro(TextField campo, int padrao) {
+        try {
+            return Integer.parseInt(texto(campo));
+        } catch (NumberFormatException naoENumero) {
+            return padrao;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -209,7 +396,7 @@ public class SettingsController {
      *
      * <p>FXML nao tem media query, entao a troca acontece aqui, observando a largura da cena. A
      * grade so e remontada quando o estado muda — reagir a cada pixel do arrasto reposicionaria os
-     * quatro cartoes continuamente.
+     * cartoes continuamente.
      */
     private void observarLargura() {
         Platform.runLater(() -> {
@@ -233,7 +420,6 @@ public class SettingsController {
             posicionar(cartaoEquipamento, 0, 0);
             posicionar(cartaoMqtt, 1, 0);
             posicionar(cartaoTempoReal, 0, 1);
-            posicionar(cartaoCards, 1, 1);
 
             grade.getColumnConstraints().setAll(coluna1, coluna2);
             coluna1.setPercentWidth(50.0);
@@ -242,7 +428,6 @@ public class SettingsController {
             posicionar(cartaoEquipamento, 0, 0);
             posicionar(cartaoMqtt, 0, 1);
             posicionar(cartaoTempoReal, 0, 2);
-            posicionar(cartaoCards, 0, 3);
 
             grade.getColumnConstraints().setAll(coluna1);
             coluna1.setPercentWidth(100.0);
@@ -258,10 +443,25 @@ public class SettingsController {
     // Salvar
     // ------------------------------------------------------------------
 
+    /**
+     * ⚠️ O portão é conferido <b>aqui também</b>, e não só nos campos desabilitados.
+     *
+     * <p>Campo desabilitado é aparência: um FXML editado, um bean trocado ou um caminho que chame
+     * este método sem passar pela tela gravariam do mesmo jeito. A regra é de autorização
+     * (RN-086), não de layout — e regra de autorização que vive só na UI é a que some na primeira
+     * refatoração.
+     */
     private void saveSettings() {
+        // ⚠️ Sem sessao nao se grava NADA. Antes de 2026-09-10 uma parte da tela ficava livre, e o
+        // metodo precisava separar o que podia do que nao podia; agora a regra e uma so.
+        if (!sessao.liberada()) {
+            closeWindow();
+            return;
+        }
+
         UnidadeSondaOpcao unidade = cmbUnidadeSonda.getSelectionModel().getSelectedItem();
 
-        settingsService.updatePlcIp(texto(txtPlcIp));
+        settingsService.updateTelemetria(chkTelemetriaMqtt.isSelected(), chkTempoReal.isSelected());
         settingsService.updateTelemetriaUrl(texto(txtTelemetriaUrl));
         settingsService.updateTelemetriaCredenciais(
                 txtTelemetriaUsuario.getText(), txtTelemetriaSenha.getText());
@@ -278,16 +478,64 @@ public class SettingsController {
                 txtBackendUsuario.getText(),
                 txtBackendSenha.getText());
 
-        CardVisibilityConfig vis = new CardVisibilityConfig();
-        vis.setPesoColuna(chkPesoColuna.isSelected());
-        vis.setChHidTubos(chkChHidTubos.isSelected());
-        vis.setChFlutuante(chkChFlutuante.isSelected());
-        vis.setBombaLama(chkBombaLama.isSelected());
-        vis.setEscp(chkEscp.isSelected());
-        vis.setVazao(chkVazao.isSelected());
-        settingsService.updateCardVisibility(vis);
+        gravarConexao(unidade);
+    }
 
-        closeWindow();
+    /**
+     * Grava a conexao do CLP no documento da unidade, e so entao fecha a janela.
+     *
+     * <h2>Por que a janela nao fecha antes</h2>
+     * O resto desta tela grava em arquivo local e nao falha na pratica. Esta parte vai a rede: fechar
+     * junto com as outras faria uma gravacao recusada — {@code 409}, Backend fora, sessao expirada —
+     * desaparecer sem que ninguem visse.
+     *
+     * <p>⚠️ As configuracoes locais ja foram gravadas quando este metodo roda, e e de proposito: o
+     * cliente le a URL do Backend do arquivo, entao a URL nova precisa estar la antes da chamada.
+     */
+    private void gravarConexao(UnidadeSondaOpcao unidade) {
+        if (documentoCarregado == null || unidade == null || unidade.id() == null) {
+            // Nada foi lido, entao nao ha o que gravar — e gravar sem base leria por cima do que
+            // nao se conhece. O restante das configuracoes ja esta salvo.
+            closeWindow();
+            return;
+        }
+
+        long unidadeSondaId = unidade.id();
+        var base = documentoCarregado;
+        com.example.demo.models.CardsDaUnidade.Conexao nova;
+        try {
+            nova = conexaoDigitada();
+        } catch (IllegalArgumentException invalido) {
+            lblConexaoStatus.setText(invalido.getMessage());
+            return;
+        }
+
+        if (nova.equals(base.conexao())) {
+            closeWindow();
+            return;
+        }
+
+        btnSave.setDisable(true);
+        lblConexaoStatus.setText("Gravando a conexão do CLP…");
+
+        Task<com.example.demo.models.CardsDaUnidade> tarefa = new Task<>() {
+            @Override
+            protected com.example.demo.models.CardsDaUnidade call() {
+                return cardsClient.salvarConexao(unidadeSondaId, base, nova);
+            }
+        };
+        tarefa.setOnSucceeded(e -> closeWindow());
+        tarefa.setOnFailed(e -> {
+            btnSave.setDisable(false);
+            Throwable causa = tarefa.getException();
+            lblConexaoStatus.setText(causa == null
+                    ? "Não foi possível gravar a conexão do CLP."
+                    : causa.getMessage());
+        });
+
+        Thread thread = new Thread(tarefa, "gravar-conexao-clp");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private String texto(TextField campo) {

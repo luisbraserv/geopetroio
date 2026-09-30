@@ -11,7 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.example.demo.models.ConfiguracaoSondaRemota.Limite;
+import com.example.demo.services.AvaliadorLocalDeAlarme.Faixa;
 import com.example.demo.services.AvaliadorLocalDeAlarme.Estado;
 import com.example.demo.services.AvaliadorLocalDeAlarme.Severidade;
 
@@ -31,24 +31,24 @@ class AvaliadorLocalDeAlarmeTest {
 	private static final Instant T0 = Instant.parse("2026-09-09T12:00:00Z");
 
 	/** Pressao: atencao acima de 100, critico acima de 120. Abre em 3 s, fecha em 5 s. */
-	private static Limite pressao() {
-		return new Limite("PRESSAO_01", null, null, 100.0, null, 120.0, 3, 5, true);
+	private static Faixa pressao() {
+		return new Faixa(null, 100.0, null, 120.0, 3, 5);
 	}
 
 	/** Roda leituras de segundo em segundo e guarda cada severidade confirmada. */
 	private static class Excursao {
 		Estado estado = Estado.inicial();
 		final List<Severidade> confirmadas = new ArrayList<>();
-		final Limite limite;
+		final Faixa faixa;
 		int segundo;
 
-		Excursao(Limite limite) {
-			this.limite = limite;
+		Excursao(Faixa faixa) {
+			this.faixa = faixa;
 		}
 
 		Excursao ler(double valor, int vezes) {
 			for (int i = 0; i < vezes; i++) {
-				estado = AvaliadorLocalDeAlarme.avaliar(estado, limite, valor, T0.plusSeconds(segundo++));
+				estado = AvaliadorLocalDeAlarme.avaliar(estado, faixa, valor, T0.plusSeconds(segundo++));
 				confirmadas.add(estado.confirmada());
 			}
 			return this;
@@ -162,21 +162,21 @@ class AvaliadorLocalDeAlarmeTest {
 
 		@Test
 		void limiteDeMinimoAcendePorBaixo() {
-			var limite = new Limite("PESO_01", null, 5000.0, null, 2000.0, null, 2, 2, true);
-			var excursao = new Excursao(limite).ler(1500, 3);
+			var faixa = new Faixa(5000.0, null, 2000.0, null, 2, 2);
+			var excursao = new Excursao(faixa).ler(1500, 3);
 			assertEquals(Severidade.CRITICO, excursao.atual());
 		}
 
 		@Test
 		void tempoZeroAcendeNaPrimeiraLeitura() {
-			var limite = new Limite("PRESSAO_01", null, null, 100.0, null, null, 0, 0, true);
-			assertEquals(Severidade.ATENCAO, new Excursao(limite).ler(105, 1).atual());
+			var faixa = new Faixa(null, 100.0, null, null, 0, 0);
+			assertEquals(Severidade.ATENCAO, new Excursao(faixa).ler(105, 1).atual());
 		}
 
 		@Test
 		void limiteDeUmLadoSoNaoAlarmaDoOutro() {
-			var limite = new Limite("PRESSAO_01", null, null, 100.0, null, null, 0, 0, true);
-			assertNull(new Excursao(limite).ler(-9999, 5).atual());
+			var faixa = new Faixa(null, 100.0, null, null, 0, 0);
+			assertNull(new Excursao(faixa).ler(-9999, 5).atual());
 		}
 
 		/** Valor nao finito nao e medicao: tratar como dentro da faixa apagaria um alarme aceso. */

@@ -100,6 +100,7 @@ public final class CopiaDeCards {
 	static Conexao conexaoPara(Conexao origem, Conexao destino) {
 		Conexao base = origem == null ? Conexao.padrao() : origem;
 		String ip = destino == null || destino.ip() == null ? "" : destino.ip();
-		return new Conexao(ip, base.rack(), base.slot(), base.dbNumero(), base.intervaloLeituraMs());
+		return new Conexao(ip, base.rack(), base.slot(), base.dbNumero(), base.intervaloLeituraMs(),
+				base.tsapLocal(), base.tsapRemoto());
 	}
 }

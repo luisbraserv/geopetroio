@@ -116,15 +116,21 @@ public class SondaService {
      * <p>Lista imutável trocada por referência: a thread de leitura do CLP escreve, a da interface
      * lê, e nenhuma das duas vê um estado pela metade.
      */
-    private volatile List<LeituraDeCards.Grandeza> grandezas = List.of();
+    private record Ciclo(com.example.demo.models.CardsDaUnidade documento,
+                         List<LeituraDeCards.Grandeza> grandezas) {}
+    private volatile Ciclo ciclo = new Ciclo(null, List.of());
 
-    public void atualizarGrandezas(List<LeituraDeCards.Grandeza> novas) {
-        this.grandezas = novas == null ? List.of() : List.copyOf(novas);
+    public void atualizarGrandezas(com.example.demo.models.CardsDaUnidade documento,
+                                  List<LeituraDeCards.Grandeza> novas) {
+        ciclo = new Ciclo(documento, novas == null ? List.of() : List.copyOf(novas));
     }
 
-    public List<LeituraDeCards.Grandeza> grandezas() {
-        return grandezas;
+    public List<LeituraDeCards.Grandeza> grandezas(com.example.demo.models.CardsDaUnidade documento) {
+        Ciclo atual = ciclo;
+        return documento != null && documento.equals(atual.documento()) ? atual.grandezas() : List.of();
     }
+
+    public void limparGrandezas() { ciclo = new Ciclo(null, List.of()); }
 
     public synchronized void updateFlowRate(Double flowRateBblMin, Double stroke) {
         sondaAtual.setVazao(flowRateBblMin != null ? flowRateBblMin : 0.0);

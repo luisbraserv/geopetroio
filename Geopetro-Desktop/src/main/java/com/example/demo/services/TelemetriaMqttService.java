@@ -2,7 +2,6 @@ package com.example.demo.services;
 
 import com.example.demo.models.AppSettings;
 import com.example.demo.models.LeituraPublicada;
-import com.example.demo.models.CardVisibilityConfig;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -66,6 +65,16 @@ public class TelemetriaMqttService {
      * mantem o registro completo de qualquer forma.
      */
     public void enviarLeitura(AppSettings settings, List<LeituraPublicada> leituras) {
+        // ⚠️ Desligado de proposito — §6. Antes disto, "desligar" era apagar um campo, e nada
+        // distinguia essa escolha de uma configuracao pela metade.
+        //
+        // A leitura do CLP, a tela, o historico local e o alarme local seguem: o que para aqui e a
+        // PUBLICACAO ao broker.
+        if (settings != null && !settings.isTelemetriaMqttAtiva()) {
+            desconectarDoBroker();
+            return;
+        }
+
         if (settings == null || settings.getSondaId() == null || settings.getSondaId().isBlank()) {
             logger.debug("Telemetria MQTT nao configurada: sondaId vazio.");
             return;
@@ -145,6 +154,33 @@ public class TelemetriaMqttService {
                 }
             }
         });
+    }
+
+    /**
+     * Fecha a conexão com o broker quando a telemetria é desligada.
+     *
+     * <p>⚠️ Não basta parar de publicar: o cliente sobe com {@code setAutomaticReconnect(true)}, e
+     * uma conexão viva reconectando sozinha seria exatamente o gasto de recurso que o interruptor
+     * existe para evitar — com a tela dizendo "desligado".
+     *
+     * <p>A fila é esvaziada junto: o que estava esperando publicação foi lido antes do desligamento
+     * e não deve sair depois dele. O H2 local mantém o registro completo de qualquer forma.
+     */
+    private synchronized void desconectarDoBroker() {
+        fila.clear();
+        if (client == null) {
+            return;
+        }
+        try {
+            if (client.isConnected()) {
+                client.disconnect();
+            }
+        } catch (Exception ignorado) {
+            // Desligando de qualquer forma: nao ha o que fazer com a falha do disconnect.
+        }
+        client = null;
+        connectedBrokerUrl = null;
+        connectedUsuario = null;
     }
 
     @PreDestroy

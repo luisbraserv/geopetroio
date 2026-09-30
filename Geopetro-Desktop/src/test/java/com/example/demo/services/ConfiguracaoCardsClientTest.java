@@ -290,4 +290,109 @@ class ConfiguracaoCardsClientTest {
 
 		assertEquals("/api/sondas/144/cards", chamadas.peek().caminho());
 	}
+
+	// ==================================================================================
+	// Gravacao por metade — configuracao-da-estacao.md §4
+	//
+	// A engrenagem edita a conexao, a tela de Cards edita os cards, e as duas gravam o MESMO
+	// documento com um PUT que leva tudo. Sem releitura, cada uma apaga o trabalho da outra com
+	// revisao valida e 200 de resposta. O sintoma e um card que some sem ninguem ter apagado.
+	// ==================================================================================
+
+	/** O documento que o servidor tem "agora", devolvido tanto no GET quanto no PUT. */
+	private void servidorTem(String conexaoJson, String cardsJson, int revisao) {
+		corpo = "{\"schemaVersion\":1,\"unidadeSondaId\":144,\"revisao\":" + revisao
+				+ ",\"conexao\":" + conexaoJson + ",\"cards\":" + cardsJson + "}";
+	}
+
+	/** A gravacao e a segunda chamada: a primeira e a releitura. */
+	private Chamada put() {
+		return chamadas.stream()
+				.filter(c -> "PUT".equals(c.metodo()))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("nenhum PUT foi enviado"));
+	}
+
+	private static final String CARD_DA_ANA = """
+			[{"dispositivoId":"PRESSAO_09","nome":"Card da Ana","tipo":"PRESSAO",\
+			"byteInicial":20,"ativo":true,"visivel":true,"ordem":0,"parametros":{"rangeSensorBar":100.0}}]""";
+
+	private static final String CONEXAO_ATUAL =
+			"{\"ip\":\"192.168.0.10\",\"rack\":0,\"slot\":1,\"dbNumero\":1,\"intervaloLeituraMs\":1000}";
+
+	@Test
+	@DisplayName("salvarConexao manda os cards do servidor, nao os que a engrenagem carregou")
+	void conexaoNaoApagaCardNovo() {
+		// A engrenagem abriu ha dez minutos, quando a unidade nao tinha card nenhum.
+		var base = new CardsDaUnidade(1, 144, 7, new Conexao("192.168.0.10", 0, 1, 1, 1000),
+				List.of(), null, null);
+		// Nesse intervalo, a Ana criou um card pela tela de Cards.
+		servidorTem(CONEXAO_ATUAL, CARD_DA_ANA, 8);
+
+		cliente().salvarConexao(144, base, new Conexao("192.168.0.77", 0, 1, 1, 1000));
+
+		Chamada enviada = put();
+		// ⚠️ Sem a releitura, o PUT levaria "cards":[] e o card da Ana sumiria — com 200 de
+		// resposta e ninguem para acusar.
+		assertTrue(enviada.corpo().contains("PRESSAO_09"), enviada.corpo());
+		assertTrue(enviada.corpo().contains("192.168.0.77"), enviada.corpo());
+		// A revisao vai a do servidor, nao a de dez minutos atras.
+		assertTrue(enviada.corpo().contains("\"revisao\":8"), enviada.corpo());
+	}
+
+	@Test
+	@DisplayName("salvarConexao recusa quando a propria conexao mudou debaixo da tela")
+	void conexaoAlteradaPorOutraPessoa() {
+		var base = new CardsDaUnidade(1, 144, 7, new Conexao("192.168.0.10", 0, 1, 1, 1000),
+				List.of(), null, null);
+		// Outra pessoa ja apontou a unidade para outro CLP.
+		servidorTem("{\"ip\":\"10.0.0.5\",\"rack\":0,\"slot\":1,\"dbNumero\":1,\"intervaloLeituraMs\":1000}",
+				"[]", 8);
+
+		// ⚠️ Adotar a revisao relida e mandar em frente passaria por cima em silencio. A protecao
+		// que a revisao da ao campo que se edita nao pode ser jogada fora junto com o merge.
+		assertThrows(ConfiguracaoCardsClient.CardsDesatualizadosException.class,
+				() -> cliente().salvarConexao(144, base, new Conexao("192.168.0.77", 0, 1, 1, 1000)));
+	}
+
+	@Test
+	@DisplayName("salvarCards manda a conexao do servidor, nao a que a tela leu ao abrir")
+	void cardsNaoDesfazemOIpCorrigido() {
+		var base = new CardsDaUnidade(1, 144, 7, new Conexao("192.168.0.10", 0, 1, 1, 1000),
+				List.of(), null, null);
+		// Alguem corrigiu o IP na engrenagem enquanto esta tela estava aberta.
+		servidorTem("{\"ip\":\"192.168.0.99\",\"rack\":0,\"slot\":1,\"dbNumero\":1,\"intervaloLeituraMs\":1000}",
+				"[]", 8);
+
+		cliente().salvarCards(144, base, List.of(
+				new Card(null, "Peso", Tipo.PESO, 4, true, true, 0, Parametros.vazio())));
+
+		Chamada enviada = put();
+		// Reenviar o IP lido ao abrir apontaria a estacao de volta para o CLP anterior.
+		assertTrue(enviada.corpo().contains("192.168.0.99"), enviada.corpo());
+		assertFalse(enviada.corpo().contains("192.168.0.10"), enviada.corpo());
+	}
+
+	@Test
+	@DisplayName("salvarCards recusa quando os cards mudaram debaixo da tela")
+	void cardsAlteradosPorOutraPessoa() {
+		var base = new CardsDaUnidade(1, 144, 7, new Conexao("192.168.0.10", 0, 1, 1, 1000),
+				List.of(), null, null);
+		servidorTem(CONEXAO_ATUAL, CARD_DA_ANA, 8);
+
+		assertThrows(ConfiguracaoCardsClient.CardsDesatualizadosException.class,
+				() -> cliente().salvarCards(144, base, List.of()));
+	}
+
+	@Test
+	@DisplayName("salvarTudo — a copia entre unidades — recusa se qualquer metade mudou")
+	void copiaRecusaSobreAlteracaoAlheia() {
+		var base = new CardsDaUnidade(1, 144, 7, new Conexao("192.168.0.10", 0, 1, 1, 1000),
+				List.of(), null, null);
+		servidorTem(CONEXAO_ATUAL, CARD_DA_ANA, 8);
+
+		// Quem copia reescreve a unidade inteira: e o pior momento para nao avisar.
+		assertThrows(ConfiguracaoCardsClient.CardsDesatualizadosException.class,
+				() -> cliente().salvarTudo(144, base, Conexao.padrao(), List.of()));
+	}
 }

@@ -7,6 +7,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -34,6 +35,16 @@
          <Label text="Configurações" styleClass="cabecalho-titulo" />
          <Label text="Ajustes desta estação. As alterações passam a valer ao salvar."
                 styleClass="cabecalho-subtitulo" />
+
+         <!-- Portao de configuracao: o que altera o que a unidade LE e PUBLICA exige ADMIN ou
+              SUPORTE. Os enderecos de servidor ficam fora dele de proposito — sem eles nao ha
+              como logar, e uma estacao nova nao teria por onde comecar. -->
+         <HBox fx:id="faixaPortao" spacing="10.0" alignment="CENTER_LEFT" visible="false" managed="false">
+            <padding><Insets top="10.0" /></padding>
+            <Label fx:id="lblPortao" styleClass="aviso-configuracao" wrapText="true"
+                   HBox.hgrow="ALWAYS" maxWidth="Infinity" />
+            <Button fx:id="btnDesbloquear" text="Entrar para configurar" />
+         </HBox>
       </VBox>
    </top>
 
@@ -53,11 +64,10 @@
                   GridPane.columnIndex="0" GridPane.rowIndex="0">
                <Label text="Equipamento" styleClass="cartao-titulo" />
 
-               <VBox spacing="5.0">
-                  <Label text="IP do PLC" styleClass="rotulo" />
-                  <TextField fx:id="txtPlcIp" promptText="Ex.: 192.168.0.10" maxWidth="Infinity" />
-               </VBox>
-
+               <!--
+                  A Unidade/Sonda vem ANTES da conexao de proposito: a conexao mora no documento
+                  daquela unidade, e sem ela escolhida nao ha o que ler nem onde gravar.
+               -->
                <VBox spacing="5.0">
                   <Label text="Unidade/Sonda desta estação" styleClass="rotulo" />
                   <HBox spacing="8.0">
@@ -69,6 +79,57 @@
                   <Label styleClass="ajuda"
                          text="A lista vem do cadastro do Backend. Escolher aqui define de uma vez o endereço do histórico e o do tempo real, que antes eram dois campos separados." />
                </VBox>
+
+               <Separator />
+
+               <!--
+                  Conexao com o CLP — configuracao-da-estacao.md §4. Saiu da tela de Cards e veio
+                  para ca inteira: IP, rack, slot, DB e intervalo. E por ela que o PLC conecta.
+               -->
+               <Label text="Conexão com o CLP" styleClass="cartao-titulo" />
+               <Label styleClass="cartao-nota"
+                      text="Fica guardada na Unidade/Sonda, não nesta estação: rack, slot, DB e intervalo descrevem o modelo de CLP e são copiados ao configurar uma sonda igual." />
+
+               <VBox spacing="5.0">
+                  <Label text="IP do PLC" styleClass="rotulo" />
+                  <TextField fx:id="txtPlcIp" promptText="Ex.: 192.168.0.10" maxWidth="Infinity" />
+                  <Label styleClass="ajuda"
+                         text="O IP não é copiado entre unidades: ele diz qual CLP, não o modelo dele." />
+               </VBox>
+
+               <HBox spacing="10.0">
+                  <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                     <Label text="Rack" styleClass="rotulo" />
+                     <TextField fx:id="txtPlcRack" maxWidth="Infinity" />
+                  </VBox>
+                  <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                     <Label text="Slot" styleClass="rotulo" />
+                     <TextField fx:id="txtPlcSlot" maxWidth="Infinity" />
+                  </VBox>
+                  <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                     <Label text="DB" styleClass="rotulo" />
+                     <TextField fx:id="txtPlcDb" maxWidth="Infinity" />
+                  </VBox>
+                  <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                     <Label text="Intervalo (ms)" styleClass="rotulo" />
+                     <TextField fx:id="txtPlcIntervalo" maxWidth="Infinity" />
+                  </VBox>
+               </HBox>
+
+                <CheckBox fx:id="chkPlcTsap" text="LOGO! / conexão por TSAP" />
+                <HBox spacing="10.0">
+                   <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                      <Label text="TSAP local (Desktop)" styleClass="rotulo" />
+                      <TextField fx:id="txtPlcTsapLocal" promptText="03.00" maxWidth="Infinity" />
+                   </VBox>
+                   <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                      <Label text="TSAP remoto (LOGO!)" styleClass="rotulo" />
+                      <TextField fx:id="txtPlcTsapRemoto" promptText="02.00" maxWidth="Infinity" />
+                   </VBox>
+                </HBox>
+                <Label styleClass="ajuda" wrapText="true"
+                       text="No LOGO!Soft Comfort, configure uma conexão Servidor S7. O TSAP local do Desktop deve ser igual ao remoto do LOGO, e vice-versa. Use os valores configurados no equipamento. A memória V é lida no DB1. Salve e reconecte o PLC após alterar a conexão." />
+                <Label fx:id="lblConexaoStatus" styleClass="ajuda" wrapText="true" />
             </VBox>
 
             <!-- ================= Broker MQTT ================= -->
@@ -77,6 +138,10 @@
                <Label text="Broker MQTT de telemetria" styleClass="cartao-titulo" />
                <Label styleClass="cartao-nota"
                       text="Caminho do histórico: as leituras vão ao broker e são gravadas no InfluxDB." />
+
+               <CheckBox fx:id="chkTelemetriaMqtt" text="Publicar telemetria MQTT" />
+               <Label styleClass="ajuda"
+                      text="Desmarcado, esta estação para de publicar no broker e não alimenta o histórico no InfluxDB. Continuam funcionando a leitura do CLP, a tela, o histórico local e o alarme desta estação." />
 
                <VBox spacing="5.0">
                   <Label text="Endereço do broker" styleClass="rotulo" />
@@ -101,6 +166,10 @@
                <Label styleClass="cartao-nota"
                       text="Caminho do tempo real: o estado atual vai ao backend por WebSocket e é retransmitido a quem tem acesso. Nada é gravado." />
 
+               <CheckBox fx:id="chkTempoReal" text="Publicar em tempo real (WebSocket)" />
+               <Label styleClass="ajuda"
+                      text="Desmarcado, esta unidade some da tela remota e o servidor deixa de avaliar alarmes dela. O alarme desta estação continua funcionando, e os cards já baixados continuam desenhando." />
+
                <VBox spacing="5.0">
                   <Label text="URL do Backend" styleClass="rotulo" />
                   <TextField fx:id="txtBackendUrl" promptText="Ex.: http://10.0.0.10:8080" maxWidth="Infinity" />
@@ -120,27 +189,19 @@
                       text="O canal de tempo real é autenticado, não é público: a sonda faz login para obter um token e só então pode publicar. Sem isso, qualquer um na rede poderia injetar leituras falsas nesta unidade. As mesmas credenciais carregam a lista de Unidades/Sondas acima." />
             </VBox>
 
-            <!-- ================= Cards visiveis ================= -->
-            <VBox fx:id="cartaoCards" spacing="12.0" styleClass="cartao"
-                  GridPane.columnIndex="1" GridPane.rowIndex="1">
-               <Label text="Cards visíveis no monitoramento" styleClass="cartao-titulo" />
-               <Label styleClass="cartao-nota"
-                      text="Cards desmarcados ficam ocultos e não salvam dados." />
+            <!--
+               "Cards visiveis no monitoramento" saiu daqui em 2026-09-10
+               (configuracao-da-estacao.md §4). Eram seis checkboxes das grandezas fixas de antes
+               dos cards configuraveis, e com cards por unidade a lista nem descrevia mais o que a
+               unidade tem.
 
-               <GridPane hgap="12.0" vgap="10.0">
-                  <columnConstraints>
-                     <ColumnConstraints percentWidth="50.0" />
-                     <ColumnConstraints percentWidth="50.0" />
-                  </columnConstraints>
+               ⚠️ E ja nao faziam nada: CardVisibilityConfig era lido e escrito SOMENTE por esta
+               tela. Quem decide o que aparece e ativo/visivel no documento de cards.
 
-                  <CheckBox fx:id="chkPesoColuna"  text="Peso da Coluna"    GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                  <CheckBox fx:id="chkChHidTubos"  text="T. Ch. Hid. Tubos" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                  <CheckBox fx:id="chkChFlutuante" text="T. Ch. Flutuante"  GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                  <CheckBox fx:id="chkBombaLama"   text="P. Bomba de Lama"  GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                  <CheckBox fx:id="chkEscp"        text="ESCP"              GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                  <CheckBox fx:id="chkVazao"       text="Vazão"             GridPane.columnIndex="1" GridPane.rowIndex="2" />
-               </GridPane>
-            </VBox>
+               ⚠️ O rotulo mentia — dizia "Cards desmarcados ficam ocultos e nao salvam dados", e
+               nenhuma das duas coisas acontecia. Quem desmarcasse iria procurar o efeito, nao
+               achar, e desconfiar do resto da configuracao.
+            -->
 
          </GridPane>
       </ScrollPane>

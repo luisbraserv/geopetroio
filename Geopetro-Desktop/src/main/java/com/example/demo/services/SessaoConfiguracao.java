@@ -88,8 +88,29 @@ public class SessaoConfiguracao {
 	}
 
 	public synchronized Resultado abrir(String usuario, String senha) {
+		return abrir(usuario, senha, null);
+	}
+
+	/**
+	 * Abre a sessão, opcionalmente contra um servidor informado na hora.
+	 *
+	 * <h2>⚠️ Por que o endereço entra aqui</h2>
+	 * Desde 2026-09-10 a engrenagem inteira exige sessão
+	 * ({@code specs/features/configuracao-da-estacao.md §5}) — inclusive o campo com a URL do
+	 * Backend. Isso fecharia a porta sobre si mesma: sem URL não há login, e sem login não se define
+	 * a URL. Uma estação recém-instalada não teria por onde começar.
+	 *
+	 * <p>A saída é pedir o endereço <b>no próprio login</b>, que é exatamente quando ele é
+	 * necessário e por quem tem credencial para usá-lo. Informado e aceito, ele é gravado: da
+	 * segunda vez em diante o campo já vem preenchido.
+	 *
+	 * @param servidor endereço a usar; {@code null} ou vazio mantém o que já está gravado
+	 */
+	public synchronized Resultado abrir(String usuario, String senha, String servidor) {
 		AppSettings configuracoes = settings.loadSettings();
-		String base = normalizarBase(configuracoes == null ? null : configuracoes.getBackendUrl());
+		String informado = normalizarBase(servidor);
+		String base = informado != null ? informado
+				: normalizarBase(configuracoes == null ? null : configuracoes.getBackendUrl());
 		if (base == null) {
 			return new Resultado.BackendNaoConfigurado();
 		}
@@ -115,6 +136,15 @@ public class SessaoConfiguracao {
 		}
 
 		atual = new Sessao(usuario.trim(), identidade.token());
+
+		// O endereco so e gravado depois de o servidor ACEITAR a credencial: um endereco digitado
+		// errado nao substitui o que estava funcionando.
+		if (informado != null && !informado.equals(normalizarBase(
+				configuracoes == null ? null : configuracoes.getBackendUrl()))) {
+			settings.updateBackendUrl(informado);
+			logger.info("Endereco do Backend definido no login de configuracao.");
+		}
+
 		logger.info("Sessao de configuracao aberta por {}.", atual.usuario());
 		return new Resultado.Liberada(atual.usuario());
 	}

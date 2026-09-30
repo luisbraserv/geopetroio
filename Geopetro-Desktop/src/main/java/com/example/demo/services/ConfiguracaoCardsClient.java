@@ -6,6 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,6 +97,78 @@ public class ConfiguracaoCardsClient {
 		return converter(resposta.body(), unidadeSondaId);
 	}
 
+	/**
+	 * Grava <b>só a conexão</b>, devolvendo os cards como estão no servidor neste instante.
+	 *
+	 * <h2>Por que reler em vez de mandar o que a tela carregou</h2>
+	 * A engrenagem e a tela de Cards editam o mesmo documento, e o {@code PUT} carrega o documento
+	 * inteiro. Sem a releitura, salvar o IP numa engrenagem aberta há dez minutos reenviaria o array
+	 * {@code cards} daquele momento — e apagaria o card que outra pessoa criou no intervalo, com
+	 * revisão válida e {@code 200} de resposta.
+	 *
+	 * <p>⚠️ <b>O sintoma é um card que some sem ninguém ter apagado</b>, e a causa está na outra
+	 * tela, separada por minutos e por pessoas diferentes. Nada disso aparece em teste feliz — ver
+	 * {@code configuracao-da-estacao.md §4}.
+	 *
+	 * <h2>⚠️ E por que o 409 continua de pé</h2>
+	 * Adotar a revisão relida e mandar em frente resolveria os cards e <b>destruiria</b> a proteção
+	 * que a revisão dá ao campo que se está editando: se outra pessoa mudou a conexão nesse meio
+	 * tempo, a gravação passaria por cima dela em silêncio.
+	 *
+	 * <p>Então a releitura confere: mudou a metade que <b>esta</b> tela edita, é conflito de verdade
+	 * e vira {@link CardsDesatualizadosException}. Mudou só a outra metade, ela volta intacta.
+	 *
+	 * @param base o documento que a tela carregou, para saber o que mudou debaixo dela
+	 */
+	public CardsDaUnidade salvarConexao(long unidadeSondaId, CardsDaUnidade base,
+			CardsDaUnidade.Conexao nova) {
+		CardsDaUnidade atual = ler(unidadeSondaId);
+		if (!Objects.equals(base.conexao(), atual.conexao())) {
+			throw new CardsDesatualizadosException(
+					"A conexao do CLP foi alterada por outra pessoa. Recarregue antes de salvar.");
+		}
+		return salvar(unidadeSondaId,
+				new CardsDaUnidade.Alteracao(atual.revisao(), nova, atual.cards()));
+	}
+
+	/**
+	 * O simétrico de {@link #salvarConexao}: grava <b>só os cards</b> e devolve a conexão como está
+	 * no servidor neste instante.
+	 *
+	 * <p>Existe pelo mesmo motivo, na direção contrária — a tela de Cards não edita mais a conexão,
+	 * e reenviar a que ela leu ao abrir apontaria a estação para o CLP anterior se alguém tivesse
+	 * corrigido o IP na engrenagem no intervalo.
+	 */
+	public CardsDaUnidade salvarCards(long unidadeSondaId, CardsDaUnidade base,
+			List<CardsDaUnidade.Card> novos) {
+		CardsDaUnidade atual = ler(unidadeSondaId);
+		if (!base.cards().equals(atual.cards())) {
+			throw new CardsDesatualizadosException(
+					"Os cards foram alterados por outra pessoa. Recarregue antes de salvar.");
+		}
+		return salvar(unidadeSondaId,
+				new CardsDaUnidade.Alteracao(atual.revisao(), atual.conexao(), novos));
+	}
+
+	/**
+	 * Grava as <b>duas</b> metades — o caso da cópia entre unidades, que traz rack, slot, DB e
+	 * intervalo junto com os cards.
+	 *
+	 * <p>Aqui não há metade a preservar, então a releitura serve só para o outro papel: recusar a
+	 * gravação se qualquer das duas mudou debaixo desta tela. É mais restrito que
+	 * {@link #salvarCards} de propósito — quem copia está reescrevendo a unidade inteira, e fazer
+	 * isso por cima da alteração de outra pessoa é o pior momento para não avisar.
+	 */
+	public CardsDaUnidade salvarTudo(long unidadeSondaId, CardsDaUnidade base,
+			CardsDaUnidade.Conexao nova, List<CardsDaUnidade.Card> novos) {
+		CardsDaUnidade atual = ler(unidadeSondaId);
+		if (!Objects.equals(base.conexao(), atual.conexao()) || !base.cards().equals(atual.cards())) {
+			throw new CardsDesatualizadosException(
+					"A configuracao foi alterada por outra pessoa. Recarregue antes de salvar.");
+		}
+		return salvar(unidadeSondaId, new CardsDaUnidade.Alteracao(atual.revisao(), nova, novos));
+	}
+
 	public CardsDaUnidade salvar(long unidadeSondaId, CardsDaUnidade.Alteracao alteracao) {
 		String corpo;
 		try {
@@ -109,7 +183,15 @@ public class ConfiguracaoCardsClient {
 					"Os cards foram alterados por outra pessoa. Recarregue antes de salvar.");
 		}
 		exigirSucesso(resposta, unidadeSondaId);
-		return converter(resposta.body(), unidadeSondaId);
+		CardsDaUnidade salvo = converter(resposta.body(), unidadeSondaId);
+		if (alteracao.conexao() != null && alteracao.conexao().usaTsap()
+				&& (salvo.conexao() == null
+						|| !Objects.equals(alteracao.conexao().tsapLocal(), salvo.conexao().tsapLocal())
+						|| !Objects.equals(alteracao.conexao().tsapRemoto(), salvo.conexao().tsapRemoto()))) {
+			throw new CardsIndisponiveisException(
+					"O Backend não preservou os TSAPs. Atualize o Backend para usar a conexão LOGO! e salve novamente.");
+		}
+		return salvo;
 	}
 
 	private HttpResponse<String> chamar(String metodo, long unidadeSondaId, String corpo) {

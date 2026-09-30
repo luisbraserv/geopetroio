@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.HexFormat;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +49,11 @@ public class PlcConnectionService {
     private ScheduledExecutorService scheduler;
     private S7Client client;
     private volatile boolean connected;
+    private volatile String ultimoErro;
+    private volatile Instant ultimaLeitura;
+    private CardsDaUnidade.Conexao conexaoEmUso;
+    private long unidadeEmUso;
+    private String backendEmUso;
     private Consumer<Boolean> statusListener;
 
     public PlcConnectionService(
@@ -89,7 +96,7 @@ public class PlcConnectionService {
         }
 
         /** O CLP não respondeu, ou respondeu recusando. Aí sim é falha. */
-        record Falhou() implements Resultado {
+        record Falhou(String motivo) implements Resultado {
         }
     }
 
@@ -103,7 +110,10 @@ public class PlcConnectionService {
      * cada unidade vira quando alguém a configura pela tela de Cards.
      */
     public synchronized Resultado connectUsingSavedIp() {
-        var documento = telemetriaRealtimeService.cardsAtuais(settingsService.loadSettings()).orElse(null);
+        disconnectSilently();
+        ultimoErro = null;
+        AppSettings settings = settingsService.loadSettings();
+        var documento = telemetriaRealtimeService.cardsAtuais(settings).orElse(null);
         if (documento == null || documento.cards().isEmpty()) {
             updateStatus(false);
             logger.info("Unidade sem configuracao de cards: nada a ler.");
@@ -120,63 +130,82 @@ public class PlcConnectionService {
             logger.info("Configuracao de cards sem IP do CLP.");
             return new Resultado.SemConfiguracao("falta o IP do CLP na configuração dos cards");
         }
-        return connect(documento.conexao().ip().trim())
+        return conectar(documento.conexao().ip().trim(), documento, settings)
                 ? new Resultado.Conectado()
-                : new Resultado.Falhou();
+                : new Resultado.Falhou(ultimoErro);
     }
 
     public synchronized boolean connect(String ip) {
+        AppSettings settings = settingsService.loadSettings();
+        return conectar(ip, telemetriaRealtimeService.cardsAtuais(settings).orElse(null), settings);
+    }
+
+    private boolean conectar(String ip, CardsDaUnidade documento, AppSettings settings) {
         disconnectSilently();
+        ultimoErro = null;
+        ultimaLeitura = null;
         strokeCalculatorService.reset();
         flowRateCalculatorService.reset();
 
-        var conexao = conexaoAtual();
-        if (conexao == null) {
+        var conexao = documento == null ? null : documento.conexao();
+        if (conexao == null || LeituraDeCards.ativos(documento.cards()).isEmpty()) {
+            ultimoErro = "Configure a conexão e pelo menos um card ativo antes de conectar.";
             updateStatus(false);
             logger.info("Sem configuracao de cards: nao ha rack/slot/DB para conectar.");
             return false;
         }
 
         try {
-            client = new S7Client();
-            int result = client.ConnectTo(ip, conexao.rack(), conexao.slot());
-            if (result != 0) {
-                updateStatus(false);
-                logger.warn("Falha ao conectar ao PLC {} (rack {}, slot {}). Codigo: {}",
-                        ip, conexao.rack(), conexao.slot(), result);
-                return false;
+            client = criarCliente();
+            client.RecvTimeout = 2000;
+            int result;
+            if (conexao.usaTsap()) {
+                if (conexao.tsapLocal() == null || conexao.tsapRemoto() == null
+                        || conexao.tsapLocal() < 0 || conexao.tsapLocal() > 0xffff
+                        || conexao.tsapRemoto() < 0 || conexao.tsapRemoto() > 0xffff) {
+                    throw new IllegalArgumentException("Informe os dois TSAPs válidos na conexão do PLC.");
+                }
+                client.SetConnectionParams(ip, conexao.tsapLocal(), conexao.tsapRemoto());
+                result = client.Connect();
+            } else {
+                result = client.ConnectTo(ip, conexao.rack(), conexao.slot());
             }
+            if (result != 0) {
+                throw new IllegalStateException("Não foi possível conectar a " + ip + ":102. "
+                        + erroS7(result) + " Verifique a rede, o acesso S7 e os parâmetros de conexão do PLC.");
+            }
+            conexaoEmUso = conexao;
+            unidadeEmUso = documento.unidadeSondaId();
+            backendEmUso = settings.getBackendUrl();
+            // Abrir a sessão S7 não prova que o DB pode ser lido. Só confirmar após receber
+            // e converter a primeira amostra; a falha chega ao mesmo diálogo de conexão.
+            lerCiclo(settings, documento);
             updateStatus(true);
             logger.info("Conectado ao PLC {} (rack {}, slot {}, DB{}, {} ms)",
                     ip, conexao.rack(), conexao.slot(), conexao.dbNumero(), conexao.intervaloLeituraMs());
             startReading(conexao.intervaloLeituraMs());
             return true;
         } catch (Exception e) {
+            ultimoErro = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            disconnectSilently();
             updateStatus(false);
             logger.error("Erro ao conectar ao PLC {}", ip, e);
             return false;
         }
     }
 
-    /** A conexão declarada no documento da unidade, ou {@code null} se ainda não há documento. */
-    private CardsDaUnidade.Conexao conexaoAtual() {
-        return telemetriaRealtimeService.cardsAtuais(settingsService.loadSettings())
-                .map(CardsDaUnidade::conexao)
-                .orElse(null);
+    S7Client criarCliente() {
+        return new S7Client();
     }
 
     public synchronized void disconnect() {
-        connected = false;
-        if (scheduler != null && !scheduler.isShutdown()) scheduler.shutdownNow();
-        scheduler = null;
-        if (client != null) {
-            try { client.Disconnect(); } catch (Exception e) { logger.warn("Erro ao desconectar", e); }
-        }
-        client = null;
+        disconnectSilently();
         notifyStatus();
     }
 
     public boolean isConnected() { return connected; }
+    public String getUltimoErro() { return ultimoErro; }
+    public Instant getUltimaLeitura() { return ultimaLeitura; }
 
     public void setStatusListener(Consumer<Boolean> statusListener) {
         this.statusListener = statusListener;
@@ -189,23 +218,36 @@ public class PlcConnectionService {
      * envios (MQTT e tempo real) sao entregues a workers proprios, de modo que a lentidao de
      * qualquer canal de rede nao atrase o ciclo de leitura.
      */
-    private void startReading(int intervaloMs) {
+    void startReading(int intervaloMs) {
         scheduler = Executors.newSingleThreadScheduledExecutor(
                 Thread.ofVirtual().name("plc-reader").factory());
-        scheduler.scheduleAtFixedRate(this::readAll, 0, Math.max(100, intervaloMs), TimeUnit.MILLISECONDS);
+        scheduler.scheduleWithFixedDelay(this::readAll, Math.max(100, intervaloMs),
+                Math.max(100, intervaloMs), TimeUnit.MILLISECONDS);
     }
 
-    private void readAll() {
+    synchronized void readAll() {
         if (!connected || client == null) return;
 
         try {
             AppSettings settings = settingsService.loadSettings();
             CardsDaUnidade documento = telemetriaRealtimeService.cardsAtuais(settings).orElse(null);
+            if (documento == null || documento.unidadeSondaId() != unidadeEmUso
+                    || !Objects.equals(settings.getBackendUrl(), backendEmUso)
+                    || !Objects.equals(documento.conexao(), conexaoEmUso)) {
+                throw new IllegalStateException("A configuração da conexão ou a unidade mudou. Reconecte o PLC para ler os dados atuais.");
+            }
+            lerCiclo(settings, documento);
+        } catch (Exception e) {
+            ultimoErro = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            logger.error("Erro na leitura do PLC", e);
+            disconnect();
+        }
+    }
+
+    private void lerCiclo(AppSettings settings, CardsDaUnidade documento) {
             List<Card> ativos = documento == null ? List.of() : LeituraDeCards.ativos(documento.cards());
             if (ativos.isEmpty()) {
-                // RN-088: sem card ativo nao ha o que ler. Nao e erro — a unidade pode ter acabado
-                // de ter o ultimo card desativado, e ai a resposta certa e nao ir ao CLP.
-                return;
+                throw new IllegalStateException("Não há cards ativos para ler. Ative um card e reconecte o PLC.");
             }
 
             // A calibracao medida em campo migra dos slots posicionais na primeira vez que o
@@ -228,7 +270,8 @@ public class PlcConnectionService {
             }
 
             // A tela recebe as grandezas ja convertidas e monta os cards a partir delas.
-            sondaService.atualizarGrandezas(grandezas);
+            sondaService.atualizarGrandezas(documento, grandezas);
+            ultimaLeitura = Instant.now();
             gravarHistoricoLocal(grandezas);
             avaliarAlarmeLocal(grandezas);
 
@@ -239,19 +282,23 @@ public class PlcConnectionService {
             }
 
             // HISTORICO: vai para a fila do worker MQTT. Cada leitura importa.
-            telemetriaMqttService.enviarLeitura(settings, leituras);
+            try {
+                telemetriaMqttService.enviarLeitura(settings, leituras);
+            } catch (RuntimeException e) {
+                logger.error("Falha ao encaminhar MQTT; leitura local do PLC preservada", e);
+            }
 
             // TEMPO REAL: sobrescreve o estado atual. Se o canal estiver lento, os estados
             // intermediarios sao descartados de proposito — a tela quer o "agora", nao a fila.
-            telemetriaRealtimeService.publicarEstado(settings,
-                    new EstadoAtual(settings.getUnidadeSondaId(), Instant.now(), leituras));
+            try {
+                telemetriaRealtimeService.publicarEstado(settings,
+                        new EstadoAtual(settings.getUnidadeSondaId(), Instant.now(), leituras));
+            } catch (RuntimeException e) {
+                logger.error("Falha ao encaminhar tempo real; leitura local do PLC preservada", e);
+            }
 
             logger.debug("PLC lido: {} cards ativos, {} grandezas publicadas.", ativos.size(), leituras.size());
 
-        } catch (Exception e) {
-            logger.error("Erro na leitura do PLC", e);
-            disconnect();
-        }
     }
 
     /**
@@ -273,15 +320,14 @@ public class PlcConnectionService {
      *
      * <p>⚠️ <b>Sinaliza, nao registra.</b> O historico de eventos tem um produtor so, o Backend.
      * Aqui a avaliacao existe para chamar quem esta ao lado do equipamento, e funciona sem rede
-     * porque os limites ficam em cache em disco.
+     * porque a faixa e configurada nesta estacao — nao vem de documento remoto nenhum.
      *
      * <p>Falha na avaliacao nao derruba o ciclo: perder o alarme local de um segundo e ruim, parar
      * de ler o CLP por causa dele seria pior — e o MQTT e o tempo real ja teriam sido publicados.
      */
     private void avaliarAlarmeLocal(List<LeituraDeCards.Grandeza> grandezas) {
         try {
-            alarmesLocais.avaliar(grandezas,
-                    telemetriaRealtimeService.getConfiguracaoSonda().orElse(null), Instant.now());
+            alarmesLocais.avaliar(grandezas, Instant.now());
         } catch (RuntimeException e) {
             logger.warn("Alarme local nao avaliado neste ciclo; a leitura seguiu normal.", e);
         }
@@ -313,14 +359,23 @@ public class PlcConnectionService {
         byte[] buffer = new byte[faixa.tamanho()];
         int result = client.ReadArea(S7.S7AreaDB, db, faixa.inicio(), faixa.tamanho(), buffer);
         if (result != 0) {
-            throw new IllegalStateException("Falha ao ler DB%d [%d..%d). Codigo: %d"
-                    .formatted(db, faixa.inicio(), faixa.inicio() + faixa.tamanho(), result));
+            throw new IllegalStateException("Sessão S7 aberta, mas a leitura do DB%d, bytes %d a %d, falhou. %s "
+                    .formatted(db, faixa.inicio(), faixa.inicio() + faixa.tamanho() - 1, erroS7(result))
+                    + "No LOGO!, confira o DB1 (memória V), o mapeamento VM e o acesso S7.");
         }
+        logger.debug("PLC DB{} bytes {}..{}: {}", db, faixa.inicio(),
+                faixa.inicio() + faixa.tamanho() - 1, HexFormat.ofDelimiter(" ").formatHex(buffer));
         return BlocoDeLeitura.de(buffer, faixa.inicio());
+    }
+
+    private static String erroS7(int codigo) {
+        return "Código S7 %d: %s".formatted(codigo, S7Client.ErrorText(codigo));
     }
 
     private synchronized void disconnectSilently() {
         connected = false;
+        sondaService.limparGrandezas();
+        sondaService.limparValoresBrutos();
         if (scheduler != null && !scheduler.isShutdown()) scheduler.shutdownNow();
         scheduler = null;
         if (client != null) {

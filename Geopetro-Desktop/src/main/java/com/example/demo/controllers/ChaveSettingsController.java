@@ -1,13 +1,16 @@
 package com.example.demo.controllers;
 
-import com.example.demo.models.AppSettings;
+import com.example.demo.models.CardsDaUnidade;
+import com.example.demo.models.CardsDaUnidade.Card;
 import com.example.demo.models.ChaveHidraulicaConfig;
-import com.example.demo.models.SensorPressaoConfig;
 import com.example.demo.models.TipoMovimento;
+import com.example.demo.services.CalibracaoCardService;
+import com.example.demo.services.CalibracaoDeCards;
 import com.example.demo.services.HydraulicTorqueCalculator;
-import com.example.demo.services.SettingsService;
+import javafx.concurrent.Task;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
@@ -17,14 +20,17 @@ import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 @Controller
+@Scope("prototype")
 public class ChaveSettingsController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChaveSettingsController.class);
 
-    @Autowired private SettingsService settingsService;
+    @Autowired private CalibracaoDeCards calibracoes;
+    @Autowired private CalibracaoCardService gravacao;
 
     @FXML private Label lblTitulo;
     @FXML private TextField txtRangeBar;
@@ -36,8 +42,11 @@ public class ChaveSettingsController {
     @FXML private ComboBox<TipoMovimento> cmbTipoMovimento;
     @FXML private Label lblAreaHidraulica;
     @FXML private Label lblValidacao;
+    @FXML private Label lblStatus;
+    @FXML private Button btnSalvar;
 
-    private boolean isTubos;
+    private CardsDaUnidade documento;
+    private Card card;
 
     @FXML
     public void initialize() {
@@ -64,19 +73,19 @@ public class ChaveSettingsController {
         ocultarValidacao();
     }
 
-    public void configurar(boolean tubos) {
-        this.isTubos = tubos;
-        lblTitulo.setText("Configuração — " + (tubos ? "T. Ch. Hid. Tubos" : "T. Ch. Flutuante"));
+    public void configurar(CardsDaUnidade documento, Card card) {
+        this.documento = documento;
+        this.card = card;
+        lblTitulo.setText("Calibração — " + card.nome() + " (" + card.dispositivoId() + ")");
 
-        int sensorIndex = tubos ? 2 : 3;
-        SensorPressaoConfig sensor = settingsService.getSensorConfig(sensorIndex);
-        txtRangeBar.setText(String.valueOf(sensor.getRangeBar()));
-        sliderSensibilidade.setValue(sensor.getSensibilidade());
-        lblSensibilidade.setText(String.format("%.2f", sensor.getSensibilidade()));
+        var calibracao = calibracoes.para(card.dispositivoId());
+        Double range = card.parametros() == null ? null : card.parametros().rangeSensorBar();
+        txtRangeBar.setText(range == null ? "" : String.valueOf(range));
+        sliderSensibilidade.setValue(calibracao.sensibilidade());
+        lblSensibilidade.setText(String.format("%.2f", calibracao.sensibilidade()));
 
-        ChaveHidraulicaConfig cfg = tubos
-                ? settingsService.getChaveTubos()
-                : settingsService.getChaveFlutuante();
+        ChaveHidraulicaConfig cfg = calibracao.chave() == null
+                ? new ChaveHidraulicaConfig() : calibracao.chave();
 
         txtDiametroPistaoIn.setText(formatConfiguredValue(cfg.getDiametroPistaoIn()));
         txtDiametroHasteIn.setText(cfg.getDiametroHasteIn() >= 0
@@ -88,6 +97,7 @@ public class ChaveSettingsController {
 
     @FXML
     public void onSalvar() {
+        if (card == null || documento == null) return;
         try {
             double rangeBar = parseNumber(txtRangeBar.getText());
             double diametroPistao = parseNumber(txtDiametroPistaoIn.getText());
@@ -101,23 +111,34 @@ public class ChaveSettingsController {
                 return;
             }
 
-            AppSettings settings = settingsService.loadSettings();
-            SensorPressaoConfig sensor = isTubos ? settings.getSensor02() : settings.getSensor03();
-            sensor.setRangeBar(rangeBar);
-            sensor.setSensibilidade(sliderSensibilidade.getValue());
-
-            ChaveHidraulicaConfig cfg = isTubos ? settings.getChaveTubos() : settings.getChaveFlutuante();
+            ChaveHidraulicaConfig cfg = new ChaveHidraulicaConfig();
             cfg.setDiametroPistaoIn(diametroPistao);
             cfg.setDiametroHasteIn(diametroHaste);
             cfg.setBracoAlavancaFt(bracoFt);
             cfg.setTipoMovimento(tipoMovimento);
 
-            settingsService.saveSettings(settings);
-
-            logger.info("Chave {} salva: rangeBar={} sens={} pistao={}in haste={}in braco={}ft movimento={}",
-                    isTubos ? "tubos" : "flutuante", rangeBar, sensor.getSensibilidade(),
-                    diametroPistao, diametroHaste, bracoFt, tipoMovimento);
-            fechar();
+            var calibracao = calibracoes.para(card.dispositivoId())
+                    .comSensibilidade(sliderSensibilidade.getValue()).comChave(cfg);
+            btnSalvar.setDisable(true);
+            lblStatus.setText("Salvando...");
+            ocultarValidacao();
+            Task<CardsDaUnidade> tarefa = new Task<>() {
+                @Override protected CardsDaUnidade call() {
+                    return gravacao.salvar(documento, card, rangeBar, calibracao);
+                }
+            };
+            tarefa.setOnSucceeded(e -> {
+                logger.info("Calibracao de torque salva para o card {}", card.dispositivoId());
+                fechar();
+            });
+            tarefa.setOnFailed(e -> {
+                btnSalvar.setDisable(false);
+                lblStatus.setText("");
+                mostrarValidacao(tarefa.getException().getMessage());
+            });
+            Thread worker = new Thread(tarefa, "calibracao-torque");
+            worker.setDaemon(true);
+            worker.start();
         } catch (NumberFormatException e) {
             mostrarValidacao("Preencha os campos numéricos usando valores válidos.");
         }

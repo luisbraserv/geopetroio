@@ -99,6 +99,9 @@
                    wrapText="true"
                    style="-fx-font-size: 12; -fx-text-fill: #b42318; -fx-font-weight: bold; -fx-background-color: #fff5f5; -fx-padding: 8; -fx-background-radius: 6;" />
 
+            <Label fx:id="lblStatus" wrapText="true"
+                   style="-fx-font-size: 12; -fx-text-fill: #154a7a;" />
+
             <!-- Botões -->
             <HBox spacing="12.0">
                <Button fx:id="btnSalvar" onAction="#onSalvar" text="Salvar"

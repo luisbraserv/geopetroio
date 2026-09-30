@@ -3,24 +3,29 @@ package com.example.demo.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.example.demo.models.CardsDaUnidade.Tipo;
-import com.example.demo.models.ConfiguracaoSondaRemota;
-import com.example.demo.models.ConfiguracaoSondaRemota.Limite;
+import com.example.demo.services.AlarmesDaEstacao.AlarmeLocal;
 import com.example.demo.services.AvaliadorLocalDeAlarme.Severidade;
 import com.example.demo.services.LeituraDeCards.Grandeza;
 
 /**
- * O alarme da estacao ligando leitura e limite — passo 3 de {@code specs/features/alarmes.md}.
+ * O alarme da estacao ligando leitura e faixa —
+ * {@code specs/features/configuracao-da-estacao.md §3}.
  *
  * <p>⚠️ <b>Nada aqui grava ou publica.</b> O historico de eventos tem um produtor so, o Backend; a
  * estacao sinaliza para quem esta ao lado do equipamento, inclusive sem rede.
+ *
+ * <p>⚠️ <b>A faixa vem desta estacao</b>, e nao do documento do servidor. Ate 2026-09-09 vinha, e
+ * uma unidade que nunca recebeu aquele documento nao alarmava nada.
  */
 class AlarmesLocaisTest {
 
@@ -36,13 +41,18 @@ class AlarmesLocaisTest {
 		}
 	}
 
+	@TempDir
+	Path dir;
+
 	private SinalFalso sinal;
+	private AlarmesDaEstacao estacao;
 	private AlarmesLocais alarmes;
 
 	@BeforeEach
 	void setup() {
 		sinal = new SinalFalso();
-		alarmes = new AlarmesLocais(sinal);
+		estacao = new AlarmesDaEstacao(dir.resolve("alarmes-locais.json"));
+		alarmes = new AlarmesLocais(sinal, estacao);
 	}
 
 	private static Grandeza grandeza(String dispositivoId, String serie, Double valor) {
@@ -50,52 +60,78 @@ class AlarmesLocaisTest {
 				valor, "psi", 0, valor == null ? "sem calibracao" : null);
 	}
 
-	private static ConfiguracaoSondaRemota documento(Limite... limites) {
-		return new ConfiguracaoSondaRemota(1, 7, 1, List.of(limites), "ana", "2026-09-09T11:00:00Z");
+	/** Pressao: apita acima de 120. O tempo minimo e fixo — 3 s para abrir, 5 s para fechar. */
+	private void configurarPressao(boolean ativo) {
+		estacao.gravar(new AlarmeLocal("PRESSAO_01", null, null, 120.0, ativo));
 	}
 
-	/** Sem tempo minimo: cada teste examina o encaixe, nao a contagem — essa e do avaliador. */
-	private static Limite pressao(boolean ativo) {
-		return new Limite("PRESSAO_01", null, null, 100.0, null, 120.0, 0, 0, ativo);
-	}
-
-	private void ciclo(ConfiguracaoSondaRemota limites, int segundo, Grandeza... grandezas) {
-		alarmes.avaliar(List.of(grandezas), limites, T0.plusSeconds(segundo));
+	private void ciclo(int segundo, Grandeza... grandezas) {
+		alarmes.avaliar(List.of(grandezas), T0.plusSeconds(segundo));
 	}
 
 	@Test
-	@DisplayName("a leitura acende o alarme da grandeza correspondente")
+	@DisplayName("a leitura acende o alarme depois do tempo minimo, e apaga depois dele tambem")
 	void acendeEApagaConformeALeitura() {
-		var doc = documento(pressao(true));
+		configurarPressao(true);
 
-		ciclo(doc, 0, grandeza("PRESSAO_01", null, 130.0));
+		ciclo(0, grandeza("PRESSAO_01", null, 130.0));
+		assertNull(alarmes.severidadeDe(grandeza("PRESSAO_01", null, 130.0)),
+				"1 s fora da faixa nao acende: o minimo e 3 s");
+
+		ciclo(3, grandeza("PRESSAO_01", null, 130.0));
 		assertEquals(Severidade.CRITICO, alarmes.severidadeDe(grandeza("PRESSAO_01", null, 130.0)));
 		assertEquals(1, alarmes.quantidade());
 
-		ciclo(doc, 1, grandeza("PRESSAO_01", null, 90.0));
+		ciclo(4, grandeza("PRESSAO_01", null, 90.0));
+		assertEquals(Severidade.CRITICO, alarmes.severidadeDe(grandeza("PRESSAO_01", null, 90.0)),
+				"voltou a faixa agora: fechar espera 5 s");
+
+		ciclo(9, grandeza("PRESSAO_01", null, 90.0));
 		assertNull(alarmes.severidadeDe(grandeza("PRESSAO_01", null, 90.0)));
 		assertEquals(0, alarmes.quantidade());
 	}
 
 	@Test
-	void grandezaSemLimiteNaoAlarma() {
-		ciclo(documento(pressao(true)), 0, grandeza("TEMPERATURA_01", null, 9999.0));
+	void grandezaSemAlarmeConfiguradoNaoAlarma() {
+		configurarPressao(true);
+		ciclo(0, grandeza("TEMPERATURA_01", null, 9999.0));
+		ciclo(5, grandeza("TEMPERATURA_01", null, 9999.0));
 		assertNull(alarmes.severidadeDe(grandeza("TEMPERATURA_01", null, 9999.0)));
 	}
 
-	/** Sonda sem limite configurado nao alarma, e isso e estado normal — nao pendencia. */
+	/** Estacao sem alarme configurado nao alarma, e isso e estado normal — nao pendencia. */
 	@Test
-	void semDocumentoNadaAlarma() {
-		alarmes.avaliar(List.of(grandeza("PRESSAO_01", null, 500.0)), null, T0);
+	void semConfiguracaoNenhumaNadaAlarma() {
+		ciclo(0, grandeza("PRESSAO_01", null, 500.0));
+		ciclo(5, grandeza("PRESSAO_01", null, 500.0));
 		assertNull(alarmes.severidadeDe(grandeza("PRESSAO_01", null, 500.0)));
 		assertEquals(0, sinal.vezes);
 	}
 
-	/** Limite desativado hiberna com o card (RN-091): nao avalia. */
+	/** Desligar no sininho para de avaliar — e a faixa fica guardada para quando voltar. */
 	@Test
-	void limiteDesativadoNaoAlarma() {
-		ciclo(documento(pressao(false)), 0, grandeza("PRESSAO_01", null, 500.0));
+	void alarmeDesligadoNaoAlarma() {
+		configurarPressao(false);
+		ciclo(0, grandeza("PRESSAO_01", null, 500.0));
+		ciclo(5, grandeza("PRESSAO_01", null, 500.0));
 		assertNull(alarmes.severidadeDe(grandeza("PRESSAO_01", null, 500.0)));
+	}
+
+	/**
+	 * ⚠️ Ativo sem faixa nenhuma nao vigia coisa alguma.
+	 *
+	 * <p>E o engano mais facil de cometer na tela: marcar o sininho e sair sem digitar numero.
+	 * Acender por isso prometeria uma vigilancia que nao existe.
+	 */
+	@Test
+	void ativoSemFaixaNaoVigia() {
+		estacao.gravar(new AlarmeLocal("PRESSAO_01", null, null, null, true));
+
+		ciclo(0, grandeza("PRESSAO_01", null, 9999.0));
+		ciclo(5, grandeza("PRESSAO_01", null, 9999.0));
+
+		assertNull(alarmes.severidadeDe(grandeza("PRESSAO_01", null, 9999.0)));
+		assertEquals(0, alarmes.quantidade());
 	}
 
 	/**
@@ -104,29 +140,53 @@ class AlarmesLocaisTest {
 	 */
 	@Test
 	void grandezaSemValorNaoApagaOAlarmeAceso() {
-		var doc = documento(pressao(true));
-		ciclo(doc, 0, grandeza("PRESSAO_01", null, 130.0));
+		configurarPressao(true);
+		ciclo(0, grandeza("PRESSAO_01", null, 130.0));
+		ciclo(3, grandeza("PRESSAO_01", null, 130.0));
 		assertEquals(Severidade.CRITICO, alarmes.severidadeDe(grandeza("PRESSAO_01", null, 130.0)));
 
-		ciclo(doc, 1, grandeza("PRESSAO_01", null, null));
+		ciclo(4, grandeza("PRESSAO_01", null, null));
 		assertEquals(Severidade.CRITICO, alarmes.severidadeDe(grandeza("PRESSAO_01", null, null)),
 				"o alarme segue aceso: nao houve medicao que o desminta");
 	}
 
 	/**
-	 * RN-098: as tres series de um contador compartilham o dispositivoId. Sem a serie na chave, o
-	 * limite da vazao acenderia o card do volume acumulado.
+	 * ⚠️ Card desativado hiberna o alarme junto (RN-091), e o destaque precisa apagar.
+	 *
+	 * <p>Card desativado sai do ciclo <b>por completo</b> — nao volta nem sem valor. Sem esta regra
+	 * o destaque dele ficaria aceso para sempre, porque nunca mais haveria leitura que o desmentisse.
+	 */
+	@Test
+	@DisplayName("card desativado apaga o destaque, em vez de deixa-lo aceso para sempre")
+	void cardDesativadoApagaODestaque() {
+		configurarPressao(true);
+		ciclo(0, grandeza("PRESSAO_01", null, 130.0));
+		ciclo(3, grandeza("PRESSAO_01", null, 130.0));
+		assertEquals(Severidade.CRITICO, alarmes.severidadeDe(grandeza("PRESSAO_01", null, 130.0)));
+
+		// O card saiu do documento: o ciclo seguinte nao o traz mais, nem sem valor.
+		ciclo(4);
+
+		assertNull(alarmes.severidadeDe(grandeza("PRESSAO_01", null, 130.0)));
+		assertEquals(0, alarmes.quantidade());
+	}
+
+	/**
+	 * RN-098: as tres series de um contador compartilham o dispositivoId. Sem a serie na chave, a
+	 * faixa da vazao acenderia o card do volume acumulado.
 	 */
 	@Test
 	void aSerieDecideQualCardAcende() {
-		var vazao = new Limite("CONTADOR_STROKE_01", "vazao", null, 8.0, null, null, 0, 0, true);
-		var doc = documento(vazao);
+		estacao.gravar(new AlarmeLocal("CONTADOR_STROKE_01", "vazao", null, 8.0, true));
 
-		ciclo(doc, 0,
+		ciclo(0,
+				grandeza("CONTADOR_STROKE_01", "vazao", 9.0),
+				grandeza("CONTADOR_STROKE_01", "volumeAcumulado", 900.0));
+		ciclo(3,
 				grandeza("CONTADOR_STROKE_01", "vazao", 9.0),
 				grandeza("CONTADOR_STROKE_01", "volumeAcumulado", 900.0));
 
-		assertEquals(Severidade.ATENCAO, alarmes.severidadeDe(grandeza("CONTADOR_STROKE_01", "vazao", 9.0)));
+		assertEquals(Severidade.CRITICO, alarmes.severidadeDe(grandeza("CONTADOR_STROKE_01", "vazao", 9.0)));
 		assertNull(alarmes.severidadeDe(grandeza("CONTADOR_STROKE_01", "volumeAcumulado", 900.0)));
 	}
 
@@ -135,30 +195,31 @@ class AlarmesLocaisTest {
 	 * operador desligar o som da estacao, e o proximo alarme nao avisaria ninguem.
 	 */
 	@Test
-	void oSomTocaAoAgravarENaoACadaCiclo() {
-		var doc = documento(pressao(true));
+	void oSomTocaAoAcenderENaoACadaCiclo() {
+		configurarPressao(true);
 
-		ciclo(doc, 0, grandeza("PRESSAO_01", null, 105.0));
-		assertEquals(1, sinal.vezes, "abriu em atencao");
+		ciclo(0, grandeza("PRESSAO_01", null, 130.0));
+		assertEquals(0, sinal.vezes, "ainda nao acendeu: tempo minimo");
 
-		ciclo(doc, 1, grandeza("PRESSAO_01", null, 105.0));
-		ciclo(doc, 2, grandeza("PRESSAO_01", null, 105.0));
-		assertEquals(1, sinal.vezes, "seguiu em atencao: nao repete");
+		ciclo(3, grandeza("PRESSAO_01", null, 130.0));
+		assertEquals(1, sinal.vezes, "acendeu");
 
-		ciclo(doc, 3, grandeza("PRESSAO_01", null, 130.0));
-		assertEquals(2, sinal.vezes, "escalou para critico");
+		ciclo(4, grandeza("PRESSAO_01", null, 130.0));
+		ciclo(5, grandeza("PRESSAO_01", null, 200.0));
+		assertEquals(1, sinal.vezes, "segue aceso: nao repete");
 
-		ciclo(doc, 4, grandeza("PRESSAO_01", null, 105.0));
-		ciclo(doc, 5, grandeza("PRESSAO_01", null, 90.0));
-		assertEquals(2, sinal.vezes, "reduzir e fechar nao tocam");
+		ciclo(6, grandeza("PRESSAO_01", null, 90.0));
+		ciclo(11, grandeza("PRESSAO_01", null, 90.0));
+		assertEquals(1, sinal.vezes, "fechar nao toca");
 	}
 
 	@Test
 	void aPiorSeveridadeDaUnidadeSaiParaOAvisoDoTopo() {
-		var peso = new Limite("PESO_01", null, null, 100.0, null, 120.0, 0, 0, true);
-		var doc = documento(pressao(true), peso);
+		configurarPressao(true);
+		estacao.gravar(new AlarmeLocal("PESO_01", null, null, 120.0, true));
 
-		ciclo(doc, 0, grandeza("PRESSAO_01", null, 105.0), grandeza("PESO_01", null, 130.0));
+		ciclo(0, grandeza("PRESSAO_01", null, 130.0), grandeza("PESO_01", null, 130.0));
+		ciclo(3, grandeza("PRESSAO_01", null, 130.0), grandeza("PESO_01", null, 130.0));
 
 		assertEquals(Severidade.CRITICO, alarmes.pior());
 		assertEquals(2, alarmes.quantidade());

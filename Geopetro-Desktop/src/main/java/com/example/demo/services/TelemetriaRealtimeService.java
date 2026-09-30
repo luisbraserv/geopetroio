@@ -74,16 +74,28 @@ public class TelemetriaRealtimeService {
 
 	private ExecutorService worker;
 	private StompRealtimeClient client;
-    private final ConfiguracaoRemotaState configuracaoRemota = new ConfiguracaoRemotaState();
 
     /**
      * O documento de cards da unidade — o que o ciclo de leitura consulta a cada volta.
      *
-     * <p>Chega pelo mesmo canal dos limites de alarme, com guardas proprias de geracao, unidade e
-     * revisao. Sem ele o Desktop nao sabe o que ler (RN-088), entao o cache em disco por tras dele
-     * e o que mantem uma sonda medindo depois de reiniciar sem rede.
+     * <p>É o <b>único</b> documento que este canal traz. Guardas próprias de geração, unidade e
+     * revisão; sem ele o Desktop não sabe o que ler (RN-088), então o cache em disco por trás dele é
+     * o que mantém uma sonda medindo depois de reiniciar sem rede.
+     *
+     * <p>⚠️ <b>Os limites de alarme não chegam mais por aqui.</b> O alarme da estação é configurado
+     * na estação ({@code specs/features/configuracao-da-estacao.md §3.3}) — buscar no servidor uma
+     * faixa para tocar um beep nesta máquina era uma volta pela rede para responder o que já estava
+     * respondido aqui.
      */
-    private final CardsState cards = new CardsState();
+    private final CardsState cards;
+
+    public TelemetriaRealtimeService() {
+        this(new CardsState());
+    }
+
+    TelemetriaRealtimeService(CardsState cards) {
+        this.cards = cards;
+    }
     /** Mesmo login da sessao de configuracao — uma implementacao so, para nao divergirem. */
     private final BackendLogin backendLogin = new BackendLogin(httpClient);
     private Alvo alvoConectado;
@@ -91,12 +103,6 @@ public class TelemetriaRealtimeService {
     private record Alvo(String backend, Long unidade, String usuario, String senha) {
         @Override public String toString() { return "Alvo[redacted]"; }
     }
-    public java.util.Optional<com.example.demo.models.ConfiguracaoSondaRemota> getConfiguracaoSonda() {
-        AppSettings settings = configuracao.get();
-        if (settings == null) return java.util.Optional.empty();
-        return configuracaoRemota.atual(chaveCache(alvo(settings)), settings.getUnidadeSondaId());
-    }
-
     /**
      * O documento de cards da unidade configurada nesta estacao, se ja tiver chegado ou estiver em
      * cache.
@@ -120,14 +126,24 @@ public class TelemetriaRealtimeService {
 	 *
 	 * <p>Nao bloqueia e nao lanca: e apenas uma troca de referencia.
 	 */
-    public void atualizarConfiguracao(AppSettings settings) {
+    public synchronized void atualizarConfiguracao(AppSettings settings) {
         Alvo novo = alvo(settings);
-        if (!java.util.Objects.equals(novo, alvo(configuracao.get()))) estadoAtual.set(null);
+        if (!java.util.Objects.equals(novo, alvo(configuracao.get()))) {
+            estadoAtual.set(null);
+            // O cache deve estar disponível ANTES de autenticar: a estação precisa
+            // mostrar os cards e ler o CLP mesmo quando o backend está offline.
+            String chave = chaveCache(novo);
+            Long unidade = novo == null ? null : novo.unidade();
+            cards.conectar(chave, unidade);
+        }
         if (novo == null) { configuracao.set(null); return; }
         // Snapshot das credenciais evita mutacao de AppSettings durante login/reconexao.
         AppSettings snapshot = new AppSettings();
         snapshot.setBackendUrl(novo.backend()); snapshot.setUnidadeSondaId(novo.unidade());
         snapshot.setBackendUsuario(novo.usuario()); snapshot.setBackendSenha(novo.senha());
+        // O interruptor viaja no snapshot porque quem o consulta e o worker, e ele so enxerga
+        // daqui — §6.
+        snapshot.setTempoRealAtivo(settings.isTempoRealAtivo());
         configuracao.set(snapshot);
         if (ativo.compareAndSet(false, true)) iniciarWorker();
     }
@@ -161,9 +177,30 @@ public class TelemetriaRealtimeService {
                 Alvo desejado = alvo(configuracao.get());
                 if (!java.util.Objects.equals(desejado, alvoConectado)) {
                     fecharClienteSilenciosamente(); conectado.set(false);
-                    configuracaoRemota.conectar(chaveCache(desejado), desejado == null ? null : desejado.unidade());
+                    cards.conectar(chaveCache(desejado), desejado == null ? null : desejado.unidade());
                 }
                 if (desejado == null) { dormir(INTERVALO_ENVIO); continue; }
+
+                // ⚠️ Desligado de proposito — §6. O teste vem DEPOIS do cards.conectar acima, e
+                // isso e deliberado: o canal de cards continua apontado para a unidade certa, entao
+                // o dashboard segue desenhando com o snapshot em disco e o alarme local segue
+                // vigiando. Desligar o tempo real cala a PUBLICACAO, nao a estacao.
+                //
+                // ⚠️ Nao dobrar este interruptor dentro de temConfiguracaoTempoReal(): alvo()
+                // passaria a devolver null, o cards.conectar(null, null) apagaria o snapshot em
+                // memoria, e a tela perderia os cards junto com a telemetria.
+                AppSettings atual = configuracao.get();
+                if (atual != null && !atual.isTempoRealAtivo()) {
+                    if (conectado.get()) {
+                        fecharClienteSilenciosamente();
+                        conectado.set(false);
+                        alvoConectado = null;
+                        logger.info("Tempo real desligado nas Configuracoes: canal encerrado.");
+                    }
+                    dormir(INTERVALO_ENVIO);
+                    continue;
+                }
+
                 if (!conectado.get() || client == null || !client.isConectado()) {
                     fecharClienteSilenciosamente(); conectar(); backoff = BACKOFF_INICIAL;
                 }
@@ -199,13 +236,16 @@ public class TelemetriaRealtimeService {
 		if (settings == null || !settings.temConfiguracaoTempoReal()) {
 			throw new IllegalStateException("configuracao de tempo real incompleta");
 		}
+		// Segunda tranca: o loop ja filtra, mas quem chamar conectar() por outro caminho nao pode
+		// abrir o canal que as Configuracoes mandaram fechar.
+		if (!settings.isTempoRealAtivo()) {
+			throw new IllegalStateException("tempo real desligado nas Configuracoes");
+		}
 
 		String token = autenticar(settings);
 		Alvo destino = alvo(settings);
-        long generation = configuracaoRemota.conectar(chaveCache(destino), destino.unidade());
         long generationCards = cards.conectar(chaveCache(destino), destino.unidade());
         client = new StompRealtimeClient(urlWebSocket(destino.backend()), token, destino.unidade(),
-            snapshot -> configuracaoRemota.aceitar(generation, snapshot),
             documento -> cards.aceitar(generationCards, documento));
 		client.conectar();
         alvoConectado = destino; ultimaSolicitacao = System.nanoTime();

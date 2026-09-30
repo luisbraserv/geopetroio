@@ -1,7 +1,6 @@
 package com.example.demo.services;
 
 import com.example.demo.models.AppSettings;
-import com.example.demo.models.CardVisibilityConfig;
 import com.example.demo.models.ChaveHidraulicaConfig;
 import com.example.demo.models.SensorPressaoConfig;
 import com.example.demo.models.TipoMovimento;
@@ -23,7 +22,6 @@ public class SettingsService {
 
     private static final Logger logger = LoggerFactory.getLogger(SettingsService.class);
 
-    private static final Pattern PLC_IP_PATTERN        = Pattern.compile("\"plcIp\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern SONDA_ID_PATTERN        = Pattern.compile("\"sondaId\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern TELEMETRIA_URL_PATTERN  = Pattern.compile("\"telemetriaUrl\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern TELEMETRIA_USER_PATTERN = Pattern.compile("\"telemetriaUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
@@ -34,6 +32,10 @@ public class SettingsService {
     private static final Pattern BACKEND_USER_PATTERN  = Pattern.compile("\"backendUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_PASS_PATTERN  = Pattern.compile("\"backendSenha\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern UNIDADE_SONDA_ID_PATTERN = Pattern.compile("\"unidadeSondaId\"\\s*:\\s*(\\d+)");
+    // Interruptores de telemetria — §6. Ausentes num arquivo antigo significam LIGADO: ver
+    // parseBooleanOuLigado.
+    private static final Pattern MQTT_ATIVA_PATTERN    = Pattern.compile("\"telemetriaMqttAtiva\"\\s*:\\s*(true|false)");
+    private static final Pattern TEMPO_REAL_ATIVO_PATTERN = Pattern.compile("\"tempoRealAtivo\"\\s*:\\s*(true|false)");
 
     private final Path settingsPath;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -50,10 +52,10 @@ public class SettingsService {
             String content = Files.readString(settingsPath, StandardCharsets.UTF_8);
             AppSettings settings = new AppSettings();
 
-            Matcher m = PLC_IP_PATTERN.matcher(content);
-            if (m.find()) settings.setPlcIp(unescapeJson(m.group(1)));
-
-            m = SONDA_ID_PATTERN.matcher(content);
+            // ⚠️ plcIp continua no arquivo das estacoes em campo e NAO e lido de proposito: adotar
+            // aquele valor apontaria a estacao para outro CLP no primeiro boot depois da
+            // atualizacao, porque quem conecta sempre foi o documento da unidade. §4.
+            Matcher m = SONDA_ID_PATTERN.matcher(content);
             if (m.find()) settings.setSondaId(unescapeJson(m.group(1)));
 
             m = TELEMETRIA_URL_PATTERN.matcher(content);
@@ -80,6 +82,12 @@ public class SettingsService {
             m = PUMP_CONSTANT_PATTERN.matcher(content);
             if (m.find()) settings.setPumpConstant(Double.parseDouble(m.group(1)));
 
+            // ⚠️ Chave ausente = LIGADO. Um app-settings.json gravado antes de §6 nao tem estas
+            // duas linhas, e tratar a ausencia como "desligado" emudeceria toda a frota na primeira
+            // atualizacao — por uma escolha que ninguem fez.
+            settings.setTelemetriaMqttAtiva(ligadoSalvoSeDitoFalso(content, MQTT_ATIVA_PATTERN));
+            settings.setTempoRealAtivo(ligadoSalvoSeDitoFalso(content, TEMPO_REAL_ATIVO_PATTERN));
+
             settings.setSensor01(parseSensor(content, "sensor01"));
             settings.setSensor02(parseSensor(content, "sensor02"));
             settings.setSensor03(parseSensor(content, "sensor03"));
@@ -87,13 +95,18 @@ public class SettingsService {
             settings.setChaveTubos(parseChave(content, "chaveTubos"));
             settings.setChaveFlutuante(parseChave(content, "chaveFlutuante"));
             settings.setPesoColuna(parsePesoColuna(content));
-            settings.setCardVisibility(parseCardVisibility(content));
 
             return settings;
         } catch (IOException e) {
             logger.error("Erro ao carregar configuracoes em {}", settingsPath, e);
             return new AppSettings();
         }
+    }
+
+    /** Só um {@code false} explícito desliga. Chave ausente ou ilegível fica ligada. */
+    private boolean ligadoSalvoSeDitoFalso(String content, Pattern padrao) {
+        Matcher m = padrao.matcher(content);
+        return !m.find() || Boolean.parseBoolean(m.group(1));
     }
 
     private SensorPressaoConfig parseSensor(String content, String key) {
@@ -146,20 +159,6 @@ public class SettingsService {
         return m.find() ? TipoMovimento.valueOf(m.group(1)) : null;
     }
 
-    private CardVisibilityConfig parseCardVisibility(String content) {
-        CardVisibilityConfig cfg = new CardVisibilityConfig();
-        Pattern blockPattern = Pattern.compile("\"cardVisibility\"\\s*:\\s*\\{([^}]*)\\}");
-        Matcher block = blockPattern.matcher(content);
-        if (!block.find()) return cfg;
-        String bc = block.group(1);
-        cfg.setPesoColuna(parseBool(bc,  "pesoColuna",  cfg.isPesoColuna()));
-        cfg.setChHidTubos(parseBool(bc,  "chHidTubos",  cfg.isChHidTubos()));
-        cfg.setChFlutuante(parseBool(bc, "chFlutuante", cfg.isChFlutuante()));
-        cfg.setBombaLama(parseBool(bc,   "bombaLama",   cfg.isBombaLama()));
-        cfg.setEscp(parseBool(bc,        "escp",        cfg.isEscp()));
-        cfg.setVazao(parseBool(bc,       "vazao",       cfg.isVazao()));
-        return cfg;
-    }
 
     private double parseDouble(String content, String field, double defaultValue) {
         Matcher m = Pattern.compile("\"" + field + "\"\\s*:\\s*([-+]?\\d+(?:\\.\\d+)?)").matcher(content);
@@ -175,13 +174,11 @@ public class SettingsService {
     public void saveSettings(AppSettings settings) {
         try {
             Files.createDirectories(settingsPath.getParent());
-            String plcIp         = settings.getPlcIp()          == null ? "" : settings.getPlcIp();
             String sondaId       = settings.getSondaId()        == null ? "" : settings.getSondaId();
             String telemetriaUrl = settings.getTelemetriaUrl()  == null ? "tcp://localhost:1883" : settings.getTelemetriaUrl();
             String telemetriaUsuario = settings.getTelemetriaUsuario() == null ? "" : settings.getTelemetriaUsuario();
             String telemetriaSenha   = settings.getTelemetriaSenha()   == null ? "" : settings.getTelemetriaSenha();
             String content = "{\n"
-                    + "  \"plcIp\" : \"" + escapeJson(plcIp) + "\",\n"
                     + "  \"sondaId\" : \"" + escapeJson(sondaId) + "\",\n"
                     + "  \"telemetriaUrl\" : \"" + escapeJson(telemetriaUrl) + "\",\n"
                     + "  \"telemetriaUsuario\" : \"" + escapeJson(telemetriaUsuario) + "\",\n"
@@ -198,7 +195,8 @@ public class SettingsService {
                     + "  \"chaveTubos\" : " + chaveJson(settings.getChaveTubos()) + ",\n"
                     + "  \"chaveFlutuante\" : " + chaveJson(settings.getChaveFlutuante()) + ",\n"
                     + "  \"pesoColuna\" : " + pesoColunaJson(settings.getPesoColuna()) + ",\n"
-                    + "  \"cardVisibility\" : " + cardVisibilityJson(settings.getCardVisibility()) + "\n"
+                    + "  \"telemetriaMqttAtiva\" : " + settings.isTelemetriaMqttAtiva() + ",\n"
+                    + "  \"tempoRealAtivo\" : " + settings.isTempoRealAtivo() + "\n"
                     + "}\n";
             Files.writeString(settingsPath, content, StandardCharsets.UTF_8);
             if (events != null) events.publishEvent(new Alteradas());
@@ -248,17 +246,6 @@ public class SettingsService {
         saveSettings(settings);
     }
 
-    private String cardVisibilityJson(CardVisibilityConfig c) {
-        if (c == null) c = new CardVisibilityConfig();
-        return "{ \"pesoColuna\" : " + c.isPesoColuna()
-                + ", \"chHidTubos\" : " + c.isChHidTubos()
-                + ", \"chFlutuante\" : " + c.isChFlutuante()
-                + ", \"bombaLama\" : " + c.isBombaLama()
-                + ", \"escp\" : " + c.isEscp()
-                + ", \"vazao\" : " + c.isVazao()
-                + " }";
-    }
-
     private String escapeJson(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
@@ -269,13 +256,9 @@ public class SettingsService {
 
     public double getPumpConstant() { return loadSettings().getPumpConstant(); }
 
-    public CardVisibilityConfig getCardVisibility() { return loadSettings().getCardVisibility(); }
-
-    public void updateCardVisibility(CardVisibilityConfig cfg) {
-        AppSettings settings = loadSettings();
-        settings.setCardVisibility(cfg);
-        saveSettings(settings);
-    }
+    // ⚠️ getCardVisibility/updateCardVisibility sairam em 2026-09-10 junto com o cartao que era o
+    // unico a chama-los. O bloco "cardVisibility" continua nos app-settings.json de campo, sem
+    // leitor — nao se apaga arquivo de configuracao de campo por conveniencia de codigo.
 
     public SensorPressaoConfig getSensorConfig(int sensorIndex) {
         AppSettings s = loadSettings();
@@ -314,9 +297,16 @@ public class SettingsService {
         saveSettings(settings);
     }
 
-    public void updatePlcIp(String plcIp) {
+    /**
+     * Os dois interruptores de telemetria — {@code configuracao-da-estacao.md §6}.
+     *
+     * <p>Gravados juntos porque a tela os oferece juntos, e porque cada {@code saveSettings}
+     * reescreve o arquivo inteiro: separá-los seria uma segunda escrita sem ganho.
+     */
+    public void updateTelemetria(boolean mqttAtiva, boolean tempoRealAtivo) {
         AppSettings settings = loadSettings();
-        settings.setPlcIp(plcIp);
+        settings.setTelemetriaMqttAtiva(mqttAtiva);
+        settings.setTempoRealAtivo(tempoRealAtivo);
         saveSettings(settings);
     }
 
@@ -360,6 +350,20 @@ public class SettingsService {
         settings.setBackendUrl(backendUrl == null ? "" : backendUrl.trim());
         settings.setBackendUsuario(usuario == null ? "" : usuario.trim());
         settings.setBackendSenha(senha == null ? "" : senha);
+        saveSettings(settings);
+    }
+
+    /**
+     * Grava só o endereço do Backend.
+     *
+     * <p>⚠️ Existe para o login de configuração, que aceita o servidor digitado na hora quando a
+     * estação ainda não tem um ({@link SessaoConfiguracao}). Diferente de
+     * {@link #updateTempoReal}, não toca em unidade nem em credenciais: nesse momento a estação
+     * pode não ter nenhuma das duas, e zerá-las seria pior que não gravar nada.
+     */
+    public void updateBackendUrl(String backendUrl) {
+        AppSettings settings = loadSettings();
+        settings.setBackendUrl(backendUrl == null ? "" : backendUrl.trim());
         saveSettings(settings);
     }
 

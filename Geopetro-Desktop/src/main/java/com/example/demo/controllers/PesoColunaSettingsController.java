@@ -1,29 +1,41 @@
 package com.example.demo.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
+
+import com.example.demo.models.CardsDaUnidade;
+import com.example.demo.models.CardsDaUnidade.Card;
 import com.example.demo.models.PesoColunaCalculo;
 import com.example.demo.models.PesoColunaConfig;
+import com.example.demo.models.SensorPressaoConfig;
+import com.example.demo.services.CalibracaoCardService;
+import com.example.demo.services.CalibracaoDeCards;
+import com.example.demo.services.ConversaoPressao;
 import com.example.demo.services.PesoColunaCalculator;
-import com.example.demo.services.SettingsService;
-import com.example.demo.services.SondaService;
+
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 
+/** Calibracao do peso ligada ao identificador do card, nunca a um slot fixo. */
 @Controller
+@Scope("prototype")
 public class PesoColunaSettingsController {
 
     private static final Logger logger = LoggerFactory.getLogger(PesoColunaSettingsController.class);
 
-    @Autowired private SettingsService settingsService;
-    @Autowired private SondaService sondaService;
+    @Autowired private CalibracaoDeCards calibracoes;
+    @Autowired private CalibracaoCardService gravacao;
 
+    @FXML private TextField txtRangeBar;
     @FXML private TextField txtPressaoZero;
     @FXML private TextField txtAreaEfetiva;
     @FXML private TextField txtBracoSensor;
@@ -31,18 +43,44 @@ public class PesoColunaSettingsController {
     @FXML private TextField txtDiametroCabo;
     @FXML private TextField txtNumeroLinhas;
     @FXML private TextField txtPesoCatarina;
-    @FXML private Slider    sliderFatorCalibracao;
-    @FXML private Label     lblFatorCalibracao;
-    @FXML private Label     lblDiagnostico;
+    @FXML private Slider sliderSensibilidade;
+    @FXML private Slider sliderFatorCalibracao;
+    @FXML private Label lblTitulo;
+    @FXML private Label lblSensibilidade;
+    @FXML private Label lblFatorCalibracao;
+    @FXML private Label lblDiagnostico;
+    @FXML private Label lblStatus;
+    @FXML private Button btnSalvar;
+
+    private CardsDaUnidade documento;
+    private Card card;
+    private double bruto = Double.NaN;
 
     @FXML
     public void initialize() {
+        sliderSensibilidade.valueProperty().addListener((obs, anterior, novo) -> {
+            lblSensibilidade.setText(String.format("%.3f", novo.doubleValue()));
+            atualizarDiagnostico();
+        });
         sliderFatorCalibracao.valueProperty().addListener((obs, anterior, novo) -> {
             lblFatorCalibracao.setText(String.format("%.3f", novo.doubleValue()));
             atualizarDiagnostico();
         });
+        for (TextField campo : new TextField[] { txtRangeBar, txtPressaoZero, txtAreaEfetiva,
+                txtBracoSensor, txtDiametroTambor, txtDiametroCabo, txtNumeroLinhas, txtPesoCatarina }) {
+            campo.textProperty().addListener((obs, anterior, novo) -> atualizarDiagnostico());
+        }
+    }
 
-        PesoColunaConfig cfg = settingsService.getPesoColuna();
+    public void configurar(CardsDaUnidade documento, Card card, double bruto) {
+        this.documento = documento;
+        this.card = card;
+        this.bruto = bruto;
+        lblTitulo.setText("Peso da coluna — " + card.nome() + " (" + card.dispositivoId() + ")");
+        var calibracao = calibracoes.para(card.dispositivoId());
+        PesoColunaConfig cfg = calibracao.peso() == null ? new PesoColunaConfig() : calibracao.peso();
+        Double range = card.parametros() == null ? null : card.parametros().rangeSensorBar();
+        txtRangeBar.setText(range == null ? "" : formatar(range));
         txtPressaoZero.setText(formatar(cfg.getPressaoZeroPsi()));
         txtAreaEfetiva.setText(formatar(cfg.getAreaEfetivaSensorPol2()));
         txtBracoSensor.setText(formatar(cfg.getBracoSensorPol()));
@@ -50,43 +88,42 @@ public class PesoColunaSettingsController {
         txtDiametroCabo.setText(formatar(cfg.getDiametroCaboPol()));
         txtNumeroLinhas.setText(String.valueOf(cfg.getNumeroLinhas()));
         txtPesoCatarina.setText(formatar(cfg.getPesoCatarinaLbf()));
+        sliderSensibilidade.setValue(calibracao.sensibilidade());
         sliderFatorCalibracao.setValue(cfg.getFatorCalibracao());
-        lblFatorCalibracao.setText(String.format("%.3f", cfg.getFatorCalibracao()));
-
-        // Recalcula enquanto o usuario digita: em campo, o ajuste e feito comparando o resultado
-        // com uma carga conhecida, e esperar o "Salvar" para ver o efeito tornaria isso lento.
-        for (TextField campo : new TextField[] {
-                txtPressaoZero, txtAreaEfetiva, txtBracoSensor,
-                txtDiametroTambor, txtDiametroCabo, txtNumeroLinhas, txtPesoCatarina }) {
-            campo.textProperty().addListener((obs, anterior, novo) -> atualizarDiagnostico());
-        }
-
         atualizarDiagnostico();
     }
 
-    /**
-     * Mostra a cadeia inteira com a leitura atual do CLP.
-     *
-     * <p>Durante a calibracao o que importa nao e o numero final, e sim <em>onde</em> ele se afasta
-     * da carga conhecida: uma forca do sensor errada aponta a area, uma carga suspensa errada aponta
-     * o numero de linhas.
-     */
     private void atualizarDiagnostico() {
+        if (card == null) return;
         PesoColunaConfig cfg = lerFormulario();
         if (cfg == null) {
             lblDiagnostico.setText("Preencha os campos com números válidos.");
             return;
         }
-
-        double pressaoAtual = sondaService.getPressao01() == null ? 0.0 : sondaService.getPressao01();
-        PesoColunaCalculo c = PesoColunaCalculator.calcular(pressaoAtual, cfg);
-
-        if (!c.configurado()) {
-            lblDiagnostico.setText(
-                    "Geometria incompleta. Área, braço, raio efetivo e número de linhas precisam ser maiores que zero.");
+        if (!cfg.isConfigurado()) {
+            lblDiagnostico.setText("Geometria incompleta. Área, braço, raio efetivo e número de linhas precisam ser maiores que zero.");
             return;
         }
-
+        if (!Double.isFinite(bruto)) {
+            lblDiagnostico.setText("Sem leitura atual do CLP. A calibração pode ser salva mesmo assim.");
+            return;
+        }
+        double range;
+        try {
+            range = numero(txtRangeBar);
+        } catch (NumberFormatException e) {
+            lblDiagnostico.setText("Informe um range do sensor válido.");
+            return;
+        }
+        if (!Double.isFinite(range) || range <= 0) {
+            lblDiagnostico.setText("Informe o range do sensor em bar para calcular a leitura atual.");
+            return;
+        }
+        SensorPressaoConfig sensor = new SensorPressaoConfig();
+        sensor.setRangeBar(range);
+        sensor.setSensibilidade(sliderSensibilidade.getValue());
+        double pressaoAtual = ConversaoPressao.axParaPsi((short) Math.round(bruto), sensor);
+        PesoColunaCalculo c = PesoColunaCalculator.calcular(pressaoAtual, cfg);
         lblDiagnostico.setText(String.format(
                 "Pressão:            %,.1f psi%n"
                         + "Pressão corrigida:  %,.1f psi%n"
@@ -96,8 +133,7 @@ public class PesoColunaSettingsController {
                         + "Tração da deadline: %,.0f lbf%n"
                         + "Linhas:             %d%n"
                         + "Carga suspensa:     %,.0f lbf%n"
-                        + "Peso da Catarina:   %,.0f lbf%n"
-                        + "%n"
+                        + "Peso da Catarina:   %,.0f lbf%n%n"
                         + "Peso da coluna:     %,.0f lbf  ·  %,.0f kgf  ·  %,.2f tf",
                 c.pressaoPsi(), c.pressaoCorrigidaPsi(), c.forcaSensorLbf(), c.torqueSargentoLbPol(),
                 c.raioEfetivoPol(), c.tracaoDeadlineLbf(), cfg.getNumeroLinhas(),
@@ -105,7 +141,6 @@ public class PesoColunaSettingsController {
                 c.pesoColunaLbf(), c.pesoColunaKgf(), c.pesoColunaTf()));
     }
 
-    /** @return a configuração digitada, ou {@code null} se algum campo não for numérico. */
     private PesoColunaConfig lerFormulario() {
         try {
             PesoColunaConfig cfg = new PesoColunaConfig();
@@ -114,7 +149,8 @@ public class PesoColunaSettingsController {
             cfg.setBracoSensorPol(numero(txtBracoSensor));
             cfg.setDiametroTamborPol(numero(txtDiametroTambor));
             cfg.setDiametroCaboPol(numero(txtDiametroCabo));
-            cfg.setNumeroLinhas((int) Math.round(numero(txtNumeroLinhas)));
+            String linhas = txtNumeroLinhas.getText();
+            cfg.setNumeroLinhas(linhas == null || linhas.isBlank() ? 0 : Integer.parseInt(linhas.trim()));
             cfg.setPesoCatarinaLbf(numero(txtPesoCatarina));
             cfg.setFatorCalibracao(sliderFatorCalibracao.getValue());
             return cfg;
@@ -125,47 +161,60 @@ public class PesoColunaSettingsController {
 
     @FXML
     public void onSalvar() {
+        if (card == null || documento == null) return;
         PesoColunaConfig cfg = lerFormulario();
         if (cfg == null) {
             alerta("Valores inválidos", "Preencha todos os campos com números válidos.");
             return;
         }
-
-        if (cfg.getAreaEfetivaSensorPol2() <= 0 || cfg.getBracoSensorPol() <= 0) {
-            alerta("Geometria incompleta", "Área efetiva e braço do sensor precisam ser maiores que zero.");
+        if (!Double.isFinite(cfg.getPressaoZeroPsi()) || !Double.isFinite(cfg.getAreaEfetivaSensorPol2())
+                || !Double.isFinite(cfg.getBracoSensorPol()) || !Double.isFinite(cfg.getDiametroTamborPol())
+                || !Double.isFinite(cfg.getDiametroCaboPol()) || !Double.isFinite(cfg.getPesoCatarinaLbf())
+                || !cfg.isConfigurado()) {
+            alerta("Geometria incompleta", "Informe área, braço, diâmetro do tambor e número de linhas válidos.");
             return;
         }
-        if (cfg.raioEfetivoPol() <= 0) {
-            // Raio zero seria divisão por zero na tração da deadline.
-            alerta("Geometria incompleta", "Informe o diâmetro do tambor — o raio efetivo não pode ser zero.");
+        double rangeBar;
+        try {
+            rangeBar = numero(txtRangeBar);
+        } catch (NumberFormatException e) {
+            alerta("Range inválido", "Informe o range do sensor em bar.");
             return;
         }
-        if (cfg.getNumeroLinhas() <= 0) {
-            alerta("Geometria incompleta", "Informe quantas linhas sustentam a Catarina (ex.: 8).");
+        if (!Double.isFinite(rangeBar) || rangeBar <= 0) {
+            alerta("Range inválido", "O range do sensor deve ser maior que zero.");
             return;
         }
-
-        settingsService.updatePesoColuna(cfg);
-        logger.info("PesoColuna salvo: zero={} area={} braco={} tambor={} cabo={} linhas={} catarina={} fator={}",
-                cfg.getPressaoZeroPsi(), cfg.getAreaEfetivaSensorPol2(), cfg.getBracoSensorPol(),
-                cfg.getDiametroTamborPol(), cfg.getDiametroCaboPol(), cfg.getNumeroLinhas(),
-                cfg.getPesoCatarinaLbf(), cfg.getFatorCalibracao());
-        fechar();
+        var calibracao = calibracoes.para(card.dispositivoId())
+                .comSensibilidade(sliderSensibilidade.getValue()).comPeso(cfg);
+        btnSalvar.setDisable(true);
+        lblStatus.setText("Salvando...");
+        Task<CardsDaUnidade> tarefa = new Task<>() {
+            @Override protected CardsDaUnidade call() {
+                return gravacao.salvar(documento, card, rangeBar, calibracao);
+            }
+        };
+        tarefa.setOnSucceeded(e -> {
+            logger.info("Calibracao de peso salva para o card {}", card.dispositivoId());
+            fechar();
+        });
+        tarefa.setOnFailed(e -> {
+            btnSalvar.setDisable(false);
+            lblStatus.setText(tarefa.getException().getMessage());
+        });
+        Thread worker = new Thread(tarefa, "calibracao-peso");
+        worker.setDaemon(true);
+        worker.start();
     }
 
-    @FXML
-    public void onCancelar() {
-        fechar();
-    }
+    @FXML public void onCancelar() { fechar(); }
 
-    private double numero(TextField campo) {
+    private static double numero(TextField campo) {
         String texto = campo.getText();
-        if (texto == null || texto.isBlank()) return 0.0;
-        // Aceita vírgula decimal, como o resto do aplicativo.
-        return Double.parseDouble(texto.trim().replace(',', '.'));
+        return texto == null || texto.isBlank() ? 0 : Double.parseDouble(texto.trim().replace(',', '.'));
     }
 
-    private String formatar(double valor) {
+    private static String formatar(double valor) {
         return valor == Math.rint(valor) ? String.valueOf((long) valor) : String.valueOf(valor);
     }
 
@@ -179,7 +228,6 @@ public class PesoColunaSettingsController {
     }
 
     private void fechar() {
-        Stage stage = (Stage) txtAreaEfetiva.getScene().getWindow();
-        stage.close();
+        ((Stage) txtAreaEfetiva.getScene().getWindow()).close();
     }
 }

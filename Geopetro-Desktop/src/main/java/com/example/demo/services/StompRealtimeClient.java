@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import com.example.demo.models.CardsDaUnidade;
 import com.example.demo.models.EstadoAtual;
-import com.example.demo.models.ConfiguracaoSondaRemota;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.function.Consumer;
 
@@ -42,18 +41,16 @@ class StompRealtimeClient {
 	private final AtomicBoolean conectado = new AtomicBoolean(false);
 	private static final ObjectMapper JSON = new ObjectMapper();
     private final Long unidade;
-    private final Consumer<ConfiguracaoSondaRemota> receberConfiguracao;
     private final Consumer<CardsDaUnidade> receberCards;
     private final CompletableFuture<Void> snapshotRecebido = new CompletableFuture<>();
     private final CompletableFuture<Void> conexaoEstabelecida = new CompletableFuture<>();
 
 	private WebSocket webSocket;
 
-	StompRealtimeClient(String url, String token) { this(url, token, null, snapshot -> {}, cards -> {}); }
+	StompRealtimeClient(String url, String token) { this(url, token, null, cards -> {}); }
 
-    StompRealtimeClient(String url, String token, Long unidade,
-            Consumer<ConfiguracaoSondaRemota> receiver, Consumer<CardsDaUnidade> receiverCards) {
-        this.unidade = unidade; this.receberConfiguracao = receiver; this.receberCards = receiverCards;
+    StompRealtimeClient(String url, String token, Long unidade, Consumer<CardsDaUnidade> receiverCards) {
+        this.unidade = unidade; this.receberCards = receiverCards;
         this.uri = URI.create(url);
 		this.token = token;
 	}
@@ -82,25 +79,25 @@ class StompRealtimeClient {
 		// apareceria depois — e o worker acharia que esta publicando.
 		conexaoEstabelecida.get(TIMEOUT_CONEXAO.toSeconds(), TimeUnit.SECONDS);
         if (unidade != null) {
-            enviarTexto(assinar("config-updates", "/topic/config/unidades-sondas/" + unidade));
             enviarTexto(assinar("cards-updates", "/topic/config/unidades-sondas/" + unidade + "/cards"));
             solicitarConfiguracao();
-            // So o snapshot de limites e esperado para dar a conexao por boa. Bloquear no de cards
-            // faria uma unidade nunca configurada — revisao 0, caso normal de RN-092 — travar a
-            // conexao inteira ate o timeout.
+            // ⚠️ A espera e pelo snapshot de CARDS, e nao mais pelo de limites. Sem cards o Desktop
+            // nao sabe o que ler (RN-088), entao e este o documento que precisa ter chegado antes de
+            // a conexao ser dada por boa.
+            //
+            // Unidade nunca configurada nao trava: o backend responde revisao 0 com a lista vazia,
+            // que e o caso normal de RN-092 — o snapshot chega, so vem sem card nenhum.
             snapshotRecebido.get(TIMEOUT_CONEXAO.toSeconds(), TimeUnit.SECONDS);
         }
 	}
 
     void solicitarConfiguracao() throws Exception {
         if (unidade == null) return;
-        enviarTexto("UNSUBSCRIBE\nid:config-snapshot\n\n" + NULO);
-        enviarTexto(assinar("config-snapshot", "/app/config/unidades-sondas/" + unidade));
         enviarTexto("UNSUBSCRIBE\nid:cards-snapshot\n\n" + NULO);
         enviarTexto(assinar("cards-snapshot", "/app/config/unidades-sondas/" + unidade + "/cards"));
     }
 
-    /** Frame SUBSCRIBE. Extraido porque agora sao quatro, e o formato tem de ser identico. */
+    /** Frame SUBSCRIBE. Extraido porque o formato tem de ser identico nas duas assinaturas. */
     private static String assinar(String id, String destino) {
         return "SUBSCRIBE\nid:" + id + "\ndestination:" + destino + "\nack:auto\n\n" + NULO;
     }
@@ -229,27 +226,21 @@ class StompRealtimeClient {
                 String topico = "/topic/config/unidades-sondas/" + unidade;
                 String app = "/app/config/unidades-sondas/" + unidade;
 
-                // Os dois documentos chegam pelo mesmo canal e sao distinguidos pelo destino. O
-                // sufixo /cards nao pode ser conferido so por "termina com", porque o destino dos
-                // limites e prefixo do de cards.
-                boolean cards = ("cards-updates".equals(subscription) && (topico + "/cards").equals(destination))
-                        || ("cards-snapshot".equals(subscription) && (app + "/cards").equals(destination));
-                if (cards) {
-                    var documento = JSON.readValue(corpo, CardsDaUnidade.class);
-                    if (documento.unidadeSondaId() != unidade) return;
-                    receberCards.accept(documento);
-                    return;
-                }
+                // ⚠️ O sufixo /cards continua sendo conferido por igualdade exata, e nao por
+                // "termina com": o destino dos limites e PREFIXO do de cards. O canal de limites nao
+                // e mais assinado, mas a comparacao frouxa voltaria a morder se ele voltar.
+                boolean atualizacao = "cards-updates".equals(subscription)
+                        && (topico + "/cards").equals(destination);
+                boolean snapshot = "cards-snapshot".equals(subscription)
+                        && (app + "/cards").equals(destination);
+                if (!atualizacao && !snapshot) return;
 
-                boolean update = ("config-updates".equals(subscription) && topico.equals(destination));
-                boolean snapshot = ("config-snapshot".equals(subscription) && app.equals(destination));
-                if (!update && !snapshot) return;
-                var config = JSON.readValue(corpo, ConfiguracaoSondaRemota.class);
-                if (config.unidadeSondaId() != unidade) return;
-                receberConfiguracao.accept(config);
+                var documento = JSON.readValue(corpo, CardsDaUnidade.class);
+                if (documento.unidadeSondaId() != unidade) return;
+                receberCards.accept(documento);
                 snapshotRecebido.complete(null);
             } catch (Exception e) {
-                logger.warn("Configuracao remota invalida; mantendo o ultimo snapshot.");
+                logger.warn("Documento de cards invalido; mantendo o ultimo snapshot.");
             }
         }
 

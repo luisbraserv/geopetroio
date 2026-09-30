@@ -21,6 +21,7 @@ import com.example.demo.models.CardsDaUnidade.Parametros;
 import com.example.demo.models.CardsDaUnidade.Tipo;
 import com.example.demo.models.UnidadeSondaOpcao;
 import com.example.demo.services.ConfiguracaoCardsClient;
+import com.example.demo.services.CalibracaoDeCards;
 import com.example.demo.services.CopiaDeCards;
 import com.example.demo.services.SessaoConfiguracao;
 import com.example.demo.services.SettingsService;
@@ -77,6 +78,7 @@ public class CardsConfigController {
 	private static final Logger logger = LoggerFactory.getLogger(CardsConfigController.class);
 
 	@Autowired private ConfiguracaoCardsClient cliente;
+	@Autowired private CalibracaoDeCards calibracoes;
 	@Autowired private SettingsService settings;
 	@Autowired private SessaoConfiguracao sessao;
 	@Autowired private UnidadeSondaCatalogoService catalogo;
@@ -140,22 +142,37 @@ public class CardsConfigController {
 	@FXML private VBox paramStroke;
 	@FXML private TextField txtConstanteBomba;
 
-	@FXML private TextField txtIp;
-	@FXML private TextField txtRack;
-	@FXML private TextField txtSlot;
-	@FXML private TextField txtDbNumero;
-	@FXML private TextField txtIntervalo;
-
 	private final ObservableList<Card> rascunho = FXCollections.observableArrayList();
 
 	private long unidadeSondaId;
-	private long revisao;
+	private String dispositivoInicial;
+	private boolean modoCardInicial;
+
+	/**
+	 * O documento como esta tela o leu — base da conferência de conflito na gravação.
+	 *
+	 * <p>Substituiu o campo {@code revisao} solto: a revisão sozinha não diz <b>o que</b> mudou
+	 * debaixo da tela, e desde que a conexão saiu daqui é preciso distinguir uma alteração nos cards
+	 * (conflito) de uma alteração na conexão feita pela engrenagem (que deve passar batida).
+	 */
+	private CardsDaUnidade documentoCarregado;
+
+	/**
+	 * A conexão que uma cópia entre unidades trouxe, e que ainda não foi gravada.
+	 *
+	 * <p>{@code null} no caso normal — esta tela não edita conexão. A cópia é a exceção: ela
+	 * replica rack, slot, DB e intervalo por serem o <b>modelo</b> de CLP, e é o que faz valer a
+	 * pena configurar uma sonda igual copiando de outra.
+	 */
+	private Conexao conexaoCopiada;
 
 	/**
 	 * Enquanto o formulário está sendo preenchido a partir do card selecionado, as escutas de
 	 * edição não devem gravar de volta — senão o preenchimento se confunde com digitação.
 	 */
 	private boolean preenchendo;
+	/** Evita recarregar o formulario quando uma tecla apenas substitui o card na mesma linha. */
+	private boolean atualizandoRascunho;
 
 	/**
 	 * Abre a janela, exigindo antes uma sessão de configuração (RN-086).
@@ -164,6 +181,11 @@ public class CardsConfigController {
 	 * — e o resto do app segue funcionando. É o desenho: só a configuração fica restrita.
 	 */
 	public static void abrir(Window dono, ApplicationContext contexto) {
+		abrir(dono, contexto, null);
+	}
+
+	/** A engrenagem do dashboard abre a tela ja no card que foi clicado. */
+	public static void abrir(Window dono, ApplicationContext contexto, String dispositivoId) {
 		if (!ConfiguracaoLoginController.exigirSessao(dono, contexto)) {
 			return;
 		}
@@ -174,15 +196,21 @@ public class CardsConfigController {
 			Parent conteudo = loader.load();
 
 			Stage janela = new Stage();
-			janela.setTitle("Cards da Unidade");
+			janela.setTitle(dispositivoId == null ? "Cards da Unidade" : "Calibração do Card");
 			janela.setScene(new Scene(conteudo));
-			janela.setMinWidth(900);
+			janela.setMinWidth(dispositivoId == null ? 900 : 560);
 			janela.setMinHeight(620);
 			janela.initModality(Modality.APPLICATION_MODAL);
 			if (dono != null) {
 				janela.initOwner(dono);
 			}
-			loader.<CardsConfigController>getController().carregar();
+			CardsConfigController controller = loader.getController();
+			controller.dispositivoInicial = dispositivoId;
+			controller.modoCardInicial = dispositivoId != null;
+			if (controller.modoCardInicial) {
+				controller.divisor.getItems().remove(0);
+			}
+			controller.carregar();
 			janela.showAndWait();
 		} catch (IOException e) {
 			logger.error("Erro ao abrir a configuracao de cards", e);
@@ -225,7 +253,11 @@ public class CardsConfigController {
 		colEstado.setCellValueFactory(c -> texto(c.getValue().ativo() ? "Ativo" : "Desativado"));
 
 		tabela.getSelectionModel().selectedItemProperty()
-				.addListener((obs, anterior, atual) -> atualizarSelecao(atual));
+				.addListener((obs, anterior, atual) -> {
+					if (!atualizandoRascunho) {
+						atualizarSelecao(atual);
+					}
+				});
 	}
 
 	private static SimpleStringProperty texto(String valor) {
@@ -281,14 +313,23 @@ public class CardsConfigController {
 			return;
 		}
 		unidadeSondaId = id;
-		lblTitulo.setText("Cards da unidade " + id);
+		lblTitulo.setText(modoCardInicial ? "Configuração do card" : "Cards da unidade " + id);
 
 		emSegundoPlano("Carregando…", () -> cliente.ler(id), documento -> {
-			revisao = documento.revisao();
+			documentoCarregado = documento;
+			conexaoCopiada = null;
 			rascunho.setAll(documento.cards());
-			preencherConexao(documento.conexao());
 			desabilitarEdicao(false);
-			atualizarSelecao(null);
+			tabela.getSelectionModel().clearSelection();
+			Card inicial = documento.cards().stream()
+					.filter(card -> card.dispositivoId() != null
+							&& card.dispositivoId().equals(dispositivoInicial))
+					.findFirst().orElse(null);
+			if (inicial == null) {
+				atualizarSelecao(null);
+			} else {
+				tabela.getSelectionModel().select(inicial);
+			}
 
 			if (documento.configurada()) {
 				lblSubtitulo.setText("Revisão %d · alterada por %s".formatted(
@@ -309,15 +350,6 @@ public class CardsConfigController {
 		return id == null ? 0 : id;
 	}
 
-	private void preencherConexao(Conexao conexao) {
-		Conexao valores = conexao == null ? Conexao.padrao() : conexao;
-		txtIp.setText(valores.ip() == null ? "" : valores.ip());
-		txtRack.setText(String.valueOf(valores.rack()));
-		txtSlot.setText(String.valueOf(valores.slot()));
-		txtDbNumero.setText(String.valueOf(valores.dbNumero()));
-		txtIntervalo.setText(String.valueOf(valores.intervaloLeituraMs()));
-	}
-
 	// ===================================================================== seleção e formulário
 
 	private void atualizarSelecao(Card card) {
@@ -334,6 +366,9 @@ public class CardsConfigController {
 		}
 
 		btnAlternarAtivo.setText(card.ativo() ? "Desativar" : "Reativar");
+		if (modoCardInicial) {
+			lblTitulo.setText("Calibração — " + card.nome() + " (" + card.dispositivoId() + ")");
+		}
 		preenchendo = true;
 		try {
 			txtNome.setText(card.nome());
@@ -390,8 +425,13 @@ public class CardsConfigController {
 				atual.ordem(),
 				lerParametros(tipo));
 
-		rascunho.set(indice, novo);
-		tabela.getSelectionModel().select(indice);
+		atualizandoRascunho = true;
+		try {
+			rascunho.set(indice, novo);
+			tabela.getSelectionModel().select(indice);
+		} finally {
+			atualizandoRascunho = false;
+		}
 		btnAlternarAtivo.setText(novo.ativo() ? "Desativar" : "Reativar");
 		atualizarEnderecoLegivel(tipo, byteInicial);
 	}
@@ -404,7 +444,7 @@ public class CardsConfigController {
 	 */
 	private Parametros lerParametros(Tipo tipo) {
 		return switch (tipo) {
-			case PRESSAO -> new Parametros(decimal(txtRangeBar.getText()),
+			case PRESSAO, PESO, TORQUE -> new Parametros(decimal(txtRangeBar.getText()),
 					null, null, null, null, null, null, null, null, null, null, null);
 			case TEMPERATURA -> new Parametros(null,
 					decimal(txtMinimoEscala.getText()), decimal(txtMaximoEscala.getText()),
@@ -418,14 +458,12 @@ public class CardsConfigController {
 					null);
 			case CONTADOR_STROKE -> new Parametros(null, null, null, null, null, null, null, null,
 					null, null, null, decimal(txtConstanteBomba.getText()));
-			// Peso e torque aplicam a calibracao local desta estacao; o card so diz onde ler.
-			case PESO, TORQUE -> Parametros.vazio();
 		};
 	}
 
 	private void mostrarParametrosDe(Tipo tipo) {
 		Tipo escolhido = tipo == null ? Tipo.PESO : tipo;
-		exibir(paramPressao, escolhido == Tipo.PRESSAO);
+		exibir(paramPressao, escolhido == Tipo.PRESSAO || escolhido == Tipo.PESO || escolhido == Tipo.TORQUE);
 		exibir(paramTemperatura, escolhido == Tipo.TEMPERATURA);
 		exibir(paramTanque, escolhido == Tipo.NIVEL_TANQUE);
 		exibir(paramStroke, escolhido == Tipo.CONTADOR_STROKE);
@@ -436,30 +474,20 @@ public class CardsConfigController {
 		}
 	}
 
-	/**
-	 * Mostra a calibração que esta estação já tem para o card.
-	 *
-	 * <p>Peso e torque não têm parâmetros no documento de cards: a calibração é <b>medida na
-	 * unidade</b>, e trazê-la para o documento seria migração de valores calibrados, não acréscimo de
-	 * campo. Mas uma tela que diz apenas "não há parâmetros aqui" se lê como <b>configuração
-	 * perdida</b> — e ela não se perdeu: está no {@code app-settings.json} desta estação, onde
-	 * sempre esteve.
-	 *
-	 * <p>⚠️ <b>A ligação card → calibração ainda é posicional</b>, como sempre foi: o primeiro card
-	 * de torque usa a calibração da chave de tubos, o segundo a da flutuante, e o de peso usa a do
-	 * peso da coluna. Com cards configuráveis isso deixa de bastar — um terceiro card de torque não
-	 * tem calibração própria. Fica dito na tela em vez de escondido, e é o que o passo 3b precisa
-	 * resolver.
-	 */
+	/** Mostra a calibracao local do dispositivo selecionado, identificada por dispositivoId. */
 	private void mostrarCalibracaoLocal(Tipo tipo) {
-		AppSettings configuracoes = settings.loadSettings();
-		if (configuracoes == null) {
+		Card selecionado = tabela.getSelectionModel().getSelectedItem();
+		if (selecionado == null || selecionado.novo()) {
+			lblCalibracaoAlvo.setText("Calibração — " + tipo.rotulo());
+			lblCalibracaoValores.setText("—");
+			alertarCalibracao("Salve o card antes de calibrá-lo.");
 			return;
 		}
+		var calibracao = calibracoes.para(selecionado.dispositivoId());
 
 		if (tipo == Tipo.PESO) {
-			var peso = configuracoes.getPesoColuna();
-			lblCalibracaoAlvo.setText("Calibração — Peso da coluna");
+			var peso = calibracao.peso();
+			lblCalibracaoAlvo.setText("Calibração — " + selecionado.nome());
 			lblCalibracaoValores.setText(peso == null ? "—" : ("""
 					área efetiva %.3f pol²  ·  braço %.3f pol
 					tambor %.2f pol  ·  cabo %.3f pol  ·  %d linhas
@@ -472,24 +500,14 @@ public class CardsConfigController {
 			return;
 		}
 
-		int posicao = indiceEntreTorques();
-		boolean tubos = posicao == 0;
-		var chave = tubos ? configuracoes.getChaveTubos() : configuracoes.getChaveFlutuante();
-		lblCalibracaoAlvo.setText("Calibração — Chave hidráulica (" + (tubos ? "tubos" : "flutuante") + ")");
+		var chave = calibracao.chave();
+		lblCalibracaoAlvo.setText("Calibração — " + selecionado.nome());
 		lblCalibracaoValores.setText(chave == null ? "—" : ("""
 				pistão %.3f pol  ·  haste %.3f pol
 				braço da alavanca %.3f ft  ·  %s""")
 				.formatted(chave.getDiametroPistaoIn(), chave.getDiametroHasteIn(),
 						chave.getBracoAlavancaFt(),
 						chave.getTipoMovimento() == null ? "—" : chave.getTipoMovimento()));
-
-		if (posicao > 1) {
-			// Ha so duas calibracoes de chave nesta estacao. Do terceiro card em diante nao existe
-			// slot proprio, e a da flutuante acaba reaproveitada.
-			alertarCalibracao("⚠️ Esta estação tem calibração para dois cards de torque. "
-					+ "Do terceiro em diante, a da flutuante é reaproveitada.");
-			return;
-		}
 		estadoDaCalibracao(chave != null && chave.isConfigurado());
 	}
 
@@ -498,7 +516,7 @@ public class CardsConfigController {
 			trocarEstilo(lblCalibracaoEstado, "estado-ok");
 			lblCalibracaoEstado.setText("Calibração preenchida nesta estação.");
 		} else {
-			alertarCalibracao("Ainda não calibrado — o card lê o CLP, mas o valor convertido fica em zero.");
+			alertarCalibracao("Ainda não calibrado — o card lê o CLP, mas não publica valor convertido.");
 		}
 	}
 
@@ -512,49 +530,21 @@ public class CardsConfigController {
 		rotulo.getStyleClass().add(estilo);
 	}
 
-	/** Posição do card selecionado entre os de torque — a ligação é posicional (ver acima). */
-	private int indiceEntreTorques() {
-		Card selecionado = tabela.getSelectionModel().getSelectedItem();
-		int posicao = 0;
-		for (Card card : rascunho) {
-			if (card == selecionado) {
-				return posicao;
-			}
-			if (card.tipo() == Tipo.TORQUE) {
-				posicao++;
-			}
-		}
-		return posicao;
-	}
-
-	/** Abre o mesmo editor de calibração que a engrenagem do dashboard já abre. */
+	/** Abre o mesmo editor por dispositivo que a engrenagem do dashboard. */
 	private void abrirCalibracao() {
 		Card selecionado = tabela.getSelectionModel().getSelectedItem();
 		if (selecionado == null) {
 			return;
 		}
-		boolean peso = selecionado.tipo() == Tipo.PESO;
-		String caminho = peso ? "/views/peso-coluna-settings.fxml" : "/views/chave-settings.fxml";
-		try {
-			FXMLLoader loader = new FXMLLoader(getClass().getResource(caminho));
-			loader.setControllerFactory(contexto::getBean);
-			Parent conteudo = loader.load();
-			if (!peso) {
-				loader.<ChaveSettingsController>getController().configurar(indiceEntreTorques() == 0);
-			}
-
-			Stage janela = new Stage();
-			janela.setTitle(peso ? "Configuração — Peso da Coluna" : "Configuração da Chave Hidráulica");
-			janela.setScene(new Scene(conteudo));
-			janela.initModality(Modality.APPLICATION_MODAL);
-			janela.initOwner(raiz.getScene().getWindow());
-			janela.showAndWait();
-
-			// O editor grava direto nas configuracoes desta estacao; reler mostra o que ficou.
-			mostrarCalibracaoLocal(selecionado.tipo());
-		} catch (IOException e) {
-			logger.error("Erro ao abrir a calibracao do card {}", selecionado.identificacao(), e);
+		if (selecionado.novo() || documentoCarregado == null
+				|| !rascunho.equals(documentoCarregado.cards()) || conexaoCopiada != null) {
+			status("Salve as alterações dos cards antes de abrir a calibração.");
+			return;
 		}
+		dispositivoInicial = selecionado.dispositivoId();
+		CalibracaoCardDialog.abrir(raiz.getScene().getWindow(), contexto,
+				documentoCarregado, selecionado, Double.NaN);
+		carregar();
 	}
 
 	/** RN-084: o cilindro horizontal não usa altura, e o retangular não usa raio. */
@@ -671,16 +661,21 @@ public class CardsConfigController {
 		emSegundoPlano("Lendo a configuração de " + origem.rotulo() + "…",
 				() -> cliente.ler(origem.id()),
 				documento -> {
-					var destino = new CardsDaUnidade(1, unidadeSondaId, revisao,
-							conexaoDigitada(), List.copyOf(rascunho), null, null);
+					var destino = new CardsDaUnidade(1, unidadeSondaId, documentoCarregado.revisao(),
+							conexaoAtual(), List.copyOf(rascunho), null, null);
 					try {
 						var copia = CopiaDeCards.copiar(documento, destino);
 						rascunho.setAll(copia.cards());
-						preencherConexao(copia.conexao());
+						conexaoCopiada = copia.conexao();
 						atualizarSelecao(null);
-						// O IP nao vem junto de proposito: veja CopiaDeCards#conexaoPara.
-						status("Copiado de " + origem.rotulo()
-								+ ". Confira o IP do CLP desta unidade e salve.");
+						// O IP nao vem junto de proposito: veja CopiaDeCards#conexaoPara. E como o
+						// painel de conexao saiu desta tela, o que a copia trouxe precisa ser DITO —
+						// gravar rack/slot/DB novos sem mostra-los seria alterar o que ninguem viu.
+						status("Copiado de " + origem.rotulo() + ": cards, e também rack "
+								+ copia.conexao().rack() + ", slot " + copia.conexao().slot()
+								+ ", DB " + copia.conexao().dbNumero() + " e intervalo "
+								+ copia.conexao().intervaloLeituraMs() + " ms. O IP não vem junto — "
+								+ "confira-o na engrenagem. Salve para aplicar.");
 					} catch (CopiaDeCards.CopiaRecusadaException recusada) {
 						alertar("Não foi possível copiar", recusada.getMessage());
 						status("");
@@ -690,8 +685,19 @@ public class CardsConfigController {
 
 	// ===================================================================== gravação
 
+	/**
+	 * ⚠️ Grava <b>só os cards</b>, salvo quando uma cópia trouxe a conexão junto.
+	 *
+	 * <p>A conexão saiu desta tela ({@code configuracao-da-estacao.md §4}) mas continua no mesmo
+	 * documento, e o {@code PUT} leva o documento inteiro. Reenviar a conexão que esta tela leu ao
+	 * abrir apontaria a estação para o CLP anterior se alguém tivesse corrigido o IP na engrenagem
+	 * no intervalo — por isso quem decide o que vai no campo {@code conexao} é o cliente, relendo.
+	 */
 	private void salvar() {
-		Conexao conexao = conexaoDigitada();
+		if (documentoCarregado == null) {
+			status("Recarregue antes de salvar.");
+			return;
+		}
 
 		// A ordem e reatribuida pela posicao na lista: o backend recusa duas posicoes iguais, e
 		// mover cards para cima e para baixo deixaria buracos e repeticoes se ela fosse mantida.
@@ -700,25 +706,32 @@ public class CardsConfigController {
 			cards.add(rascunho.get(i).comOrdem(i));
 		}
 
-		var alteracao = new CardsDaUnidade.Alteracao(revisao, conexao, cards);
-		emSegundoPlano("Salvando…", () -> cliente.salvar(unidadeSondaId, alteracao), salvo -> {
-			revisao = salvo.revisao();
-			rascunho.setAll(salvo.cards());
-			preencherConexao(salvo.conexao());
-			atualizarSelecao(null);
-			lblSubtitulo.setText("Revisão %d · alterada por %s".formatted(
-					salvo.revisao(), salvo.atualizadoPor() == null ? "—" : salvo.atualizadoPor()));
-			status("Salvo. A unidade passa a ler esta configuração no próximo ciclo.");
-		});
+		var base = documentoCarregado;
+		var conexao = conexaoCopiada;
+		emSegundoPlano("Salvando…",
+				() -> conexao == null
+						? cliente.salvarCards(unidadeSondaId, base, cards)
+						: cliente.salvarTudo(unidadeSondaId, base, conexao, cards),
+				salvo -> {
+					documentoCarregado = salvo;
+					conexaoCopiada = null;
+					rascunho.setAll(salvo.cards());
+					atualizarSelecao(null);
+					lblSubtitulo.setText("Revisão %d · alterada por %s".formatted(
+							salvo.revisao(),
+							salvo.atualizadoPor() == null ? "—" : salvo.atualizadoPor()));
+					status("Salvo. A unidade passa a ler esta configuração no próximo ciclo.");
+				});
 	}
 
-	private Conexao conexaoDigitada() {
-		return new Conexao(
-				txtIp.getText() == null ? "" : txtIp.getText().trim(),
-				inteiro(txtRack.getText(), 0),
-				inteiro(txtSlot.getText(), 1),
-				inteiro(txtDbNumero.getText(), 1),
-				inteiro(txtIntervalo.getText(), 1000));
+	/** A conexão vigente: a que a cópia trouxe, ou a do documento lido. */
+	private Conexao conexaoAtual() {
+		if (conexaoCopiada != null) {
+			return conexaoCopiada;
+		}
+		return documentoCarregado == null || documentoCarregado.conexao() == null
+				? Conexao.padrao()
+				: documentoCarregado.conexao();
 	}
 
 	// ===================================================================== apoio

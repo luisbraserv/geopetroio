@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <!--
-   Geometria do sargento. Cabecalho e rodape fixos, miolo rolavel: sao oito parametros e o
+   Calibracao do card de peso. Cabecalho e rodape fixos, miolo rolavel: range, geometria e
    diagnostico, e com os botoes dentro da area rolavel "Salvar" sairia de vista.
 -->
 <BorderPane prefWidth="560.0" prefHeight="640.0"
@@ -25,7 +25,7 @@
 
    <top>
       <VBox spacing="3.0" styleClass="cabecalho">
-         <Label text="Peso da Coluna — geometria do sargento" styleClass="cabecalho-titulo" />
+         <Label fx:id="lblTitulo" text="Peso da Coluna — geometria do sargento" styleClass="cabecalho-titulo" />
          <Label styleClass="cabecalho-subtitulo" wrapText="true"
                 text="O sensor mede a pressão no sargento, não o peso no gancho. A conversão percorre força, torque, tração da linha morta e número de linhas." />
       </VBox>
@@ -44,18 +44,32 @@
                   <ColumnConstraints hgrow="ALWAYS" />
                </columnConstraints>
 
-               <Label text="Pressão zero (psi)" styleClass="rotulo" GridPane.rowIndex="0" />
-               <TextField fx:id="txtPressaoZero" promptText="Ex.: 0.0" maxWidth="Infinity"
+               <Label text="Range do sensor (bar)" styleClass="rotulo" GridPane.rowIndex="0" />
+               <TextField fx:id="txtRangeBar" promptText="Ex.: 250" maxWidth="Infinity"
                           GridPane.columnIndex="1" GridPane.rowIndex="0" />
 
-               <Label text="Área efetiva do sensor (pol²)" styleClass="rotulo" GridPane.rowIndex="1" />
-               <TextField fx:id="txtAreaEfetiva" promptText="Ex.: 10.0" maxWidth="Infinity"
+               <Label text="Pressão zero (psi)" styleClass="rotulo" GridPane.rowIndex="1" />
+               <TextField fx:id="txtPressaoZero" promptText="Ex.: 0.0" maxWidth="Infinity"
                           GridPane.columnIndex="1" GridPane.rowIndex="1" />
 
-               <Label text="Braço do sensor (pol)" styleClass="rotulo" GridPane.rowIndex="2" />
-               <TextField fx:id="txtBracoSensor" promptText="Ex.: 12.0" maxWidth="Infinity"
+               <Label text="Área efetiva do sensor (pol²)" styleClass="rotulo" GridPane.rowIndex="2" />
+               <TextField fx:id="txtAreaEfetiva" promptText="Ex.: 10.0" maxWidth="Infinity"
                           GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+               <Label text="Braço do sensor (pol)" styleClass="rotulo" GridPane.rowIndex="3" />
+               <TextField fx:id="txtBracoSensor" promptText="Ex.: 12.0" maxWidth="Infinity"
+                          GridPane.columnIndex="1" GridPane.rowIndex="3" />
             </GridPane>
+
+            <VBox spacing="4.0">
+               <HBox spacing="8.0">
+                  <Label text="Sensibilidade do sensor:" styleClass="rotulo" />
+                  <Label fx:id="lblSensibilidade" text="1.000" styleClass="rotulo" />
+               </HBox>
+               <Slider fx:id="sliderSensibilidade" min="0.5" max="1.5" value="1.0"
+                       majorTickUnit="0.25" minorTickCount="4" blockIncrement="0.005"
+                       showTickLabels="true" showTickMarks="true" />
+            </VBox>
 
             <Label styleClass="ajuda" wrapText="true"
                    text="Pressão zero é apenas o offset do sensor — não use para descontar a Catarina, que entra no fim da conta. O braço é a distância entre o eixo do tambor e a linha de atuação da força." />
@@ -129,7 +143,7 @@
 
    <bottom>
       <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="rodape">
-         <Region HBox.hgrow="ALWAYS" />
+         <Label fx:id="lblStatus" styleClass="ajuda" wrapText="true" HBox.hgrow="ALWAYS" />
          <Button fx:id="btnCancelar" prefWidth="110.0" text="Cancelar"
                  styleClass="botao-secundario" onAction="#onCancelar" />
          <Button fx:id="btnSalvar" prefWidth="110.0" text="Salvar" defaultButton="true"

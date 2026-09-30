@@ -1,7 +1,7 @@
 package com.example.demo.services;
 
 import java.time.Instant;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,8 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.models.ConfiguracaoSondaRemota;
-import com.example.demo.models.ConfiguracaoSondaRemota.Limite;
+import com.example.demo.services.AlarmesDaEstacao.AlarmeLocal;
 import com.example.demo.services.AvaliadorLocalDeAlarme.Estado;
 import com.example.demo.services.AvaliadorLocalDeAlarme.Severidade;
 import com.example.demo.services.LeituraDeCards.Grandeza;
@@ -26,16 +25,20 @@ import com.example.demo.services.LeituraDeCards.Grandeza;
  * nos dois lados. O que esta classe guarda vive em memória e morre com o processo.
  *
  * <h2>Funciona sem rede, e é esse o ponto</h2>
- * Os limites chegam pelo canal de configuração e ficam em <b>cache em disco</b>
- * ({@code ConfiguracaoRemotaStore}). Uma sonda que perdeu a internet continua lendo o CLP,
- * convertendo e alarmando localmente — que é exatamente a situação em que o operador ao lado do
- * equipamento é a única pessoa que pode agir.
+ * A faixa vem de {@link AlarmesDaEstacao} — configuração <b>desta estação</b>, gravada em disco
+ * aqui mesmo ({@code specs/features/configuracao-da-estacao.md §3}). Não há documento remoto no
+ * caminho: uma sonda que nunca teve internet continua lendo o CLP, convertendo e alarmando.
+ *
+ * <p>⚠️ <b>Isto mudou.</b> Até 2026-09-09 a faixa vinha do documento de limites do servidor, e uma
+ * unidade que nunca o recebeu não alarmava nada — o beep desta máquina dependia de uma volta pela
+ * rede para responder o que já estava respondido aqui.
  *
  * <h2>⚠️ A estação vê mais que o servidor</h2>
  * Aqui entram <b>todos os cards ativos</b>, inclusive os invisíveis. O servidor avalia pelo canal de
- * tempo real, que só carrega os visíveis (RN-037 encontrando RN-102), então um limite sobre card
- * invisível dispara <b>na sonda</b> e não no servidor. Isso reduz o alcance de
- * {@code OQ-050} sem resolvê-la: a supervisão remota continua sem ver aquele alarme.
+ * tempo real, que só carrega os visíveis (RN-037 encontrando RN-102), então grandeza de card
+ * invisível só é vigiada <b>na sonda</b>. É o que reduz o alcance de {@code OQ-050} — e depende de o
+ * dashboard continuar mostrando card ativo invisível, sem o que essas grandezas ficariam sem alarme
+ * em lugar nenhum.
  */
 @Service
 public class AlarmesLocais {
@@ -43,6 +46,7 @@ public class AlarmesLocais {
 	private static final Logger logger = LoggerFactory.getLogger(AlarmesLocais.class);
 
 	private final SinalSonoro sinal;
+	private final AlarmesDaEstacao alarmes;
 
 	/** Estado por grandeza, entre um ciclo e o seguinte. */
 	private final Map<String, Estado> estados = new ConcurrentHashMap<>();
@@ -50,37 +54,46 @@ public class AlarmesLocais {
 	/** O que vale agora, para a tela ler sem recalcular nada. */
 	private volatile Map<String, Severidade> vigentes = Map.of();
 
-	public AlarmesLocais(SinalSonoro sinal) {
+	public AlarmesLocais(SinalSonoro sinal, AlarmesDaEstacao alarmes) {
 		this.sinal = sinal;
+		this.alarmes = alarmes;
 	}
 
 	/**
-	 * Avalia um ciclo de leituras contra os limites vigentes.
+	 * Avalia um ciclo de leituras contra os alarmes configurados <b>nesta estação</b>.
 	 *
 	 * <p>Grandeza sem valor não é avaliada: não houve medição, e RN-099 já diz que a ausência é
 	 * lacuna honesta. Tratá-la como dentro da faixa apagaria um alarme aceso por falta de dado.
 	 *
-	 * @param limites documento vigente, ou {@code null} se ainda não chegou — e aí nada alarma,
-	 *                que é o estado normal de uma sonda sem limite configurado
+	 * <p>Estação sem alarme configurado não alarma nada — estado normal, e não pendência.
 	 */
-	public void avaliar(List<Grandeza> grandezas, ConfiguracaoSondaRemota limites, Instant agora) {
-		Map<String, Limite> vigiadas = vigiadas(limites);
+	public void avaliar(List<Grandeza> grandezas, Instant agora) {
+		Map<String, AlarmeLocal> vigiadas = alarmes.vigiadas();
+		var presentes = new HashSet<String>();
 		boolean agravou = false;
 
 		for (Grandeza grandeza : grandezas == null ? List.<Grandeza>of() : grandezas) {
 			// ⚠️ Grandeza sem valor NAO e avaliada, e por isso nao apaga o que estava aceso. Nao
 			// houve medicao que desminta o alarme; trata-la como dentro da faixa apagaria o
 			// destaque por FALTA DE DADO — o oposto do que RN-099 estabelece.
-			if (grandeza == null || !grandeza.temValor()) {
+			if (grandeza == null) {
 				continue;
 			}
+			// ⚠️ O card entrou no ciclo, entao ele existe e esta ATIVO. Isto vale mesmo sem valor:
+			// e o que distingue "faltou a medicao agora" de "o card saiu do documento" — o primeiro
+			// conserva o destaque, o segundo o apaga.
 			String chave = chave(grandeza);
-			Limite limite = vigiadas.get(chave);
-			if (limite == null) {
+			presentes.add(chave);
+
+			if (!grandeza.temValor()) {
+				continue;
+			}
+			AlarmeLocal alarme = vigiadas.get(chave);
+			if (alarme == null) {
 				continue;
 			}
 			Estado anterior = estados.get(chave);
-			Estado atual = AvaliadorLocalDeAlarme.avaliar(anterior, limite, grandeza.valor(), agora);
+			Estado atual = AvaliadorLocalDeAlarme.avaliar(anterior, alarme.comoFaixa(), grandeza.valor(), agora);
 			estados.put(chave, atual);
 
 			if (piorou(anterior, atual)) {
@@ -89,9 +102,14 @@ public class AlarmesLocais {
 			}
 		}
 
-		// Grandeza que deixou de ser vigiada — limite apagado ou desativado — perde o estado:
-		// manter o destaque de algo que ninguem mais vigia seria mentira na tela.
-		estados.keySet().retainAll(vigiadas.keySet());
+		// Grandeza que deixou de ser vigiada — alarme apagado ou desligado no sininho — perde o
+		// estado: manter o destaque de algo que ninguem mais vigia seria mentira na tela.
+		//
+		// ⚠️ E tambem a que saiu do ciclo, porque o card foi DESATIVADO: o alarme local hiberna
+		// junto com ele (RN-091), como o limite remoto ja hibernava. Sem esta segunda condicao o
+		// destaque de um card desativado ficaria aceso para sempre — ele nunca mais voltaria ao
+		// ciclo para se desmentir.
+		estados.keySet().removeIf(chave -> !vigiadas.containsKey(chave) || !presentes.contains(chave));
 
 		// O que a tela le sai do ESTADO, e nao do ciclo: assim uma grandeza que faltou neste ciclo
 		// conserva o destaque que ja tinha.
@@ -137,20 +155,6 @@ public class AlarmesLocais {
 	private static boolean piorou(Estado anterior, Estado atual) {
 		int antes = Severidade.ordem(anterior == null ? null : anterior.confirmada());
 		return Severidade.ordem(atual.confirmada()) > antes;
-	}
-
-	/** Só limite ativo vigia; desativado hiberna com o card (RN-091). */
-	private static Map<String, Limite> vigiadas(ConfiguracaoSondaRemota limites) {
-		if (limites == null || limites.limites() == null) {
-			return Map.of();
-		}
-		var mapa = new HashMap<String, Limite>();
-		for (Limite limite : limites.limites()) {
-			if (limite != null && limite.ativo()) {
-				mapa.put(limite.chave(), limite);
-			}
-		}
-		return mapa;
 	}
 
 

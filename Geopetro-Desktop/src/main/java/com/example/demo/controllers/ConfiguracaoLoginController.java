@@ -37,6 +37,10 @@ public class ConfiguracaoLoginController {
 	@Autowired
 	private SessaoConfiguracao sessao;
 
+	@Autowired
+	private com.example.demo.services.SettingsService settingsService;
+
+	@FXML private TextField txtServidor;
 	@FXML private TextField txtUsuario;
 	@FXML private PasswordField txtSenha;
 	@FXML private Label lblErro;
@@ -85,7 +89,21 @@ public class ConfiguracaoLoginController {
 	public void initialize() {
 		btnEntrar.setOnAction(evento -> entrar());
 		btnCancelar.setOnAction(evento -> fechar());
-		Platform.runLater(() -> txtUsuario.requestFocus());
+
+		// Ja gravado: o campo existe para a PRIMEIRA vez e para trocar de servidor, nao para ser
+		// redigitado a cada login.
+		var configuracoes = settingsService.loadSettings();
+		txtServidor.setText(configuracoes == null ? "" : configuracoes.getBackendUrl());
+
+		// O foco vai para o servidor quando ele esta vazio — estacao nova —, e para o usuario quando
+		// ja ha endereco, que e o caso de todo dia.
+		Platform.runLater(() -> {
+			if (txtServidor.getText() == null || txtServidor.getText().isBlank()) {
+				txtServidor.requestFocus();
+			} else {
+				txtUsuario.requestFocus();
+			}
+		});
 	}
 
 	/**
@@ -93,6 +111,7 @@ public class ConfiguracaoLoginController {
 	 * janela inteira se rodasse na thread da interface.
 	 */
 	private void entrar() {
+		String servidor = txtServidor.getText();
 		String usuario = txtUsuario.getText();
 		String senha = txtSenha.getText();
 		ocupado(true);
@@ -100,7 +119,7 @@ public class ConfiguracaoLoginController {
 		Task<SessaoConfiguracao.Resultado> tarefa = new Task<>() {
 			@Override
 			protected SessaoConfiguracao.Resultado call() {
-				return sessao.abrir(usuario, senha);
+				return sessao.abrir(usuario, senha, servidor);
 			}
 		};
 		tarefa.setOnSucceeded(evento -> {
@@ -135,8 +154,10 @@ public class ConfiguracaoLoginController {
 			case SessaoConfiguracao.Resultado.BackendIndisponivel indisponivel ->
 				mostrarErro("Sem conexão com o Backend, e não há validação local: não é possível "
 						+ "configurar agora. (" + indisponivel.motivo() + ")");
+			// ⚠️ Nao mandar para Configuracoes: ela exige esta sessao desde 2026-09-10, e o conselho
+			// levaria a uma porta trancada. O campo esta nesta janela.
 			case SessaoConfiguracao.Resultado.BackendNaoConfigurado ignorado ->
-				mostrarErro("Informe a URL do Backend em Configurações antes de entrar.");
+				mostrarErro("Informe o endereço do servidor no campo acima.");
 		}
 	}
 

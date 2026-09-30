@@ -19,7 +19,10 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.layout.GridPane;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -62,6 +65,27 @@ class SettingsViewTest {
     }
 
     /**
+     * A conexao do CLP <b>inteira</b> mora aqui — {@code configuracao-da-estacao.md §4}.
+     *
+     * <p>Antes o IP aparecia nesta tela e nao conectava nada ({@code AppSettings.plcIp} era lido,
+     * exibido, salvo e ignorado), enquanto rack, slot, DB e intervalo viviam na tela de Cards. Agora
+     * os cinco estao num lugar so, e e por ele que o PLC conecta.
+     */
+    @Test
+    void aConexaoDoClpEstaCompletaNaEngrenagem() throws Exception {
+        assumeTrue(toolkitDisponivel, "JavaFX indisponivel neste ambiente");
+
+        Parent raiz = carregarNaThreadDaUi();
+
+        for (String campo : new String[] { "#txtPlcIp", "#txtPlcRack", "#txtPlcSlot",
+                "#txtPlcDb", "#txtPlcIntervalo" }) {
+            assertNotNull(raiz.lookup(campo), campo + " ausente: a conexao do CLP ficou pela metade");
+        }
+        assertNotNull(raiz.lookup("#lblConexaoStatus"),
+                "sem linha de status, uma leitura que falhou deixaria campos vazios sem explicacao");
+    }
+
+    /**
      * A tela deve oferecer <b>um</b> lugar para dizer qual e a sonda.
      *
      * <p>Antes havia dois campos — o codigo do historico e o id numerico do cadastro — e nada
@@ -80,7 +104,95 @@ class SettingsViewTest {
         assertEquals(null, raiz.lookup("#txtUnidadeSondaId"), "campo antigo txtUnidadeSondaId ainda na tela");
     }
 
-    /** Em janela estreita, os quatro cartoes precisam empilhar numa coluna so. */
+    /**
+     * ⚠️ O portao de configuracao — {@code configuracao-da-estacao.md §5}.
+     *
+     * <p><b>[DECIDIDO 2026-09-10]</b> Sem excecao: os cartoes ficam trancados sem sessao,
+     * enderecos e credenciais inclusive.
+     *
+     * <p>O que impede a porta de fechar sobre si mesma e o campo <b>Servidor na tela de login</b>:
+     * sem ele, uma estacao nova nao teria como logar para definir o endereco contra o qual se loga.
+     */
+    @Test
+    void semSessaoAEngrenagemInteiraFicaTrancada() throws Exception {
+        assumeTrue(toolkitDisponivel, "JavaFX indisponivel neste ambiente");
+
+        Parent raiz = carregarNaThreadDaUi();
+
+        assertTrue(raiz.lookup("#cartaoEquipamento").isDisabled(),
+                "IP do CLP e Unidade/Sonda exigem ADMIN ou SUPORTE");
+        // ⚠️ cartaoCards saiu da tela em 2026-09-10 — ver oCartaoDeCardsVisiveisSumiu().
+        assertTrue(raiz.lookup("#cartaoTempoReal").isDisabled(),
+                "URL do Backend e credenciais entraram no portao");
+        assertTrue(raiz.lookup("#cartaoMqtt").isDisabled(),
+                "endereco e credenciais do broker entraram junto");
+    }
+
+    /**
+     * "Cards visíveis no monitoramento" saiu da engrenagem — {@code configuracao-da-estacao.md §4}.
+     *
+     * <p>Eram seis checkboxes das grandezas fixas de antes dos cards configuráveis, e
+     * {@code CardVisibilityConfig} era lido e escrito <b>somente</b> pela própria tela: nada no
+     * caminho de leitura, de publicação ou de desenho o consultava.
+     *
+     * <p>⚠️ <b>O rótulo mentia</b> — prometia que "cards desmarcados ficam ocultos e não salvam
+     * dados", e nenhuma das duas coisas acontecia. Uma tela que promete controle que não exerce é
+     * pior que a ausência dela: quem desmarcasse iria procurar o efeito, não achar, e desconfiar do
+     * resto da configuração.
+     */
+    @Test
+    void oCartaoDeCardsVisiveisSumiu() throws Exception {
+        assumeTrue(toolkitDisponivel, "JavaFX indisponivel neste ambiente");
+
+        Parent raiz = carregarNaThreadDaUi();
+
+        assertNull(raiz.lookup("#cartaoCards"), "o cartao de cards visiveis voltou a tela");
+        for (String morto : new String[] { "#chkPesoColuna", "#chkChHidTubos", "#chkChFlutuante",
+                "#chkBombaLama", "#chkEscp", "#chkVazao" }) {
+            assertNull(raiz.lookup(morto), morto + " voltou: ele nao controla nada");
+        }
+    }
+
+    /**
+     * Os dois interruptores de telemetria — {@code configuracao-da-estacao.md §6}.
+     *
+     * <p>Antes não havia liga/desliga: "desligar" era apagar um campo. Funcionava por acidente, era
+     * indescobrível, e não distinguia <b>desligado de propósito</b> de <b>mal configurado</b>.
+     *
+     * <p>Nascem marcados, e é o que a migração exige: uma estação em campo abre esta tela com a
+     * telemetria ligada, como sempre esteve.
+     */
+    @Test
+    void osDoisInterruptoresDeTelemetriaEstaoNaTela() throws Exception {
+        assumeTrue(toolkitDisponivel, "JavaFX indisponivel neste ambiente");
+
+        Parent raiz = carregarNaThreadDaUi();
+
+        javafx.scene.control.CheckBox mqtt =
+                (javafx.scene.control.CheckBox) raiz.lookup("#chkTelemetriaMqtt");
+        javafx.scene.control.CheckBox tempoReal =
+                (javafx.scene.control.CheckBox) raiz.lookup("#chkTempoReal");
+
+        assertNotNull(mqtt, "sem o interruptor, desligar volta a ser apagar um campo");
+        assertNotNull(tempoReal);
+        assertTrue(mqtt.isSelected(), "a tela abriria desligando a telemetria de quem nunca escolheu");
+        assertTrue(tempoReal.isSelected());
+    }
+
+    /** O aviso precisa estar na tela, ou o campo desabilitado vira mistério sem explicação. */
+    @Test
+    void aTelaDizPorQueEstaTrancada() throws Exception {
+        assumeTrue(toolkitDisponivel, "JavaFX indisponivel neste ambiente");
+
+        Parent raiz = carregarNaThreadDaUi();
+
+        assertNotNull(raiz.lookup("#btnDesbloquear"), "sem caminho para entrar, o portao vira beco");
+        javafx.scene.control.Label aviso = (javafx.scene.control.Label) raiz.lookup("#lblPortao");
+        assertNotNull(aviso);
+        assertTrue(aviso.getText().contains("ADMIN"), aviso.getText());
+    }
+
+    /** Em janela estreita, os cartoes precisam empilhar numa coluna so. */
     @Test
     void colapsaParaUmaColunaEmJanelaEstreita() throws Exception {
         assumeTrue(toolkitDisponivel, "JavaFX indisponivel neste ambiente");
@@ -159,6 +271,8 @@ class SettingsViewTest {
             SettingsController controller = new SettingsController();
             injetar(controller, "settingsService", new SettingsService());
             injetar(controller, "catalogoService", new UnidadeSondaCatalogoService());
+            // Sessao fechada: e o estado com que a tela abre, e o que o portao precisa ver.
+            injetar(controller, "sessao", new com.example.demo.services.SessaoConfiguracao(new SettingsService()));
             return controller;
         });
         return loader;

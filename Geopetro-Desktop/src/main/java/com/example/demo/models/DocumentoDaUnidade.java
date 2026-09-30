@@ -3,15 +3,18 @@ package com.example.demo.models;
 /**
  * O que os documentos de configuração de uma Unidade/Sonda têm em comum.
  *
- * <p>São dois — {@link ConfiguracaoSondaRemota} (limites de alarme) e {@link CardsDaUnidade} (o que
- * a unidade lê) —, separados de propósito porque têm autoridades diferentes para gravar
- * ({@code RN-089}). Mas o <b>ciclo de vida</b> dos dois é idêntico: chegam pelo canal de tempo real,
- * só substituem o anterior se a revisão for maior, e são guardados em disco para sobreviver a um
- * reinício sem rede.
+ * <p>Hoje há <b>um</b>: {@link CardsDaUnidade}, o que a unidade lê. O ciclo de vida dele é o que esta
+ * interface descreve — chega pelo canal de tempo real, só substitui o anterior se a revisão for
+ * maior, e é guardado em disco para sobreviver a um reinício sem rede.
  *
- * <p>Esta interface existe para que essa mecânica seja escrita <b>uma vez</b>. A base já teve o fator
- * bar-PSI declarado duas vezes com precisões diferentes, e uma ficou para trás — cache com guarda de
- * revisão é bem mais sutil que uma constante.
+ * <p>⚠️ <b>Eram dois.</b> O documento de limites de alarme saiu em 2026-09-09: o alarme da estação
+ * passou a ser configurado na estação
+ * ({@code specs/features/configuracao-da-estacao.md §3.3}), e buscar no servidor uma faixa para
+ * tocar um beep nesta máquina era uma volta pela rede para responder o que já estava respondido
+ * aqui.
+ *
+ * <p>A abstração fica: a mecânica de cache com guarda de revisão é sutil, e escrevê-la de novo para
+ * um segundo documento — se um dia voltar a haver — é como ela diverge.
  */
 public interface DocumentoDaUnidade {
 

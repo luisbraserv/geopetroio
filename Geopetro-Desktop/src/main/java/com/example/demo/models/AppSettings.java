@@ -2,7 +2,9 @@ package com.example.demo.models;
 
 public class AppSettings {
 
-    private String plcIp;
+    // ⚠️ plcIp saiu daqui em 2026-09-10: ele era lido, exibido e salvo — e ignorado. Quem conecta
+    // sempre foi conexao.ip do documento de cards da unidade, hoje editado na engrenagem.
+    // Ver configuracao-da-estacao.md §4.
     private String sondaId;
     private String telemetriaUrl;
     // Credenciais do broker MQTT. Vazias = conexao anonima, que so funciona se o broker
@@ -33,10 +35,25 @@ public class AppSettings {
     private ChaveHidraulicaConfig chaveTubos;     // parâmetros de torque — chave dos tubos
     private ChaveHidraulicaConfig chaveFlutuante; // parâmetros de torque — chave flutuante
     private PesoColunaConfig      pesoColuna;     // parâmetros de cálculo — peso da coluna B002
-    private CardVisibilityConfig  cardVisibility;
+
+    /**
+     * Os dois interruptores de telemetria — {@code configuracao-da-estacao.md §6}.
+     *
+     * <p>Antes não havia liga/desliga: "desligar" era deixar um campo em branco. Funcionava por
+     * acidente, era indescobrível, e não distinguia <b>desligado de propósito</b> de <b>mal
+     * configurado</b>.
+     *
+     * <p>⚠️ <b>Nascem ligados, e isso é a migração.</b> Uma estação em campo tem um
+     * {@code app-settings.json} sem estas chaves; se a ausência valesse "desligado", a frota inteira
+     * emudeceria na primeira atualização — e por um campo que ninguém escolheu.
+     *
+     * <p>São <b>locais</b>: não viajam ao servidor. De fora, uma unidade calada de propósito é
+     * indistinguível de uma quebrada, que é o mesmo limite já aceito para o CLP desligado.
+     */
+    private boolean telemetriaMqttAtiva;
+    private boolean tempoRealAtivo;
 
     public AppSettings() {
-        this.plcIp          = "";
         this.sondaId        = "";
         this.telemetriaUrl  = "tcp://localhost:1883";
         this.telemetriaUsuario = "";
@@ -53,11 +70,9 @@ public class AppSettings {
         this.chaveTubos     = new ChaveHidraulicaConfig();
         this.chaveFlutuante = new ChaveHidraulicaConfig();
         this.pesoColuna     = new PesoColunaConfig();
-        this.cardVisibility = new CardVisibilityConfig();
+        this.telemetriaMqttAtiva = true;
+        this.tempoRealAtivo      = true;
     }
-
-    public String getPlcIp()                            { return plcIp; }
-    public void   setPlcIp(String v)                    { this.plcIp = v; }
 
     public String getSondaId()                          { return sondaId; }
     public void   setSondaId(String v)                  { this.sondaId = v; }
@@ -124,6 +139,10 @@ public class AppSettings {
     public PesoColunaConfig getPesoColuna()                  { return pesoColuna; }
     public void setPesoColuna(PesoColunaConfig c)            { this.pesoColuna = c; }
 
-    public CardVisibilityConfig getCardVisibility()          { return cardVisibility; }
-    public void setCardVisibility(CardVisibilityConfig c)    { this.cardVisibility = c; }
+    public boolean isTelemetriaMqttAtiva()                   { return telemetriaMqttAtiva; }
+    public void setTelemetriaMqttAtiva(boolean v)            { this.telemetriaMqttAtiva = v; }
+
+    public boolean isTempoRealAtivo()                        { return tempoRealAtivo; }
+    public void setTempoRealAtivo(boolean v)                 { this.tempoRealAtivo = v; }
+
 }

@@ -46,7 +46,18 @@ public record CardsDaUnidade(int schemaVersion, long unidadeSondaId, long revisa
 
 	/** Endereçamento do CLP por unidade — encerra OQ-017 e OQ-018. */
 	@JsonIgnoreProperties(ignoreUnknown = true)
-	public record Conexao(String ip, int rack, int slot, int dbNumero, int intervaloLeituraMs) {
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record Conexao(String ip, int rack, int slot, int dbNumero, int intervaloLeituraMs,
+			Integer tsapLocal, Integer tsapRemoto) {
+
+		public Conexao(String ip, int rack, int slot, int dbNumero, int intervaloLeituraMs) {
+			this(ip, rack, slot, dbNumero, intervaloLeituraMs, null, null);
+		}
+
+		/** TSAPs vistos pelo Desktop: local = remoto no LOGO e vice-versa. */
+		public boolean usaTsap() {
+			return tsapLocal != null || tsapRemoto != null;
+		}
 
 		/** O que a tela oferece antes de alguém digitar: os valores que hoje são constantes. */
 		public static Conexao padrao() {

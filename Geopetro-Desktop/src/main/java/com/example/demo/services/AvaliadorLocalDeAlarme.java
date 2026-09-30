@@ -3,7 +3,6 @@ package com.example.demo.services;
 import java.time.Duration;
 import java.time.Instant;
 
-import com.example.demo.models.ConfiguracaoSondaRemota.Limite;
 
 /**
  * A regra do alarme na borda — RN-068, RN-071.
@@ -35,6 +34,22 @@ public final class AvaliadorLocalDeAlarme {
 	private AvaliadorLocalDeAlarme() {
 	}
 
+	/**
+	 * A faixa que a regra avalia — e nada além disso.
+	 *
+	 * <h2>Por que o avaliador tem tipo próprio</h2>
+	 * Antes ele recebia o {@code Limite} do documento do servidor, e isso o amarrava a um documento
+	 * remoto para decidir se o beep desta máquina toca. O alarme da estação passou a ser da estação
+	 * ({@code specs/features/configuracao-da-estacao.md §3}), e a regra não deve saber de onde os
+	 * números vieram: aqui entra a faixa, venha ela do sininho ou de qualquer outra origem futura.
+	 *
+	 * <p>Sem {@code dispositivoId} e sem {@code ativo} de propósito — identidade e liga/desliga são
+	 * de quem guarda a configuração, não de quem aplica a regra.
+	 */
+	public record Faixa(Double minimoAtencao, Double maximoAtencao, Double minimoCritico, Double maximoCritico,
+			int segundosParaAbrir, int segundosParaFechar) {
+	}
+
 	/** Dois níveis — RN-071. A ordem decide se a transição é subida ou descida. */
 	public enum Severidade {
 		ATENCAO, CRITICO;
@@ -59,37 +74,37 @@ public final class AvaliadorLocalDeAlarme {
 		}
 	}
 
-	public static Estado avaliar(Estado anterior, Limite limite, double valor, Instant agora) {
+	public static Estado avaliar(Estado anterior, Faixa faixa, double valor, Instant agora) {
 		Estado estado = anterior == null ? Estado.inicial() : anterior;
-		Severidade lida = severidadeDe(limite, valor);
+		Severidade lida = severidadeDe(faixa, valor);
 
 		Instant desde = estado.observada() == lida && estado.desde() != null ? estado.desde() : agora;
 
-		if (lida == estado.confirmada() || !tempoCumprido(limite, estado.confirmada(), lida, desde, agora)) {
+		if (lida == estado.confirmada() || !tempoCumprido(faixa, estado.confirmada(), lida, desde, agora)) {
 			return new Estado(estado.confirmada(), lida, desde);
 		}
 		return new Estado(lida, lida, desde);
 	}
 
 	/** Fora do crítico é crítico; fora da atenção é atenção; o resto é dentro da faixa. */
-	public static Severidade severidadeDe(Limite limite, double valor) {
+	public static Severidade severidadeDe(Faixa faixa, double valor) {
 		if (!Double.isFinite(valor)) {
 			return null;
 		}
-		if (abaixo(valor, limite.minimoCritico()) || acima(valor, limite.maximoCritico())) {
+		if (abaixo(valor, faixa.minimoCritico()) || acima(valor, faixa.maximoCritico())) {
 			return Severidade.CRITICO;
 		}
-		if (abaixo(valor, limite.minimoAtencao()) || acima(valor, limite.maximoAtencao())) {
+		if (abaixo(valor, faixa.minimoAtencao()) || acima(valor, faixa.maximoAtencao())) {
 			return Severidade.ATENCAO;
 		}
 		return null;
 	}
 
-	private static boolean tempoCumprido(Limite limite, Severidade confirmada, Severidade lida, Instant desde,
+	private static boolean tempoCumprido(Faixa faixa, Severidade confirmada, Severidade lida, Instant desde,
 			Instant agora) {
 		int segundos = Severidade.ordem(lida) > Severidade.ordem(confirmada)
-				? limite.segundosParaAbrir()
-				: limite.segundosParaFechar();
+				? faixa.segundosParaAbrir()
+				: faixa.segundosParaFechar();
 		return !Duration.between(desde, agora).minusSeconds(segundos).isNegative();
 	}
 
