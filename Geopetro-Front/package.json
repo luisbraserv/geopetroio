@@ -5,7 +5,6 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "test:hydraulics": "vitest run tests/hydraulics.spec.js",
     "deploy:cloudflare": "npm run build && npx wrangler pages deploy dist/Geopetro-Front/browser --project-name geopetro-front-geopetro-io",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
