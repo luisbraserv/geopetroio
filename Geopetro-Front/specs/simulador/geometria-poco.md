@@ -1,13 +1,23 @@
 # Geometria de Poço e Trajetória — Simulador
 
-> Spec de feature · **[DECIDIDO 2026-09-05]** · Trabalho **em curso, não commitado**
+> **[DECIDIDO 2026-09-19 — IMPLEMENTAÇÃO PENDENTE]** Squeeze, tampão e primária
+> devem seguir: cadastrar as fases → selecionar a fase da operação → calcular
+> para essa fase. Fluxo, contexto geométrico, migração e aceites em
+> [Fase de trabalho — regra comum aos simuladores](fase-operacao.md).
+
+> Spec de feature · **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-09] Commitado** — ver §1
 >
 > Specs de sistema em [`../../../specs/`](../../../specs/) · contexto de produto em
 > [`product-context.md`](../../../specs/product-context.md)
 
 ## 1. Estado
 
-**[FATO 2026-09-05]** Existe no *working tree*, sem commit:
+**[FATO 2026-09-09]** Os arquivos abaixo **estão versionados**, com suítes próprias aprovadas.
+
+⚠️ *O texto seguinte é de 05/09 e descrevia o working tree; ficou para trás quando o commit
+aconteceu. Preservado datado porque explica de onde a feature veio, e não o que ela é hoje.*
+
+**[FATO 2026-09-05 — histórico]** Existe no *working tree*, sem commit:
 
 | Arquivo | Papel |
 |---|---|
@@ -446,3 +456,61 @@ continuam bloqueantes.
 Contrato e cobertura em [`faixas-validacao.md`](faixas-validacao.md#entrega-de-relações-entre-campos--2026-09-06).
 Suíte completa: **299 testes aprovados em 32 arquivos**. Build aprovado com os
 avisos de tamanho existentes. As faixas quantitativas seguem aguardando a equipe.
+
+## 17. Diâmetros por fase e exemplo iniciado na superfície
+
+**[FATO 2026-09-17 — alteração no frontend]** O campo "Caliper" do squeeze era
+um controle somente leitura, derivado do diâmetro do furo na base da operação.
+No tampão, o controle `holeID`, também somente leitura, era o diâmetro interno
+disponível nessa base: ID do revestimento ou diâmetro do furo aberto. A edição
+real dos dois já vinha da estrutura por fases, em outro acordeão. Uma geometria
+inválida interrompia a sincronização e deixava o resumo com o valor anterior.
+
+Caliper é a medição/ferramenta que fornece o diâmetro do poço; não é um limite
+global para todos os revestimentos. Referência de terminologia:
+[SLB, caliper log](https://glossary.slb.com/terms/c/caliper_log).
+O diâmetro de furo continua necessário para trechos abertos, representação da
+estrutura e verificação de que o revestimento cabe na fase declarada.
+
+**Mudanças:**
+
+- Removidos da apresentação os controles derivados duplicados `caliper`,
+  `casingOD` e `casingID` do squeeze e `holeID` do tampão. Seus contratos internos
+  permanecem para cálculo e migração de cenários antigos.
+- Campo editável por fase passa a se chamar **Diâmetro do furo (pol)**, com
+  explicação de diâmetro nominal da broca ou medido por caliper e distinção de
+  OD/ID do revestimento. Selecionar uma opção API só altera OD/ID; não inventa
+  nem aumenta automaticamente o diâmetro do furo.
+- "Dados da Operação" e "Estrutura do Poço" abrem inicialmente. A seção geral
+  oferece o botão **Editar diâmetros por fase** para voltar à origem dos dados.
+- O erro `CASING_OD_GT_HOLE` informa a fase e orienta revisar furo/revestimento
+  nessa estrutura; o bloqueio físico permanece.
+- Novas simulações usam um exemplo editável com **Superfície** entre 0–300 m,
+  furo 17.5", revestimento OD 13.375" / ID 12.415", seguido de uma fase até
+  1500 m: produção revestida no squeeze ou poço aberto no tampão. Os valores
+  não são dimensões inferidas do poço do usuário nem recomendações operacionais.
+- A primeira linha nova sem fase anterior recebe nome/tipo Superfície. Condutor
+  continua disponível; cenários carregados conservam seus tipos, IDs, dimensões
+  e número de fases, inclusive os antigos com uma única fase.
+
+O tamanho da superfície não substitui o diâmetro de uma fase mais profunda.
+Para OD 9.625" numa fase cujo furo está informado como 8.535", o erro continua
+correto; informar o diâmetro real dessa fase, por exemplo 12.25", permite o
+cálculo. Em trecho revestido, squeeze/tampão usam o ID para capacidade interna.
+Na primária, o anular externo será tratado pelo contrato próprio de
+[`cimentacao-primaria.md`](cimentacao-primaria.md), sem reaproveitar esse ID como
+parede externa.
+
+**Cobertura acrescentada:** edição do furo via DOM junto ao seletor API;
+invalidação/recuperação com revestimento maior nos dois simuladores; independência
+entre fase de superfície e fase da operação; geometria inicial válida; restauração
+de cenário antigo sem acrescentar fases. Os testes existentes de TVD/survey e
+integração foram adaptados para não depender de uma única fase padrão.
+
+**Verificação desta alteração:** `npm.cmd test -- --watch=false` aprovado:
+**419 testes em 45 arquivos**. `npm.cmd run build` aprovado (exit 0), com avisos
+de orçamento do bundle inicial (524.88 kB / 500 kB) e estilos de squeeze
+(14.17 kB / 8 kB) e tampão (13.72 kB / 8 kB). Execuções fora do sandbox foram
+necessárias porque a resolução de dependências era bloqueada dentro dele.
+Teste de DOM cobre seleção API e edição do diâmetro; a inspeção visual em
+navegador não foi possível nesta sessão por ausência de navegador conectado.

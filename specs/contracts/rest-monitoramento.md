@@ -127,9 +127,15 @@ telemetria vira `502` na API pública, não `500`.
 
 ## 4. Endpoints expostos pelo Geopetro-Backend
 
-**[FATO]** Já implementados. Roles: `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` e
-`CLIENTE`. O perfil `CLIENTE` tem escopo restrito às Unidades/Sondas concedidas no cadastro; os
-demais perfis listados acessam a frota inteira.
+**[FATO 2026-09-17]** Já implementados. O acesso é por **combinação** — `ADMIN`, ou
+`MONITORAMENTO` somada ao tipo de conta (`CLIENTE` ou `INTERNO`); ver
+[RN-099](../business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo). O
+`CLIENTE` tem escopo restrito às Unidades/Sondas concedidas no cadastro; a conta interna acessa a
+frota inteira.
+
+⚠️ `/api/sondas/{id}/configuracao` e `/api/sondas/{id}/alarmes[...]` exigem
+`MONITORAMENTO_REAL`, **não** `MONITORAMENTO`: limite de alarme e histórico seguem o tempo real
+(RN-069).
 
 ### `GET /api/sondas/minhas`
 

@@ -104,7 +104,7 @@ no startup do backend.
 |---|---|---|
 | 1 | Coluna `tipo` em `unidades_sondas`, com backfill `SONDA` | ✅ `V2026.09.06.1` |
 | 2 | `DROP` de `usuario_interno_regionais`, `usuario_interno_setores` e `usuarios.regional_id` | ✅ `V2026.09.06.2` — ⚠️ descarta dados |
-| 3 | Tabelas de **limite** e **log de eventos** de alarme | ⏳ Não escrita — depende de [RN-071](business-rules.md#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico) · [RN-076](business-rules.md#rn-076--o-alarme-é-registrado-como-sequência-de-fatos) |
+| 3 | Tabelas de **limite** e **log de eventos** de alarme | ✅ Escritas — limites em `V2026.09.07.2`, log de fatos em `V2026.09.09.1` e o pico de cada episódio em `V2026.09.09.2` ([RN-071](business-rules.md#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico) · [RN-076](business-rules.md#rn-076--o-alarme-é-registrado-como-sequência-de-fatos)) |
 | 4 | **Poço** com geometria tipada, mais `simulador_cenarios.poco_id` | ✅ `V2026.09.05` |
 | 5 | `DROP` das tabelas órfãs dos módulos removidos | ⏳ Não escrita — [OQ-026](open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs) |
 
@@ -132,7 +132,9 @@ app/src/main/resources/db/migration/
 ├── V2026.09.07.1__configuracao_smtp.sql
 ├── V2026.09.07.2__configuracao_sonda.sql
 ├── V2026.09.07.3__role_suporte.sql
-└── V2026.09.07.4__configuracao_cards.sql
+├── V2026.09.07.4__configuracao_cards.sql
+├── V2026.09.09.1__evento_alarme.sql            ← log de fatos, append-only
+└── V2026.09.09.2__episodio_alarme_extremo.sql  ← o pico de cada episódio, atualizável
 
 db/historico/                          ← V2026.06.*, aplicados à mão antes do Flyway. Não rodam mais
 ```
@@ -231,7 +233,7 @@ a seguir nas próximas.
 ### O que permanece aberto
 
 - **[FATO]** `migration-regional.sql` tinha passos de limpeza **comentados** com instrução *"após validar os dados"*, sem registro de execução — [OQ-015](open-questions.md#oq-015--as-colunas-legadas-ainda-existem-em-produção). A divergência acima **é OQ-015 se materializando**: o baseline não descreve produção, e ninguém comparou os dois.
-- Os itens 3 e 5 da tabela acima ainda não têm migration escrita.
+- O item 5 da tabela acima ainda não tem migration escrita. *(O item 3 passou a ter em 09/09.)*
 - ⚠️ **Nunca editar um script já aplicado.** `validate-on-migrate` está ligado: mexer no conteúdo quebra o startup em vez de divergir em silêncio. Correção vem em script novo.
 
 ---
@@ -507,9 +509,17 @@ efeito real desde o primeiro dia — alcança `/api/configuracoes/**` e não alc
 desta dívida foi respeitado: a role nasceu com uma fronteira testada, não reservada para uso futuro.
 
 **Melhoria estrutural [FATO]:** as roles por módulo deixaram de ser literais espalhados e passaram a
-constantes exportadas (`ROLES_MONITORAMENTO`, `ROLES_SIMULADOR`, `ROLES_ADMINISTRACAO`) em
-`user.model.ts`, usadas tanto pelos guards de rota quanto pelo menu. Antes, menu e guard podiam
-divergir silenciosamente — um item aparecia e levava a "acesso negado".
+constantes exportadas em `user.model.ts`, usadas tanto pelos guards de rota quanto pelo menu. Antes,
+menu e guard podiam divergir silenciosamente — um item aparecia e levava a "acesso negado".
+
+**[FATO 2026-09-17]** Seguem **8**, mas a lista mudou de forma: `SONDA`, `GERENCIA` e `DIRETORIA`
+saíram e `MONITORAMENTO`, `MONITORAMENTO_REAL` e `SIMULADOR` entraram. As três removidas eram o
+contra-exemplo do princípio desta dívida — tinham efeito, mas **o mesmo efeito**: quem tinha
+`GERENCIA` podia exatamente o que `SONDA` podia, e a distinção só existia no cadastro. As constantes
+por módulo viraram **regras de combinação** (`ACESSO_MONITORAMENTO`, `ACESSO_SIMULADOR_CIMENTACAO`…),
+espelhando `RegrasDeAcesso` no backend, porque uma lista de roles não expressa "tipo de conta somado
+a permissão de módulo" — ver
+[RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
 
 ---
 

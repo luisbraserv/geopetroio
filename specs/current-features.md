@@ -310,7 +310,7 @@ puro).
 | Campo | Conteúdo |
 |---|---|
 | **Objetivo** | Calcular operações de cimentação (Squeeze e Tampão) e gerar relatórios técnicos |
-| **Atores** | `CIMENTACAO`, `ADMIN`, `GERENCIA`, `DIRETORIA` |
+| **Atores** | `ADMIN` · `CLIENTE`+`SIMULADOR`+`CIMENTACAO` · `INTERNO`+`SIMULADOR`+`CIMENTACAO` — [RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo) |
 | **Rotas** | `/app/simulador` · `/app/simulador/squeeze` · `/app/simulador/tampao` |
 | **Endpoints** | `/api/simulador/pastas[...]` · `/api/simulador/cenarios[...]` · `/cenarios/sem-pasta?operacao` |
 | **Entidades** | `PastaSimuladorEntity`, `CenarioSimuladorEntity` |
@@ -327,7 +327,7 @@ conformidade operacional
 
 **Regras [FATO]**
 - Cenários organizados em pastas por `operacao` — o backend é agnóstico de domínio.
-- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador (`CIMENTACAO`, `ADMIN`, `GERENCIA` ou `DIRETORIA`) edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015---cenários-do-simulador-não-têm-dono)).
+- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015---cenários-do-simulador-não-têm-dono)) — e desde 2026-09-17 isso inclui `CLIENTE`, que passou a poder receber acesso ao simulador.
 - Pasta com cenários: cascade `ALL` + `orphanRemoval`.
 
 ⚠️ **Validações [FATO]** — **ausência quase total**. Os ~40 campos numéricos críticos de engenharia
@@ -345,7 +345,7 @@ próprio** que resta no backend, além da identidade e da organização.
 | Campo | Conteúdo |
 |---|---|
 | **Objetivo** | Visualizar séries temporais de telemetria de uma sonda |
-| **Atores** | `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` (frota inteira) · `CLIENTE` (apenas as sondas concedidas) |
+| **Atores** | `ADMIN` e conta interna com `MONITORAMENTO` (frota inteira) · `CLIENTE`+`MONITORAMENTO` (apenas as sondas concedidas) |
 | **Rota** | `/app/monitoramento-sondas` — carregada sob demanda com `loadComponent` |
 | **Endpoints** | `GET /api/sondas/minhas` · `GET /api/sondas/{idSondaUnidade}/monitoramentos/series?dispositivoId&inicio&fim` |
 
@@ -386,9 +386,9 @@ transparente para o frontend, que recebe a mesma forma `{dataHora, valor}`.
 
 | Perfil | Sondas visíveis |
 |---|---|
-| `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` | Frota inteira |
-| `CLIENTE` | Apenas as concedidas no cadastro |
-| Só `INTERNO` | Nenhuma |
+| `ADMIN`, e `INTERNO`+`MONITORAMENTO` (ou `MONITORAMENTO_REAL`) | Frota inteira |
+| `CLIENTE`+`MONITORAMENTO` | Apenas as concedidas no cadastro |
+| Só `INTERNO`, ou permissão de módulo sem tipo de conta | Nenhuma |
 
 Ver [RN-047](business-rules.md#rn-047--escopo-de-sondas-por-perfil). Erros: `403` sem acesso à sonda ·
 `502` serviço de telemetria fora.

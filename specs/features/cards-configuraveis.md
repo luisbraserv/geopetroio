@@ -505,6 +505,11 @@ calibrado" em vez de converter com a de outro ([RN-099](../business-rules.md#rn-
    que traçam a **escala configurada** e não uma fixa — um sensor de motor (0..150) e um de lama
    (−20..80) desenham diferente para a mesma temperatura
 
+   **[CORRIGIDO 2026-09-09]** O monitoramento do Desktop agora monta os indicadores pelo documento,
+   antes da primeira leitura do CLP, com `--` enquanto não há medição. O cache de cards é restaurado
+   antes do login de rede. Reabrir a página, renomear e desativar cards atualiza a tela sem deixar
+   nós antigos ou timers duplicados. Ver [auditoria do Desktop](../auditoria-desktop-cards-2026-09.md).
+
    ⚠️ **Junto veio a virada do H2 local.** `SondaReading`, de colunas fixas, deu lugar a uma linha
    por grandeza ([RN-100](../business-rules.md#rn-100--o-histórico-local-é-por-grandeza-e-tem-prazo)):
    a tabela antiga não conseguia representar um terceiro card de torque, um de temperatura ou um de

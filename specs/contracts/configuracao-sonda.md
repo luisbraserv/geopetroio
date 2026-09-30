@@ -11,7 +11,7 @@
 | STOMP SUBSCRIBE | `/topic/config/unidades-sondas/{id}` | Recebe alterações após commit |
 | STOMP SUBSCRIBE | `/app/config/unidades-sondas/{id}` | Recebe um snapshot diretamente na assinatura solicitante |
 
-**[FATO]** Reutiliza `/ws`, JWT no `CONNECT` e autorização por unidade. `SEND` para configuração é recusado; gravação ocorre somente por HTTP. Os perfis de monitoramento (`SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA`, `ADMIN` e `CLIENTE`) usam as concessões existentes. Conta inativa ou sem acesso não lê nem grava. Cada entrega também verifica conta e concessão atuais, inclusive nas sessões previamente assinantes.
+**[FATO]** Reutiliza `/ws`, JWT no `CONNECT` e autorização por unidade. `SEND` para configuração é recusado; gravação ocorre somente por HTTP. O `SUBSCRIBE` confere **duas** coisas desde 2026-09-17: a permissão de módulo (`MONITORAMENTO` para o documento de cards, `MONITORAMENTO_REAL` para as leituras ao vivo, somadas ao tipo de conta — [RN-099](../business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo)) e o escopo por unidade, que usa as concessões existentes. ⚠️ A conta de uma estação precisa de `MONITORAMENTO` para assinar os cards. Conta inativa ou sem acesso não lê nem grava. Cada entrega também verifica conta e concessão atuais, inclusive nas sessões previamente assinantes.
 
 **[FATO]** `WebSocketInboundGuard` envia `ERROR` para recusas de autenticação, assinatura ou destino de envio, encerrando a sessão. A resposta explícita é necessária porque a fila de ordenação captura exceções antes do tratador de protocolo.
 

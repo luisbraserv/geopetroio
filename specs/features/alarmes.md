@@ -227,7 +227,13 @@ geraria 600 registros — e nenhuma tela de histórico sobrevive a isso.
 
 **[DECIDIDO 2026-09-05]** Pela **conexão WebSocket/STOMP que já existe**.
 
-**[FATO 2026-09-07]** O Desktop publica em `/app/realtime/estado` e agora recebe configurações na mesma conexão autenticada. Snapshot inicial, reconexão, revisão e permissões estão no [contrato de configuração](../contracts/configuracao-sonda.md). Ajuste pela tela e avaliação dos limites continuam pendentes; o fluxo abaixo é o desenho completo previsto.
+**[FATO 2026-09-07]** O Desktop publica em `/app/realtime/estado` e agora recebe configurações na mesma conexão autenticada. Snapshot inicial, reconexão, revisão e permissões estão no [contrato de configuração](../contracts/configuracao-sonda.md).
+
+**[FATO 2026-09-09]** ⚠️ *A frase anterior desta seção dizia que "ajuste pela tela e avaliação dos
+limites continuam pendentes" — texto de 07/09 que sobreviveu à entrega.* Os dois **existem**: a tela
+está em `/app/limites-alarme` e a avaliação em `MotorDeAlarmes` (§8, item 2). O fluxo abaixo descreve
+o que está implementado, e não mais um desenho previsto. **O que segue pendente é a distribuição à
+frota**, que depende do auto-update do Desktop.
 
 ```
 Supervisão ajusta o limite na tela

@@ -94,16 +94,57 @@ monitoramento, que era o último lugar onde essa limitação se manifestava.
 cadastro, mas hoje **não influencia nenhuma decisão de autorização**. Ver
 [OQ-002](open-questions.md#oq-002--o-vínculo-regionalsetor-ainda-serve-para-alguma-coisa).
 
+### RN-099 · Acesso por combinação: tipo de conta + permissão de módulo
+**[DECIDIDO 2026-09-17]** O acesso deixou de ser "uma role da lista".
+
+Duas famílias de role, e nenhuma das duas basta sozinha:
+
+| Família | Roles | O que diz |
+|---|---|---|
+| Tipo de conta | `CLIENTE`, `INTERNO` | **De quem** é a conta. Aplicada pelo backend conforme o cadastro |
+| Permissão de módulo | `MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR`, `CIMENTACAO` | **O que** ela alcança |
+
+`ADMIN` atravessa tudo sem permissão de módulo. `SUPORTE` segue o caso à parte de
+[RN-086](#rn-086--suporte-configura-o-sistema-sem-administrar-cadastro).
+
+| Módulo | Combinações que abrem |
+|---|---|
+| Monitoramento (séries) | `ADMIN` · `CLIENTE`+`MONITORAMENTO` · `INTERNO`+`MONITORAMENTO` |
+| Tempo Real, Limites de Alarme, Histórico de Alarmes | `ADMIN` · `CLIENTE`+`MONITORAMENTO_REAL` · `INTERNO`+`MONITORAMENTO_REAL` |
+| Simulador de Cimentação | `ADMIN` · `CLIENTE`+`SIMULADOR`+`CIMENTACAO` · `INTERNO`+`SIMULADOR`+`CIMENTACAO` |
+| Cadastros | `ADMIN` |
+| Configurações | `ADMIN` · `SUPORTE` |
+
+**[FATO]** Declarado uma única vez em `RegrasDeAcesso` (backend) e espelhado em `user.model.ts`
+(frontend). O HTTP aplica por `.access(...)`; o WebSocket, por `PermissoesDoUsuario` no `SUBSCRIBE`.
+
+**O que a mudança resolve:** conceder monitoramento a um cliente exigia uma role que também valia
+para funcionário, e cada nova área do produto acrescentava mais uma role a várias listas. Agora a
+área nova nasce como uma permissão de módulo combinada ao tipo de conta.
+
+**⚠️ `MONITORAMENTO_REAL` não depende de `MONITORAMENTO`** — são concessões independentes, senão
+conceder apenas o tempo real seria impossível.
+
+**Roles removidas:** `SONDA`, `GERENCIA` e `DIRETORIA`. Existiam só dentro de listas de permissão,
+sem nenhuma regra própria — quem tinha `GERENCIA` podia exatamente o que `SONDA` podia. A migration
+`V2026.09.17.1__roles_por_modulo.sql` converte as linhas existentes **preservando o alcance
+anterior** de cada usuário; quem não deve ter tempo real precisa ser ajustado no cadastro depois.
+
 ### RN-047 · Escopo de sondas por perfil
-**[DECIDIDO 2026-08-27]** Regra central do monitoramento.
+**[DECIDIDO 2026-08-27]**, atualizada em **2026-09-17**. Regra central do monitoramento.
 
 | Perfil | Escopo |
 |---|---|
-| `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` | **Frota inteira** |
+| `ADMIN`, e conta **interna** com permissão de monitoramento | **Frota inteira** |
 | `CLIENTE` | **Apenas** as Unidades/Sondas concedidas no seu cadastro |
 | Qualquer outro (ex.: só `INTERNO`) | Nenhuma sonda |
 
-**[FATO]** Implementada em `SondaMonitoramentoService`, com 9 testes cobrindo cada caso.
+**Escopo não é permissão.** Quem *entra* é decidido por [RN-099](#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo);
+esta regra responde *quanto* quem entrou enxerga. A permissão é repetida no escopo de propósito,
+para que um endpoint futuro que reuse o serviço sem declarar regra não entregue a frota a qualquer
+funcionário.
+
+**[FATO]** Implementada em `SondaMonitoramentoService`, com 11 testes cobrindo cada caso.
 
 **Precedência:** a role de maior alcance vence. Um usuário `CLIENTE` + `ADMIN` enxerga a frota
 inteira — o vínculo de cliente não o limita.
@@ -126,9 +167,19 @@ interna abriria a porta para expor dados de uma empresa a outra por efeito colat
 - Id inexistente → `400`, indicando formulário dessincronizado
 
 ### RN-049 · Acesso ao Simulador
-**[DECIDIDO 2026-08-27]** Restrito a `ADMIN`, `CIMENTACAO`, `GERENCIA` e `DIRETORIA`.
+**[DECIDIDO 2026-08-27]**, **substituída em 2026-09-17** por
+[RN-099](#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
 
-**[FATO]** `CLIENTE` e `SONDA` **não** acessam o simulador — nem no menu, nem na rota, nem na API.
+**O que dizia:** restrito a `ADMIN`, `CIMENTACAO`, `GERENCIA` e `DIRETORIA`; `CLIENTE` **não**
+acessava o simulador.
+
+**O que vale hoje:** `ADMIN`, ou `SIMULADOR`+`CIMENTACAO` somadas ao tipo de conta — e o tipo pode
+ser `CLIENTE`. Um cliente **passa** a poder usar o Simulador de Cimentação, desde que as duas
+permissões sejam concedidas no cadastro dele.
+
+**Por que `SIMULADOR` e `CIMENTACAO`, e não uma role só:** outros simuladores estão previstos. A
+primeira diz que o usuário alcança a área; a segunda, qual simulador. O próximo nasce exigindo
+`SIMULADOR` mais o seu próprio domínio, sem tocar na regra do de cimentação.
 
 ### RN-014 · ~~Observações sem controle de acesso~~ — REMOVIDA
 **[DECIDIDO 2026-08-26]** O módulo `observacao` foi removido. A regra documentava que
@@ -1289,3 +1340,216 @@ sistema — **o volume é o do sistema operacional**, e uma estação com som de
 lados, ou o operador na sonda vê um estado e a supervisão vê outro. Os projetos são repositórios
 independentes, sem biblioteca comum: o que impede a deriva são os testes dos dois lados exercitando a
 **mesma** sequência de leituras.
+
+### RN-105 · Um ciclo de tempo real carrega uma leitura por grandeza
+**[DECIDIDO 2026-09-09]** Uma mensagem de `/app/realtime/estado` é **um instante** da unidade. Duas
+leituras da mesma identidade `(dispositivoId, serie)` no mesmo ciclo tornam a mensagem **malformada**,
+e o ciclo inteiro é descartado com registro em log.
+
+**Por que não ficar com a última:** o resultado pareceria plausível e esconderia um produtor quebrado.
+**Por que não avaliar as duas em sequência:** elas compartilham o mesmo instante do servidor
+([RN-102](#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)), então um tempo mínimo
+venceria sem tempo nenhum ter passado — o alarme abriria antes da hora.
+
+**Custo aceito:** a unidade fica muda por um ciclo. O canal é declaradamente com perda e a próxima
+mensagem chega em 1s; a causa fica escrita no log, que é o que faltava.
+
+⚠️ **A recusa não é a única defesa.** O motor encadeia o estado dentro do ciclo mesmo que uma
+identidade se repita: nenhuma das duas sozinha cobre um chamador que não passe pelo controller.
+
+### RN-106 · O pico de um episódio de alarme é gravado à parte
+**[DECIDIDO 2026-09-09]** O log de eventos guarda **transições**
+([RN-076](#rn-076--o-alarme-é-registrado-como-sequência-de-fatos)), e o pior valor de uma excursão
+quase nunca é uma transição: `130` abre, `200` não muda severidade e não gera fato, `90` fecha. O
+extremo mora numa **linha por episódio**, atualizada enquanto ele durar, e sobrevive ao fechamento.
+
+**Por que não uma coluna do evento:** `valor` é a leitura que provocou o fato, e continua sendo.
+Misturar as duas coisas obrigaria a escolher entre gravar uma linha por leitura — 600 numa excursão de
+dez minutos — ou perder o pico.
+
+**O que isso corrige:** o histórico subestimava a excursão, e reiniciar o servidor no meio dela
+rebaixava a projeção ao valor do último fato gravado.
+
+⚠️ **Episódios anteriores a esta decisão não recuperam o pico.** A migração semeia o melhor que os
+fatos permitem deduzir; o que aconteceu entre transições daquele período não foi gravado por ninguém.
+
+### RN-107 · O corte de acesso vale também no tempo real
+**[DECIDIDO 2026-09-09]** A conta desativada
+([RN-062](#rn-062--desativar-usuário-corta-o-acesso-na-hora)) perde o canal de tempo real
+como perde o HTTP: no `CONNECT`, no `SUBSCRIBE`, na publicação e **a cada entrega**.
+
+**Por que a cada entrega, e não só na assinatura:** uma tela aberta assina no login e fica horas
+conectada. Verificar uma vez faria o corte valer para quem chegasse depois, e não para quem já estava
+— justamente o caso que a desativação existe para tratar.
+
+**Custo aceito:** uma consulta de status por mensagem entregue, amortecida pelo cache curto de
+`ContaAtivaVerificador`. A janela do corte passa a ser a mesma do HTTP, e não a hora inteira do token.
+
+⚠️ **Isto não é revogação de token.** Um token vazado de usuário **ativo** segue valendo até expirar —
+[SEC-008](security-findings.md#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário)
+continua aberto.
+
+### RN-108 · O alarme da estação é configurado na estação
+**[FATO 2026-09-09]** A faixa que faz a estação apitar vive em `config/alarmes-locais.json`, na
+própria máquina, por `dispositivoId` mais `serie` (RN-098). **Não vem do servidor.**
+
+**Por quê:** o valor nasce ali. A estação lê o CLP, converte e sabe o número antes de qualquer outro;
+mandá-lo ao servidor, deixar o servidor decidir que está fora da faixa e trazer a decisão de volta
+para tocar um beep na mesma máquina é uma volta pela rede para responder o que já estava respondido.
+E a volta é justamente o que falta quando o alarme importa — a sonda sem internet é o cenário em que
+o operador ao lado do equipamento é a única pessoa que pode agir.
+
+⚠️ **São dois alarmes, e eles não se falam.** O do servidor
+([RN-102](#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)) continua sendo configurado
+no Front por quem enxerga a sonda ([RN-069](#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)).
+Divergirem é **comportamento correto**: o operador aperta o limite dele para uma manobra sem alterar
+o que a supervisão vigia, e vice-versa. Nenhum precisa conhecer o outro para funcionar.
+
+⚠️ **O tempo mínimo não aparece na tela, e continua valendo** — 3 s para abrir, 5 s para fechar, os
+mesmos do servidor. Sem ele, um valor tremendo na fronteira produz um bipe por segundo; o desfecho
+conhecido é o operador desligar o som da estação, e o próximo alarme de verdade não avisar ninguém
+([RN-071](#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico)).
+
+⚠️ **Ativo sem faixa nenhuma não vigia.** Marcar o alarme e sair sem digitar número é o engano mais
+fácil de cometer; tratá-lo como vigilância prometeria o que não cumpre.
+
+**Desligar guarda a faixa; apagar não.** Quem desliga para uma manobra encontra os números onde
+deixou — redigitar a cada vez é o caminho para ninguém mais religar. E card desativado **hiberna o
+alarme junto** ([RN-091](#rn-091--card-se-desativa-nunca-se-exclui)).
+
+### RN-111 · O dashboard da estação mostra todo card ativo, visível ou não
+**[FATO 2026-09-09]** `CardsDoMonitoramento` monta os indicadores a partir dos cards **ativos**, e
+nada filtra por `visivel` — esse campo decide apenas se a grandeza entra na publicação de tempo real
+([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)).
+
+⚠️ **Isto sustenta a única cobertura que resta para card invisível.** O servidor avalia pelo tempo
+real, que só carrega card visível, então grandeza de card invisível **nunca dispara alarme no
+servidor** ([OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara)). Quem cobre
+esse buraco é o alarme da estação — e ele só alcança aquelas grandezas porque elas aparecem na tela.
+
+⚠️ **Esconder card invisível do dashboard parece inofensivo e coerente com o nome do campo.** Não é:
+aquelas grandezas ficariam **sem alarme em lugar nenhum**, e nada no sistema acusaria.
+
+### RN-109 · O sininho é o único ajuste do Desktop sem login
+**[FATO 2026-09-09]** Toda configuração do Desktop exige `ADMIN` ou `SUPORTE`
+([RN-086](#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)). O ajuste do alarme
+local, atrás do sininho de cada card, é a **exceção**: qualquer pessoa na unidade abre e altera.
+
+**Por quê:** é a mesma razão que sustenta o alarme local existir. Quem está no equipamento precisa
+poder dizer "me avise se passar disto" no momento em que precisa, e um portão de rede ali anularia a
+feature justamente no cenário que a motiva — a sonda sem internet
+([RN-108](#rn-108--o-alarme-da-estação-é-configurado-na-estação)).
+
+**A linha que separa:** o sininho **não altera o que a unidade lê nem o que ela publica**. Ele decide
+quando esta máquina apita. Errar nele não produz dado errado no histórico de cinco anos; errar na
+configuração de cards ou na conexão do CLP, sim.
+
+⚠️ **Sem autoria, por construção.** A estação não tem identidade de quem opera: mudar, desligar ou
+afrouxar um alarme local não deixa rastro, e um turno pode desativá-lo sem o seguinte saber.
+**[DECIDIDO 2026-09-09]** Aceito sem mitigação — *"é um alarme, só vai apitar, não é nada crítico"*.
+
+### RN-086b · O portão de configuração alcança a engrenagem
+**[FATO 2026-09-10]** [RN-086](#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)
+valia para a tela de Cards. Passa a valer também para a engrenagem do Desktop e para as janelas de
+calibração abertas pelo card.
+
+**O que mudou desde a decisão original.** A engrenagem ficava aberta porque ajustava *esta estação*.
+Deixou de ser verdade: ela passou a editar a conexão do CLP — que é da unidade — e a decidir se a
+unidade publica ([`configuracao-da-estacao.md §4`](features/configuracao-da-estacao.md)).
+
+**Não há campo livre na engrenagem.** Os quatro cartões — inclusive endereço do Backend e do broker,
+com credenciais — exigem `ADMIN` ou `SUPORTE`.
+
+⚠️ **A porta não fecha sobre si mesma porque o Servidor mudou de tela.** O login acontece contra o
+Backend, e o endereço dele morava na engrenagem: trancar a engrenagem inteira deixaria uma estação
+recém-instalada sem por onde começar — sem URL não há login, e sem login não se definiria a URL. O
+campo Servidor passou então para a **janela de login**, ao lado de usuário e senha, e é o único ponto
+de configuração fora do cadeado. O endereço só é gravado depois que o servidor aceita a credencial,
+de modo que uma tentativa falha não deixa endereço inválido para trás.
+
+**[HISTÓRICO]** Até 2026-09-10 esta regra deixava os campos de endereço editáveis sem login, pelo
+motivo acima. A decisão foi revertida — *"URL do Backend + credenciais e endereço e credenciais do
+broker MQTT também exige autenticação"* — e a trava passou a ser resolvida pelo campo na tela de
+login, e não por exceção no portão.
+
+⚠️ **A calibração de peso e torque entrou junto**, e é a consequência que mais deve doer: ela é
+**medida em campo**, com a unidade parada, e passou a exigir rede ao menos uma vez.
+
+⚠️ **Campo desabilitado não é a regra.** A verificação se repete na gravação; autorização que vive só
+na UI some na primeira refatoração.
+
+### RN-112 · Cada tela grava só a sua metade do documento da unidade
+**[FATO 2026-09-10]** A engrenagem edita a **conexão** do CLP e a tela de Cards edita os **cards**.
+As duas gravam o mesmo documento, e o `PUT` de `/api/sondas/{id}/cards` carrega o documento inteiro.
+
+**Regra:** quem grava **relê o documento imediatamente antes** e devolve intacta a metade que não
+edita — `ConfiguracaoCardsClient.salvarConexao` e `salvarCards`.
+
+⚠️ **A revisão não cobre este caso.** Ela recusa duas gravações concorrentes, mas não impede a
+engrenagem de reenviar o array `cards` que ela leu dez minutos atrás: se alguém criou um card nesse
+intervalo pela outra tela, salvar o IP o apaga — com revisão válida e `200` de resposta. **O sintoma
+é um card que some sem ninguém ter apagado**, e a causa está na outra tela, separada por minutos e
+por pessoas diferentes.
+
+⚠️ **E o inverso é igualmente invisível:** a tela de Cards reenviando a conexão que leu ao abrir
+apontaria a estação de volta para o CLP anterior, desfazendo um IP corrigido na engrenagem.
+
+**A releitura não descarta o `409`.** Adotar a revisão relida e mandar em frente resolveria a metade
+alheia e **destruiria** a proteção sobre a metade própria: outra pessoa que tivesse mudado aquele
+mesmo campo seria sobrescrita em silêncio. Então a releitura **compara**: mudou a metade que esta
+tela edita, é conflito e a gravação é recusada; mudou só a outra, ela volta como está no servidor.
+
+**A cópia entre unidades é a exceção que grava as duas** (`salvarTudo`), e por isso é a mais
+restrita: recusa se **qualquer** das metades mudou. Quem copia reescreve a unidade inteira, e esse é
+o pior momento para não avisar.
+
+⚠️ **Nada disso aparece em teste feliz** — é preciso encenar a segunda pessoa. Ver
+`ConfiguracaoCardsClientTest`, seção "Gravação por metade".
+
+### RN-113 · A conexão do CLP mora na unidade, não na estação
+**[FATO 2026-09-10]** IP, rack, slot, DB e intervalo ficam no documento da Unidade/Sonda. A
+engrenagem passou a ser a tela que os edita — **mudou a tela, não o lugar do dado**.
+
+**Por que não em `app-settings.json`:** rack, slot, DB e intervalo descrevem o **modelo** de CLP, e é
+isso que a cópia entre unidades repete ao configurar uma sonda igual. Torná-los locais tiraria esse
+ganho e obrigaria a redigitá-los unidade a unidade.
+
+⚠️ **`AppSettings.plcIp` era código morto que parecia vivo.** Ele era lido, exibido na tela, salvo — e
+ignorado: quem conecta sempre foi `conexao.ip` do documento. A correção não foi escolher entre os
+dois, foi **apagar o morto**.
+
+⚠️ **O valor antigo não é promovido na virada.** Estações em campo têm um `plcIp` gravado que pode
+divergir do documento; adotá-lo apontaria a estação para outro endereço no primeiro boot depois da
+atualização. Ele fica no arquivo, sem leitor.
+
+⚠️ **O IP continua fora da cópia entre unidades.** Ele diz **qual** CLP, não o modelo dele. Copiá-lo
+apontaria a estação B para o CLP da A, *"a conexão teria sucesso, os endereços existiriam, e a B
+publicaria a leitura da A sob o próprio nome. Nada acusaria"*. Reunir os campos numa tela só não
+apaga essa distinção — e como o painel saiu da tela de Cards, o que a cópia trouxe passou a ser
+**dito na linha de status**: gravar rack/slot/DB novos sem mostrá-los seria alterar o que ninguém viu.
+
+### RN-114 · Os interruptores de telemetria nascem ligados
+**[DECIDIDO 2026-09-10]** A engrenagem tem dois interruptores locais — telemetria MQTT e tempo real
+(WebSocket) — em `app-settings.json`. **A ausência da chave vale LIGADO.**
+
+**Por quê:** toda estação em campo tem um `app-settings.json` gravado antes de os interruptores
+existirem. Tratar a ausência como "desligado" emudeceria a frota inteira na primeira atualização —
+sem histórico no InfluxDB, sem tela remota e sem alarme de servidor — por uma escolha que ninguém
+fez. Só um `false` explícito desliga.
+
+**O que o interruptor separa:** antes dele, "desligar" era apagar um campo. Funcionava por acidente,
+era indescobrível, e não distinguia **desligado de propósito** de **mal configurado**.
+
+**O que continua de pé com os dois desligados:** leitura do CLP, tela, histórico local e o alarme da
+estação ([RN-108](#rn-108--o-alarme-da-estação-é-configurado-na-estação)). O que para é a
+**publicação**.
+
+⚠️ **O interruptor do tempo real não pode entrar em `temConfiguracaoTempoReal()`.** Aquele predicado
+alimenta o alvo do canal, e alvo nulo faz `EstadoDeDocumento.conectar` zerar o snapshot de cards em
+memória: o dashboard esvaziaria e o alarme local ficaria mudo junto com a telemetria — e o alarme da
+estação só alcança grandeza de card invisível porque ela aparece no dashboard
+([RN-111](#rn-111--o-dashboard-da-estação-mostra-todo-card-ativo-visível-ou-não)). O teste é
+`CardsOfflineTest.desligarTempoRealNaoApagaOsCards`.
+
+⚠️ **São locais e não viajam ao servidor.** De fora, uma unidade calada de propósito é indistinguível
+de uma quebrada — o mesmo limite já aceito para o CLP desligado.

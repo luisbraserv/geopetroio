@@ -298,8 +298,15 @@ usa `/api/{recurso}`. Pode ser design (serviço de identidade separado) ou incon
 ---
 
 ### OQ-014 · ~~Qual é a lista canônica de roles?~~ — RESPONDIDA
-**[DECIDIDO 2026-08-27]** São **7**: `ADMIN`, `CLIENTE`, `INTERNO`, `CIMENTACAO`, `SONDA`,
-`GERENCIA`, `DIRETORIA`. Backend e frontend alinhados, e **todas com efeito real**.
+**[DECIDIDO 2026-09-17]** São **8**, em duas famílias: tipo de conta (`CLIENTE`, `INTERNO`),
+permissão de módulo (`MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR`, `CIMENTACAO`), mais `ADMIN`
+e `SUPORTE`. O acesso é a **combinação** — ver
+[RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
+Backend e frontend alinhados, e **todas com efeito real**.
+
+**[HISTÓRICO 2026-08-27]** Eram 7: `ADMIN`, `CLIENTE`, `INTERNO`, `CIMENTACAO`, `SONDA`, `GERENCIA`,
+`DIRETORIA`. As três últimas saíram em 2026-09-17 — existiam só dentro de listas de permissão, sem
+regra própria.
 
 Ver [DT-011](technical-debt.md#dt-011--divergência-de-roles-backend--frontend).
 
@@ -918,8 +925,28 @@ apontar para o byte errado.
 e é barata, já que o Desktop está conectado ao CLP enquanto se configura.
 
 ### OQ-049 · Como saber quais unidades da frota já foram configuradas
-**[ABERTA 2026-09-08]** · ✅ **RESOLVIDA 2026-09-09** — tela **Prontidão da Frota**, em
-`/app/prontidao-frota`, sobre `GET /api/sondas/prontidao`.
+**[ABERTA 2026-09-08]** · ✅ **RESOLVIDA 2026-09-09** · ⚠️ **REABERTA 2026-09-10 — a solução foi
+removida, com um dia de vida.**
+
+> **[DECIDIDO 2026-09-10]** *"A frota não tá configurada, eu vou configurar tudo de uma vez, não faz
+> sentido ter ela."*
+>
+> A tela existia para acompanhar um **mutirão espalhado no tempo**. A migração vai ser feita de uma
+> vez, então não há pergunta para ela responder — e ela custaria manutenção sem resolver problema.
+> Saíram a tela, `prontidao.service.ts`, `GET /api/sondas/prontidao`, `ProntidaoController`,
+> `ProntidaoService`, `ProntidaoDaUnidade`, e os `Resumo`/`resumos()` de `CardsDeclarados` e
+> `LimitesDeclarados`, que só ela usava. Ver
+> [`configuracao-da-estacao.md §7`](features/configuracao-da-estacao.md).
+>
+> ⚠️ **A pergunta volta a não ter resposta.** Se entrar unidade nova na frota, ou uma for
+> reconfigurada, **não haverá como saber de fora que ela ficou muda**. Aceito porque a migração é um
+> evento único e acompanhado — registrado aqui para que a decisão não se perca se o cenário mudar.
+>
+> ⚠️ **O achado A05 da auditoria some junto**, por ausência de código e não por conserto — ver
+> [`auditoria-alteracoes-2026-09.md`](auditoria-alteracoes-2026-09.md).
+>
+> **O texto abaixo fica como estava**: ele descreve o que a tela entregava, e é a especificação
+> pronta caso o cenário volte a exigi-la.
 
 Com [RN-088](business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada) e a frota nascendo
 vazia, a virada dos cards deixa cada unidade muda até alguém configurá-la pela tela do Desktop.
@@ -1031,3 +1058,32 @@ Era o item 1 de [alarmes §7](features/alarmes.md#continuam-abertos), agora com 
 exige janela (máximo 92 dias) e devolve no máximo 200 excursões, dizendo quando cortou. Isso impede
 que a tela quebre com a tabela crescendo, **e não substitui a política**: os dados continuam lá para
 sempre, e nada os apaga.
+
+### OQ-052 · Como a estação mostra que suas definições de card estão velhas
+**[ABERTA 2026-09-10]** · **[DECIDIDO 2026-09-10] Adiada de propósito** — *"isso é observabilidade, a
+gente vai pensar futuramente nessa arquitetura"*. Não é correção de defeito, e sim decisão de
+arquitetura de observabilidade; entra quando esse tema for tratado como um todo.
+
+**O que abre a questão.** Com o tempo real desligado
+([RN-114](business-rules.md#rn-114--os-interruptores-de-telemetria-nascem-ligados)) ou com o backend
+fora do ar, os cards continuam sendo desenhados a partir do snapshot em disco — comportamento
+deliberado, porque a alternativa esvaziaria o dashboard e calaria o alarme local.
+
+⚠️ **O card não é só desenho.** Ele diz **onde ler** (`byteInicial`) e **como converter**
+(`parâmetros`). Uma definição velha produz número plausível e errado: corrigido o raio de um tanque
+de 1,20 m para 1,50 m no servidor, a estação desatualizada segue mostrando ~8.400 L onde há ~13.000 L.
+**Nada acusa** — a tela está normal.
+
+**É a mesma forma do `plcIp`** ([RN-113](business-rules.md#rn-113--a-conexão-do-clp-mora-na-unidade-não-na-estação)):
+a tela exibindo algo que não é o que está em vigor. Só que na direção contrária — lá o campo não
+valia nada; aqui a definição vale, e está atrasada.
+
+**Caminho mais barato quando for a hora:** `MonitoringController` já guarda o documento inteiro em
+`documentoAtual`, e `CardsDaUnidade` carrega `atualizadoPor`/`atualizadoEm`; `estadoMonitoramento` e
+seu helper já existem. Uma linha — *"Definições dos cards de 03/09 14:22, por ana — tempo real
+desligado, não se atualizam"* — fecha a lacuna sem arquitetura nova. Fica registrado como piso, não
+como decisão: o desenho maior é o que a questão adia.
+
+⚠️ **Relacionada a [OQ-049](#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas)**, que
+foi reaberta no mesmo dia. As duas são a mesma família: **de fora não se vê quem está mudo, e de
+dentro não se vê que o que se mostra está velho.**

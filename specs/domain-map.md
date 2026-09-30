@@ -233,17 +233,26 @@ autorizada → tela.
 
 ## 7. Modelo de autorização
 
-**[DECIDIDO 2026-08-27]** O enum foi reduzido a **7 roles**, e frontend e backend estão alinhados.
+**[DECIDIDO 2026-09-17]** São **8 roles**, em duas famílias, e o acesso é a **combinação** delas —
+ver [RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
+Frontend e backend estão alinhados (`RegrasDeAcesso` ↔ `user.model.ts`).
 
-| Role | Monitoramento | Simulador | Cadastros | Observação |
-|---|---|---|---|---|
-| `ADMIN` | ✅ frota inteira | ✅ | ✅ | Acesso total |
-| `GERENCIA` | ✅ frota inteira | ✅ | — | |
-| `DIRETORIA` | ✅ frota inteira | ✅ | — | |
-| `CIMENTACAO` | ✅ frota inteira | ✅ | — | |
-| `SONDA` | ✅ frota inteira | — | — | |
-| `CLIENTE` | ⚠️ **apenas as sondas concedidas** | — | — | Escopo definido no cadastro |
-| `INTERNO` | — | — | — | Role base de funcionário; sozinha não dá acesso a módulo |
+| Role | Família | O que concede |
+|---|---|---|
+| `ADMIN` | — | Acesso total, sem precisar de permissão de módulo |
+| `CLIENTE` | Tipo de conta | Nada sozinha. Combinada, o escopo é ⚠️ **apenas as sondas concedidas** no cadastro |
+| `INTERNO` | Tipo de conta | Nada sozinha. Combinada, o escopo é a frota inteira |
+| `MONITORAMENTO` | Permissão de módulo | Monitoramento (séries) |
+| `MONITORAMENTO_REAL` | Permissão de módulo | Tempo Real, Limites de Alarme e Histórico de Alarmes. **Não** depende de `MONITORAMENTO` |
+| `SIMULADOR` | Permissão de módulo | A área de simuladores; qual simulador depende do domínio |
+| `CIMENTACAO` | Permissão de módulo | O domínio de cimentação. Com `SIMULADOR`, abre o Simulador de Cimentação |
+| `SUPORTE` | — | Configurações do sistema e gravação dos cards (RN-086). Não acompanha operação |
+
+⚠️ **Nenhuma permissão de módulo concede nada sozinha**: `MONITORAMENTO` sem `CLIENTE` nem `INTERNO`
+não abre tela alguma. Era isso que uma lista de roles não conseguia expressar.
+
+**Removidas em 2026-09-17:** `SONDA`, `GERENCIA`, `DIRETORIA` — existiam só dentro de listas de
+permissão, sem regra própria.
 
 ### A distinção que define o modelo
 

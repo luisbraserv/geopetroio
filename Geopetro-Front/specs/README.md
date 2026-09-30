@@ -4,6 +4,128 @@
 >
 > Specs de **sistema** em [`../../specs/`](../../specs/). Aqui ficam as specs de **feature**.
 
+**[REVISADA EM ENTREVISTA 2026-09-23 — S1 a S8 concluídas; revisão visual pendente]** Squeeze
+e tampão perdem todos os gráficos atuais e ganham os três da primária (hidrostática/ECD,
+envelope e volume × tempo), com o mesmo componente, e o perfil/planta da trajetória
+**sem caliper**; cronograma e UCA viram tabelas. Para as curvas se comportarem igual, os
+dois passam a usar o motor da primária: alvo "coluna de trabalho", drenagem até o
+equilíbrio do tampão, retirada até a extremidade do relatório de retirada e, no squeeze,
+compressão em blocos (hesitação) pelas técnicas Bradenhead, packer recuperável ou
+retentor. Tampão sem excesso. Tampão primeiro, depois squeeze. Relação entre as três
+operações conferida no R3 cap. 14, Petroguia F-18–F-20 e Halliburton cap. 7–8. Entregas
+S1–S8 e casos T-01 a T-20 em
+[Squeeze e tampão — gráficos e motor](simulador/squeeze-tampao-graficos-motor.md).
+**S1 concluída:** gráficos e perfil/planta extraídos para um módulo comum, com a primária
+idêntica (12 de 12 SVGs iguais no caso MINA-02). **S2 concluída:** alvo "coluna de
+trabalho" no motor da primária; o tampão do Petroguia sem excesso termina com as
+interfaces nas alturas de projeto. **S3 concluída:** retirada da coluna até a
+extremidade do relatório de retirada, pela mesma função; topo do cimento igual ao do
+dimensionamento. **S4 concluída (2026-09-24):** o tampão roda no motor da primária na
+tela, com os três gráficos na base do tampão, perfil/planta sem caliper, cronograma e UCA
+em tabela e relatório em SVG; o relatório de conformidade lê o motor novo (varredura de
+48 simulações em ~1 s). **S5 concluída (2026-09-24):** compressão Bradenhead depois da
+retirada, com retorno fechado, blocos de injeção e pressurização (hesitação), pressão
+no canhoneado pelo percurso, limite de superfície do squeeze de baixa pressão e
+revestimento exposto. **S6 concluída (2026-09-24):** packer com contrapressão no anular e
+diferencial na ferramenta; retentor posicionado com o stinger desencaixado (escolha do
+usuário, conforme R3 §14-9.6.2) e encaixado quando a pasta chega à ferramenta, com o
+dimensionamento de §6.6. **S7 concluída (2026-09-24):** squeeze na tela nova nas três
+técnicas, com blocos de compressão, seletor de referência, perfil/planta sem caliper,
+tabelas e relatório em SVG; cenários antigos abrem como Bradenhead; a Bradenhead e o packer
+equilibram a pasta inteira no posicionamento; componentes antigos apagados. **S8 concluída
+(2026-09-24):** T-01 a T-20 conferidos, comparação com o motor antigo, queda livre como alerta
+no relatório de conformidade e cenários de exemplo de tampão (id 6) e squeeze (id 7) com pasta
+de 15,8 ppg no banco local; falta a revisão visual. 844 testes em 87 arquivos (em lotes);
+build exit 0.
+
+**[IMPLEMENTADO 2026-09-19; ACEITES MANUAIS PENDENTES]** Todos os simuladores devem seguir
+**cadastrar fases → selecionar a fase da operação → calcular para a fase escolhida**.
+Regra comum para squeeze, tampão e primária, incluindo cenário e relatório:
+[Fase de trabalho](simulador/fase-operacao.md).
+
+**[R2 IMPLEMENTADA — 2026-09-19; ACEITES MANUAIS PENDENTES]** A primária deve completar o
+padrão do squeeze: painel retrátil com grupos/subseções, cenários organizados por
+pastas, dados completos do relatório, sequência operacional própria, Pasta e
+Aditivos separados e **receitas completas no relatório**, individuais por pasta/estágio,
+sem consolidação geral. Entrevista: parâmetros calculados/manuais, sequência derivada
+do programa e emissão final bloqueada por pendências ou limites excedidos. Entrevista
+encerrada: exclusão de pasta com seus cenários mediante confirmação; o usuário fará
+o aceite numérico manual posteriormente, com dados reais.
+Requisitos, persistência, compatibilidade e aceites em
+[Padrão do squeeze, cenários e relatório](simulador/cimentacao-primaria-padrao-squeeze.md).
+Esta revisão substitui as limitações do primeiro redesenho nos pontos indicados.
+Evidências e pendências: [Validação R2](simulador/r2-validacao.md).
+
+**[REDESENHO DA TELA INICIADO 2026-09-18]** A pedido do usuário, a página da
+primária passa a seguir o desenho do squeeze: menu horizontal, entradas numa
+sidebar vertical, dados no conteúdo e cenários/relatório num menu flutuante. Todos
+os gráficos saem e voltam um a um sob demanda, e a receita da pasta ganha aditivos.
+Alvo e sequência T1–T7 em [redesenho da tela](simulador/cimentacao-primaria-tela.md).
+O motor não muda.
+
+**[PRIMEIRA VERSÃO IMPLEMENTADA 2026-09-18 — P1 a P12 concluídas; revisão visual pendente]**
+[`simulador/cimentacao-primaria.md`](simulador/cimentacao-primaria.md) define a
+cimentação por trás do revestimento: geometria externa, volumes, shoe track,
+deslocamento e hidráulica, incluindo liner e múltiplos estágios. Entrevista
+consolidada: volumes por TOC/intervalos, ordem livre, playback, banco e relatório
+completo; sequência P1–P12. Inclui fórmulas, referências e casos de aceitação.
+[`Gráficos e dados medidos`](simulador/cimentacao-primaria-graficos.md) detalha os
+cinco anexos adicionais, eixos de volume total/pasta e comparação com medições
+importadas.
+
+Já implementados: contratos versionados, geometria convencional e de liner,
+conectividade por estado de dispositivo, dimensionamento por intervalo com TOC
+ideal, reservas e receitas, transporte de fluido com eventos exatos e colocação
+real, hidráulica com atrito, ECD, janela, envelope e alertas de limite, e a
+página `/app/simulador/primaria` com os oito gráficos, esquemático 2D, visão 3D
+com corte, reprodução sincronizada e importação de medições em CSV para comparar
+com o calculado, mais os cinco gráficos anexos G1 a G5 a persistência do cenário e o relatório completo.
+
+As doze etapas estão implementadas e verificadas por teste. Continuam em aberto,
+fora da lista: a **revisão visual por uma pessoa**, a conferência da integração
+HTTP contra o backend, as imagens dos gráficos no relatório, os aditivos da pasta
+na tela e os perfis medidos por profundidade; os aditivos da pasta continuam no
+catálogo compartilhado.
+
+**[REVISÃO DA HIDRÁULICA 2026-09-23]** Avaliada contra um poço real (survey
+Gyrodata do MINA-28BD) e um modelo de referência independente: o atrito passou
+para o método de R3 §4-6 (a tabela F-40 do Petroguia é descontínua em Re = 400),
+a queda livre passou a ser resolvida com vazio em vez de interromper o cálculo, e
+os fluidos de um programa novo partem da reologia do R3 §12-7. Caso de campo,
+números e decisões em [cimentação primária §7.3, §7.5, §11.5 e §13.11](simulador/cimentacao-primaria.md).
+Comparado depois com o iCem da Halliburton no MINA-02 ([§11.6 e §13.12](simulador/cimentacao-primaria.md)):
+com as mesmas entradas e sem calibração, hidrostática a 7,1 psi (~1%) e ECD a 0,1 ppg
+RMS das curvas do programa (2,9 psi e 0,047 ppg com caliper e reologia calibrados
+contra o próprio iCem); os gráficos de hidrostática/ECD e de envelope seguem o desenho do iCem.
+Validação: 773 testes em 78 arquivos aprovados (em lotes); `npm run build` exit 0.
+**Nenhuma pessoa abriu a página ainda** — há teste de componente, não revisão visual.
+Validação da etapa: 689 testes em 66 arquivos aprovados; `npm run build` exit 0.
+
+**[ALTERADO 2026-09-17]** Squeeze/tampão passam a editar diâmetros somente por fase,
+sem o resumo fixo de caliper, e começam com um exemplo de superfície seguido do
+trecho da operação. Análise e compatibilidade em
+[`simulador/geometria-poco.md`, §17](simulador/geometria-poco.md#17-diâmetros-por-fase-e-exemplo-iniciado-na-superfície).
+
+## ⚠️ O comando de teste é `ng test` — nunca `vitest` direto
+
+**[FATO 2026-09-10]** O alvo `test` em `angular.json` é `@angular/build:unit-test`. Ele roda sobre o
+Vitest, mas é **ele** quem monta o ambiente: jsdom, os globais (`describe`/`it`), `zone.js`,
+`@angular/compiler` e o `TestBed.initTestEnvironment`. É por isso que **não existe `vitest.config`
+nem arquivo de setup** neste repositório — a ausência é o desenho, não um esquecimento.
+
+```
+npm test          # = ng test
+npx ng test --watch=false
+```
+
+⚠️ **`npx vitest run` produz 38 falhas em 28 arquivos, e nenhuma é defeito.** Sem o builder faltam
+todas aquelas peças, então os erros saem convincentes e enganosos: `JIT compilation failed for
+injectable [class PlatformLocation]`, `describe is not defined`, `localStorage is not defined`,
+`Need to call TestBed.initTestEnvironment() first`. **Um resultado de `npx vitest` não é evidência
+sobre este repositório** — inclusive porque falha igual antes e depois de qualquer alteração, o que
+faz uma comparação "com e sem a mudança" parecer inocentar o código quando ela só repetiu o erro de
+comando.
+
 **[FATO 2026-09-06]** Login inclui recuperação por e-mail. Rotas públicas
 `/recuperar-senha` e `/redefinir-senha`, com token em memória e retorno ao login.
 Contrato e configuração em
@@ -60,17 +182,21 @@ reduziu o carregamento inicial sem alterar URLs, guards ou componentes standalon
 | `/acesso-negado` | `AcessoNegadoComponent` | público | sim |
 | `/app` | `ShellComponent` | autenticado | sim |
 | `/app/dashboard` | `DashboardPageComponent` | `ADMIN` | sim |
-| `/app/simulador` | `SimuladorIndexComponent` | `CIMENTACAO`, `ADMIN`, `GERENCIA`, `DIRETORIA` | sim |
+| `/app/simulador` | `SimuladorIndexComponent` | `ADMIN` · `(CLIENTE\|INTERNO)`+`SIMULADOR`+`CIMENTACAO` | sim |
 | `/app/simulador/squeeze` | `SimuladorSqueezeComponent` | herda | sim |
 | `/app/simulador/tampao` | `SimuladorTampaoComponent` | herda | sim |
+| `/app/simulador/primaria` | `SimuladorPrimariaComponent` | herda | sim |
 | `/app/cadastros` | `CadastrosPageComponent` | `ADMIN` | sim |
 | `/app/cadastros/usuarios` | `UsuariosAdminPageComponent` | `ADMIN` | sim |
 | `/app/cadastros/empresas` | `EmpresasPageComponent` | `ADMIN` | sim |
 | `/app/cadastros/regionais` | `RegionaisPageComponent` | `ADMIN` | sim |
 | `/app/cadastros/setores` | `SetoresPageComponent` | `ADMIN` | sim |
 | `/app/cadastros/unidades-sondas` | `UnidadesSondasPageComponent` | `ADMIN` | sim |
-| `/app/monitoramento-sondas` | `MonitoramentoSondaPageComponent` | `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA`, `CLIENTE` | **sim** |
-| `/app/tempo-real` | `TempoRealPageComponent` | mesmas roles do Monitoramento | **sim** |
+| `/app/monitoramento-sondas` | `MonitoramentoSondaPageComponent` | `ADMIN` · `(CLIENTE\|INTERNO)`+`MONITORAMENTO` | **sim** |
+| `/app/tempo-real` | `TempoRealPageComponent` | `ADMIN` · `(CLIENTE\|INTERNO)`+`MONITORAMENTO_REAL` | **sim** |
+| `/app/limites-alarme` | `LimitesAlarmePageComponent` | mesma regra do Tempo Real (RN-069) | **sim** |
+| `/app/historico-alarmes` | `HistoricoAlarmesPageComponent` | mesma regra do Tempo Real (RN-069) | **sim** |
+| `/app/configuracoes` | `SettingsPageComponent` | `ADMIN`, `SUPORTE` | sim |
 | `/app/meu-usuario` | `MeuUsuarioPageComponent` | autenticado | sim |
 | `/app/administracao/usuarios` | — | redirect legado → `/app/cadastros/usuarios` | — |
 
@@ -144,7 +270,7 @@ Itens de maior impacto:
 | `@maskito/*` instalado, nunca usado | Usar (telefone/CEP/CNPJ sem máscara) ou remover |
 | `MOCK_USERS` com senhas em texto puro | Remover |
 | `RichTextEditorComponent` órfão | Remover ou usar |
-| `tests/hydraulics.spec.js` referencia arquivo inexistente | Remover (e o script `test:hydraulics`) |
+| `tests/hydraulics.spec.js` referencia arquivo inexistente | ✅ Resolvido em 2026-09-09; os cenários úteis foram migrados para `squeeze-hydraulic-simulation.service.spec.ts` e o arquivo e o script `test:hydraulics` saíram |
 | Simulador sem `Validators` em ~40 campos críticos | [OQ-009](../../specs/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador) |
 | Roles divergentes do backend | ✅ Resolvido em 2026-08-27; ver [DT-011](../../specs/technical-debt.md#dt-011--divergência-de-roles-backend--frontend) |
 | Mojibake em `meu-usuario-page.component.html:43` | Corrigir encoding |
@@ -366,3 +492,22 @@ de borda que quebrariam a curva em silêncio, ambos cobertos por teste:
   sugerindo queda de pressão que não houve.
 
 **Testes [FATO]** · 6 casos em `grafico-tempo-real.component.spec.ts`.
+
+
+## GeoPetro Vision — integração prevista (11/09/2026)
+
+**[DECIDIDO 2026-09-11]** O GeoPetro Vision monitorará localmente as câmeras de cada unidade e alimentará o Geopetro-Backend com registros de não conformidade SMS e fotos. O Geopetro-Front existente disponibilizará o histórico sincronizado; não haverá nova central nem vídeo ao vivo remoto nesta etapa. ADMIN/SUPORTE poderão consultar todas as unidades; os demais acessos respeitarão o escopo autorizado. Retenção do Vision é indefinida e distinta da telemetria. Requisitos ainda não implementados.
+
+Decisões, permissões, operação offline e contrato pendente: [GeoPetro Vision](../../specs/features/geopetro-vision.md).
+
+**[DECIDIDO 2026-09-11 — entrevista encerrada]** Frontend somente consulta histórico; avaliações/correções e configuração de turnos/zonas exclusivamente no desktop. Câmeras cadastradas manualmente, quantidade variável. Tempos por zona e turnos definidos localmente. Offline-first mantém consulta/avaliação da sessão já iniciada; ao reconectar com token expirado exige relogin na interface sem parar monitoramento/transporte. Não enviar e-mail ao SMS por falha de câmera/IA. Especificações atualizadas, sem implementação.
+
+## Decisão final de sessão e executor — revisão 11/09/2026
+
+**[DECIDIDO 2026-09-11]** Esta decisão substitui a previsão anterior de retomada automática após reboot offline. Monitoramento somente inicia após login online autorizado no Vision, inclusive depois de reiniciar Windows. Bloquear tela mantém a captura; trocar usuário Windows ou encerrar sessão Windows para a captura. Fechar janela mantém execução na conta atual. Logout Vision bloqueia a instalação inteira até qualquer usuário autorizado fazer novo login online.
+
+**[DECIDIDO 2026-09-11]** Cada pessoa tem sua conta Windows; unidade/câmeras são configuração compartilhada de todos os usuários daquele computador. Sessão humana não é compartilhada. Executor separado da UI na sessão atual, sem serviço Windows permanente de monitoramento; uma captura ativa por instalação.
+
+**[DECIDIDO 2026-09-11]** SUPORTE/ADMIN seleciona unidade consultando GeoPetro IO dentro do próprio app desktop. Não haverá liberação manual em portal ou cadastro externo. Ao salvar vínculo, app obtém automaticamente credencial técnica da instalação; mecanismo remoto ainda precisa de contrato/implementação. Essa credencial permite transporte independente do token humano durante execução, mas não substitui login exigido para iniciar monitoramento ou usar interface.
+
+**[PENDENTE]** Cofre compartilhado entre contas Windows, rotação/revogação da credencial técnica e comportamento do transporte após logoff/logout; não prometer envio local com todos os processos encerrados nem reintroduzir serviço permanente implicitamente. Nenhum endpoint/papel/código alterado nesta entrega documental.
