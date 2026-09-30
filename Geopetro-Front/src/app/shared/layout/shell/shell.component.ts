@@ -5,14 +5,16 @@ import { TuiIcon } from '@taiga-ui/core';
 import { Store } from '@ngxs/store';
 
 import {
+  ACESSO_ADMINISTRACAO,
+  ACESSO_CONFIGURACAO,
+  ACESSO_MONITORAMENTO,
+  ACESSO_MONITORAMENTO_REAL,
+  ACESSO_SIMULADOR_CIMENTACAO,
   AuthenticatedUser,
-  normalizarRoles,
-  possuiAlgumaRole,
-  ROLES_ADMINISTRACAO,
-  ROLES_CONFIGURACAO,
-  ROLES_MONITORAMENTO,
-  ROLES_SIMULADOR,
+  RegraDeAcesso,
   UserRole,
+  normalizarRoles,
+  satisfazAcesso,
 } from '../../../features/auth/models/user.model';
 import { Logout } from '../../../features/auth/state/auth.actions';
 import { AuthState } from '../../../features/auth/state/auth.state';
@@ -22,8 +24,8 @@ interface NavLeaf {
   label: string;
   icon: string;
   route: string;
-  /** Roles que enxergam esta entrada. Precisa espelhar o guard da rota correspondente. */
-  roles: readonly UserRole[];
+  /** Regra que enxerga esta entrada. Precisa espelhar o guard da rota correspondente. */
+  acesso: RegraDeAcesso;
 }
 
 interface NavGroup {
@@ -42,7 +44,7 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
     label: 'Dashboard',
     icon: '@tui.layout-dashboard',
     route: '/app/dashboard',
-    roles: ROLES_ADMINISTRACAO,
+    acesso: ACESSO_ADMINISTRACAO,
   },
   {
     kind: 'group',
@@ -54,51 +56,46 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         label: 'Monitoramento',
         icon: '@tui.radio-tower',
         route: '/app/monitoramento-sondas',
-        roles: ROLES_MONITORAMENTO,
+        acesso: ACESSO_MONITORAMENTO,
       },
       {
         kind: 'leaf',
         label: 'Tempo Real',
         icon: '@tui.zap',
         route: '/app/tempo-real',
-        roles: ROLES_MONITORAMENTO,
+        acesso: ACESSO_MONITORAMENTO_REAL,
       },
       {
-        // Fica com o monitoramento, e nao com Configuracoes: quem enxerga a sonda ajusta o alarme
-        // dela (RN-069). Sob Configuracoes so entrariam ADMIN e SUPORTE.
+        // Fica com o monitoramento, e nao com Configuracoes: quem acompanha o ao vivo ajusta o
+        // alarme dele (RN-069). Sob Configuracoes so entrariam ADMIN e SUPORTE.
         kind: 'leaf',
         label: 'Limites de Alarme',
         icon: '@tui.bell',
         route: '/app/limites-alarme',
-        roles: ROLES_MONITORAMENTO,
+        acesso: ACESSO_MONITORAMENTO_REAL,
       },
       {
         kind: 'leaf',
         label: 'Histórico de Alarmes',
         icon: '@tui.history',
         route: '/app/historico-alarmes',
-        roles: ROLES_MONITORAMENTO,
-      },
-      {
-        kind: 'leaf',
-        label: 'Prontidão da Frota',
-        icon: '@tui.list-checks',
-        route: '/app/prontidao-frota',
-        roles: ROLES_MONITORAMENTO,
+        acesso: ACESSO_MONITORAMENTO_REAL,
       },
     ],
   },
   {
+    // Área de simuladores, e não de cimentação: a cimentação é o primeiro simulador, não o assunto
+    // do grupo. Outros simuladores entram como irmãos de 'Cimentação', sem remontar o menu.
     kind: 'group',
-    label: 'Cimentação',
-    icon: '@tui.layers',
+    label: 'Simulador',
+    icon: '@tui.flask-conical',
     children: [
       {
         kind: 'leaf',
-        label: 'Simulador',
-        icon: '@tui.flask-conical',
+        label: 'Cimentação',
+        icon: '@tui.layers',
         route: '/app/simulador',
-        roles: ROLES_SIMULADOR,
+        acesso: ACESSO_SIMULADOR_CIMENTACAO,
       },
     ],
   },
@@ -112,18 +109,19 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         label: 'Cadastros',
         icon: '@tui.clipboard-list',
         route: '/app/cadastros',
-        roles: ROLES_ADMINISTRACAO,
+        acesso: ACESSO_ADMINISTRACAO,
       },
       {
         kind: 'leaf',
         label: 'Configurações',
         icon: '@tui.settings',
         route: '/app/configuracoes',
-        roles: ROLES_CONFIGURACAO,
+        acesso: ACESSO_CONFIGURACAO,
       },
     ],
   },
 ];
+
 
 @Component({
   selector: 'app-shell',
@@ -150,7 +148,7 @@ export class ShellComponent {
   /**
    * Menu filtrado pelas roles do usuário.
    *
-   * A visibilidade vem da própria entrada (`roles`), não de condicionais por rótulo — assim uma
+   * A visibilidade vem da própria entrada (`acesso`), não de condicionais por rótulo — assim uma
    * entrada nova não aparece por engano só porque ninguém lembrou de tratá-la aqui. Um grupo cujos
    * filhos foram todos filtrados é removido, evitando cabeçalho vazio no menu.
    *
@@ -162,10 +160,10 @@ export class ShellComponent {
 
     return ALL_NAV_ENTRIES.flatMap<NavEntry>((entry) => {
       if (entry.kind === 'leaf') {
-        return possuiAlgumaRole(roles, entry.roles) ? [entry] : [];
+        return satisfazAcesso(roles, entry.acesso) ? [entry] : [];
       }
 
-      const children = entry.children.filter((child) => possuiAlgumaRole(roles, child.roles));
+      const children = entry.children.filter((child) => satisfazAcesso(roles, child.acesso));
       return children.length > 0 ? [{ ...entry, children }] : [];
     });
   });

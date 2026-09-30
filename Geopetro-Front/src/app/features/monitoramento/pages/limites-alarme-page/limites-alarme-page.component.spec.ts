@@ -9,6 +9,8 @@ import { SondaDisponivel } from '../../services/monitoramento-sonda.service';
 import { LimitesAlarmePageComponent } from './limites-alarme-page.component';
 
 const SONDA: SondaDisponivel = { id: 7, idSondaUnidade: 'SPT-145', nome: 'SPT-145', apelido: 'Sonda 7' };
+/** A segunda sonda existe para o caso de troca no meio de um salvamento — ver A06. */
+const OUTRA: SondaDisponivel = { id: 8, idSondaUnidade: 'SPT-146', nome: 'SPT-146', apelido: 'Sonda 8' };
 
 function card(parcial: Partial<CardUnidade>): CardUnidade {
   return {
@@ -52,6 +54,8 @@ describe('LimitesAlarmePageComponent', () => {
   const urlSondas = `${environment.apiUrl}/api/sondas/minhas`;
   const urlCards = `${environment.apiUrl}/api/sondas/7/cards`;
   const urlLimites = `${environment.apiUrl}/api/sondas/7/configuracao`;
+  const urlCardsOito = `${environment.apiUrl}/api/sondas/8/cards`;
+  const urlLimitesOito = `${environment.apiUrl}/api/sondas/8/configuracao`;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -197,6 +201,75 @@ describe('LimitesAlarmePageComponent', () => {
 
     expect(componente.linhas()[0].maximoAtencao).toBe(70);
     expect(componente.documento()?.revisao).toBe(5);
+  });
+
+  /**
+   * ⚠️ O achado A06: o callback de erro não tinha a guarda que o de sucesso já tinha.
+   *
+   * Salvar a sonda 7, trocar para a 8 e só então receber o 409 da 7 mandava recarregar a **7**:
+   * `carregar` ligava o indicador de espera, a resposta caía fora do ciclo atual e ninguém o
+   * desligava. A sonda 8, já carregada, ficava escondida atrás de um "carregando" permanente.
+   */
+  it('conflito atrasado da sonda anterior não deixa a tela presa carregando', () => {
+    selecionar([card({})], [limite()], 4);
+
+    componente.atualizar(0, 'maximoAtencao', 90);
+    componente.salvar();
+    const salvamentoDaSete = http.expectOne(urlLimites);
+
+    componente.sondaSelecionadaValue = OUTRA;
+    componente.onSondaChange();
+    http.expectOne(urlCardsOito).flush({
+      schemaVersion: 1, unidadeSondaId: 8, revisao: 2, conexao: null, cards: [card({})],
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
+    });
+    http.expectOne(urlLimitesOito).flush({
+      schemaVersion: 1, unidadeSondaId: 8, revisao: 1, limites: [limite({ maximoAtencao: 55 })],
+      atualizadoPor: 'bruno', atualizadoEm: '2026-09-09T13:00:00Z',
+    });
+
+    salvamentoDaSete.flush(
+      { message: 'A configuracao foi alterada. Recarregue antes de salvar.' },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    expect(componente.carregando()).toBe(false);
+    expect(componente.documento()?.unidadeSondaId).toBe(8);
+    expect(componente.linhas()[0].maximoAtencao).toBe(55);
+    http.expectNone(urlCards);
+  });
+
+  /** A sequência A → B → A: o mesmo id volta, e a resposta velha continua sendo velha. */
+  it('voltar para a sonda anterior não ressuscita a resposta antiga dela', () => {
+    selecionar([card({})], [limite()], 4);
+
+    componente.atualizar(0, 'maximoAtencao', 90);
+    componente.salvar();
+    const salvamentoDaSete = http.expectOne(urlLimites);
+
+    componente.sondaSelecionadaValue = OUTRA;
+    componente.onSondaChange();
+    http.expectOne(urlCardsOito).flush({
+      schemaVersion: 1, unidadeSondaId: 8, revisao: 2, conexao: null, cards: [card({})],
+      atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
+    });
+    http.expectOne(urlLimitesOito).flush({
+      schemaVersion: 1, unidadeSondaId: 8, revisao: 1, limites: [limite()],
+      atualizadoPor: 'bruno', atualizadoEm: '2026-09-09T13:00:00Z',
+    });
+
+    selecionar([card({})], [limite({ maximoAtencao: 42 })], 9);
+
+    salvamentoDaSete.flush(
+      { message: 'A configuracao foi alterada. Recarregue antes de salvar.' },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    expect(componente.carregando()).toBe(false);
+    // A leitura mais recente da sonda 7 prevalece; o 409 do salvamento antigo nao a desfaz.
+    expect(componente.documento()?.revisao).toBe(9);
+    expect(componente.linhas()[0].maximoAtencao).toBe(42);
+    expect(componente.aviso()).toBeNull();
   });
 
   it('resposta atrasada de outra sonda não sobrescreve a selecionada', () => {

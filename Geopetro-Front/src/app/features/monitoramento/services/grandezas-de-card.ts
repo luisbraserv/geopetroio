@@ -60,6 +60,9 @@ export interface ConexaoCards {
   slot: number;
   dbNumero: number;
   intervaloLeituraMs: number;
+  /** Hexadecimal na tela, inteiro no documento; local/remoto vistos pelo Desktop. */
+  tsapLocal?: number | null;
+  tsapRemoto?: number | null;
 }
 
 export interface ConfiguracaoCards {

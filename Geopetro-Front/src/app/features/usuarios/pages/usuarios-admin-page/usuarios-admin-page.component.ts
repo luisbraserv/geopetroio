@@ -58,13 +58,17 @@ export class UsuariosAdminPageComponent {
    *
    * Espelha o enum `Role` do backend. Não faz sentido oferecer aqui uma role que o servidor não
    * conhece — ela seria rejeitada ou simplesmente não teria efeito.
+   *
+   * São as **permissões de módulo**: cada uma vale somada à role base. A ordem segue o menu, e não
+   * o enum, porque é assim que quem cadastra pensa o acesso — "esse cliente vê Tempo Real?".
+   * `ADMIN` fica no fim de propósito: é a única que dispensa o resto.
    */
   protected readonly rolesAdicionais: UserRole[] = [
-    'ADMIN',
+    'MONITORAMENTO',
+    'MONITORAMENTO_REAL',
+    'SIMULADOR',
     'CIMENTACAO',
-    'SONDA',
-    'GERENCIA',
-    'DIRETORIA',
+    'ADMIN',
   ];
 
   protected readonly form = {
@@ -135,10 +139,10 @@ export class UsuariosAdminPageComponent {
       ADMIN: 'Administrador',
       CLIENTE: 'Cliente',
       INTERNO: 'Interno',
+      MONITORAMENTO: 'Monitoramento',
+      MONITORAMENTO_REAL: 'Tempo Real e Alarmes',
+      SIMULADOR: 'Simulador',
       CIMENTACAO: 'Cimentação',
-      SONDA: 'Sonda',
-      GERENCIA: 'Gerência',
-      DIRETORIA: 'Diretoria',
       SUPORTE: 'Suporte',
     };
     return labels[role] ?? role;

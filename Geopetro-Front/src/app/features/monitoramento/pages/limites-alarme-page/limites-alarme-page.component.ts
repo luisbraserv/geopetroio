@@ -87,6 +87,15 @@ export class LimitesAlarmePageComponent implements OnInit {
   /** `null` enquanto os cards não chegaram; distingue "carregando" de "unidade sem cards". */
   readonly cardsLidos = signal(false);
 
+  /**
+   * Qual seleção está valendo agora.
+   *
+   * ⚠️ **Comparar o id da sonda não basta.** A sequência A → B → A devolve o mesmo id de uma
+   * requisição que já não é a atual, e a resposta velha passaria pela guarda como se fosse a nova.
+   * O contador cresce a cada troca e a cada recarga, então cada resposta sabe de qual ciclo veio.
+   */
+  private ciclo = 0;
+
   readonly unidadeSemCards = computed(() => this.cardsLidos() && this.linhas().length === 0);
 
   readonly autoria = computed(() => {
@@ -124,6 +133,9 @@ export class LimitesAlarmePageComponent implements OnInit {
     this.linhas.set([]);
     this.orfaos.set([]);
     this.cardsLidos.set(false);
+    // Abandona o ciclo anterior antes de qualquer coisa: o que estiver em voo ja nao vale.
+    this.ciclo += 1;
+    this.carregando.set(false);
 
     const sonda = this.sondaSelecionada();
     if (sonda) {
@@ -139,36 +151,48 @@ export class LimitesAlarmePageComponent implements OnInit {
    * reconstruiria as linhas e apagaria os valores já preenchidos pelos limites.
    */
   private carregar(sonda: SondaDisponivel): void {
+    const meu = (this.ciclo += 1);
     this.carregando.set(true);
     this.cardsService.ler(sonda.id).subscribe({
       next: (configuracao) => {
-        // Resposta atrasada de uma sonda que ja nao e a selecionada nao pode sobrescrever a atual.
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        // Resposta atrasada de um ciclo que ja nao e o atual nao pode sobrescrever a tela.
+        if (!this.atual(meu)) return;
         const grandezas = grandezasVigiaveis(configuracao.cards);
         this.cardsLidos.set(true);
-        this.carregarLimites(sonda, grandezas);
+        this.carregarLimites(sonda, grandezas, meu);
       },
       error: (falha) => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (!this.atual(meu)) return;
         this.carregando.set(false);
         this.erro.set(parseApiError(falha));
       },
     });
   }
 
-  private carregarLimites(sonda: SondaDisponivel, grandezas: GrandezaVigiavel[]): void {
+  private carregarLimites(sonda: SondaDisponivel, grandezas: GrandezaVigiavel[], meu: number): void {
     this.limitesService.ler(sonda.id).subscribe({
       next: (documento) => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (!this.atual(meu)) return;
         this.carregando.set(false);
         this.aplicar(documento, grandezas);
       },
       error: (falha) => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (!this.atual(meu)) return;
         this.carregando.set(false);
         this.erro.set(parseApiError(falha));
       },
     });
+  }
+
+  /**
+   * A resposta veio do ciclo que ainda está na tela?
+   *
+   * ⚠️ Quem descarta uma resposta velha **não pode** mexer nos sinais da tela — nem para desligar o
+   * `carregando`. Era o que travava a tela: o ciclo velho ligava `carregando` e o ciclo novo, que
+   * não sabia dele, nunca o desligava.
+   */
+  private atual(ciclo: number): boolean {
+    return this.ciclo === ciclo;
   }
 
   private aplicar(documento: ConfiguracaoLimites, grandezas: GrandezaVigiavel[]): void {
@@ -196,15 +220,24 @@ export class LimitesAlarmePageComponent implements OnInit {
     // Linha sem limiar nenhum nao vira limite: e assim que se apaga um.
     const limites = this.linhas().map(paraLimite).filter(temAlgumLimiar);
 
+    // O salvamento pertence ao ciclo em que foi disparado: trocar de sonda no meio o invalida.
+    const meu = this.ciclo;
+
     this.limitesService.salvar(sonda.id, documento.revisao, limites).subscribe({
       next: (atualizado) => {
+        // `salvando` sai do ar em qualquer caso: e o estado do botao, nao o da sonda.
         this.salvando.set(false);
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (!this.atual(meu)) return;
         this.aplicar(atualizado, this.linhas().map((linha) => linha.grandeza));
         this.salvo.set(`Limites salvos. Revisão ${atualizado.revisao}.`);
       },
       error: (falha) => {
         this.salvando.set(false);
+        // ⚠️ O erro precisa da MESMA guarda do sucesso. Sem ela, um 409 atrasado da sonda anterior
+        // mandava recarregar aquela sonda: `carregar` ligava o indicador de espera, a resposta
+        // caia fora do ciclo atual e ninguem o desligava — a sonda selecionada ficava escondida
+        // atras de um "carregando" que nao terminava.
+        if (!this.atual(meu)) return;
         if (falha?.status === 409) {
           this.recarregarPorConflito(sonda);
           return;
