@@ -1,0 +1,3518 @@
+{
+  "head": "4b97c84c6f7bac9aa197f4f69791e6fc54c5d404",
+  "baseline": {
+    "id": "cf532537c4ffa191267436c45b07081a23f3de36",
+    "tree": "cfa1789c38eec476e68c45213255e127c255b358",
+    "parents": [],
+    "date": "2026-08-27T17:44:46.000Z",
+    "message": "Initial commit"
+  },
+  "commits": [
+    {
+      "id": "47d9df2a5810e5ababa3db687e246124289c0da3",
+      "tree": "49db2dcbb1b0d1570d5af22104d3c4a0a06b37b5",
+      "parents": [
+        "cf532537c4ffa191267436c45b07081a23f3de36"
+      ],
+      "date": "2026-09-03T17:50:18.000Z",
+      "message": "chore: consolida os projetos em um monorepo unico"
+    },
+    {
+      "id": "25c9683280986abbed304b96af9f2b1e11a507d8",
+      "tree": "01f499d3e9fd680eb80df674dfa9006b361d99fb",
+      "parents": [
+        "47d9df2a5810e5ababa3db687e246124289c0da3"
+      ],
+      "date": "2026-09-06T15:33:44.000Z",
+      "message": "feat(simulador): geometria de poco, survey, unidades e entidade Poco"
+    },
+    {
+      "id": "45726cbeb2759e471b91f30786fa89b932244dc0",
+      "tree": "64fbf0f396ed04184ecccf31841b6ce3092b959e",
+      "parents": [
+        "25c9683280986abbed304b96af9f2b1e11a507d8"
+      ],
+      "date": "2026-09-06T15:57:00.000Z",
+      "message": "feat(usuario,seguranca,cadastro): politica de senha, corte imediato, tipo e fim do vinculo organizacional"
+    },
+    {
+      "id": "76e9d8fa47d1ed5c49cf0b2585454d01210188e7",
+      "tree": "88223990230fb96f0dd010ec170dcf9da1b47335",
+      "parents": [
+        "45726cbeb2759e471b91f30786fa89b932244dc0"
+      ],
+      "date": "2026-09-06T18:14:41.000Z",
+      "message": "feat(cadastro,telemetria): exclusao bloqueada por vinculo, com historico contando"
+    },
+    {
+      "id": "9328a1567951a655bb09c985967af7a0a038a65a",
+      "tree": "e2afce96b6ccdc1d98f64225f8e458f5b7d600fd",
+      "parents": [
+        "76e9d8fa47d1ed5c49cf0b2585454d01210188e7"
+      ],
+      "date": "2026-09-06T18:39:37.000Z",
+      "message": "chore(db): adota Flyway como dono unico do schema"
+    },
+    {
+      "id": "b38c351556ba34a551e9eb4dc19678e83ef374d6",
+      "tree": "e2d68055ed4aec54c7f601064c5705e42d143dd1",
+      "parents": [
+        "9328a1567951a655bb09c985967af7a0a038a65a"
+      ],
+      "date": "2026-09-07T19:52:55.000Z",
+      "message": "feat: prefixo /api, recuperacao de senha, SMTP e canal de configuracao da sonda"
+    },
+    {
+      "id": "04b354b72e3aae582174ded229c19327a4556e1a",
+      "tree": "880ce3504492a8c0a38d98485588e4d65b619b26",
+      "parents": [
+        "b38c351556ba34a551e9eb4dc19678e83ef374d6"
+      ],
+      "date": "2026-09-07T19:53:19.000Z",
+      "message": "docs(specs): cards configuraveis, renomeacao dos projetos e revisao da base"
+    },
+    {
+      "id": "ad5f598fc482cad6139e19b2237ec0564ab2fb41",
+      "tree": "ad755848dd5a59c60992cdf2bde32ffe2a56f458",
+      "parents": [
+        "04b354b72e3aae582174ded229c19327a4556e1a"
+      ],
+      "date": "2026-09-07T20:04:39.000Z",
+      "message": "refactor: renomeia os projetos para o prefixo Geopetro"
+    },
+    {
+      "id": "375afbe81a338a1551f670cd88644f23b051ffd0",
+      "tree": "5263e0a1e5e56eee59a0a8a050bd6fe2b3f512ad",
+      "parents": [
+        "ad5f598fc482cad6139e19b2237ec0564ab2fb41"
+      ],
+      "date": "2026-09-07T20:15:47.000Z",
+      "message": "feat(seguranca): role SUPORTE, com a fronteira entre configurar e cadastrar"
+    },
+    {
+      "id": "7e52a3c6bb127bcbc0c649daf57e3a2f5cfdb053",
+      "tree": "ff0e31737fdb510605f9e09d38c1f84a637686a9",
+      "parents": [
+        "375afbe81a338a1551f670cd88644f23b051ffd0"
+      ],
+      "date": "2026-09-07T20:21:01.000Z",
+      "message": "test(db): verifica a migration da role SUPORTE contra MySQL real"
+    },
+    {
+      "id": "1fb5dd1531ad1e3a5bc909b5d331e0d4aae7ce13",
+      "tree": "1b9049daa8c22a5c9adf10aae3d5fce1ef0f5451",
+      "parents": [
+        "7e52a3c6bb127bcbc0c649daf57e3a2f5cfdb053"
+      ],
+      "date": "2026-09-07T20:27:57.000Z",
+      "message": "feat(desktop): cache de configuracao em disco, para reiniciar sem rede"
+    },
+    {
+      "id": "d7133248d7139b1d4dc0fdff23e0b45f642586ab",
+      "tree": "5f6fa4b7e3fe2940d44927d919d8eb5f40879d49",
+      "parents": [
+        "1fb5dd1531ad1e3a5bc909b5d331e0d4aae7ce13"
+      ],
+      "date": "2026-09-07T20:32:30.000Z",
+      "message": "perf(desktop): uma leitura do CLP por ciclo, fatiada em memoria"
+    },
+    {
+      "id": "e9dce8f201d1490030d19a52de6a249843a2894b",
+      "tree": "fde975037723d4021d9ef192299a1c8540a8fb8c",
+      "parents": [
+        "d7133248d7139b1d4dc0fdff23e0b45f642586ab"
+      ],
+      "date": "2026-09-07T20:46:05.000Z",
+      "message": "feat(cards): documento de cards da unidade, em recurso proprio"
+    },
+    {
+      "id": "f006ed8312e77392c6549e84e2face39eea10979",
+      "tree": "93dfe28056145af0206f691f87b264ba940f6420",
+      "parents": [
+        "e9dce8f201d1490030d19a52de6a249843a2894b"
+      ],
+      "date": "2026-09-07T20:59:16.000Z",
+      "message": "refactor(desktop): estado de stroke e vazao por card"
+    },
+    {
+      "id": "be65550ae6337fa5fc7edbab3988a82e962035d2",
+      "tree": "2fc54bc3d8a6572a56b016ce1cd0962cc1dbb83f",
+      "parents": [
+        "f006ed8312e77392c6549e84e2face39eea10979"
+      ],
+      "date": "2026-09-07T21:03:44.000Z",
+      "message": "feat(desktop): sessao que libera as janelas de configuracao"
+    },
+    {
+      "id": "f819fd7fc22571bb91907dfb1e64cb8382c99b65",
+      "tree": "ba869057c81ee0efa3329a7cfe09474850232322",
+      "parents": [
+        "be65550ae6337fa5fc7edbab3988a82e962035d2"
+      ],
+      "date": "2026-09-07T21:24:49.000Z",
+      "message": "fix: liga o Flyway no Spring Boot 4 e completa a renomeacao nos textos de produto"
+    },
+    {
+      "id": "cee21ade085baaafc758c6ddf165f1bbbdd19edb",
+      "tree": "51052e8267eca9ef2293a3cefd2dfce31857833a",
+      "parents": [
+        "f819fd7fc22571bb91907dfb1e64cb8382c99b65"
+      ],
+      "date": "2026-09-08T01:20:38.000Z",
+      "message": "feat: tela de configuracao de cards no Desktop (passo 6)"
+    },
+    {
+      "id": "c1a06c56b86218ba8b959e0513421ea3ed607537",
+      "tree": "3c57f71aad32d2663f6a5181e499bfe9b2e80b49",
+      "parents": [
+        "cee21ade085baaafc758c6ddf165f1bbbdd19edb"
+      ],
+      "date": "2026-09-08T01:33:21.000Z",
+      "message": "fix: status antes do modal de conflito, nao depois"
+    },
+    {
+      "id": "e5a9a77c06dbdb9c50bef6a97d368ce0051ee47d",
+      "tree": "a324736693b38d24f9b38e3bbd5b53297d8ee29f",
+      "parents": [
+        "c1a06c56b86218ba8b959e0513421ea3ed607537"
+      ],
+      "date": "2026-09-08T01:41:06.000Z",
+      "message": "fix: card de peso e torque mostra a calibracao que ja existe"
+    },
+    {
+      "id": "16a9b09ce5741f32babd8c5241f7b841f8d52768",
+      "tree": "e542f9fccdfe48d5c2d3f73009b09378d3026f4c",
+      "parents": [
+        "e5a9a77c06dbdb9c50bef6a97d368ce0051ee47d"
+      ],
+      "date": "2026-09-08T01:50:13.000Z",
+      "message": "feat(3b): calibracao por dispositivoId, e range de sensor no documento"
+    },
+    {
+      "id": "f90a87a40908d6c018f47cc75ff624c7e822bcdb",
+      "tree": "1b35f5d584b583d390d7fca0bbb60756b47dc829",
+      "parents": [
+        "16a9b09ce5741f32babd8c5241f7b841f8d52768"
+      ],
+      "date": "2026-09-08T01:54:42.000Z",
+      "message": "feat(3b): conversao dirigida pelo documento de cards"
+    },
+    {
+      "id": "e841629c7d2090b50c74374e238871b2969d0395",
+      "tree": "df8b388ef5a9a489f54ae4917bcbee2285fcdf45",
+      "parents": [
+        "f90a87a40908d6c018f47cc75ff624c7e822bcdb"
+      ],
+      "date": "2026-09-08T02:09:27.000Z",
+      "message": "docs(3b): reescreve o contrato de telemetria para cards por unidade"
+    },
+    {
+      "id": "65e238fa9361ee127bb950f57697d47b6dab08f6",
+      "tree": "f04c5e3b6b5329fc57fc57783b5fbef3b6765da8",
+      "parents": [
+        "e841629c7d2090b50c74374e238871b2969d0395"
+      ],
+      "date": "2026-09-08T02:18:01.000Z",
+      "message": "feat(3b): o documento de cards chega ao Desktop pelo canal de configuracao"
+    },
+    {
+      "id": "d4c7307d5219562fbd97d533f66fc4d51f745aa6",
+      "tree": "e88d856b8dac0ad0ba8c3c2809848b3382699fec",
+      "parents": [
+        "65e238fa9361ee127bb950f57697d47b6dab08f6"
+      ],
+      "date": "2026-09-08T02:26:58.000Z",
+      "message": "feat(3b): o Desktop le pelo documento e publica no formato novo"
+    },
+    {
+      "id": "48ca3afb7ba893535940da3f0747ba4a7ca54d04",
+      "tree": "00e35422e34999446b7f7626855cef5734973245",
+      "parents": [
+        "d4c7307d5219562fbd97d533f66fc4d51f745aa6"
+      ],
+      "date": "2026-09-08T02:32:52.000Z",
+      "message": "feat(3b): a Telemetria consome o formato de cards por unidade"
+    },
+    {
+      "id": "be7ba2a4b0b7e70ceb244d62bbc30bb71ee50e5a",
+      "tree": "301400dd5e2bdf540d49afd3ea18c21f2b801167",
+      "parents": [
+        "48ca3afb7ba893535940da3f0747ba4a7ca54d04"
+      ],
+      "date": "2026-09-08T08:54:17.000Z",
+      "message": "fix(3b): o Desktop nao assinava o topico de cards, e o backend o recusava"
+    },
+    {
+      "id": "d34b441f73c28f0fea1ebcfdb17eb047a8c8b925",
+      "tree": "1d38fc621785384fb78042e33c8a2dc52aaa5846",
+      "parents": [
+        "be7ba2a4b0b7e70ceb244d62bbc30bb71ee50e5a"
+      ],
+      "date": "2026-09-08T08:54:32.000Z",
+      "message": "chore: nao versionar os caches de runtime da estacao"
+    },
+    {
+      "id": "4123de7e3fc5bf2eadfb471c811c589c95ef3a1d",
+      "tree": "ecb43d21463f2b8d92accc9e9738a0627f2a2554",
+      "parents": [
+        "d34b441f73c28f0fea1ebcfdb17eb047a8c8b925"
+      ],
+      "date": "2026-09-08T09:00:39.000Z",
+      "message": "feat(7): conversao de temperatura e de nivel de tanque"
+    },
+    {
+      "id": "2bcb9bee4102557db23bb6c0e46b7ccb15b3a320",
+      "tree": "3a006a90d4465a7fa3b1f8e901ce92f13283bca0",
+      "parents": [
+        "4123de7e3fc5bf2eadfb471c811c589c95ef3a1d"
+      ],
+      "date": "2026-09-08T09:22:56.000Z",
+      "message": "feat(7): dashboard dinamico, desenhos, e o H2 local por grandeza"
+    },
+    {
+      "id": "4547c492f11098999b3908751c05dc64aea8d27f",
+      "tree": "4a126385487644c3aa91bdc92465584b41aad439",
+      "parents": [
+        "2bcb9bee4102557db23bb6c0e46b7ccb15b3a320"
+      ],
+      "date": "2026-09-09T12:34:08.000Z",
+      "message": "feat(8): front dinamico, e o filtro serie no caminho de leitura"
+    },
+    {
+      "id": "234cfccfdbc0785903f22f653ccf0ff728615d31",
+      "tree": "6e6bae1f5d5615e205e75ba62b0e8a704d943b54",
+      "parents": [
+        "4547c492f11098999b3908751c05dc64aea8d27f"
+      ],
+      "date": "2026-09-09T12:35:31.000Z",
+      "message": "docs: o roteiro dos cards estava atras do codigo em tres pontos"
+    },
+    {
+      "id": "ed8b143cd03c109203c796ee242a77b50e85a81a",
+      "tree": "fab06d2d70e8ede8dc639417a8b35680b3d99d20",
+      "parents": [
+        "234cfccfdbc0785903f22f653ccf0ff728615d31"
+      ],
+      "date": "2026-09-09T12:48:58.000Z",
+      "message": "feat(alarmes): o limite passa a valer sobre a grandeza que a unidade declara"
+    },
+    {
+      "id": "3de3381df9770e30b396742db3b225e6ac50c0d9",
+      "tree": "1b4a0e37e8e3739150bd54197e050fb9a4b1048b",
+      "parents": [
+        "ed8b143cd03c109203c796ee242a77b50e85a81a"
+      ],
+      "date": "2026-09-09T13:05:41.000Z",
+      "message": "feat(alarmes): o servidor avalia as leituras e grava o log de eventos"
+    },
+    {
+      "id": "495f43a6685c09d4f23a2e6c986d606076159ede",
+      "tree": "39b6f6bd735305f31b0ce79571b1d2dc4a2a6d3c",
+      "parents": [
+        "3de3381df9770e30b396742db3b225e6ac50c0d9"
+      ],
+      "date": "2026-09-09T13:31:19.000Z",
+      "message": "feat(alarmes): tela de ajuste de limites, montada pelo que a unidade declara"
+    },
+    {
+      "id": "e4b5443689c4a2d85831127866e1257137bb582b",
+      "tree": "c7060a3665bc096fc55fda0e0fb18b5b6a92e93b",
+      "parents": [
+        "495f43a6685c09d4f23a2e6c986d606076159ede"
+      ],
+      "date": "2026-09-09T13:48:09.000Z",
+      "message": "feat(alarmes): a projecao chega a tela, junto das leituras que a provocaram"
+    },
+    {
+      "id": "63eb97d26bc702c23408d59ae0e321f6edd24ea4",
+      "tree": "079c27ae77ddb408fbadad18db457013b7f84820",
+      "parents": [
+        "e4b5443689c4a2d85831127866e1257137bb582b"
+      ],
+      "date": "2026-09-09T14:06:49.000Z",
+      "message": "feat(alarmes): historico na tela, em excursoes e nao em linhas de log"
+    },
+    {
+      "id": "ea60406a580f0b38fa7cbd407cf6ffee5d28ca40",
+      "tree": "9f1451ffc3a067a483d445b7c53ebd011e5fddd2",
+      "parents": [
+        "63eb97d26bc702c23408d59ae0e321f6edd24ea4"
+      ],
+      "date": "2026-09-09T14:23:27.000Z",
+      "message": "feat(alarmes): a estacao alarma sozinha, sem rede e sem registrar"
+    },
+    {
+      "id": "8dba6d928597c11ed45f84a797b6f7cdc32ed17f",
+      "tree": "136ff74d6d9a08cf14d8f77adc9a3b36987f83f4",
+      "parents": [
+        "ea60406a580f0b38fa7cbd407cf6ffee5d28ca40"
+      ],
+      "date": "2026-09-09T14:38:45.000Z",
+      "message": "feat(prontidao): \"a migracao terminou\" deixa de ser afirmacao sem conferir"
+    },
+    {
+      "id": "e32fcbede2e17f7fe149c88a9c47b2f06b2e176c",
+      "tree": "c44cc781c7b0a58ba44467e1408f57ad3d87833c",
+      "parents": [
+        "8dba6d928597c11ed45f84a797b6f7cdc32ed17f"
+      ],
+      "date": "2026-09-09T17:51:57.000Z",
+      "message": "feat(cards): avisa quem esconde um card que esta desligando a vigilancia remota"
+    },
+    {
+      "id": "40870be057ccba4b29889599bcdb82082eeae935",
+      "tree": "528a742fb7ee634d7f917adf8092b7dc83688734",
+      "parents": [
+        "e32fcbede2e17f7fe149c88a9c47b2f06b2e176c"
+      ],
+      "date": "2026-09-09T18:20:16.000Z",
+      "message": "docs(auditoria): o que os oito commits de alarmes deixaram de pe"
+    },
+    {
+      "id": "4b97c84c6f7bac9aa197f4f69791e6fc54c5d404",
+      "tree": "2f8c3d7e30ed45573bde53568c4c37e22a447813",
+      "parents": [
+        "40870be057ccba4b29889599bcdb82082eeae935"
+      ],
+      "date": "2026-09-09T19:13:18.000Z",
+      "message": "docs(auditoria): a evidencia commitada contradizia o texto"
+    }
+  ],
+  "changes": [
+    {
+      "path": ".gitignore",
+      "status": "modified"
+    },
+    {
+      "path": "deploy/README.md",
+      "status": "modified"
+    },
+    {
+      "path": "deploy/dev/docker-compose.yml",
+      "status": "modified"
+    },
+    {
+      "path": "deploy/vm1-transacional/.env.example",
+      "status": "modified"
+    },
+    {
+      "path": "deploy/vm1-transacional/docker-compose.yml",
+      "status": "modified"
+    },
+    {
+      "path": "deploy/vm1-transacional/mysql-init/01-schema.sql",
+      "status": "deleted"
+    },
+    {
+      "path": "deploy/vm2-telemetria/docker-compose.yml",
+      "status": "modified"
+    },
+    {
+      "path": "deploy/vm2-telemetria/mosquitto/mosquitto.conf",
+      "status": "modified"
+    },
+    {
+      "path": "specs/README.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/business-rules.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/contracts/mqtt-telemetria.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/contracts/rest-monitoramento.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/contracts/websocket-realtime.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/current-features.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/domain-map.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/open-questions.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/security-findings.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/system-overview.md",
+      "status": "modified"
+    },
+    {
+      "path": "specs/technical-debt.md",
+      "status": "modified"
+    },
+    {
+      "path": "start-dev.cmd",
+      "status": "modified"
+    },
+    {
+      "path": "stop-dev.cmd",
+      "status": "modified"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/.gitattributes",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/.gitignore",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/build.gradle",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/config/bomba_config.json",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/data/registros_operacao.json",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/gradle/wrapper/gradle-wrapper.jar",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/gradle/wrapper/gradle-wrapper.properties",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/gradlew",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/gradlew.bat",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/scripts/create-windows-icon.ps1",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/scripts/package-windows.ps1",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/scripts/run-windows.ps1",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/settings.gradle",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/specs/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/InstanciaUnica.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/JavaFxApp.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/Launcher.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/controller/CarregarCsvController.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/controller/CartaOperacao.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/controller/ConfiguracaoController.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/controller/GerarPdfController.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/dto/ConfiguracaoBomba.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/dto/OperacaoSnapshot.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/helper/S7AreaHelper.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/model/RegistroOperacao.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/model/UnidadePressao.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/repository/H2DatabaseService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/repository/JsonRegistroService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/ConfiguracaoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/ConnectPLCService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/GraficoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/PdfService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/RegistroOperacaoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/StrokeCalculatorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/StrokePorMinutoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/java/com/example/braservhorusdesktop/service/VazaoCalculatorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/application.properties",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/carregar.csv.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/carta.operacao.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/configuracao.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/geopetro-design-system.css",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/gerar.pdf.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/icons/app.ico",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/icons/logo.png",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/icons/logo2-inverso.png",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/main/resources/icons/logo2.png",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/BraservHorusDesktopApplicationTests.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/InstanciaUnicaTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/controller/ConfiguracaoControllerTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/model/UnidadePressaoTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/repository/JsonRegistroServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/service/ConfiguracaoServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/service/ConnectPLCServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/service/GraficoServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/service/PdfServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Braserv-Horus-Desktop/src/test/java/com/example/braservhorusdesktop/service/StrokeCalculatorServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/.dockerignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/.gitattributes",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/.gitignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/.mvn/wrapper/maven-wrapper.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/Dockerfile",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/abrir-geopetro-online",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/BackendSondaGeopetroIoApplication.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/AlarmeAtivo.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/AlarmesController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/AvaliadorDeAlarme.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/EpisodioAlarme.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/EventoAlarme.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/EventoAlarmeEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/EventoAlarmeRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/EventoAlarmeVinculo.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/HistoricoDeAlarmes.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/CardsDeclarados.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCards.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsAccess.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsOutbound.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/ConfiguracaoCardsVinculo.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/cards/GrandezasDeCard.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/ApiErrorResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/ApiExceptionHandler.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/MonitoramentoClientConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/MonitoramentoClientProperties.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/OpenApiConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/ProfileGuard.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/UsuarioBeanConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/config/VinculoBeanConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSonda.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaAccess.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaOutbound.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/ConfiguracaoSondaVinculo.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/LimitesDeclarados.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpSecretCipher.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpSettings.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpSettingsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpSettingsEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpSettingsRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpSettingsService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/configuracoes/SmtpTransport.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/MonitoramentoClient.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/SondaMonitoramentoController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/SondaMonitoramentoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/TelemetriaVinculoAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/dto/ExistenciaSerieDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/dto/MonitoramentoPontoDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/dto/MonitoramentoSerieDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/dto/SondaDisponivelDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/prontidao/ProntidaoController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/prontidao/ProntidaoDaUnidade.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/prontidao/ProntidaoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/realtime/RealtimeController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/realtime/WebSocketAuthInterceptor.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/realtime/WebSocketConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/realtime/WebSocketInboundGuard.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/realtime/WebSocketNaoAutorizadoException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/realtime/dto/EstadoRealtimeDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryConfiguration.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryMail.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryToken.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryTokenRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/RecoveryUserRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/java/com/geopetro/recuperacao/SmtpRecoveryMail.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/application-dev.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/application-prod.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/application.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.04__baseline.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.05__simulador_pocos.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.06.1__unidade_sonda_tipo.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.06.2__usuario_sem_vinculo_organizacional.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.06.3__recuperacao_senha.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.07.1__configuracao_smtp.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.07.2__configuracao_sonda.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.07.3__role_suporte.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.07.4__configuracao_cards.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/db/migration/V2026.09.09.1__evento_alarme.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/main/resources/migration-regional.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/BackendSondaGeopetroIoApplicationTests.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/alarmes/AlarmesControllerTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/alarmes/AvaliadorDeAlarmeTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/alarmes/HistoricoDeAlarmesTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/alarmes/MotorDeAlarmesTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/cards/ConfiguracaoCardsAccessTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/cards/ConfiguracaoCardsTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/cards/GrandezasDeCardTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/configuracaosonda/ConfiguracaoSondaAccessTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/configuracaosonda/ConfiguracaoSondaServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/configuracaosonda/ConfiguracaoSondaWebSocketTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/configuracoes/SmtpSettingsServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/configuracoes/SmtpTransportTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/core/GuardaDeExclusaoTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/db/MigracaoFlywayTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/monitoramento/SondaMonitoramentoServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/monitoramento/TelemetriaVinculoAdapterTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/prontidao/ProntidaoServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/realtime/RealtimeControllerTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/realtime/WebSocketAuthInterceptorTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/recuperacao/RecoveryServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/recuperacao/SmtpRecoveryMailTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/regional/RegionalServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/security/ContaAtivaVerificadorTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/security/IdentidadeHttpSecurityTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/security/JwtAuthenticationFilterTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/setor/SetorServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/simulador/PocoGeometryTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/simulador/PocoPersistenceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/simulador/PocoSecurityTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/app/src/test/java/com/geopetro/unidadesonda/UnidadeSondaServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/dto/PaginaResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/exception/BusinessException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/exception/RegraNegocioException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/exception/ResourceNotFoundException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/port/EmpresaConsultaPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/port/UnidadeSondaConsultaPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/port/VinculoCadastroPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/core/src/main/java/com/geopetro/core/vinculo/GuardaDeExclusao.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/db/cleanup/2026-08-26-remove-operacao.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/db/cleanup/2026-08-26-remove-quimico.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/db/historico/V2026.06.02__base_regionais_setores.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/db/historico/V2026.06.03__usuario_regionais_setores.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/db/historico/V2026.06.04__amplia_usuario_roles_role.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/db/historico/V2026.06.15__unidades_spt144_spt145.sql",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/adapter/in/web/EmpresaController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/adapter/in/web/request/EmpresaRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/adapter/in/web/response/EmpresaResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/adapter/out/persistence/EmpresaConsultaAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/adapter/out/persistence/entity/EmpresaEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/adapter/out/persistence/repository/EmpresaJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/empresa/src/main/java/com/geopetro/empresa/application/service/EmpresaService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/geopetro-online-tray.py",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/mvnw",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/mvnw.cmd",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/postman/geopetro-io.postman_collection.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/src/main/java/com/geopetro/regional/adapter/in/web/RegionalController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/src/main/java/com/geopetro/regional/adapter/in/web/request/RegionalRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/src/main/java/com/geopetro/regional/adapter/in/web/response/RegionalResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/src/main/java/com/geopetro/regional/adapter/out/persistence/entity/RegionalEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/src/main/java/com/geopetro/regional/adapter/out/persistence/repository/RegionalJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/regional/src/main/java/com/geopetro/regional/application/service/RegionalService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/adapter/in/web/AutenticacaoController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/adapter/in/web/request/AutenticacaoRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/adapter/in/web/response/AutenticacaoResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/adapter/out/BCryptPasswordEncoderAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/adapter/out/JwtTokenAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/application/AutenticacaoUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/application/ContaAtivaVerificador.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/application/port/out/TokenPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/config/JwtAuthenticationFilter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/config/SecurityConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/security/src/main/java/com/geopetro/security/domain/AutenticacaoInvalidaException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/adapter/in/web/SetorController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/adapter/in/web/request/SetorRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/adapter/in/web/response/SetorResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/adapter/out/persistence/SetorVinculoAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/adapter/out/persistence/entity/SetorEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/adapter/out/persistence/repository/SetorJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/setor/src/main/java/com/geopetro/setor/application/service/SetorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/CenarioSimuladorController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/PastaSimuladorController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/PocoController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/request/CenarioRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/request/PastaRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/request/PocoRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/response/CenarioResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/response/PastaResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/in/web/response/PocoResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/entity/CenarioSimuladorEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/entity/PastaSimuladorEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/entity/PocoEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/entity/PocoGeometryConverter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/repository/CenarioSimuladorJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/repository/PastaSimuladorJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/adapter/out/persistence/repository/PocoJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/application/service/CenarioSimuladorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/application/service/PastaSimuladorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/application/service/PocoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/domain/PocoGeometry.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/simulador/src/main/java/com/geopetro/simulador/domain/PocoGeometryValidator.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/specs/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/specs/api-prefix.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/specs/configuracao-smtp.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/specs/identidade-e-cadastro.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/specs/recuperacao-senha.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/specs/simulador-pocos.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/in/web/UnidadeSondaController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/in/web/request/UnidadeSondaRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/in/web/response/UnidadeSondaResponse.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaConsultaAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaSetorVinculoAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaVinculoAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/entity/UnidadeSondaEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/application/service/UnidadeSondaService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/domain/TipoUnidadeSonda.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/repository/UnidadeSondaJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/in/web/UsuarioController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/in/web/request/AlterarSenhaRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/in/web/request/AtualizarUsuarioRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/in/web/request/CriarUsuarioClienteRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/in/web/request/CriarUsuarioInternoRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/UsuarioEmpresaVinculoAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/UsuarioPersistenceAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/UsuarioVinculoAdapter.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/entity/UsuarioClienteEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/entity/UsuarioEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/entity/UsuarioInternoEntity.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/mapper/UsuarioPersistenceMapper.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/adapter/out/persistence/repository/UsuarioJpaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/command/AlterarSenhaCommand.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/command/AtualizarUsuarioCommand.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/command/CriarUsuarioClienteCommand.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/command/CriarUsuarioInternoCommand.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/dto/PaginaOutput.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/dto/UsuarioOutput.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/port/in/BuscarUsuarioInputPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/port/in/CriarUsuarioInputPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/port/out/PasswordEncoderPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/port/out/UsuarioRepositoryPort.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/usecase/AlterarSenhaUsuarioUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/usecase/AtivarUsuarioUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/usecase/AtualizarUsuarioUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/usecase/BuscarUsuarioUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/usecase/CriarUsuarioUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/application/usecase/DesativarUsuarioUseCase.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/exception/UsuarioInvalidoException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/exception/UsuarioJaExisteException.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/Email.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/Endereco.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/PoliticaSenha.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/Role.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/StatusUsuario.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/Telefone.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/Usuario.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/UsuarioCliente.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/main/java/com/geopetro/usuario/domain/model/UsuarioInterno.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/test/java/com/geopetro/usuario/domain/model/EmailTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/test/java/com/geopetro/usuario/domain/model/EnderecoTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/test/java/com/geopetro/usuario/domain/model/PoliticaSenhaTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/test/java/com/geopetro/usuario/domain/model/TelefoneTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Backend/usuario/src/test/java/com/geopetro/usuario/domain/model/UsuarioTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/.gitattributes",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/.gitignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/.mvn/wrapper/maven-wrapper.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/config/app-settings.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/docs/documentacao-sistema.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/mvnw",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/mvnw.cmd",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/scripts/package-app-image.ps1",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/scripts/package-installer-exe.ps1",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/scripts/png-to-ico.ps1",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/specs/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/DesktopSondaGeopetroIoApplication.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/config/AppPaths.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/config/InstanciaUnica.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/config/JavaFXConfiguration.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/config/MainViewController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/CardsConfigController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/ChartPreviewController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/ChaveSettingsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/ConfiguracaoLoginController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/GenerateOperationChartController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/GraficosController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/MainViewFxmlController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/MonitoringController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/OperationChartController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/PesoColunaSettingsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/PumpSettingsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/SensorSettingsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/SettingsController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/SplashController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/TanqueView.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/TermometroView.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/AppSettings.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/CardVisibilityConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/CardsDaUnidade.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/ChaveHidraulicaConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/ConfiguracaoSondaRemota.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/DocumentoDaUnidade.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/EstadoAtual.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/GeneratedOperationChart.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/LeituraLocal.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/LeituraPublicada.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/OperationChartRequest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/PesoColunaCalculo.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/PesoColunaConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/SensorPressaoConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/SondaData.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/TipoMovimento.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/models/UnidadeSondaOpcao.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/repositories/LeituraLocalRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/repositories/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/AlarmesLocais.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ApplicationService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/AvaliadorLocalDeAlarme.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/BackendLogin.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/BlocoDeLeitura.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/CalibracaoDeCards.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/CanalConfiguracaoLifecycle.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/CardsState.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/CardsStore.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ConfiguracaoCardsClient.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ConfiguracaoRemotaState.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ConfiguracaoRemotaStore.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ConversaoPressao.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ConversaoTanque.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/ConversaoTemperatura.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/CopiaDeCards.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/EstadoDeDocumento.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/FlowRateCalculatorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/HydraulicTorqueCalculator.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/LeituraDeCards.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/OperationChartPdfService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/PesoColunaCalculator.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/PlcConnectionService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/PodaDeLeiturasLocais.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SeriesLocais.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SessaoConfiguracao.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SettingsService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SinalSonoro.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SnapshotStore.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SondaService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/StompRealtimeClient.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/StrokeCalculatorService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/TelemetriaMqttService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/TelemetriaRealtimeService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/UnidadeSondaCatalogoService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/utils/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/application.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/icon/loading.gif",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/icon/logo.ico",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/icon/logo.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/icon/logo2-inverso.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/icon/logo2.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/static/WhatsApp Image 2026-03-19 at 13.13.56.jpeg",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/cards-config.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/chart-preview.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/chave-settings.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/configuracao-login.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/generate-operation-chart.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/geopetro-design-system.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/graficos.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/main-view.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/monitoring.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/operation-chart.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/peso-coluna-settings.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/pump-settings.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/sensor-settings.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/settings.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/settings.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/splash.fxml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/DesktopSondaGeopetroIoApplicationTests.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/config/InstanciaUnicaTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/controllers/CarregamentoDasTelasTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/controllers/FxmlLigadoAoControllerTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/controllers/SettingsViewTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/AlarmesLocaisTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/AvaliadorLocalDeAlarmeTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/BackendLoginRouteTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/BlocoDeLeituraTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/CalculadoresPorCardTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/CalibracaoDeCardsTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/ConfiguracaoCardsClientTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/ConfiguracaoRemotaPersistenteTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/ConfiguracaoRemotaTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/ConversaoPressaoTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/ConversaoTanqueTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/ConversaoTemperaturaTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/CopiaDeCardsTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/HydraulicTorqueCalculatorTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/LeituraDeCardsTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/PesoColunaCalculatorTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/PodaDeLeiturasLocaisTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/SessaoConfiguracaoTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/services/SettingsServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/resources/application.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/.dockerignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/.editorconfig",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/.gitignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/.prettierrc",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/Dockerfile",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/angular.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/front-login-check.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/nginx.conf",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/package-lock.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/package.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/proxy.conf.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/_redirects",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/data/quimicos.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/data/quimicos.json.backup-before-planilha-20260513",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/data/quimicos.json.codex-backup-20260513",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/favicon.ico",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/image.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/logo-horizontal-inverso.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/logo-horizontal.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/public/logo.png",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/specs/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/specs/simulador/faixas-validacao.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/specs/simulador/geometria-poco.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/specs/simulador/receitas-pasta.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/app.config.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/app.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/app.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/app.routes.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/app.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/app.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/core/http/api-error.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/core/http/api-error.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/core/http/api-prefix.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/core/http/auth-token.interceptor.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/core/http/auth-token.interceptor.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/guards/auth.guard.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/models/user.model.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/models/user.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/services/auth.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/services/password-recovery.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/state/auth.actions.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/auth/state/auth.state.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/models/cadastros.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/pages/cadastros-page/cadastros-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/pages/empresas-page/empresas-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/pages/regionais-page/regionais-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/pages/setores-page/setores-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/pages/unidades-sondas-page/unidades-sondas-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/services/empresa.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/services/regional.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/services/regional.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/services/setor.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/services/setor.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/cadastros/services/unidade-sonda.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/configuracoes/email-settings.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/configuracoes/email-settings.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/configuracoes/email-settings.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/configuracoes/email-settings.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/configuracoes/email-settings.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/configuracoes/settings-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/dashboard/pages/dashboard-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/dashboard/pages/dashboard-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/dashboard/pages/dashboard-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/components/grafico-monitoramento/grafico-monitoramento.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/components/grafico-monitoramento/grafico-monitoramento.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/components/grafico-tempo-real/grafico-tempo-real.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/components/grafico-tempo-real/grafico-tempo-real.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/historico-alarmes-page/historico-alarmes-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/historico-alarmes-page/historico-alarmes-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/historico-alarmes-page/historico-alarmes-page.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/historico-alarmes-page/historico-alarmes-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/monitoramento-sonda-page/monitoramento-sonda-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/monitoramento-sonda-page/monitoramento-sonda-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/monitoramento-sonda-page/monitoramento-sonda-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/prontidao-frota-page/prontidao-frota-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/prontidao-frota-page/prontidao-frota-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/prontidao-frota-page/prontidao-frota-page.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/prontidao-frota-page/prontidao-frota-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/tempo-real-page/tempo-real-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/tempo-real-page/tempo-real-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/tempo-real-page/tempo-real-page.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/pages/tempo-real-page/tempo-real-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/alarme-ativo.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/alarme-ativo.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/alarmes.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/cards-unidade.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/grandezas-de-card.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/grandezas-de-card.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/historico-alarmes.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/limites-alarme.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/limites-alarme.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/monitoramento-sonda.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/prontidao.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/realtime.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/realtime.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/monitoramento/services/stomp-client.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/aditivos/aditivo-modal.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/chart-zoom-modal.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/ops-chart.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/pressure-chart.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/pressure-depth-config.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/pressure-depth-config.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/schematic-tampao.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/schematic-tampao.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/schematic-wellbore.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/squeeze-operation-charts.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/squeeze-schematics.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/squeeze-schematics.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/thickening-chart.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/uca-chart.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/visual-segments.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/charts/visual-segments.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/relatorio/relatorio-builder.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/relatorio/relatorio-capa-modal.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/relatorio/relatorio-viewer.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/state-modal/simulador-state-modal.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/state-modal/simulador-state-modal.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/depth-input.directive.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/depth-input.directive.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/poco-selector.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/poco-selector.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-3d.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-schematic.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-schematic.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-structure-form.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-structure-form.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-trajectory-form.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/components/well/well-trajectory-form.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/aditivo.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/api-tubulares.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/constantes.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/depth-unit.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/pasta.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/poco.model.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/poco.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/reologia.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/squeeze.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/tampao.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/well-geometry.form.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/well-geometry.form.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/well-geometry.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/models/well-trajectory.form.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/geometry-validation.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-base.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-index/simulador-index.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-index/simulador-index.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-index/simulador-index.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-squeeze/simulador-squeeze.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-squeeze/simulador-squeeze.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-squeeze/simulador-squeeze.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-tampao/simulador-tampao.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-tampao/simulador-tampao.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/pages/simulador-tampao/simulador-tampao.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/additive-effect-engine.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/aditivos-store.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/cement-slurry-recipe.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/cement-slurry-recipe.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/conformidade-operacional-report.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/core-calculo.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/engineering-validation.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/engineering-validation.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/minimum-curvature.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/minimum-curvature.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/poco-api.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/retirada-tubos-report.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/reverse-circulation-calculo.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/reverse-circulation-calculo.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/rheology-adjustment.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/rheology-adjustment.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/simulador-state-api.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/simulador-state-store.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/slurry-calculo.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/slurry-calculo.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/slurry-engine.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/squeeze-calculo.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/squeeze-calculo.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/squeeze-hydraulic-geometry.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/squeeze-hydraulic-simulation.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/squeeze-hydraulic-simulation.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/squeeze-multiphase.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/tampao-calculo.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/tampao-calculo.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/tests-calculo.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/well-fluid-distribution.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/well-fluid-distribution.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/well-geometry.service.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/well-geometry.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/well-spatial-path.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/simulador/services/well-spatial-path.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/models/usuario-api.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/pages/meu-usuario-page/meu-usuario-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/pages/meu-usuario-page/meu-usuario-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/pages/meu-usuario-page/meu-usuario-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/pages/usuarios-admin-page/usuarios-admin-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/pages/usuarios-admin-page/usuarios-admin-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/pages/usuarios-admin-page/usuarios-admin-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/features/usuarios/services/usuarios.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/login/login-page.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/login/login-page.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/login/login-page.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/password-recovery/password-recovery.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/password-recovery/password-recovery.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/password-recovery/password-recovery.component.spec.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/pages/password-recovery/password-recovery.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/layout/shell/shell.component.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/layout/shell/shell.component.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/layout/shell/shell.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/models/pagina.model.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/pages/acesso-negado/acesso-negado.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/pages/pagina-nao-encontrada/pagina-nao-encontrada.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/rich-text-editor/rich-text-editor.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/services/cep.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/toast/toast-host.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/toast/toast.service.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/ui/modal/modal.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/ui/paginator/paginator.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/app/shared/ui/search-box/search-box.component.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/assets/data/cement-additives.seed.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/environments/environment.k8s.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/environments/environment.prod.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/environments/environment.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/index.html",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/main.ts",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/src/styles.css",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/tests/hydraulics.spec.js",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/tsconfig.app.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/tsconfig.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/tsconfig.spec.json",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Front/wrangler.toml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/.dockerignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/.gitignore",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/.mvn/wrapper/maven-wrapper.properties",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/Dockerfile",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/mvnw",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/mvnw.cmd",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/pom.xml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/specs/README.md",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/TelemetriaGeopetroioApplication.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/adapter/in/web/ApiExceptionHandler.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/adapter/in/web/MonitoramentoController.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/adapter/in/web/TelemetriaHealthIndicators.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/adapter/in/web/dto/ExistenciaSerieDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/adapter/in/web/dto/MonitoramentoPontoDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/adapter/in/web/dto/MonitoramentoSerieDTO.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaSerieService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/application/service/IngestaoTelemetriaService.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/InfluxConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/InfluxProperties.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/MqttConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/MqttProperties.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/OpenApiConfig.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/TelemetriaProperties.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/config/TelemetriaSeedProperties.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/domain/LeituraTelemetria.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/domain/TelemetriaBatch.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/influx/InfluxTelemetriaRepository.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/influx/TelemetriaDevSeeder.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/mqtt/MqttTelemetriaSubscriber.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/mqtt/TelemetriaPayloadParser.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/resources/application.yml",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/TelemetriaGeopetroioApplicationTests.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaSerieServiceTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/influx/TelemetriaDevSeederTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/mqtt/MqttTelemetriaSubscriberTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/infrastructure/mqtt/TelemetriaPayloadParserTest.java",
+      "status": "added"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/test/resources/application-test.yml",
+      "status": "added"
+    },
+    {
+      "path": "deploy/dev/audit-endpoints-result.txt",
+      "status": "added"
+    },
+    {
+      "path": "deploy/dev/audit-endpoints.ps1",
+      "status": "added"
+    },
+    {
+      "path": "deploy/vm1-transacional/windows/01-instalar-wsl.ps1",
+      "status": "added"
+    },
+    {
+      "path": "deploy/vm1-transacional/windows/02-preparar-ubuntu.sh",
+      "status": "added"
+    },
+    {
+      "path": "deploy/vm1-transacional/windows/03-publicar-portas.ps1",
+      "status": "added"
+    },
+    {
+      "path": "deploy/vm1-transacional/windows/README.md",
+      "status": "added"
+    },
+    {
+      "path": "favicon.ico",
+      "status": "added"
+    },
+    {
+      "path": "specs/auditoria-2026-09-08.md",
+      "status": "added"
+    },
+    {
+      "path": "specs/contracts/configuracao-sonda.md",
+      "status": "added"
+    },
+    {
+      "path": "specs/features/alarmes.md",
+      "status": "added"
+    },
+    {
+      "path": "specs/features/cards-configuraveis.md",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/ChatGPT Image 31 de ago. de 2026, 07_56_00 (1).png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/ChatGPT Image 31 de ago. de 2026, 07_56_00 (2).png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/ChatGPT Image 31 de ago. de 2026, 07_56_00 (3).png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/ChatGPT Image 31 de ago. de 2026, 07_56_00 (4).png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/ChatGPT Image 31 de ago. de 2026, 07_56_00 (8).png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/Icon-FLAT-AZUL.png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/Icon-Fundo-AZUL.png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/Icon-fundo-branco.png",
+      "status": "added"
+    },
+    {
+      "path": "specs/image/logo.png",
+      "status": "added"
+    },
+    {
+      "path": "specs/index.html",
+      "status": "added"
+    },
+    {
+      "path": "specs/product-context.md",
+      "status": "added"
+    },
+    {
+      "path": "specs/renomeacao-projetos.md",
+      "status": "added"
+    }
+  ],
+  "working": [
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/controllers/MonitoringController.java",
+      "status": "modified"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/PlcConnectionService.java",
+      "status": "modified"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/SondaService.java",
+      "status": "modified"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/java/com/example/demo/services/TelemetriaRealtimeService.java",
+      "status": "modified"
+    },
+    {
+      "path": "Geopetro-Desktop/src/main/resources/views/monitoring.fxml",
+      "status": "modified"
+    },
+    {
+      "path": "Geopetro-Desktop/src/test/java/com/example/demo/controllers/FxmlLigadoAoControllerTest.java",
+      "status": "modified"
+    },
+    {
+      "path": "Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaService.java",
+      "status": "unreadable",
+      "error": "EPERM"
+    },
+    {
+      "path": "specs/features/cards-configuraveis.md",
+      "status": "modified"
+    }
+  ]
+}

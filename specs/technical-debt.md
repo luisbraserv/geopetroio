@@ -9,7 +9,7 @@
 | ID | Item | Aplicação | Severidade | Estado |
 |---|---|---|---|---|
 | [DT-001](#dt-001--código-fonte-perdido-de-almoxarifado-e-compras) | Código-fonte perdido (almoxarifado/compras) | Backend | **Crítica** | Registro histórico |
-| [DT-002](#dt-002--estratégias-conflitantes-de-evolução-de-schema) | Estratégias conflitantes de schema | Backend | **Crítica** | Parcialmente resolvido |
+| [DT-002](#dt-002--estratégias-conflitantes-de-evolução-de-schema) | Estratégias conflitantes de schema | Backend | **Crítica** | ✅ **Resolvido 2026-09-07** — Flyway |
 | [DT-003](#dt-003--telemetria-capturada-mas-nunca-persistida) | Telemetria capturada e descartada | Sistema | **Crítica** | ✅ Resolvido |
 | [DT-004](#dt-004--risco-de-onedrive-sobre-repositórios-git) | OneDrive corrompendo repositórios Git | Todas | **Crítica** | Aberto |
 | [DT-005](#dt-005--módulos-de-backend-sem-interface) | Módulos de backend sem interface | Backend | Alta | ✅ Resolvido |
@@ -20,132 +20,32 @@
 | [DT-010](#dt-010--duplicação-entre-os-dois-desktops) | Duplicação entre os dois desktops | Desktops | Média | Aceita |
 | [DT-011](#dt-011--divergência-de-roles-backend--frontend) | Divergência de roles backend↔frontend | Backend/Front | Média | ✅ Resolvido |
 | [DT-012](#dt-012--dois-formatos-de-erro-na-api) | Dois formatos de erro na API | Backend | Média | Aberto |
-| [DT-013](#dt-013--seed-de-dados-sintéticos-sem-guarda) | Seed sintético sem guarda de ambiente | Desktop-Sonda | Média | Aberto |
+| [DT-013](#dt-013--seed-de-dados-sintéticos-sem-guarda) | Seed sintético sem guarda de ambiente | Geopetro-Desktop | Média | Aberto |
 | [DT-014](#dt-014--simulador-sem-validação-de-entrada) | Simulador sem validação de entrada | Front | Média | Aberto |
 | [DT-015](#dt-015--código-morto-inventário) | Código morto (inventário) | Todas | Baixa | Parcialmente resolvido |
 | [DT-016](#dt-016--inconsistências-de-organização-de-projeto) | Organização de projeto | Backend | Baixa | Aberto |
 
 ---
 
+**Histórico detalhado:** [levantamento integral](history/technical-debt-2026-09.md). Itens resolvidos aparecem abaixo apenas com o resultado; itens em aberto conservam diagnóstico e ações.
+
 ## DT-001 · Código-fonte perdido de almoxarifado e compras
 
-**Severidade: Crítica** · **[DECIDIDO 2026-08-26]** módulos descontinuados · Registro histórico
+**Registro histórico.** Almoxarifado e compras foram descontinuados; o código-fonte não está no Git. Evidências e lições de recuperação ficaram no histórico.
 
-### O que foi encontrado [FATO]
-
-A pasta `almoxarifado/` **não era um módulo Maven** e continha apenas diretórios vazios.
-`git log --all -- almoxarifado` retorna **zero commits**.
-
-Porém, artefatos de build locais (gitignorados) provam que existiu implementação completa:
-
-**`almoxarifado/target/almoxarifado-0.0.1-SNAPSHOT.jar` — 27 classes compiladas:** controllers,
-requests/responses, entidades, repositórios JPA com projeção, services, enum.
-
-**`app/target/surefire-reports/` — 33 testes passando, 0 falhas**, revelando regras de negócio:
-- `deveBloquearExclusaoDeAlmoxarifadoComItens` · `deveBloquearExclusaoDeCategoriaComItens` · `deveBloquearExclusaoDeItemComMovimentacoes`
-- `deveRegistrarEntradaSomandoEstoque` / `deveRegistrarSaidaSubtraindoEstoque`
-- **`deveLancarExcecaoAoRegistrarSaidaComSaldoInsuficiente`**
-- `deveLancarExcecaoAoRegistrarSaidaParaUsuarioNaoInterno` · `deveGerarResumoPreenchendoDiasSemMovimentacao`
-
-**Bônus — `com.geopetro.compra`, nunca visto em nenhum código-fonte**, com 19 testes passando,
-revelando aprovação multinível por faixa de valor: `deveExigirNiveis1e2ParaPedidoAteOLimite` ·
-`deveExigirNiveis2e3ParaPedidoAcimaDoLimite` · `deveBloquearMesmoUsuarioEmDuasEtapas` ·
-`deveExigirObservacaoParaReprovar` · `deveBloquearFornecedorInativo`.
-
-### O que isso significa
-
-Trabalho **funcional e testado** de dois módulos se perdeu. Sobraram apenas binários. O classpath nos
-relatórios aponta para um caminho **sem** a pasta `GeopetroIO` — **[INFERÊNCIA]** os artefatos precedem
-uma reorganização de pastas, e o código nunca foi commitado antes dela.
-
-### Lição estrutural
-
-Custo concreto de [DT-004](#dt-004--risco-de-onedrive-sobre-repositórios-git) somado a trabalho não
-commitado. O `.gitignore` sempre excluiu `target/` — corretamente. O erro foi o código nunca ter
-entrado no Git.
-
-**[FATO]** As classes compiladas ainda existem em disco e são descompiláveis, caso a decisão mude.
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-002 · Estratégias conflitantes de evolução de schema
 
-**Severidade: Crítica** · Backend-Sonda · **Parcialmente resolvido**
+**Resolvido no código em 2026-09-07.** Flyway aplica migrations no startup e Hibernate usa validate. As migrations ainda precisam ser conferidas no próximo deploy de produção; a antiga fila de execução manual foi superada.
 
-**[FATO]** Conviviam **três** mecanismos. Um foi eliminado em 2026-08-26:
-
-| # | Mecanismo | Estado |
-|---|---|---|
-| 1 | Hibernate `ddl-auto` (`update` em dev, `validate` em prod) | Ativo |
-| 2 | Scripts SQL manuais em `db/migration/V*.sql` | Ativo — **sem execução automática** |
-| 3 | ~~`ProcessoSchemaInitializer`~~ | ✅ **Removido** com o módulo `processo` |
-
-**[FATO] Não há Flyway nem Liquibase.** Os scripts imitam a convenção Flyway (`V<data>__desc.sql`) sem
-o mecanismo. O cabeçalho de `V2026.06.02` avisa: *"O projeto NAO usa Flyway/Liquibase... Rode
-manualmente em producao ANTES de subir a aplicacao"*.
-
-### O que melhorou
-
-O mecanismo 3 era o pior dos três: um `ApplicationRunner` que executava `ALTER TABLE processos` a cada
-startup, com falhas engolidas em log `debug` — DDL em runtime num ambiente configurado para apenas
-validar. Saiu junto com o módulo.
-
-### O que permanece
-
-- Em produção (`validate`), a aplicação **não sobe** se o DBA não executar manualmente, na ordem certa: `migration-regional.sql` → `V2026.06.02` → `V2026.06.03` → `V2026.06.04` → `V2026.06.15`.
-- **[FATO]** `migration-regional.sql` tem passos de limpeza **comentados** com instrução *"após validar os dados"*. Sem registro de execução — [OQ-015](open-questions.md#oq-015--as-colunas-legadas-ainda-existem-em-produção).
-- ⚠️ **Novo:** as migrations existentes referenciam tabelas de módulos removidos (`projetos`, `processos`, `usuario_interno_setores`). Elas continuam válidas historicamente, mas um ambiente novo criaria tabelas sem uso.
-
-**Recomendação:** adotar Flyway (os scripts já estão no formato e são idempotentes) e criar uma
-migration de baseline refletindo o escopo atual.
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-003 · Telemetria capturada mas nunca persistida
 
-**Severidade: Crítica** · ✅ **Resolvido em 2026-08-27**
+**Resolvido.** A telemetria histórica passou a ser persistida pelo serviço Geopetro-Telemetria no InfluxDB; veja o [contrato MQTT](contracts/mqtt-telemetria.md).
 
-### O problema
-
-```
-Desktop-Sonda ──publica──► Broker MQTT ──►   ???   ──► Backend-Sonda ──► Front
-  (funcionava)            (funcionava)     (vazio)      (pronto)       (pronto)
-```
-
-Os dois extremos funcionavam e o cliente REST do Backend-Sonda já estava implementado. **Faltava o
-meio.** Nenhum dado de telemetria era persistido, e a tela de Monitoramento sempre retornava `502`.
-Era a maior lacuna funcional do sistema.
-
-### Como foi resolvido
-
-**[DECIDIDO 2026-08-26]** Papéis definidos: `Desktop-Sonda` é o **produtor**,
-`Backend-Telemetria-Sonda-Geopetro-io` é o **consumidor**. O consumidor no-op do Backend-Sonda
-(`MonitoramentoTelemetriaService.processar`, que apenas logava) foi removido junto com a dependência
-Paho e as propriedades `mqtt.*` — não para resolver o problema, mas para **esclarecer de quem era a
-responsabilidade**.
-
-**[FATO 2026-08-27]** O Backend-Telemetria foi implementado: consumidor MQTT, persistência em
-InfluxDB e API REST de consulta. 24 testes passando. Ver
-[`Backend-Telemetria-Sonda-Geopetro-io/specs/`](../Backend-Telemetria-Sonda-Geopetro-io/specs/).
-
-### Pendências operacionais remanescentes
-
-O código existe; a operação ainda não:
-
-| Item | Referência |
-|---|---|
-| Provisionar broker MQTT e InfluxDB | — |
-| Definir `INFLUX_TOKEN` (sem default, falha no startup) | — |
-| Autenticação no broker | [SEC-009](security-findings.md#sec-009--broker-mqtt-sem-autenticação) |
-| Criar o repositório Git do serviço | [DT-004](#dt-004--risco-de-onedrive-sobre-repositórios-git) |
-| Política de retenção do InfluxDB | [`rest-monitoramento.md`](contracts/rest-monitoramento.md#6-pontos-em-aberto) |
-| Migrar o produtor para o formato alvo | [`mqtt-telemetria.md §9`](contracts/mqtt-telemetria.md#9-migração-a-partir-do-formato-atual) |
-
-⚠️ **Nova dívida introduzida:** não há teste de integração com InfluxDB real —
-`InfluxTelemetriaRepository`, incluindo a montagem do Flux e o cálculo da janela de agregação, não é
-exercitado por nenhum teste. Um Testcontainer fecharia a lacuna.
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-004 · Risco de OneDrive sobre repositórios Git
 
@@ -171,6 +71,11 @@ Três manifestações distintas, todas verificadas durante este levantamento:
    **modificado mesmo estando intacto**. Um `git add -A` seguido de commit pode registrar mudanças
    fantasma — ou pior, mascarar mudanças reais em meio a ruído.
 
+   ✅ **[FATO 2026-09-07] Aliviado, não resolvido.** A [renomeação dos projetos](renomeacao-projetos.md)
+   encurtou **todo** caminho do repositório em 8 caracteres — `Geopetro-Backend` contra
+   `Backend-Sonda-Geopetro-IO`. A fronteira dos 260 ficou mais longe; a causa, que é a profundidade da
+   árvore do OneDrive, continua.
+
 ### Causa
 
 **[INFERÊNCIA]** Duas causas somadas:
@@ -184,9 +89,24 @@ Três manifestações distintas, todas verificadas durante este levantamento:
 
 | Prazo | Ação |
 |---|---|
-| **Definitiva** | Mover os repositórios para fora da árvore sincronizada (ex.: `C:\dev\GeopetroIO\`). Resolve as três manifestações de uma vez |
+| **Definitiva** | ❌ **Recusada 2026-09-05** — mover os repositórios para fora da árvore sincronizada (ex.: `C:\dev\GeopetroIO\`) resolveria as três manifestações de uma vez |
 | Paliativa | `git config --global core.longpaths true` (não está definido hoje) — resolve apenas a manifestação 3 |
-| Paliativa | Excluir `target/`, `node_modules/` e `.git/` da sincronização do OneDrive |
+| Paliativa | ❌ **Recusada 2026-09-05** — excluir `target/`, `node_modules/` e `.git/` da sincronização do OneDrive |
+
+### ⏳ Risco aceito em 2026-09-05
+
+**[DECIDIDO 2026-09-05]** Os repositórios **ficam onde estão**, e nenhuma das mitigações será aplicada.
+Ver [OQ-025](open-questions.md#oq-025--os-repositórios-podem-sair-do-onedrive).
+
+⚠️ **[FATO observado 2026-09-05]** Durante a própria entrevista que registrou esta decisão, o OneDrive
+impediu leitura de arquivos **duas vezes**: `git status` falhou com `read error ... Invalid argument` e
+`mmap failed` em 16 arquivos do Geopetro-Telemetria, e um `grep` recebeu `Permission denied` em arquivos
+do simulador. O comportamento é corrente, não histórico.
+
+**O que segue exposto:** histórico Git dos cinco repositórios, e — de forma mais aguda — **trabalho não
+commitado**. Com backup de MySQL também recusado
+([product-context §11](product-context.md#11-fechamentos-das-rodadas-3-a-6)), commitar cedo e com
+frequência passa a ser a única rede de proteção do código.
 
 **É o risco de maior impacto potencial do levantamento: perda silenciosa de histórico e de código.**
 Ver [OQ-025](open-questions.md#oq-025--os-repositórios-podem-sair-do-onedrive).
@@ -195,58 +115,43 @@ Ver [OQ-025](open-questions.md#oq-025--os-repositórios-podem-sair-do-onedrive).
 
 ## DT-005 · Módulos de backend sem interface
 
-**Severidade: Alta** · ✅ **Resolvido em 2026-08-26**
+**Resolvido por redução de escopo.** Módulos sem interface foram removidos; funções remanescentes estão no inventário vigente.
 
-**[FATO]** Havia quatro domínios com API REST completa e **nenhuma tela** que os consumisse:
-Processos, Anotações, Observações e Químicos — este último o maior módulo do backend, com job
-agendado e alertas por e-mail.
-
-✅ **Todos foram removidos** em 2026-08-26. O backend não tem mais nenhum módulo órfão de interface.
-
-**Lição preservada:** o padrão indicava construção de backend antes de definição de produto. Sob SDD,
-uma spec de feature deve declarar o consumidor da API antes da implementação.
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-006 · Químico desconectado do modelo relacional
 
-**Severidade: Alta** · ✅ **Eliminado em 2026-08-26**
+**Eliminado.** O módulo Químicos saiu do backend. Tabelas remanescentes seguem a decisão [OQ-026](open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs).
 
-**[FATO]** O módulo ignorava o modelo relacional existente:
-
-| Campo | Como estava | Como deveria |
-|---|---|---|
-| `QuimicoEntity.regional` | enum próprio `{AL, SE, RN, BA, ES, AM, OUTRA}` | FK → `RegionalEntity` |
-| `OperacaoSondaEntity.sonda` | String livre | FK → `UnidadeSondaEntity` |
-| `dataRecebimento` / `dataValidade` | **String** | `LocalDate` |
-
-O enum próprio **não continha `BRASIL`**, a regional padrão criada pelas migrations — os dois
-vocabulários eram incompatíveis.
-
-**[FATO]** Também eliminou a **única violação do grafo de dependências**: `EmailQuimicoService` fazia
-SQL nativo contra `usuarios`/`usuario_roles` sem declarar dependência Maven de `usuario`. **O grafo de
-dependências entre módulos está hoje íntegro.**
-
-**[INFERÊNCIA]** O módulo nasceu de uma planilha (`Planilha_Quimicos.xlsm`, citada no seed) e foi
-encaixado no monólito sem refatoração. **Lição:** integrar ao modelo existente é parte do custo de
-adotar um domínio, não um passo opcional.
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-007 · Ausência de testes em áreas críticas
 
-**Severidade: Alta** · Backend-Sonda · Aberto
+**Severidade: Alta** · Geopetro-Backend · Aberto
 
-**[FATO]** Cobertura atual: **43 testes**, todos unitários, em 7 classes.
+**[FATO]** Cobertura no levantamento: **43 testes**, todos unitários, em 7 classes.
 
-**Zero cobertura:**
-- **Nenhum teste de controller / HTTP** em todo o repositório
-- **Nenhum `@DataJpaTest`**
-- Módulo `security` inteiro — autenticação, geração e validação de JWT
-- Módulos `simulador`, `empresa`, `monitoramento`
+**[FATO 2026-09-06]** Hoje são **110** no Geopetro-Backend e **27** no Geopetro-Telemetria. Duas lacunas
+fecharam parcialmente:
 
-**Consequência direta [FATO]:** nenhuma das falhas corrigidas em
-[`security-findings.md`](security-findings.md) seria detectada por regressão hoje.
+| Antes | Agora |
+|---|---|
+| Nenhum teste de controller / HTTP | `PocoSecurityTest` exercita `SecurityConfig` sobre `/api/simulador/pocos` |
+| Nenhum `@DataJpaTest` | `PocoPersistenceTest` usa H2 real, incluindo a restrição de FK |
+| Módulo `security` sem cobertura | `ContaAtivaVerificadorTest` e `JwtAuthenticationFilterTest` cobrem o corte de acesso |
+| Exclusão sem teste | `GuardaDeExclusaoTest` e `TelemetriaVinculoAdapterTest` cobrem RN-063 e RN-072, incluindo o caso em que a Telemetria está fora |
+
+**[FATO 2026-09-06 — atualização]** A lacuna HTTP de login e usuários foi coberta
+em `IdentidadeHttpSecurityTest`: nove testes passaram nas URLs antigas antes de
+[RN-079](business-rules.md#rn-079--a-api-padroniza-o-prefixo-api), e onze passaram
+nas URLs `/api` após a migração. A ordem das regras de autoatendimento/administração,
+as restrições de regionais/cadastros e a ausência de segredo JWT têm regressões.
+Backend: 121 testes aprovados nesta execução, excluindo o teste de migrations MySQL.
+Contrato em [`api-prefix.md`](../Geopetro-Backend/specs/api-prefix.md).
+
+**Ainda aberto:** geração, assinatura, expiração e validação criptográfica de JWT
+não são exercitadas pela nova suíte HTTP, que usa `TokenPort` mockado. Também
+permanecem lacunas nos módulos `empresa` e `monitoramento`.
 
 **[FATO] Causa raiz relacionada:** os testes de `regional`, `setor` e `unidade-sonda` vivem
 fisicamente em `app/src/test/`, não nos módulos que testam — porque **esses módulos não declaram
@@ -259,7 +164,7 @@ proporção** — os testes removidos cobriam justamente os módulos removidos.
 
 ## DT-008 · PATCH que não é parcial
 
-**Severidade: Alta** · Backend-Sonda · Aberto
+**Severidade: Alta** · Geopetro-Backend · Aberto
 
 **[FATO]** `AtualizarUsuarioRequest.toCommand()` chama `Telefone.comTratamento()` e
 `Email.comTratamento()` **incondicionalmente**. Omitir `telefone` ou `email` no corpo de um
@@ -274,9 +179,9 @@ alterados quebra.
 
 ## DT-009 · Documentação divergente do código
 
-**Severidade: Alta** · Desktop-Sonda e Horus · Aberto
+**Severidade: Alta** · Geopetro-Desktop e Horus · Aberto
 
-### Desktop-Sonda [FATO]
+### Geopetro-Desktop [FATO]
 
 `docs/documentacao-sistema.html` (datado "Maio 2026") descreve comportamento que **não existe**:
 
@@ -294,55 +199,26 @@ fluxo do CLP) é **correto e valioso** — foi usado e validado neste levantamen
 `StrokePorMinutoService` tem javadoc, comentários e nomes de método afirmando *"últimos 10 segundos"*,
 mas `JANELA_TEMPO_MS = 60000` (**60 segundos**).
 
-**[FATO]** Os READMEs de pacote do Desktop-Sonda descrevem uma arquitetura CRUD genérica que **não
+**[FATO]** Os READMEs de pacote do Geopetro-Desktop descrevem uma arquitetura CRUD genérica que **não
 corresponde a nenhuma classe real**, e referenciam três arquivos que **não existem**.
 
 ---
 
 ## DT-010 · Duplicação entre os dois desktops
 
-**Severidade: Média** · **[DECIDIDO 2026-08-26]** duplicação aceita — produtos distintos
+**Aceito.** Geopetro-Desktop e Horus permanecem produtos separados; a duplicação entre eles não é tarefa de unificação.
 
-**[FATO]** Desktop-Sonda e Horus implementam independentemente o mesmo conjunto:
-
-| Capacidade | Desktop-Sonda | Horus |
-|---|---|---|
-| Leitura CLP S7 | Moka7, rack 0 slot **1** | Moka7, rack 0 slot **0** |
-| Conversão bar→psi | `14.5037738` | `14.5038` |
-| Vazão | Média móvel 60s | Média móvel 60s |
-| Carta de Operação | PDF **escrito à mão** (bytes crus) | **PDFBox 2.0.32** |
-| Persistência local | H2 | JSONL |
-| Build | Maven + Spring | Gradle |
-
-Documentado aqui para que a duplicação seja **consciente**, e para que correções de fórmula sejam
-aplicadas **nos dois lugares**.
-
-**[FATO]** Duplicação interna adicional no Desktop-Sonda: a suavização de curva está implementada
-**três vezes**, com os mesmos números mágicos (`5`, `0.045`, `17`).
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-011 · Divergência de roles backend ↔ frontend
 
-**Severidade: Média** · ✅ **Resolvido em 2026-08-27**
+**Resolvido.** Roles e permissões foram alinhadas entre backend e frontend; veja [RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
 
-**Estado anterior [FATO]:** backend com **17 valores**, frontend com **20** — e o frontend declarava
-`USER`, `OPERADOR` e `ENGENHARIA` que **não existiam** no backend. Apenas 5 tinham efeito real.
-
-**Como foi resolvido:** o enum foi reduzido a **7 roles** (`ADMIN`, `CLIENTE`, `INTERNO`,
-`CIMENTACAO`, `SONDA`, `GERENCIA`, `DIRETORIA`) e o frontend passou a espelhá-lo exatamente.
-**Todas as 7 têm efeito real** — nenhuma role decorativa restou.
-
-**Melhoria estrutural [FATO]:** as roles por módulo deixaram de ser literais espalhados e passaram a
-constantes exportadas (`ROLES_MONITORAMENTO`, `ROLES_SIMULADOR`, `ROLES_ADMINISTRACAO`) em
-`user.model.ts`, usadas tanto pelos guards de rota quanto pelo menu. Antes, menu e guard podiam
-divergir silenciosamente — um item aparecia e levava a "acesso negado".
-
----
+[Evidências e trajetória](history/technical-debt-2026-09.md).
 
 ## DT-012 · Dois formatos de erro na API
 
-**Severidade: Média** · Backend-Sonda · Aberto
+**Severidade: Média** · Geopetro-Backend · Aberto
 
 **[FATO]** `ApiExceptionHandler` padroniza erros de negócio como
 `ApiErrorResponse{timestamp, status, error, message, path, details}`.
@@ -357,7 +233,7 @@ autorização. **[FATO]** O `parseApiError` do frontend tem tratamento defensivo
 
 ## DT-013 · Seed de dados sintéticos sem guarda
 
-**Severidade: Média** · Desktop-Sonda · Aberto
+**Severidade: Média** · Geopetro-Desktop · Aberto
 
 **[FATO]** `SondaReadingSeeder` insere **1000 leituras sintéticas** (senoide + ruído, seed fixa `42`)
 sempre que o banco H2 estiver vazio — **sem `@Profile("dev")` nem qualquer guarda de ambiente**.
@@ -371,14 +247,14 @@ Gráficos antes de existir leitura real do CLP. Nada na UI distingue dado real d
 
 **Severidade: Média** · Front · Aberto
 
-**[FATO]** Os ~40 campos numéricos de engenharia dos formulários de squeeze e tampão **não têm nenhum
-`Validators`** — apenas valores padrão. O único uso na feature inteira é no `FormArray` de aditivos.
+**[FATO]** A geometria inconsistente bloqueia o cálculo e relações entre
+campos geram avisos em squeeze e tampão. Permanecem sem definição completa as
+faixas quantitativas e a obrigatoriedade dos campos individuais. Ver
+[faixas de validação](../Geopetro-Front/specs/simulador/faixas-validacao.md)
+e [OQ-009](open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador).
 
-**Impacto:** valores fisicamente impossíveis produzem relatórios de engenharia sem nenhum aviso.
-Ver [OQ-009](open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador).
-
-**Relevância aumentada:** com as remoções, o simulador é hoje **o único domínio de negócio próprio do
-sistema**. Sua falta de validação passou de item médio a risco concentrado.
+**Impacto:** um valor individual fora do domínio físico ainda pode chegar
+ao relatório se não for capturado por uma relação entre campos.
 
 ---
 
@@ -386,8 +262,9 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 
 **Severidade: Baixa** · Parcialmente resolvido
 
-### Backend-Sonda [FATO]
+### Geopetro-Backend [FATO]
 - ✅ **Resolvido:** `ProcessoSchemaInitializer`, pacote `com.geopetro.telemetria`, dependência Paho, propriedades `mqtt.*`, `@EnableScheduling`, `data-quimicos.sql` — todos removidos em 2026-08-26
+- ✅ **Resolvido 2026-09-06:** `RegionalBuscaPort`, `SetorConsultaPort` e seus adaptadores — ficaram sem chamador quando [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional) tirou o vínculo organizacional, e saíram junto em vez de virar porta órfã
 - ⏳ **Lombok** declarado em `app/pom.xml` e **nunca usado** — zero anotações
 - ⏳ `src/main/java` e `src/test/java` na **raiz** (fora dos módulos), vazios, nunca commitados — scaffold do Spring Initializr
 - ⏳ **[FATO]** Nenhum `TODO`/`FIXME`/`@Deprecated` em todo o código — a dívida real não está sinalizada
@@ -406,7 +283,7 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 - ⏳ Branch morto em `ShellComponent.navEntries` para grupo `'Gerenciamento'` inexistente
 - ⏳ Checkbox "Lembrar acesso" sem binding; link "Esqueci minha senha" apontando para `/`
 
-### Desktop-Sonda [FATO]
+### Geopetro-Desktop [FATO]
 - `SondaData.calcularVazao()` — com TODO explícito, nunca usado
 - Getters de `SondaService` (`getPeso`, `getPressao01..03`, `getStatus`, `obterDadosAtuais`) — sem chamador
 - Comentários de campo em `SondaData.java:17-20` **incorretos** quanto ao mapeamento de sensores
@@ -437,3 +314,4 @@ sistema**. Sua falta de validação passou de item médio a risco concentrado.
 - **[FATO]** Higiene no Horus: `data/registros_operacao.json` (3,3 MB de telemetria real) e binários H2 versionados no Git
 - Build do front usa `--configuration k8s`, mas **não há manifesto Kubernetes** no workspace — [OQ-012](open-questions.md#oq-012--onde-vivem-os-manifestos-de-deploy)
 - `Braserv-Horus-Desktop` injeta um `JAVA_HOME` de fallback fixo no `build.gradle` — frágil entre máquinas
+- ✅ **Resolvido 2026-09-06:** o Geopetro-Telemetria roda Spring Boot **3.4.5** enquanto o Geopetro-Backend já está no **4.0.5**. O Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que **não reconhece o bytecode do Java 25** instalado — *toda* mockagem de classe falhava com `Java 25 (69) is not supported`, derrubando **10 dos 24 testes** do serviço. Corrigido fixando `mockito.version` e `byte-buddy.version` no `pom.xml` para as mesmas versões que o Boot 4 já resolve. ⚠️ **A divergência de Boot entre os dois serviços permanece** — este é o primeiro sintoma dela, e não será o último

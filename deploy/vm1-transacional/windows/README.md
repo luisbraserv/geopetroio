@@ -41,7 +41,7 @@ Na sua máquina, gere o pacote:
 
 ```powershell
 Compress-Archive -Path `
-  "Backend-Sonda-Geopetro-IO", "Front-Sonda-Geopetro-IO", "deploy" `
+  "Geopetro-Backend", "Geopetro-Front", "deploy" `
   -DestinationPath "$env:TEMP\geopetro.zip" -Force
 ```
 

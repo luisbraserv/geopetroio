@@ -52,6 +52,16 @@ Empresa (empresas)   cnpj UNIQUE (mas nullable)
 **[FATO]** Com a saída de `projeto`, a Regional passou a ter apenas dois tipos de dependente: setores
 e usuários internos.
 
+✅ **[DECIDIDO 2026-09-05]** Com a remoção do vínculo organizacional do usuário
+([RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional)), a Regional passa a
+ter **um único dependente: o Setor**. A hierarquia fica puramente estrutural — Regional → Setor →
+Unidade/Sonda — sem nenhum ramo apontando para pessoas.
+
+**[DECIDIDO 2026-09-05] `UnidadeSonda` ganha `tipo`:** `SONDA` · `UNIDADE_BOMBEIO` ·
+`SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ`. O cadastro sempre abrigou mais que sondas — é o que o
+próprio nome do módulo indica. Ver [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) e, para o
+efeito na telemetria, [OQ-041](open-questions.md#oq-041--o-tipo-da-unidade-define-quais-variáveis-são-monitoradas).
+
 ### Usuário — modelo de herança
 
 **[FATO]** `SINGLE_TABLE` em `usuarios`, discriminador `tipo_usuario`, **PK é o `username`** (String,
@@ -71,9 +81,10 @@ cliente é pequeno.
 ⚠️ **[FATO]** `UsuarioClienteEntity` guarda a empresa **duas vezes**: `empresa` (String denormalizada)
 e `empresaRef` (FK). Fonte potencial de divergência.
 
-⚠️ **[FATO]** O vínculo N:N com regionais e setores existe desde `V2026.06.03`, **mas o controle de
-acesso ignora essas listas** e usa apenas a regional principal —
-[RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização).
+✅ **[DECIDIDO 2026-09-05] O vínculo N:N com regionais e setores é removido.** Existia desde
+`V2026.06.03` e, desde 2026-08-27, **não influenciava nenhuma decisão** — nem no backend nem no front.
+Saem a regional principal, as duas listas N:N e as tabelas `usuario_interno_regionais` e
+`usuario_interno_setores`. Ver [RN-064](business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional).
 
 ## 3. Domínio de Telemetria
 
@@ -98,16 +109,16 @@ acesso ignora essas listas** e usa apenas a regional principal —
 **[DECIDIDO 2026-08-26]**
 
 ```
-Desktop-Sonda ──publish──► BROKER MQTT ──subscribe──► Backend-Telemetria
+Geopetro-Desktop ──publish──► BROKER MQTT ──subscribe──► Geopetro-Telemetria
   PRODUTOR                                              CONSUMIDOR
   (existe)                                              (implementado)
                                                               │ InfluxDB
                                                               ▼
-                            Front ◄──REST── Backend-Sonda ◄──REST──
+                            Front ◄──REST── Geopetro-Backend ◄──REST──
                                             (autoriza e faz proxy)
 ```
 
-**[FATO]** O Backend-Sonda **não consome MQTT** — o consumidor no-op foi removido em 2026-08-26. Seu
+**[FATO]** O Geopetro-Backend **não consome MQTT** — o consumidor no-op foi removido em 2026-08-26. Seu
 papel no histórico é **autorizar e consultar** séries já processadas.
 
 ### Tempo real, a partir de 2026-08-27
@@ -115,12 +126,12 @@ papel no histórico é **autorizar e consultar** séries já processadas.
 **[DECIDIDO 2026-08-27]** Um segundo caminho, independente do MQTT:
 
 ```
-Desktop-Sonda ──WebSocket/STOMP──► Backend-Sonda ──► Angular
+Geopetro-Desktop ──WebSocket/STOMP──► Geopetro-Backend ──► Angular
    (AtomicReference)                 retransmite      /topic/realtime/
    estado atual                      sem persistir    unidades-sondas/{id}
 ```
 
-**[FATO]** O Backend-Sonda **agora participa do WebSocket** — mas como retransmissor, não como
+**[FATO]** O Geopetro-Backend **agora participa do WebSocket** — mas como retransmissor, não como
 persistidor. Nada deste canal é gravado.
 
 **A distinção que organiza os dois caminhos:**
@@ -155,6 +166,33 @@ aceita conscientemente ([DT-010](technical-debt.md#dt-010--duplicação-entre-os
 **[FATO]** Com as remoções, `simulador` é hoje **o único módulo de domínio de negócio próprio** que
 resta no backend, além de identidade e organização.
 
+### Poço — entidade decidida em 2026-09-05
+
+**[DECIDIDO 2026-09-05]** `Poço` passa a ser **entidade do sistema**. Ainda **não existe em código**.
+
+A motivação é operacional: o mesmo poço volta em vários cenários (squeeze, tampão, revisões), e
+redigitar a geometria a cada vez produz divergência entre cenários que descrevem a mesma realidade
+física.
+
+```
+Poço  (novo)
+ ├── geometria: fases · revestimentos · sapatas
+ ├── trajetória: estações de survey (MD · inclinação · azimute)
+ └── 1:N  CenarioSimulador  (referencia o poço)
+```
+
+⚠️ **É a primeira vez que o backend do simulador conhece o domínio.** Hoje ele é **agnóstico** —
+persiste `formValue` como `LONGTEXT` opaco e `operacao` como VARCHAR livre (§4 acima). Tirar a
+geometria de dentro do blob muda essa premissa arquitetural, não apenas o schema.
+
+**Relação com a telemetria [PENDENTE]:** a telemetria segue indexada por **sonda e tempo**, sem
+segmentação por poço. Com `Poço` existindo, a ponte entre os dois eixos do sistema deixa de ser
+hipotética — mas **não foi decidida**. Ver
+[OQ-027](open-questions.md#oq-027--o-simulador-deve-ganhar-um-consumidor-de-telemetria).
+
+Detalhe em [`../Geopetro-Front/specs/simulador/geometria-poco.md`](../Geopetro-Front/specs/simulador/geometria-poco.md)
+e [RN-059](business-rules.md#rn-059--a-geometria-pertence-ao-poço-não-ao-cenário).
+
 ## 5. Domínios fora de escopo
 
 **[DECIDIDO 2026-08-26]**
@@ -176,7 +214,7 @@ Registro histórico das regras descobertas em
 
 ## 6. Mapa de responsabilidade por aplicação
 
-| Domínio | Backend-Sonda | Front | Desktop-Sonda | Horus | Telemetria |
+| Domínio | Geopetro-Backend | Front | Geopetro-Desktop | Horus | Telemetria |
 |---|---|---|---|---|---|
 | Identidade / Autenticação | **Dono** | Consome | — | — | — |
 | Organização (Regional→Sonda) | **Dono** | CRUD | — | — | — |
@@ -186,7 +224,7 @@ Registro histórico das regras descobertas em
 | Cimentação — cálculo | Persiste cenários | **Dono** | — | — | — |
 | Cimentação — monitoramento | — | — | — | **Dono** | — |
 
-✅ **[FATO]** Com o Backend-Telemetria implementado em 2026-08-27, a cadeia de telemetria está
+✅ **[FATO]** Com o Geopetro-Telemetria implementado em 2026-08-27, a cadeia de telemetria está
 **fechada ponta a ponta**: captura no CLP → publicação MQTT → ingestão → InfluxDB → consulta
 autorizada → tela.
 
@@ -195,17 +233,26 @@ autorizada → tela.
 
 ## 7. Modelo de autorização
 
-**[DECIDIDO 2026-08-27]** O enum foi reduzido a **7 roles**, e frontend e backend estão alinhados.
+**[DECIDIDO 2026-09-17]** São **8 roles**, em duas famílias, e o acesso é a **combinação** delas —
+ver [RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
+Frontend e backend estão alinhados (`RegrasDeAcesso` ↔ `user.model.ts`).
 
-| Role | Monitoramento | Simulador | Cadastros | Observação |
-|---|---|---|---|---|
-| `ADMIN` | ✅ frota inteira | ✅ | ✅ | Acesso total |
-| `GERENCIA` | ✅ frota inteira | ✅ | — | |
-| `DIRETORIA` | ✅ frota inteira | ✅ | — | |
-| `CIMENTACAO` | ✅ frota inteira | ✅ | — | |
-| `SONDA` | ✅ frota inteira | — | — | |
-| `CLIENTE` | ⚠️ **apenas as sondas concedidas** | — | — | Escopo definido no cadastro |
-| `INTERNO` | — | — | — | Role base de funcionário; sozinha não dá acesso a módulo |
+| Role | Família | O que concede |
+|---|---|---|
+| `ADMIN` | — | Acesso total, sem precisar de permissão de módulo |
+| `CLIENTE` | Tipo de conta | Nada sozinha. Combinada, o escopo é ⚠️ **apenas as sondas concedidas** no cadastro |
+| `INTERNO` | Tipo de conta | Nada sozinha. Combinada, o escopo é a frota inteira |
+| `MONITORAMENTO` | Permissão de módulo | Monitoramento (séries) |
+| `MONITORAMENTO_REAL` | Permissão de módulo | Tempo Real, Limites de Alarme e Histórico de Alarmes. **Não** depende de `MONITORAMENTO` |
+| `SIMULADOR` | Permissão de módulo | A área de simuladores; qual simulador depende do domínio |
+| `CIMENTACAO` | Permissão de módulo | O domínio de cimentação. Com `SIMULADOR`, abre o Simulador de Cimentação |
+| `SUPORTE` | — | Configurações do sistema e gravação dos cards (RN-086). Não acompanha operação |
+
+⚠️ **Nenhuma permissão de módulo concede nada sozinha**: `MONITORAMENTO` sem `CLIENTE` nem `INTERNO`
+não abre tela alguma. Era isso que uma lista de roles não conseguia expressar.
+
+**Removidas em 2026-09-17:** `SONDA`, `GERENCIA`, `DIRETORIA` — existiam só dentro de listas de
+permissão, sem regra própria.
 
 ### A distinção que define o modelo
 
@@ -223,7 +270,11 @@ usuário `CLIENTE` + `ADMIN` vê a frota inteira. Há teste cobrindo isso.
 **[FATO]** Até 2026-08-27, um usuário interno só via sondas da sua **regional principal**. Com os
 perfis operacionais passando a ver a frota inteira, essa restrição **deixou de existir** no
 monitoramento — e com ela, a limitação descrita em
-[RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização) perdeu objeto.
+[RN-013](business-rules.md#rn-013--apenas-a-regional-principal-conta-para-autorização--superada) perdeu objeto.
 
-O vínculo N:N usuário↔regional/setor continua no modelo, mas hoje **não influencia nenhuma decisão de
-autorização**. Ver [OQ-002](open-questions.md#oq-002--múltiplas-regionais-por-usuário-devem-valer-para-autorização).
+O vínculo N:N usuário↔regional/setor continuava no modelo sem influenciar nenhuma decisão de
+autorização. ✅ **[DECIDIDO 2026-09-05] Foi removido** — ver
+[OQ-002](open-questions.md#oq-002--o-vínculo-regionalsetor-ainda-serve-para-alguma-coisa).
+
+**[DECIDIDO 2026-09-05]** A seleção de sondas por usuário **continua exclusiva do `CLIENTE`**. Perfis
+internos seguem enxergando a frota inteira: RN-047 e RN-048 permanecem exatamente como estão.

@@ -8,9 +8,9 @@
 responsabilidades que não se sobrepõem:
 
 ```
-                        ┌── MQTT ──► Broker ──► Backend-Telemetria ──► InfluxDB
-CLP ──► Desktop-Sonda ──┤                              HISTÓRICO
-                        └── WebSocket ──► Backend-Sonda :8080 ──► Angular
+                        ┌── MQTT ──► Broker ──► Geopetro-Telemetria ──► InfluxDB
+CLP ──► Geopetro-Desktop ──┤                              HISTÓRICO
+                        └── WebSocket ──► Geopetro-Backend :8080 ──► Angular
                                                 TEMPO REAL
 ```
 
@@ -31,12 +31,11 @@ CLP. Cada um tem seu worker; a thread de leitura apenas entrega e segue.
 
 | Papel | Aplicação | Destino |
 |---|---|---|
-| **Produtor** | `Desktop-Sonda-Geopetro-IO` | envia para `/app/realtime/estado` |
-| **Retransmissor** | `Backend-Sonda-Geopetro-IO` | publica em `/topic/realtime/unidades-sondas/{id}` |
-| **Consumidor** | `Front-Sonda-Geopetro-IO` | assina o tópico da unidade escolhida |
+| **Produtor** | `Geopetro-Desktop` | envia para `/app/realtime/estado` |
+| **Retransmissor** | `Geopetro-Backend` | publica em `/topic/realtime/unidades-sondas/{id}` |
+| **Consumidor** | `Geopetro-Front` | assina o tópico da unidade escolhida |
 
-**[FATO]** O Backend-Sonda **não persiste** nada deste canal e **não consome MQTT** — essa separação
-foi decidida em 2026-08-26 e permanece.
+**[FATO]** O Geopetro-Backend **não persiste as amostras de estado atual** e **não consome MQTT**. Desde 2026-09-07, a mesma conexão também transporta [configurações persistidas por unidade](configuracao-sonda.md), em destinos próprios.
 
 ---
 
@@ -63,21 +62,89 @@ mas evita reproduzir a mesma fragilidade num canal novo.
 
 ## 3. Payload
 
+**[DECIDIDO 2026-09-08]** Reescrito para cards por unidade, **no mesmo formato do MQTT**.
+
 ```json
 {
-  "unidadeSondaId": 7,
-  "timestamp": "2026-08-27T16:32:05.120Z",
-  "pesoColuna": 12450.75,
-  "torqueTubos": 3200.0,
-  "torqueFlutuante": 2980.5,
-  "pressaoBomba": 1450.25,
-  "vazao": 0.523,
-  "strokeAtual": 184
+  "unidadeSondaId": 144,
+  "timestamp": "2026-09-08T16:32:05.120Z",
+  "leituras": [
+    { "dispositivoId": "PESO_01", "tipo": "PESO", "unidade": "lbf",
+      "enderecoDb": "DBW4", "valor": 184300.5, "valorBruto": 412 },
+    { "dispositivoId": "CONTADOR_STROKE_01", "serie": "vazao",
+      "tipo": "CONTADOR_STROKE", "unidade": "bbl/min",
+      "enderecoDb": "DBD0", "valor": 1.52, "valorBruto": 148320 }
+  ],
+  "alarmes": [
+    { "unidadeSondaId": 144, "dispositivoId": "PESO_01", "serie": null,
+      "episodioId": "6f1c…", "severidadeAtual": "CRITICO",
+      "desde": "2026-09-08T16:30:10.400Z", "valorExtremo": 190100.0,
+      "limiteViolado": "MAX" }
+  ]
 }
 ```
 
 **[FATO]** `unidadeSondaId` e `timestamp` são **obrigatórios**. Se o timestamp vier ausente, o
 backend carimba o instante de recepção — mas isso é rede de segurança, não o caminho esperado.
+
+### `alarmes` é a única coisa que o servidor acrescenta — **[DECIDIDO 2026-09-09]**
+
+**[FATO]** O Desktop **não envia** este campo, e o valor que um produtor mandasse é ignorado: quem
+decide o que alarma é quem tem os limites. O backend avalia o ciclo recebido
+([RN-102](../business-rules.md#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)) e
+retransmite a mensagem com os episódios abertos **depois** dela. Lista vazia é o normal.
+
+⚠️ **Por que junto, e não num tópico próprio.** O destaque descreve **estes** números. Em canais
+separados os dois chegariam em ordens diferentes, e a tela mostraria um valor com o destaque do ciclo
+anterior — um alarme aceso sobre um número que já voltou à faixa, ou o contrário. O preço é a consulta
+de limites entrar no caminho do ciclo; é uma busca por chave primária.
+
+⚠️ **Falha do motor não apaga a tela.** Retransmitir é o que faz a tela existir; avaliar produz
+histórico. Uma exceção na avaliação vira log, e a mensagem segue com a **última projeção conhecida**
+em vez de nenhuma: o alarme que já estava aceso continua aceso, que é mais próximo da verdade do que
+apagá-lo por causa de uma falha de escrita.
+
+**[FATO]** Antes da primeira mensagem — e enquanto a sonda **não publica** — quem responde é
+`GET /api/sondas/{id}/alarmes`, com a mesma autorização dos limites
+([RN-069](../business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)). Sem essa rota, um
+episódio aberto de uma sonda que caiu ficaria invisível justamente quando ninguém está olhando o CLP.
+
+### Mesma forma que o MQTT, de propósito
+
+As regras de cada leitura são as de
+[`mqtt-telemetria.md §3`](mqtt-telemetria.md#campos-de-cada-leitura) — **não são repetidas aqui**,
+para não haver duas versões da mesma definição divergindo. O que muda entre os dois canais é o
+destino e a garantia, não o conteúdo:
+
+| | MQTT (histórico) | WebSocket (tempo real) |
+|---|---|---|
+| Garantia | QoS 1, cada leitura importa | Sobrescreve: estados intermediários são descartados de propósito |
+| Consumidor | Geopetro-Telemetria → InfluxDB | Angular, direto na tela |
+| Envelope | `idSondaUnidade` (nome) | `unidadeSondaId` (id numérico) — ver [§2](#por-que-unidadesondaid-numérico-e-não-o-nome) |
+
+### Os campos fixos saíram — isto quebrava o Angular
+
+**[DECIDIDO 2026-09-08]** `pesoColuna`, `torqueTubos`, `torqueFlutuante`, `pressaoBomba`, `vazao` e
+`strokeAtual` **deixam de existir**.
+
+✅ **[FATO 2026-09-08] O consumidor Angular foi atualizado** — passo 8 de
+[cards-configuraveis](../features/cards-configuraveis.md#13-ordem-de-implementação-sugerida).
+`EstadoRealtime` passou a carregar `leituras[]`, e a tela monta cards e gráficos a partir do documento
+de cards da unidade. Duas decisões de leitura que valem registrar:
+
+| Situação | O que a tela faz |
+|---|---|
+| Grandeza ausente num ciclo (RN-099) | Vira **lacuna** na série, não ponto omitido — comprimir a falta deslocaria o resto da curva como se o tempo não tivesse passado |
+| Leitura que chega **sem card** no documento lido | Aparece com o `dispositivoId` no lugar do rótulo. Acontece quando o Desktop publica de um cache mais novo ou mais velho que o servidor; **esconder leitura real seria pior que exibi-la sem nome** |
+| Mensagem **sem** `leituras` (produtor antigo) | Recusada, com aviso na tela. Aceitá-la produziria uma tela sem card nenhum e sem explicar por quê |
+
+**Por que não manter os dois formatos por um tempo:** o payload carregaria os campos fixos e a lista
+ao mesmo tempo, e se divergissem não haveria como dizer qual vale. Pior: com uma unidade que tem dois
+cards de torque e um de temperatura, os campos fixos já não conseguiriam representá-la — seriam uma
+verdade parcial se passando por completa.
+
+⚠️ **Consequência de deploy:** Desktop, Backend e Front mudam **juntos**. Ver
+[`mqtt-telemetria.md §10`](mqtt-telemetria.md#10-o-que-a-virada-quebra).
 
 ---
 
@@ -104,7 +171,7 @@ controle de acesso por esquecimento.
 
 ### O Desktop também é um usuário
 
-**[FATO]** O Desktop autentica em `/auth/login` com credenciais de um usuário de serviço e usa o JWT
+**[FATO]** O Desktop autentica em `/api/auth/login` com credenciais de um usuário de serviço e usa o JWT
 no CONNECT. Sujeito às mesmas regras: só publica na unidade a que tem acesso.
 
 **Por quê:** um token estático separado criaria um segundo mecanismo de autenticação para manter, com
@@ -154,7 +221,7 @@ segundos** sem leitura nova.
 
 ---
 
-## 7. Configuração do Desktop-Sonda
+## 7. Configuração do Geopetro-Desktop
 
 **[FATO]** Campos novos na tela de Configurações:
 
@@ -174,7 +241,7 @@ publica no MQTT. O tempo real é um canal adicional, não um requisito de funcio
 | # | Limitação | Impacto |
 |---|---|---|
 | 1 | **Broker STOMP em memória** | Não propaga entre instâncias. Com mais de uma réplica do backend, um assinante na instância A não recebe o que o Desktop publicou na B. Resolver com RabbitMQ/ActiveMQ como broker externo, ou afinidade de sessão |
-| 2 | **Sem histórico no canal** | Quem conecta vê a partir da próxima mensagem (até 1s). Deliberado |
+| 2 | **Sem histórico de telemetria no canal** | Estado atual chega na próxima amostra. Configurações têm snapshot inicial persistido |
 | 3 | **Um Desktop por unidade** | Duas instalações com o mesmo `unidadeSondaId` sobrescrevem o estado uma da outra |
 | 4 | **`ws://` sem TLS** | Aceitável em rede privada; use `wss://` se atravessar internet |
 
@@ -184,9 +251,10 @@ publica no MQTT. O tempo real é um canal adicional, não um requisito de funcio
 
 | Contrato | Responsabilidade |
 |---|---|
-| [`mqtt-telemetria.md`](mqtt-telemetria.md) | Ingestão do histórico: Desktop → Broker → Backend-Telemetria |
-| [`rest-monitoramento.md`](rest-monitoramento.md) | Consulta do histórico: Backend-Sonda → Backend-Telemetria |
-| **Este** | Estado atual: Desktop → Backend-Sonda → Angular |
+| [`mqtt-telemetria.md`](mqtt-telemetria.md) | Ingestão do histórico: Desktop → Broker → Geopetro-Telemetria |
+| [`rest-monitoramento.md`](rest-monitoramento.md) | Consulta do histórico: Geopetro-Backend → Geopetro-Telemetria |
+| **Este** | Estado atual: Desktop → Geopetro-Backend → Angular |
+| [`configuracao-sonda.md`](configuracao-sonda.md) | Configuração persistida: Geopetro-Backend → Desktop, na mesma conexão STOMP |
 
 **[FATO]** Os três são independentes. A tela de Monitoramento usa o histórico; a de Tempo Real usa
 este canal. Nenhuma depende da outra.

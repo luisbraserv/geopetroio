@@ -1,0 +1,2 @@
+name = "geopetro-front-geopetro-io"
+pages_build_output_dir = "dist/Geopetro-Front/browser"

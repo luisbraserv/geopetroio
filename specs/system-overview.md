@@ -12,6 +12,11 @@ identidade e organização (usuários, empresas, regionais, setores, unidades/so
 **[DECIDIDO 2026-08-26]** O escopo foi reduzido: os domínios de Operação (projetos, processos,
 observações) e Suprimentos (químicos, almoxarifado, compras) foram removidos do sistema.
 
+**[DECIDIDO 2026-09-05]** *Para quem* o sistema existe e *quem usa cada superfície* estão em
+[`product-context.md`](product-context.md) — inclusive a decisão de que o público principal das telas
+web é **supervisão remota e cliente**, o que reposiciona o Geopetro-Desktop como sensor do sistema, não
+como produto final.
+
 O nome "GeopetroIO" é a marca de usuário final. **[FATO]** "Horus" é codinome interno de
 desenvolvimento do módulo de Cimentação Desktop — o produto se apresenta como
 `"GeoPetro IO - Cimentação"` (`Braserv-Horus-Desktop/src/main/java/.../JavaFxApp.java:24`).
@@ -23,11 +28,11 @@ diretório `GeopetroIO/` que os agrupa **não é** um repositório — é apenas
 
 | Aplicação | Stack | Repositório | Papel |
 |---|---|---|---|
-| **Backend-Sonda-Geopetro-IO** | Spring Boot 4.0.5 · Java 21 · Maven multi-módulo | `luisbraserv/geopetro-io-back-end` | API REST central, autenticação, todo o domínio administrativo |
-| **Front-Sonda-Geopetro-IO** | Angular 21.2.7 · Taiga UI 5.2 · NGXS 21 | `luisbraserv/geopetro-io-front` | SPA web — cadastros, monitoramento, simulador de cimentação |
-| **Desktop-Sonda-Geopetro-IO** | JavaFX 21 + Spring Boot 4.0.5 · Maven | `luisbraserv/geopetro-io-sonda-desktop` | Agente de borda na sonda: lê CLP, publica telemetria via MQTT |
+| **Geopetro-Backend** | Spring Boot 4.0.5 · Java 21 · Maven multi-módulo | `luisbraserv/geopetro-io-back-end` | API REST central, autenticação, todo o domínio administrativo |
+| **Geopetro-Front** | Angular 21.2.7 · Taiga UI 5.2 · NGXS 21 | `luisbraserv/geopetro-io-front` | SPA web — cadastros, monitoramento, simulador de cimentação |
+| **Geopetro-Desktop** | JavaFX 21 + Spring Boot 4.0.5 · Maven | `luisbraserv/geopetro-io-sonda-desktop` | Agente de borda na sonda: lê CLP, publica telemetria via MQTT |
 | **Braserv-Horus-Desktop** | JavaFX 21 · Gradle 9.3 | `luisbraserv/geopetro-io-cimentacao-desktop` | Desktop de Cimentação: lê CLP da bomba, gera Carta de Operação |
-| **Backend-Telemetria-Sonda-Geopetro-io** | Spring Boot 3.4.5 · Java 21 · Maven | — | Ingestão MQTT → InfluxDB e API de consulta de séries. ✅ **Implementado em 2026-08-27** |
+| **Geopetro-Telemetria** | Spring Boot 3.4.5 · Java 21 · Maven | — | Ingestão MQTT → InfluxDB e API de consulta de séries. ✅ **Implementado em 2026-08-27** |
 
 ## 3. Topologia de execução
 
@@ -40,7 +45,7 @@ diretório `GeopetroIO/` que os agrupa **não é** um repositório — é apenas
            │ S7/Snap7 (TCP 102, rack 0 slot 1)
            │ leitura a cada 1s
  ┌─────────▼──────────┐  MQTT publish        ┌──────────────────────┐
- │ Desktop-Sonda      ├─ telemetria/{u}/batch ─►  Broker MQTT :1883  │
+ │ Geopetro-Desktop      ├─ telemetria/{u}/batch ─►  Broker MQTT :1883  │
  │ (JavaFX + H2 local)│  QoS 1                └──────────┬───────────┘
  │ PRODUTOR           │                                  │ subscribe
  └────────────────────┘                                  │ telemetria/+/batch
@@ -52,39 +57,39 @@ diretório `GeopetroIO/` que os agrupa **não é** um repositório — é apenas
                                               └──────────┬───────────┘
                                                          │ REST
  ┌────────────────────┐   HTTPS /api, /auth   ┌──────────▼───────────┐
- │ Front Angular      ├──────────────────────►│  Backend-Sonda :8080 │
+ │ Front Angular      ├──────────────────────►│  Geopetro-Backend :8080 │
  │ nginx SPA          │   (nunca direto p/    │  MySQL geopetro_io   │
  │                    │    telemetria)        │  autoriza e consulta │
  │                    │◄──WebSocket /ws ─────►│                      │
  └────────────────────┘   tempo real          └──────────▲───────────┘
                                                          │ WebSocket
                                               ┌──────────┴───────────┐
-                                              │ Desktop-Sonda        │
+                                              │ Geopetro-Desktop        │
                                               │ (mesmo produtor)     │
                                               └──────────────────────┘
 ```
 
 **[FATO 2026-08-27]** A telemetria segue por **dois caminhos independentes** a partir do
-Desktop-Sonda:
+Geopetro-Desktop:
 
 | Caminho | Responsabilidade | Destino |
 |---|---|---|
-| **MQTT** | Histórico, persistido | Broker → Backend-Telemetria → InfluxDB |
-| **WebSocket** | Estado atual, efêmero | Backend-Sonda → Angular |
+| **MQTT** | Histórico, persistido | Broker → Geopetro-Telemetria → InfluxDB |
+| **WebSocket** | Estado atual, efêmero | Geopetro-Backend → Angular |
 
 Falha em um não bloqueia o outro nem interrompe a leitura do CLP. Ver
 [`contracts/websocket-realtime.md`](contracts/websocket-realtime.md).
 
-**[DECIDIDO 2026-08-26]** Papéis MQTT definidos: **um produtor** (Desktop-Sonda) e **um consumidor**
-(Backend-Telemetria). O Backend-Sonda **não participa do MQTT** — seu consumidor no-op foi removido.
+**[DECIDIDO 2026-08-26]** Papéis MQTT definidos: **um produtor** (Geopetro-Desktop) e **um consumidor**
+(Geopetro-Telemetria). O Geopetro-Backend **não participa do MQTT** — seu consumidor no-op foi removido.
 Ver [`contracts/mqtt-telemetria.md`](contracts/mqtt-telemetria.md).
 
 **[FATO]** O frontend **nunca** consulta o serviço de telemetria diretamente. Comentário explícito
 em `Front/src/app/features/monitoramento/services/monitoramento-sonda.service.ts`: *"O front não
 fala direto com o telemetria; sempre passa pelo backend para respeitar o vínculo do usuário às
-sondas"*. O Backend-Sonda valida acesso antes de fazer proxy.
+sondas"*. O Geopetro-Backend valida acesso antes de fazer proxy.
 
-## 4. Backend-Sonda — módulos Maven
+## 4. Geopetro-Backend — módulos Maven
 
 **[FATO]** `pom.xml` raiz (packaging `pom`) declara **9 módulos** após as remoções de 2026-08-26
 (eram 13). Grafo de dependências extraído dos `pom.xml`:
@@ -116,20 +121,15 @@ dependência Maven de `usuario`. **O grafo de dependências está hoje íntegro.
 
 | Aplicação | Banco | Estratégia de schema |
 |---|---|---|
-| Backend-Sonda | **MySQL 8** (`geopetro_io`, TZ `America/Sao_Paulo`) | `ddl-auto=update` em dev · `validate` em prod |
-| Desktop-Sonda | **H2** em arquivo (`~/.geopetro-io/data/sonda_geopetro`) | `ddl-auto=update` |
+| Geopetro-Backend | **MySQL 8** (`geopetro_io`, TZ `America/Sao_Paulo`) | Flyway no startup · `ddl-auto=validate` em todos os perfis |
+| Geopetro-Desktop | **H2** em arquivo (`~/.geopetro-io/data/sonda_geopetro`) | `ddl-auto=update` |
 | Horus/Cimentação | **JSONL** em arquivo (`%LOCALAPPDATA%\GeopetroIO\data\registros_operacao.jsonl`) | — |
 | Telemetria | **InfluxDB** (measurement `telemetria`) | Sem migrations — o esquema é definido pelas tags/fields na escrita |
 
-**[FATO] Não há Flyway nem Liquibase.** Os scripts em
-`app/src/main/resources/db/migration/V*.sql` **imitam** a convenção Flyway sem o mecanismo. O
-cabeçalho de `V2026.06.02__base_regionais_setores.sql:6-10` diz literalmente: *"O projeto NAO usa
-Flyway/Liquibase. Esta migration e um script SQL IDEMPOTENTE... Rode manualmente em producao ANTES de
-subir a aplicacao"*.
-
-Em produção (`ddl-auto=validate`) a aplicação **não sobe** se o DBA não tiver executado manualmente,
-na ordem correta: `migration-regional.sql` → `V2026.06.02` → `V2026.06.03` → `V2026.06.04` →
-`V2026.06.15`. Ver risco em [`technical-debt.md`](technical-debt.md).
+**[FATO 2026-09-06]** O Backend usa Flyway no startup e `validate` em
+todos os perfis. Scripts antigos foram arquivados em `db/historico/`; o
+baseline é `V2026.09.04`. Histórico da migração em
+[DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
 
 **[FATO]** Existia ainda uma terceira via — `ProcessoSchemaInitializer`, um `ApplicationRunner` que
 executava `ALTER TABLE processos` a cada startup com falhas engolidas em log `debug`. Foi **removido**
@@ -185,25 +185,25 @@ tela de Monitoramento sempre retornava `502`.
 **[FATO]** O serviço encaixa em referências que já apontavam para ele:
 - `Front/nginx.conf`: `location /telemetria/ { proxy_pass http://telemetria:8081/; }`
 - `Front/src/environments/environment.prod.ts`: `telemetriaUrl: 'https://telemetria.geopetro-io.braserv.com.br'`
-- `Backend-Sonda/.../application.properties`: `monitoramento.base-url` default `:8081`
+- `Geopetro-Backend/.../application.properties`: `monitoramento.base-url` default `:8081`
 
 **[FATO]** O remote `luisbraserv/telemetria-backend-geopetroio` respondia `Repository not found` no
 levantamento. **[PENDENTE]** O repositório precisa ser criado — preferencialmente **fora do OneDrive**
 ([DT-004](technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)).
 
-Detalhes em [`Backend-Telemetria-Sonda-Geopetro-io/specs/`](../Backend-Telemetria-Sonda-Geopetro-io/specs/).
+Detalhes em [`Geopetro-Telemetria/specs/`](../Geopetro-Telemetria/specs/).
 
 ## 8. Integrações externas
 
 | Integração | Direção | Tecnologia | Estado |
 |---|---|---|---|
-| CLP Siemens S7 (sonda) | Entrada | Moka7/Snap7, TCP 102 | **[FATO]** Ativo — Desktop-Sonda |
+| CLP Siemens S7 (sonda) | Entrada | Moka7/Snap7, TCP 102 | **[FATO]** Ativo — Geopetro-Desktop |
 | CLP Siemens LOGO! (bomba) | Entrada | Moka7/Snap7, TCP 102 | **[FATO]** Ativo — Horus |
-| Broker MQTT | Saída (produtor) | Eclipse Paho 1.2.5, QoS 1 | **[FATO]** Ativo — Desktop-Sonda. Ver §9 |
+| Broker MQTT | Saída (produtor) | Eclipse Paho 1.2.5, QoS 1 | **[FATO]** Ativo — Geopetro-Desktop. Ver §9 |
 | Serviço Monitoramento :8081 | Saída | Spring WebClient (Netty), timeout 5s | **[FATO]** Ativo — cliente e servidor implementados |
 | WebSocket/STOMP `/ws` | Ambas | Spring WebSocket, broker em memória | **[FATO 2026-08-27]** Ativo — Desktop publica, Angular assina |
-| Broker MQTT | Entrada (consumidor) | Eclipse Paho 1.2.5, QoS 1 | **[FATO]** Ativo — Backend-Telemetria |
-| InfluxDB | Saída | influxdb-client-java 6.12.0 | **[FATO]** Ativo — Backend-Telemetria |
+| Broker MQTT | Entrada (consumidor) | Eclipse Paho 1.2.5, QoS 1 | **[FATO]** Ativo — Geopetro-Telemetria |
+| InfluxDB | Saída | influxdb-client-java 6.12.0 | **[FATO]** Ativo — Geopetro-Telemetria |
 | ViaCEP | Saída | `https://viacep.com.br/ws/{cep}/json/` | **[FATO]** Chamado **direto do browser** ⚠️ |
 
 **[FATO]** A integração SMTP **deixou de existir** com a remoção do módulo `quimico` —
@@ -216,16 +216,16 @@ Detalhes em [`Backend-Telemetria-Sonda-Geopetro-io/specs/`](../Backend-Telemetri
 
 | Ator | Papel | Tópico | Estado |
 |---|---|---|---|
-| **Desktop-Sonda** | **Produtor** | publica `telemetria/{unidade}/batch` — 1 msg/ciclo (1s), QoS 1, não retida | Ativo |
-| **Backend-Telemetria** | **Consumidor** | assina `telemetria/+/batch` | ✅ **Implementado em 2026-08-27** |
-| ~~Backend-Sonda~~ | ~~Subscriber~~ | — | ✅ **Removido em 2026-08-26** |
+| **Geopetro-Desktop** | **Produtor** | publica `telemetria/{unidade}/batch` — 1 msg/ciclo (1s), QoS 1, não retida | Ativo |
+| **Geopetro-Telemetria** | **Consumidor** | assina `telemetria/+/batch` | ✅ **Implementado em 2026-08-27** |
+| ~~Geopetro-Backend~~ | ~~Subscriber~~ | — | ✅ **Removido em 2026-08-26** |
 
-**[FATO]** O Backend-Sonda tinha um consumidor **no-op** (`MonitoramentoTelemetriaService.processar()`
+**[FATO]** O Geopetro-Backend tinha um consumidor **no-op** (`MonitoramentoTelemetriaService.processar()`
 apenas logava, com comentário *"Ponto de extensão: salvar no banco, encaminhar para InfluxDB..."*).
 Foi removido junto com a dependência Paho e as propriedades `mqtt.*` — o backend não participa mais do
 broker.
 
-✅ **[FATO] Cadeia fechada em 2026-08-27.** Com o Backend-Telemetria implementado, a telemetria
+✅ **[FATO] Cadeia fechada em 2026-08-27.** Com o Geopetro-Telemetria implementado, a telemetria
 publicada passa a ser persistida no InfluxDB e fica disponível para consulta. Ver
 [DT-003](technical-debt.md#dt-003--telemetria-capturada-mas-nunca-persistida).
 
@@ -241,8 +241,8 @@ publicada passa a ser persistida no InfluxDB e fica disponível para consulta. V
 
 **[FATO]**
 
-- **Backend-Sonda**: Docker multi-stage (`maven:3.9-eclipse-temurin-21` → `eclipse-temurin:21-jre-jammy`), compila só `-pl app -am`, expõe `8080`.
-- **Front**: Docker (`node:22-alpine` → `nginx:alpine`), build `--configuration k8s`, expõe `80`. nginx faz proxy reverso same-origin para `backend-sonda:8080` e `telemetria:8081`.
+- **Geopetro-Backend**: Docker multi-stage (`maven:3.9-eclipse-temurin-21` → `eclipse-temurin:21-jre-jammy`), compila só `-pl app -am`, expõe `8080`.
+- **Front**: Docker (`node:22-alpine` → `nginx:alpine`), build `--configuration k8s`, expõe `80`. nginx faz proxy reverso same-origin para `geopetro-backend:8080` e `telemetria:8081`.
 - **Front alternativo**: Cloudflare Pages (`wrangler.toml`, `public/_redirects`).
 - **Desktops**: instalador Windows `.exe` via `jpackage` (Horus exige WiX Toolset), instalação per-user, execução em bandeja do sistema.
 - **Domínios de produção**: `api.geopetro-io.braserv.com.br` · `telemetria.geopetro-io.braserv.com.br`.
@@ -266,12 +266,12 @@ do código-fonte de `almoxarifado`/`compra` documentada em [`technical-debt.md`]
 
 | Aplicação | Framework | Cobertura |
 |---|---|---|
-| Backend-Sonda | JUnit 5 + Mockito + AssertJ | Parcial — ver abaixo |
+| Geopetro-Backend | JUnit 5 + Mockito + AssertJ | Parcial — ver abaixo |
 | Front | **Vitest** (não Karma) | Mínima — 2 services de 5 |
-| Desktop-Sonda | JUnit 5 | 3 classes |
+| Geopetro-Desktop | JUnit 5 | 3 classes |
 | Horus | JUnit 5 | 7 arquivos |
 
-**[FATO]** No Backend-Sonda: **43 testes**, todos unitários. **Zero** testes de controller/HTTP,
+**[FATO]** No Geopetro-Backend: **43 testes**, todos unitários. **Zero** testes de controller/HTTP,
 **zero** `@DataJpaTest`, **zero** testes de `security`. Módulos sem cobertura: `empresa`, `simulador`,
 `security`, `monitoramento`.
 
@@ -287,7 +287,7 @@ testes removidos cobriam exatamente os módulos removidos.
 
 **[FATO]** A fonte normativa é [`specs/index.html`](index.html) — tokens, componentes e princípios.
 Os dois desktops JavaFX transcrevem esses tokens em `geopetro-design-system.css`, arquivo idêntico
-em Desktop-Sonda e Horus. Detalhes e lista de classes em
+em Geopetro-Desktop e Horus. Detalhes e lista de classes em
 [`Braserv-Horus-Desktop/specs/README.md`](../Braserv-Horus-Desktop/specs/README.md#design-system-revisão-2026-08-31).
 
 ⚠️ **[DECIDIDO 2026-08-31]** Ação primária é **azul-marinho** `#051833`. Vermelho ficou reservado a
@@ -304,7 +304,7 @@ arquivo, e o `rem` da fonte normativa é convertido para `px` na base 16.
 
 | Aplicação | Arquivos |
 |---|---|
-| Desktop-Sonda | `icon/logo.png` · `icon/logo.ico` |
+| Geopetro-Desktop | `icon/logo.png` · `icon/logo.ico` |
 | Horus | `icons/logo.png` · `icons/app.ico` |
 | Front | `public/logo.png` · `public/favicon.ico` |
 
@@ -313,9 +313,26 @@ duas telas desktop, no splash e no PDF da carta de operação. Trocá-lo pelo í
 marca esticada no cabeçalho. **Não substituir junto.**
 
 ⚠️ **[FATO]** Os `.ico` são multi-resolução de verdade (256→16 px, seis entradas, assinatura
-`00000100`). O `jpackage` exige ICO real: o `logo.ico` anterior do Desktop-Sonda era um **PNG
+`00000100`). O `jpackage` exige ICO real: o `logo.ico` anterior do Geopetro-Desktop era um **PNG
 renomeado**, e o instalador sairia com ícone quebrado. Ao trocar o logo, regenere com
 `Braserv-Horus-Desktop/scripts/create-windows-icon.ps1` ou equivalente — nunca renomeie um PNG.
 
 **[FATO]** O PNG de origem tem 907 KB, tamanho de ilustração. Os derivados ficam em ~58 KB; carregar
 o original como ícone de janela seria desperdício em cada inicialização.
+
+
+## GeoPetro Vision — integração prevista (11/09/2026)
+
+**[DECIDIDO 2026-09-11]** O Vision fará captura e avaliação local por
+unidade; enviará ocorrências e fotos ao Backend para consulta no Front. Não
+haverá central nem vídeo remoto nesta etapa. Requisitos e pendências estão na
+[feature Vision](features/geopetro-vision.md) e no
+[contrato proposto](contracts/geopetro-vision.md). A integração ainda não foi
+implementada.
+
+## Decisão final de sessão e executor — revisão 11/09/2026
+
+**[DECIDIDO 2026-09-11]** Após reiniciar Windows, o monitoramento aguarda
+novo login online no Vision. A execução fica na sessão Windows atual, com
+captura única por instalação. Detalhes e pendências de credencial técnica estão
+na [feature](features/geopetro-vision.md#decisão-final-de-sessão-e-executor--revisão-11092026).

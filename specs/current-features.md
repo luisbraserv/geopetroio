@@ -27,15 +27,16 @@
 | ~~F-13~~ | ~~Alertas de Químicos por E-mail~~ | — | **Removido 2026-08-26** |
 | [F-14](#f-14--simulador-de-cimentação) | Simulador de Cimentação | Front + Backend | Ativo |
 | [F-15](#f-15--monitoramento-de-sondas) | Monitoramento de Sondas | Front + Backend + Telemetria | Ativo |
-| [F-16](#f-16--captura-de-telemetria-na-sonda) | Captura de Telemetria na Sonda | Desktop-Sonda | Ativo |
-| [F-17](#f-17--carta-de-operação-sonda) | Carta de Operação (Sonda) | Desktop-Sonda | Ativo |
+| [F-16](#f-16--captura-de-telemetria-na-sonda) | Captura de Telemetria na Sonda | Geopetro-Desktop | Ativo |
+| [F-17](#f-17--carta-de-operação-sonda) | Carta de Operação (Sonda) | Geopetro-Desktop | Ativo |
 | [F-18](#f-18--monitoramento-de-cimentação) | Monitoramento de Cimentação | Horus | Ativo |
 | [F-19](#f-19--carta-de-operação-cimentação) | Carta de Operação (Cimentação) | Horus | Ativo |
 | [F-20](#f-20--tempo-real-de-sondas) | **Tempo Real de Sondas** | Front + Backend + Desktop | **Novo 2026-08-27** |
+| [F-21](#f-21--configuração-remota-da-sonda) | Configuração remota da sonda | Backend + Desktop | Implementado em código 2026-09-07 |
 
-**[FATO]** O sistema hoje tem **14 funcionalidades ativas**, distribuídas em três eixos: administração
+**[FATO]** O inventário reúne **15 funcionalidades implementadas**, distribuídas em três eixos: administração
 de identidade e organização (F-01 a F-07), engenharia de cimentação (F-14, F-18, F-19) e telemetria de
-sonda (F-15 a F-17, F-20).
+sonda (F-15 a F-17, F-20 e F-21). Implementação em código não indica distribuição à frota.
 
 **[FATO 2026-08-27]** A telemetria passou a ter **dois caminhos complementares**: F-15 responde "o
 que aconteceu?" (histórico, InfluxDB) e F-20 responde "o que está acontecendo?" (tempo real,
@@ -51,7 +52,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 | **Atores** | Qualquer usuário cadastrado |
 | **Entradas** | `{username, password}` — aceita **username ou e-mail** |
 | **Saídas** | `AuthResponse{token, username, nome, email, endereço, telefone, roles[], regionalId, regionalNome}` |
-| **Endpoints** | `POST /auth/login` — **público** |
+| **Endpoints** | `POST /api/auth/login` — **público** |
 | **Entidades** | `UsuarioEntity` |
 
 **Fluxo principal [FATO]**
@@ -72,7 +73,17 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 
 **Dependências** · módulo `security` → `usuario` · BCrypt · jjwt 0.12.6
 
-**[PENDENTE]** Não existe recuperação de senha — [OQ-021](open-questions.md#oq-021--recuperação-de-senha-é-planejada).
+**[FATO 2026-09-06]** Recuperação por e-mail implementada: link no login,
+solicitação pública e tela de nova senha. Token de uso único, validade de 30 minutos,
+hash no banco e limites de envio. SMTP desativado por padrão; configuração e teste
+de entrega corporativa pendentes. Contrato em
+[`recuperacao-senha.md`](../Geopetro-Backend/specs/recuperacao-senha.md).
+
+**[FATO 2026-09-07]** ADMIN configura o SMTP em **Configurações → E-mail**, com
+menu horizontal, ativação do envio, credencial protegida e teste de conexão.
+Alterações valem sem reiniciar o backend. O teste não envia mensagens nem comprova
+entrega corporativa. Detalhes em
+[`configuracao-smtp.md`](../Geopetro-Backend/specs/configuracao-smtp.md).
 
 ---
 ## F-02 · Gestão de Usuários
@@ -81,7 +92,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 |---|---|
 | **Objetivo** | Cadastrar e manter usuários internos (funcionários) e clientes |
 | **Atores** | `ADMIN` |
-| **Endpoints** | `POST /usuarios/clientes` · `POST /usuarios/internos` · `GET /usuarios?pagina&tamanho&busca` · `GET /usuarios/{username}` · `PATCH /usuarios/{username}` · `PATCH /usuarios/{username}/ativar` · `/desativar` |
+| **Endpoints** | `POST /api/usuarios/clientes` · `POST /api/usuarios/internos` · `GET /api/usuarios?pagina&tamanho&busca` · `GET /api/usuarios/{username}` · `PATCH /api/usuarios/{username}` · `PATCH /api/usuarios/{username}/ativar` · `/desativar` |
 | **Permissões** | `ROLE_ADMIN` |
 | **Entidades** | `UsuarioEntity` → `UsuarioInternoEntity` / `UsuarioClienteEntity`, `EmpresaEntity`, `RegionalEntity`, `SetorEntity` |
 | **Tela** | `/app/cadastros/usuarios` |
@@ -109,7 +120,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 
 **Erros** · `400` validação · `404` empresa/regional/setor inexistente · `409` usuário já existe
 
-⚠️ **[FATO] Bug conhecido** — `PATCH /usuarios/{username}` **não é PATCH parcial**: omitir `telefone` ou `email` causa `400`. Ver [DT-008](technical-debt.md#dt-008--patch-que-não-é-parcial).
+⚠️ **[FATO] Bug conhecido** — `PATCH /api/usuarios/{username}` **não é PATCH parcial**: omitir `telefone` ou `email` causa `400`. Ver [DT-008](technical-debt.md#dt-008--patch-que-não-é-parcial).
 
 ---
 
@@ -119,7 +130,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 |---|---|
 | **Objetivo** | Usuário editar o próprio cadastro e trocar a própria senha |
 | **Atores** | Qualquer usuário autenticado |
-| **Endpoints** | `PATCH /usuarios/me` · `PATCH /usuarios/me/senha` |
+| **Endpoints** | `PATCH /api/usuarios/me` · `PATCH /api/usuarios/me/senha` |
 | **Tela** | `/app/meu-usuario` |
 
 ### ✅ Corrigido em 2026-08-26
@@ -129,7 +140,7 @@ WebSocket). Ver [`websocket-realtime.md`](contracts/websocket-realtime.md).
 `403`. Agravante: `/app/meu-usuario` é o **destino pós-login da role `INTERNO`**.
 
 **Correção:** a regra de `/usuarios/me` passou a ser declarada **antes** da regra genérica, exigindo
-apenas autenticação. Ver [SEC-003](security-findings.md#sec-003--usuáriosme-exige-admin).
+apenas autenticação. Ver [SEC-003](security-findings.md#sec-003--autoatendimento-liberado).
 
 **Regras [FATO]** · senha atual deve conferir · nova = confirmação · **nova deve diferir da atual**
 
@@ -175,7 +186,7 @@ em `.anyRequest().authenticated()`. Qualquer autenticado, inclusive `CLIENTE`, p
 
 **Correção:** `GET` liberado aos perfis internos (as telas de Setor e Unidade/Sonda precisam listar
 regionais nos selects); escrita restrita a `ADMIN`. Ver
-[SEC-002](security-findings.md#sec-002--apiregionais-sem-restrição-de-role).
+[SEC-002](security-findings.md#sec-002--regionais-com-controle-de-acesso).
 
 **Regras [FATO]**
 - Nome duplicado, **case-insensitive** → `409`.
@@ -216,12 +227,29 @@ quebra o histórico de telemetria**, e nada no sistema impede ou avisa. Ver
 
 **Regras [FATO]** · nome duplicado → `409` · ⚠️ **exclusão sem guarda de vínculo**
 
+### Decidido em 2026-09-05 — ainda não implementado
+
+**[DECIDIDO 2026-09-05]** Dois acréscimos ao cadastro:
+
+| Mudança | Detalhe |
+|---|---|
+| **Campo `tipo`** | `SONDA` · `UNIDADE_BOMBEIO` · `SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ` — [RN-065](business-rules.md#rn-065--unidadesonda-tem-tipo) |
+| **Guarda de exclusão** | Passa a **bloquear** quando houver vínculo, em vez do `500` de FK — [RN-063](business-rules.md#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros) |
+
+**[FATO 2026-09-06]** O `tipo` entra pela migration `V2026.09.06.1` do Flyway, aplicada no startup.
+Ela adiciona a coluna nula, faz o backfill como `SONDA` e só então a torna obrigatória — a
+classificação precisa ser conferida registro a registro na tela depois do deploy.
+
+⚠️ **O `tipo` não muda a telemetria por si.** As telas de Monitoramento e Tempo Real continuam pedindo
+as mesmas cinco variáveis de sonda para qualquer unidade — ver
+[OQ-041](open-questions.md#oq-041--o-tipo-da-unidade-define-quais-variáveis-são-monitoradas).
+
 ---
 
 ## F-08 a F-11 · Projetos, Processos, Anotações e Observações — REMOVIDOS
 
 **[DECIDIDO 2026-08-26]** Os módulos `projeto`, `processo` (com anotações) e `observacao` foram
-**removidos do Backend-Sonda-Geopetro-IO**, e a tela de Projetos foi removida do frontend.
+**removidos do Geopetro-Backend**, e a tela de Projetos foi removida do frontend.
 
 ### O que saiu
 
@@ -247,18 +275,18 @@ Endpoints removidos: `/api/projetos/**`, `/api/processos/**`, `/api/anotacoes/**
 
 ⚠️ **[FATO]** A remoção do código **não** apaga as tabelas. Permanecem no MySQL: `projetos`,
 `processos`, `anotacoes`, `observacoes`. Não quebram nada (`ddl-auto=validate` ignora tabelas extras),
-mas contêm dados. Ver `Backend-Sonda-Geopetro-IO/db/cleanup/`.
+mas contêm dados. Ver `Geopetro-Backend/db/cleanup/`.
 
 ### Recuperação
 
 **[FATO]** Tudo está no histórico do Git — ver
-[`Backend-Sonda-Geopetro-IO/specs/README.md`](../Backend-Sonda-Geopetro-IO/specs/README.md#módulos-removidos).
+[`Geopetro-Backend/specs/README.md`](../Geopetro-Backend/specs/README.md#módulos-removidos).
 
 ---
 
 ## F-12 e F-13 · Químicos — REMOVIDOS
 
-**[DECIDIDO 2026-08-26]** O módulo `quimico` foi **removido do Backend-Sonda-Geopetro-IO**.
+**[DECIDIDO 2026-08-26]** O módulo `quimico` foi **removido do Geopetro-Backend**.
 
 Saíram o Estoque de Químicos (F-12) e os Alertas por E-mail (F-13), com todos os endpoints
 (`/api/quimicos/**`, `/api/movimentacoes-quimico/**`, `/api/operacoes-sonda/**`,
@@ -273,7 +301,7 @@ puro).
 
 ⚠️ **Tabelas órfãs:** `quimicos`, `operacoes_sonda`, `movimentacoes_quimico`, `configuracoes_email`,
 `alertas_email_quimico`. Script de limpeza sugerido (não executado) em
-`Backend-Sonda-Geopetro-IO/db/cleanup/2026-08-26-remove-quimico.sql`.
+`Geopetro-Backend/db/cleanup/2026-08-26-remove-quimico.sql`.
 
 ---
 
@@ -281,14 +309,15 @@ puro).
 
 | Campo | Conteúdo |
 |---|---|
-| **Objetivo** | Calcular operações de cimentação (Squeeze e Tampão) e gerar relatórios técnicos |
-| **Atores** | `CIMENTACAO`, `ADMIN`, `GERENCIA`, `DIRETORIA` |
-| **Rotas** | `/app/simulador` · `/app/simulador/squeeze` · `/app/simulador/tampao` |
+| **Objetivo** | Calcular squeeze, tampão e cimentação primária e gerar relatórios técnicos |
+| **Atores** | `ADMIN` · `CLIENTE`+`SIMULADOR`+`CIMENTACAO` · `INTERNO`+`SIMULADOR`+`CIMENTACAO` — [RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo) |
+| **Rotas** | `/app/simulador` · `/app/simulador/squeeze` · `/app/simulador/tampao` · `/app/simulador/primaria` |
 | **Endpoints** | `/api/simulador/pastas[...]` · `/api/simulador/cenarios[...]` · `/cenarios/sem-pasta?operacao` |
 | **Entidades** | `PastaSimuladorEntity`, `CenarioSimuladorEntity` |
 
-**[FATO]** É a **maior feature do sistema**: ~17.800 linhas em ~45 arquivos. Todo o cálculo é
-client-side — o backend só persiste `formValue` como `LONGTEXT` opaco e `operacao` como VARCHAR livre.
+**[FATO]** O cálculo ocorre no Front; o Backend persiste cenários e pastas.
+Geometria, hidráulica, critérios de aceite e estado da primária estão na
+[SPEC do simulador](../Geopetro-Front/specs/simulador/cimentacao-primaria.md).
 
 **Capacidades de cálculo [FATO]** · tempo de espessamento (estilo API 10B-2) · curvas UCA · reologia
 Bingham e lei de potência a partir de θ300..θ3 · cálculo de pasta (FAC/FAM/rendimento) · hidráulica
@@ -299,13 +328,13 @@ conformidade operacional
 
 **Regras [FATO]**
 - Cenários organizados em pastas por `operacao` — o backend é agnóstico de domínio.
-- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador (`CIMENTACAO`, `ADMIN`, `GERENCIA` ou `DIRETORIA`) edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015--cenários-do-simulador-não-têm-dono)).
+- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015)) — e desde 2026-09-17 isso inclui `CLIENTE`, que passou a poder receber acesso ao simulador.
 - Pasta com cenários: cascade `ALL` + `orphanRemoval`.
 
-⚠️ **Validações [FATO]** — **ausência quase total**. Os ~40 campos numéricos críticos de engenharia
-(geometria de poço, gradientes de fratura/poro, pesos de fluido, pressão de operação) **não têm
-nenhum `Validators`**. O único uso na feature inteira é no `FormArray` de aditivos.
-Ver [DT-014](technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
+**[FATO]** Coerência da geometria e relações entre campos já geram bloqueios
+ou avisos. Faixas quantitativas e obrigatoriedade ainda dependem da
+[tabela de validação](../Geopetro-Front/specs/simulador/faixas-validacao.md);
+veja [DT-014](technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
 
 **[FATO]** Com a remoção dos demais módulos, o `simulador` é hoje **o único domínio de negócio
 próprio** que resta no backend, além da identidade e da organização.
@@ -317,7 +346,7 @@ próprio** que resta no backend, além da identidade e da organização.
 | Campo | Conteúdo |
 |---|---|
 | **Objetivo** | Visualizar séries temporais de telemetria de uma sonda |
-| **Atores** | `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` (frota inteira) · `CLIENTE` (apenas as sondas concedidas) |
+| **Atores** | `ADMIN` e conta interna com `MONITORAMENTO` (frota inteira) · `CLIENTE`+`MONITORAMENTO` (apenas as sondas concedidas) |
 | **Rota** | `/app/monitoramento-sondas` — carregada sob demanda com `loadComponent` |
 | **Endpoints** | `GET /api/sondas/minhas` · `GET /api/sondas/{idSondaUnidade}/monitoramentos/series?dispositivoId&inicio&fim` |
 
@@ -332,7 +361,7 @@ próprio** que resta no backend, além da identidade e da organização.
 ### ✅ Fonte de dados implementada em 2026-08-27
 
 O serviço em `monitoramento.base-url` (default `:8081`) é o
-[Backend-Telemetria](../Backend-Telemetria-Sonda-Geopetro-io/specs/README.md), **implementado em
+[Geopetro-Telemetria](../Geopetro-Telemetria/specs/README.md), **implementado em
 2026-08-27**. A cadeia completa — captura no CLP, publicação MQTT, ingestão, InfluxDB, consulta REST,
 tela — existe agora ponta a ponta.
 
@@ -358,9 +387,9 @@ transparente para o frontend, que recebe a mesma forma `{dataHora, valor}`.
 
 | Perfil | Sondas visíveis |
 |---|---|
-| `ADMIN`, `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA` | Frota inteira |
-| `CLIENTE` | Apenas as concedidas no cadastro |
-| Só `INTERNO` | Nenhuma |
+| `ADMIN`, e `INTERNO`+`MONITORAMENTO` (ou `MONITORAMENTO_REAL`) | Frota inteira |
+| `CLIENTE`+`MONITORAMENTO` | Apenas as concedidas no cadastro |
+| Só `INTERNO`, ou permissão de módulo sem tipo de conta | Nenhuma |
 
 Ver [RN-047](business-rules.md#rn-047--escopo-de-sondas-por-perfil). Erros: `403` sem acesso à sonda ·
 `502` serviço de telemetria fora.
@@ -377,7 +406,7 @@ não-interno — o que dava a **todo `CLIENTE` acesso a todas as sondas**. Hoje 
 |---|---|
 | **Objetivo** | Ler sensores do CLP, converter em grandezas de engenharia, gravar local e publicar via MQTT |
 | **Atores** | Operador da sonda (configura) · Sistema (ciclo automático) |
-| **Aplicação** | Desktop-Sonda-Geopetro-IO — **é o produtor MQTT do sistema** |
+| **Aplicação** | Geopetro-Desktop — **é o produtor MQTT do sistema** |
 | **Entradas** | CLP Siemens S7 — DB1, leitura a cada **1 segundo** |
 | **Saídas** | H2 local · MQTT `telemetria/{unidade}/batch` · dashboard JavaFX |
 
@@ -561,3 +590,14 @@ o id da unidade, e um usuário autenticado poderia trocá-lo à mão. Coberto po
 
 **Limitação conhecida [FATO]** · Broker STOMP em memória não propaga entre instâncias do backend.
 Com mais de uma réplica, é preciso broker externo ou afinidade de sessão.
+
+---
+
+## F-21 · Configuração remota da sonda
+
+**[FATO]** O Backend persiste limites por unidade, com revisão e autoria.
+`GET`/`PUT /api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda.
+O motor de alarmes usa esse documento no servidor; a tela de limites e o
+histórico estão implementados. O Desktop usa limites locais independentes e
+sincroniza apenas cards por STOMP. Contrato em
+[`configuracao-sonda.md`](contracts/configuracao-sonda.md).

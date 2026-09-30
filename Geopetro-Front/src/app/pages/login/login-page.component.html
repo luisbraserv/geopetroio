@@ -1,0 +1,120 @@
+<section class="login-page">
+  <div class="login-page__hero">
+    <!-- Marca no topo: é a primeira coisa que identifica o sistema. -->
+    <img src="/logo-horizontal-inverso.png" alt="Geopetro IO" class="hero-logo" />
+
+    <div class="hero-bottom">
+      <p class="hero-kicker">Plataforma de Software Industrial</p>
+      <h1 tuiTitle="l">Monitoramento e controle de sondas</h1>
+
+      <!--
+         Os módulos reais do sistema, não promessas de marketing. Quem chega nesta tela ou já
+         sabe o que vem depois, ou está avaliando se é o sistema certo — em ambos os casos, a
+         lista do que existe informa mais que adjetivos.
+      -->
+      <ul class="hero-modulos">
+        <li>
+          <tui-icon icon="@tui.activity"></tui-icon>
+          <div>
+            <strong>Monitoramento</strong>
+            <span>Histórico de telemetria por unidade e período</span>
+          </div>
+        </li>
+        <li>
+          <tui-icon icon="@tui.zap"></tui-icon>
+          <div>
+            <strong>Tempo real</strong>
+            <span>Estado instantâneo da sonda, direto do CLP</span>
+          </div>
+        </li>
+        <li>
+          <tui-icon icon="@tui.flask-conical"></tui-icon>
+          <div>
+            <strong>Simulador</strong>
+            <span>Cimentação: squeeze, tampão e reologia</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <p class="hero-rodape">
+      <tui-icon icon="@tui.shield"></tui-icon>
+      <span>Acesso restrito · o perfil define quais unidades você enxerga</span>
+    </p>
+  </div>
+
+  <div class="login-card">
+    <div class="login-card__header">
+      <p class="login-card__eyebrow">Autenticação</p>
+      <h2 tuiTitle="m">Entrar no sistema</h2>
+      <p class="login-card__description">Use seu usuário corporativo e a senha cadastrada.</p>
+    </div>
+
+    <form class="login-form" (ngSubmit)="submit()">
+      @if (authError()) {
+        <div class="login-error" role="alert" (click)="clearError()">
+          <tui-icon icon="@tui.alert-triangle" class="login-error__icon"></tui-icon>
+          <span>{{ authError() }}</span>
+        </div>
+      }
+
+      <tui-textfield>
+        <label tuiLabel>Usuário</label>
+        <input
+          tuiInput
+          type="text"
+          autocomplete="username"
+          [ngModel]="username()"
+          (ngModelChange)="username.set($event)"
+          name="username"
+          placeholder="usuario.nome"
+        />
+      </tui-textfield>
+
+      <tui-textfield>
+        <label tuiLabel>Senha</label>
+        <input
+          tuiInput
+          type="password"
+          autocomplete="current-password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          placeholder="Digite sua senha"
+        />
+      </tui-textfield>
+
+      <div class="login-form__actions">
+        <label class="remember-me">
+          <input type="checkbox" />
+          <span>Lembrar acesso neste dispositivo</span>
+        </label>
+
+        <a routerLink="/recuperar-senha" class="forgot-link">Esqueci minha senha</a>
+      </div>
+
+      <button
+        tuiButton
+        appearance="primary"
+        size="l"
+        type="submit"
+        class="login-submit"
+        [disabled]="isLoading()"
+      >
+        @if (isLoading()) {
+          Entrando...
+        } @else {
+          Entrar
+        }
+      </button>
+    </form>
+
+    <!-- Rodapé técnico: versão e ambiente, como todo sistema interno mostra. -->
+    <footer class="login-card__rodape">
+      <span class="login-versao">Geopetro IO · v{{ versao }}</span>
+      @if (ambiente) {
+        <span class="login-ambiente">{{ ambiente }}</span>
+      }
+    </footer>
+  </div>
+</section>

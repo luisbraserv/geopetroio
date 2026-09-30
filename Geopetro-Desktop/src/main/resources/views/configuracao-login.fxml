@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+   Login que libera as janelas de configuracao — RN-086, RN-087.
+
+   Nao e o login do app: o Geopetro-Desktop nao pede credencial para iniciar, ler o CLP ou publicar.
+   Esta janela aparece so quando alguem vai ABRIR uma configuracao, e a sessao vale ate o app fechar.
+
+   Nao ha "lembrar de mim" de proposito. Persistir credencial na borda e o oposto do que SEC-011 ja
+   registra como risco aceito, e configurar e ato raro.
+-->
+<VBox prefWidth="440.0" spacing="16.0" styleClass="cartao"
+      stylesheets="@geopetro-design-system.css"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.demo.controllers.ConfiguracaoLoginController">
+   <padding><Insets top="22.0" right="24.0" bottom="22.0" left="24.0" /></padding>
+
+   <VBox spacing="3.0">
+      <Label text="Entrar para configurar" styleClass="cabecalho-titulo" />
+      <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
+             text="Só ADMIN ou SUPORTE alteram a configuração. O restante do app continua funcionando normalmente." />
+   </VBox>
+
+   <!-- ⚠️ O servidor entra AQUI porque a engrenagem inteira passou a exigir sessao, e o endereco
+        mora nela: sem ele nao ha login, e sem login nao se define ele. Uma estacao nova nao teria
+        por onde comecar. Vem preenchido com o que ja estiver gravado. -->
+   <VBox spacing="5.0">
+      <Label text="Servidor" styleClass="rotulo" />
+      <TextField fx:id="txtServidor" promptText="Ex.: https://geopetro.braserv.com.br" maxWidth="Infinity" />
+   </VBox>
+
+   <VBox spacing="5.0">
+      <Label text="Usuário" styleClass="rotulo" />
+      <TextField fx:id="txtUsuario" promptText="Usuário do Geopetro-Backend" maxWidth="Infinity" />
+   </VBox>
+
+   <VBox spacing="5.0">
+      <Label text="Senha" styleClass="rotulo" />
+      <PasswordField fx:id="txtSenha" maxWidth="Infinity" />
+   </VBox>
+
+   <!-- Ocupa espaco so quando ha o que dizer: managed acompanha visible no controller. -->
+   <Label fx:id="lblErro" styleClass="estado-erro" wrapText="true" maxWidth="Infinity" visible="false" managed="false" />
+
+   <HBox spacing="10.0" alignment="CENTER_RIGHT">
+      <Label fx:id="lblAguarde" styleClass="ajuda" text="Falando com o Backend…"
+             visible="false" managed="false" />
+      <Region HBox.hgrow="ALWAYS" />
+      <Button fx:id="btnCancelar" text="Cancelar" styleClass="botao-secundario" cancelButton="true" />
+      <Button fx:id="btnEntrar" text="Entrar" styleClass="botao-primario" defaultButton="true" />
+   </HBox>
+</VBox>

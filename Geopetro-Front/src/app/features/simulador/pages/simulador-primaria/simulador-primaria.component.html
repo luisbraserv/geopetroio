@@ -1,0 +1,1343 @@
+<div class="sim">
+
+  <!-- ── Cabeçalho ── -->
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Simulador</p>
+      <h1>Cimentação Primária</h1>
+      <p class="subtitle">
+        Volumes por TOC, deslocamento dos fluidos e hidráulica do circuito.
+        Resultado calculado, não é aprovação operacional.
+      </p>
+    </div>
+    <div class="head-actions">
+      <button tuiButton appearance="flat" size="s" type="button" class="sidebar-toggle"
+        [attr.aria-label]="sidebarOpen() ? 'Ocultar painel' : 'Exibir painel'"
+        aria-controls="primary-sidebar" [attr.aria-expanded]="sidebarOpen()"
+        (click)="sidebarOpen.set(!sidebarOpen())">
+        <tui-icon [icon]="sidebarOpen() ? '@tui.panel-left-close' : '@tui.panel-left-open'"></tui-icon>
+        Painel de dados
+      </button>
+      <label>Profundidades
+        <select aria-label="Unidade de profundidade" [value]="depthUnit()"
+          (change)="setDepthUnit($any($event.target).value)">
+          <option value="m">Metros (m)</option><option value="ft">Pés (ft)</option>
+        </select>
+      </label>
+      <span class="pr-head-status" [class.pr-head-status--bad]="hasBlockingError()">
+        {{ hasBlockingError() ? 'Resultado indisponível' : 'Resultado calculado' }}
+      </span>
+    </div>
+  </header>
+  <p class="subtitle" role="status"><strong>Fase da operação:</strong> {{ phaseLabel() }}</p>
+
+  <!-- ── Menu horizontal ── -->
+  <div class="sim-tabs" role="tablist">
+    @for (item of tabs; track item.id) {
+      <button tuiButton appearance="flat" class="sim-tab" type="button" role="tab"
+        [class.sim-tab--active]="tab() === item.id" [attr.aria-selected]="tab() === item.id"
+        (click)="tab.set(item.id)">{{ item.label }}</button>
+    }
+  </div>
+
+  <!-- ── Layout: sidebar + conteúdo ── -->
+  <div class="sim-body" [class.sim-body--collapsed]="!sidebarOpen()">
+
+    <!-- ════ SIDEBAR: só entradas ════ -->
+    <aside id="primary-sidebar" aria-label="Dados da cimentação primária" class="sim-sidebar" [class.sim-sidebar--hidden]="!sidebarOpen()">
+      <div class="sidebar-sections">
+
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-report"
+              [class.acc-group-label--open]="secReportOpen" [attr.aria-expanded]="secReportOpen"
+              aria-controls="primary-section-report" (click)="secReportOpen = !secReportOpen">
+              <tui-icon icon="@tui.file-text"></tui-icon> 1. Dados do relatório
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-report" class="sidebar-section-content"
+            [hidden]="!secReportOpen" aria-labelledby="primary-heading-report"><div class="acc-body"><label>Cliente<input [value]="cliente()" (change)="setCliente($any($event.target).value)"></label>
+<label>Nome do cenário<input [value]="scenarioName()" (change)="setScenarioName($any($event.target).value)"></label>
+<label>Poço<input [value]="poco?.nome || reportData().poco" [readOnly]="!!poco" (change)="setReportField('poco', $any($event.target).value)"></label>
+@for (field of reportFields; track field.key) {
+  <label>{{ field.label }}<input [type]="field.type || 'text'" [value]="reportData()[field.key]" (change)="setReportField(field.key, $any($event.target).value)"></label>
+}
+<label>Logo do cliente (até 2 MB)<input type="file" accept="image/png,image/jpeg,image/webp" (change)="selectClientLogo($event)"></label>
+@if (reportData().clienteLogoImagem) { <img [src]="reportData().clienteLogoImagem" alt="Logo do cliente" width="120"><button type="button" (click)="clearClientLogo()">Remover logo</button> }
+<label>Observações<textarea [value]="reportData().observacoes" (change)="setReportField('observacoes', $any($event.target).value)"></textarea></label>
+@for (section of reportData().extraSections; track $index; let i = $index) {
+  <label>Título da seção adicional<input [value]="section.title" (change)="setExtraSection(i, 'title', $any($event.target).value)"></label>
+  <label>Texto<textarea [value]="section.text" (change)="setExtraSection(i, 'text', $any($event.target).value)"></textarea></label>
+  <button type="button" (click)="removeExtraSection(i)">Remover seção</button>
+}
+<button tuiButton size="s" type="button" (click)="addExtraSection()">Acrescentar seção</button></div></div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-sequence"
+              [class.acc-group-label--open]="secSequenceOpen" [attr.aria-expanded]="secSequenceOpen"
+              aria-controls="primary-section-sequence" (click)="secSequenceOpen = !secSequenceOpen">
+              <tui-icon icon="@tui.list-ordered"></tui-icon> 2. Sequência operacional
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-sequence" class="sidebar-section-content"
+            [hidden]="!secSequenceOpen" aria-labelledby="primary-heading-sequence"><div class="acc-body"><p class="acc-hint">A sequência acompanha os estágios e o programa de bombeio. Volumes, vazões, tempos e receitas são calculados. Confira a prévia em Volumes e programa.</p>
+<label>Preparação<textarea [value]="reportData().sequence.preparation" (change)="setSequenceField('preparation', $any($event.target).value)"></textarea></label>
+<label>Pressão de teste das linhas (psi)<input type="number" min="0" [value]="reportData().sequence.lineTestPressurePsi" (change)="setSequenceField('lineTestPressurePsi', $any($event.target).value)"></label>
+<label>Duração do teste (min)<input type="number" min="0" [value]="reportData().sequence.lineTestDurationMin" (change)="setSequenceField('lineTestDurationMin', $any($event.target).value)"></label>
+<label>Referência do teste<input [value]="reportData().sequence.lineTestReference" (change)="setSequenceField('lineTestReference', $any($event.target).value)"></label>
+@for (stage of form().stages; track stage.id) {
+  <strong>{{ stage.name }}</strong>
+  @for (step of stage.steps; track step.id) {
+    <label>Observação — {{ stepLabel(step) }}<textarea [value]="reportData().sequence.stepNotes[step.id] || ''" (change)="setSequenceNote('stepNotes', step.id, $any($event.target).value)"></textarea></label>
+  }
+}
+@for (item of cementFluids(); track item.id) {
+  <label>Laboratório — {{ item.name }}<textarea [value]="reportData().sequence.laboratoryNotes[item.id] || ''" (change)="setSequenceNote('laboratoryNotes', item.id, $any($event.target).value)"></textarea></label>
+}
+<label>Encerramento<textarea [value]="reportData().sequence.closing" (change)="setSequenceField('closing', $any($event.target).value)"></textarea></label></div></div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-operation"
+              [class.acc-group-label--open]="secOperationOpen" [attr.aria-expanded]="secOperationOpen"
+              aria-controls="primary-section-operation" (click)="secOperationOpen = !secOperationOpen">
+              <tui-icon icon="@tui.layers"></tui-icon> 3. Dados da operação
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-operation" class="sidebar-section-content"
+            [hidden]="!secOperationOpen" aria-labelledby="primary-heading-operation"><div class="acc-body acc-body--sections"><tui-accordion [closeOthers]="false" size="s">        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secWellOpen">
+          <tui-icon icon="@tui.layers"></tui-icon> 3.1 Poço e fases
+        </button>
+        <tui-expand [expanded]="secWellOpen">
+          <div class="acc-body">
+            <app-poco-selector [geometry]="pocoGeometry" [poco]="poco"
+              (changed)="applyPoco($event)"></app-poco-selector>
+            <app-well-structure-form [phases]="phasesArray" [depthUnit]="depthUnit()"
+              [issues]="geometryIssues()" (add)="addPhase()" (remove)="removePhase($event)"
+              (change)="onPhaseEdit()"></app-well-structure-form>
+            <app-phase-survey-editor [phases]="phasesArray" [geometry]="fullWell()"
+              [depthUnit]="depthUnit()" (changed)="onSurveyEdit()"></app-phase-survey-editor>
+            <app-caliper-las-import [profile]="caliper()" [phases]="phases()"
+              (imported)="importCaliper($event)" (removed)="removeCaliper()"></app-caliper-las-import>
+            <app-operation-phase-selector [phases]="phases()" [selectedPhaseId]="selectedPhaseId()"
+              [depthUnit]="depthUnit()" (selectedPhaseIdChange)="selectOperationPhase($event)"></app-operation-phase-selector>
+            <p class="acc-hint">
+              A parede externa do anular vem destas fases: ID do revestimento anterior acima
+              da sua sapata, diâmetro do furo abaixo dela.
+            </p>
+          </div>
+        </tui-expand>
+
+        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secTargetOpen">
+          <tui-icon icon="@tui.circle-dot"></tui-icon> 3.2 Revestimento ou liner
+        </button>
+        <tui-expand [expanded]="secTargetOpen">
+          <div class="acc-body">
+            <label>Tipo
+              <select [value]="form().targetKind"
+                (change)="setText('targetKind', $any($event.target).value)">
+                <option value="conventional">Convencional</option>
+                <option value="liner">Liner</option>
+              </select>
+            </label>
+            <label>Sapata ({{ depthUnit() }})
+              <input type="number" [value]="selectedPhaseId() ? depthValue(form().shoeMD) : null" readonly title="Derivado do cadastro da fase selecionada"></label>
+            <label>Colar flutuante ({{ depthUnit() }})
+              <input type="number" [value]="depthValue(form().floatCollarMD)"
+                (change)="setField('floatCollarMD', depthRaw($any($event.target).value))"></label>
+            @if (form().targetKind === 'liner') {
+              <label>Topo do liner ({{ depthUnit() }})
+                <input type="number" [value]="depthValue(form().linerTopMD)"
+                  (change)="setField('linerTopMD', depthRaw($any($event.target).value))"></label>
+              <label>ID da coluna (pol)
+                <input type="number" step="0.001" [value]="form().settingIdIn"
+                  (change)="setField('settingIdIn', $any($event.target).value)"></label>
+              <label>OD da coluna (pol)
+                <input type="number" step="0.001" [value]="form().settingOdIn"
+                  (change)="setField('settingOdIn', $any($event.target).value)"></label>
+            }
+            <label>ID do revestimento (pol)
+              <input type="number" [value]="selectedPhaseId() ? form().casingIdIn : null" readonly title="Derivado do cadastro da fase selecionada"></label>
+            <label>OD do revestimento (pol)
+              <input type="number" [value]="selectedPhaseId() ? form().casingOdIn : null" readonly title="Derivado do cadastro da fase selecionada"></label>
+          </div>
+        </tui-expand>
+
+        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secAnnulusOpen">
+          <tui-icon icon="@tui.move-vertical"></tui-icon> 3.3 Anular e retorno
+        </button>
+        <tui-expand [expanded]="secAnnulusOpen">
+          <div class="acc-body">
+            <label>Excesso anular estimado (%)
+              <input type="number" step="1" [value]="form().excessPct"
+                (change)="setField('excessPct', $any($event.target).value)"></label>
+            <label>Diâmetro medido (pol)
+              <input type="number" step="0.01" [value]="form().measuredHoleIn"
+                (change)="setField('measuredHoleIn', $any($event.target).value)"></label>
+            <p class="acc-hint">Com diâmetro medido, o excesso não é aplicado de novo.</p>
+            <label>Contrapressão no retorno (psi)
+              <input type="number" [value]="form().returnPressurePsi"
+                (change)="setField('returnPressurePsi', $any($event.target).value)"></label>
+            <label>Condição da cabeça
+              <select [value]="form().headCondition"
+                (change)="setText('headCondition', $any($event.target).value)">
+                <option value="closed-head">Fechada</option>
+                <option value="vented-free-surface">Ventilada (superfície livre)</option>
+              </select>
+            </label>
+          </div>
+        </tui-expand>
+
+        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secStagesOpen">
+          <tui-icon icon="@tui.list-ordered"></tui-icon> 3.4 Estágios, intervalos e dispositivos
+        </button>
+        <tui-expand [expanded]="secStagesOpen">
+          <div class="acc-body">
+            @for (stage of form().stages; track stage.id; let stageIndex = $index) {
+              <div class="acc-group">
+                <label>Nome do estágio<input [value]="stage.name" (change)="setStage(stageIndex, { name: $any($event.target).value })"></label>
+                <label>Saída ativa ({{ depthUnit() }})<input type="number" [value]="depthValue(stage.outletMD)" (change)="setStageDepth(stageIndex, 'outletMD', $any($event.target).value)"></label>
+                <label>Assento ({{ depthUnit() }})<input type="number" [value]="depthValue(stage.seatMD)" (change)="setStageDepth(stageIndex, 'seatMD', $any($event.target).value)"></label>
+                <label>TOC alvo ({{ depthUnit() }})
+                  <input type="number" [value]="depthValue(stage.targetTocMD)"
+                    (change)="setTargetToc(stageIndex, depthRaw($any($event.target).value))"></label>
+                @for (placement of stage.placements; track placement.id; let placementIndex = $index) {
+                  <label>Pasta do intervalo {{ placementIndex + 1 }}<select [value]="placement.fluidId" (change)="setPlacement(stageIndex, placementIndex, 'fluidId', $any($event.target).value)">@for (item of cementFluids(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }</select></label>
+                  <label>Topo ({{ depthUnit() }})<input type="number" [value]="depthValue(placement.topMD)" (change)="setPlacement(stageIndex, placementIndex, 'topMD', $any($event.target).value)"></label>
+                  <label>Base ({{ depthUnit() }})<input type="number" [value]="depthValue(placement.bottomMD)" (change)="setPlacement(stageIndex, placementIndex, 'bottomMD', $any($event.target).value)"></label>
+                  <button type="button" [disabled]="stage.placements.length <= 1" (click)="removePlacement(stageIndex, placementIndex)">Remover intervalo</button>
+                  <label>Reserva de mistura de {{ placement.id }} (bbl)
+                    <input type="number" step="1" [value]="placement.mixingReserveBbl"
+                      (change)="setMixingReserve(stageIndex, placementIndex, $any($event.target).value)"></label>
+                }
+                <button tuiButton size="s" type="button" (click)="addPlacement(stageIndex)">Dividir intervalo e acrescentar pasta</button>
+                @if (stageIndex > 0) {
+                  <button tuiButton size="s" type="button"
+                    (click)="removeStage(stageIndex)">Remover estágio</button>
+                }
+              </div>
+            }
+            <button tuiButton size="s" type="button" (click)="addStage()">Acrescentar estágio</button>
+            <p class="acc-hint">
+              A reserva de mistura aumenta o material preparado e não entra no volume bombeado.
+            </p>
+          </div>
+        </tui-expand>
+
+        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secLimitsOpen">
+          <tui-icon icon="@tui.triangle-alert"></tui-icon> 3.5 Janela e equipamento
+        </button>
+        <tui-expand [expanded]="secLimitsOpen">
+          <div class="acc-body">
+            <label>Gradiente de poro no topo (ppg)
+              <input type="number" step="0.1" [value]="form().poreTopPpg"
+                (change)="setField('poreTopPpg', $any($event.target).value)"></label>
+            <label>Gradiente de poro na base (ppg)
+              <input type="number" step="0.1" [value]="form().porePpg"
+                (change)="setField('porePpg', $any($event.target).value)"></label>
+            <label>Gradiente de fratura no topo (ppg)
+              <input type="number" step="0.1" [value]="form().fractureTopPpg"
+                (change)="setField('fractureTopPpg', $any($event.target).value)"></label>
+            <label>Gradiente de fratura na base (ppg)
+              <input type="number" step="0.1" [value]="form().fracturePpg"
+                (change)="setField('fracturePpg', $any($event.target).value)"></label>
+            @if (form().pressureWindowRows?.length) {
+              <div class="acc-hint" data-window-rows>
+                <strong>Janela por trechos ({{ form().pressureWindowRows!.length }})</strong>
+                @for (row of form().pressureWindowRows!; track $index) {
+                  <div>{{ fmtDepth(row.topMD) }}–{{ fmtDepth(row.bottomMD) }} {{ depthUnit() }}:
+                    poro {{ fmt(row.topPorePpg ?? row.porePpg, 2) }}→{{ fmt(row.porePpg, 2) }} ppg,
+                    fratura {{ fmt(row.topFracturePpg ?? row.fracturePpg, 2) }}→{{ fmt(row.fracturePpg, 2) }} ppg</div>
+                }
+                Editar um dos campos acima substitui os trechos por um intervalo único.
+              </div>
+            }
+            <p class="acc-hint">
+              A janela só é avaliada no trecho aberto; atrás do revestimento anterior
+              fica indisponível.
+            </p>
+            <label>Pressão máxima (psi)
+              <input type="number" [value]="form().maxPressurePsi"
+                (change)="setField('maxPressurePsi', $any($event.target).value)"></label>
+            <label>Vazão máxima (bpm)
+              <input type="number" step="0.1" [value]="form().maxRateBpm"
+                (change)="setField('maxRateBpm', $any($event.target).value)"></label>
+            <label>Potência do motor (HP)
+              <input type="number" [value]="form().motorHp"
+                (change)="setField('motorHp', $any($event.target).value)"></label>
+            <label>Eficiência (0–1)
+              <input type="number" step="0.05" [value]="form().efficiency"
+                (change)="setField('efficiency', $any($event.target).value)"></label>
+            <div class="acc-group pr-friction-settings">
+              <strong>Atrito hidráulico</strong>
+              <label>Interior do tubo / revestimento
+                <select data-friction-path="internal" [value]="form().internalFrictionLevel"
+                  (change)="setText('internalFrictionLevel', $any($event.target).value)">
+                  <option value="low">Baixo — tubo liso (1,00×)</option>
+                  <option value="medium">Médio — condição típica (1,15×)</option>
+                  <option value="high">Alto — condição severa (1,35×)</option>
+                </select>
+              </label>
+              <label>Retorno anular / parede do poço
+                <select data-friction-path="annular" [value]="form().annularFrictionLevel"
+                  (change)="setText('annularFrictionLevel', $any($event.target).value)">
+                  <option value="low">Baixo — parede lisa (1,00×)</option>
+                  <option value="medium">Médio — condição típica (1,15×)</option>
+                  <option value="high">Alto — condição severa (1,35×)</option>
+                </select>
+              </label>
+              <p class="acc-hint">
+                O motor calcula a perda de cada pasta e fluido com seus valores de n e k.
+                Estes níveis corrigem a perda-base pela condição média das superfícies;
+                o atrito anular altera diretamente o ECD.
+              </p>
+            </div>
+          </div>
+        </tui-expand>
+
+</tui-accordion></div></div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-pumping"
+              [class.acc-group-label--open]="secPumpingOpen" [attr.aria-expanded]="secPumpingOpen"
+              aria-controls="primary-section-pumping" (click)="secPumpingOpen = !secPumpingOpen">
+              <tui-icon icon="@tui.play"></tui-icon> 4. Fluidos e bombeio
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-pumping" class="sidebar-section-content"
+            [hidden]="!secPumpingOpen" aria-labelledby="primary-heading-pumping"><div class="acc-body"><strong>4.1 Fluidos</strong>
+            @for (item of otherFluids(); track item.id) {
+              <div class="acc-group pr-fluid-card" [attr.data-fluid-id]="item.id">
+                <div class="pr-fluid-card__head">
+                  <strong>{{ item.name }} ({{ item.kind }})</strong>
+                  <button type="button" class="pr-mini" [disabled]="fluidInUse(item.id)"
+                    [title]="fluidInUse(item.id) ? 'Em uso no programa' : 'Remover fluido'"
+                    (click)="removeFluid(item.id)">✕</button>
+                </div>
+                <label>Densidade (ppg)
+                  <input type="number" step="0.1" [value]="item.densityPpg"
+                    (change)="setFluidDensity(item.id, $any($event.target).value)"></label>
+                <label>Volume utilizado (bbl)
+                  <input type="number" min="0" step="0.1" [value]="fluidProgrammedVolume(item.id)"
+                    [readonly]="!fluidVolumeEditable(item.id)"
+                    [title]="isPreflushFluid(item.id) ? 'Calculado pelo simulador; digite para informar outro volume'
+                      : fluidVolumeEditable(item.id) ? 'Volume que entra na sequência operacional' : 'Volume inicial calculado pela capacidade do poço'"
+                    (change)="setFluidVolume(item.id, $any($event.target).value)"></label>
+                @if (isPreflushFluid(item.id)) {
+                  @if (preflushSummary(item.id); as preflush) {
+                    <div class="pr-preflush" data-preflush>
+                      <p class="acc-hint">{{ preflush.text }}</p>
+                      @if (preflush.overridden) {
+                        <p class="acc-hint pr-preflush__override">O volume informado substitui o calculado.</p>
+                        <button type="button" class="pr-link" (click)="useCalculated(item.id)">Usar o volume calculado pelo simulador</button>
+                      }
+                      @if (preflush.criteria; as criteria) {
+                        <label>Tempo de contato mínimo (min)
+                          <input type="number" min="0" step="0.5" data-preflush-field="contactTimeMin" [value]="criteria.contactTimeMin"
+                            (change)="setPreflushCriterion(item.id, 'contactTimeMin', $any($event.target).value)"></label>
+                        <label>Comprimento anular mínimo (m)
+                          <input type="number" min="0" step="1" data-preflush-field="annularLengthM" [value]="criteria.annularLengthM"
+                            (change)="setPreflushCriterion(item.id, 'annularLengthM', $any($event.target).value)"></label>
+                        <p class="acc-hint">
+                          V = máx(t·Q, L·C), com Q a vazão do passo e C a capacidade anular da pasta de fundo
+                          (volume do intervalo sobre a altura, com caliper e excesso). Partida: 8 min de contato
+                          e, no espaçador, 152,4 m (500 ft) de anular (Nelson e Guillot, cap. 5).
+                        </p>
+                      }
+                    </div>
+                  }
+                }
+
+                <div class="pr-fluid-rheology">
+                  <strong>Reologia para o cálculo hidráulico</strong>
+                  <label>Índice de comportamento n
+                    <input type="number" min="0.000001" step="any"
+                      data-rheology-field="n"
+                      [attr.aria-label]="'Índice de comportamento n de ' + item.name"
+                      [value]="item.rheology.n"
+                      (input)="setFluidRheology(item.id, 'n', $any($event.target).value)"></label>
+                  <label>Consistência k (lbf·sⁿ/ft²)
+                    <input type="number" min="0.000000001" step="any"
+                      data-rheology-field="kLbfSnFt2"
+                      [attr.aria-label]="'Consistência k de ' + item.name"
+                      [value]="item.rheology.kLbfSnFt2"
+                      (input)="setFluidRheology(item.id, 'kLbfSnFt2', $any($event.target).value)"></label>
+                  <p class="acc-hint pr-fluid-rheology__source">
+                    Origem: n <strong>{{ fluidRheologySourceLabel(item, 'n') }}</strong> ·
+                    k <strong>{{ fluidRheologySourceLabel(item, 'kLbfSnFt2') }}</strong>.
+                  </p>
+                  @if (fluidProgrammedVolume(item.id) <= 0 && form().initialFluidId !== item.id) {
+                    <p class="acc-hint pr-fluid-rheology__unused">
+                      Este fluido está sem volume na sequência e não altera a hidráulica enquanto não for utilizado.
+                    </p>
+                  }
+                  @if (usesReferenceRheology(item)) {
+                    <p class="acc-hint pr-fluid-rheology__estimate">
+                      Reologia de referência (R3 §12-7, cenário MINA-28BD): ponto de partida
+                      para um programa novo, não medição deste fluido. Informe n e k do ensaio
+                      para representar sua perda de carga no ECD.
+                    </p>
+                  }
+                  @if (usesSimplifiedWaterRheology(item)) {
+                    <p class="acc-hint pr-fluid-rheology__estimate">
+                      Estimativa simplificada de água a 1 cP: n = 1 e
+                      k = 0,000020885 lbf·sⁿ/ft². Informe os valores do fluido para
+                      representar sua perda de carga no ECD.
+                    </p>
+                  }
+                </div>
+              </div>
+            }
+<tui-accordion [closeOthers]="false" size="s">        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secProgramOpen">
+          <tui-icon icon="@tui.play"></tui-icon> 4.2 Programa de bombeio
+        </button>
+        <tui-expand [expanded]="secProgramOpen">
+          <div class="acc-body">
+            @for (stage of form().stages; track stage.id; let stageIndex = $index) {
+              <div class="acc-group">
+                <strong>{{ stage.name }}</strong>
+                <ol class="pr-steps">
+                  @for (step of stage.steps; track step.id; let stepIndex = $index) {
+                    <li>
+                      <span class="pr-step-label">{{ stepLabel(step) }}</span>
+                      @if (step.kind === 'pump') {
+                        <label>{{ quantityLabel(step) }}<input type="number" step="any" [value]="quantityValue(step)" (change)="setStepQuantity(stageIndex, step.id, $any($event.target).value)"></label>
+                        <label>Vazão (bpm)
+                          <input type="number" step="0.5" [value]="step.rateBpm"
+                            (change)="setStepRate(stageIndex, step.id, $any($event.target).value)"></label>
+                      }
+                      @if (step.kind === 'pause') {
+                        <label>Duração (min)
+                          <input type="number" step="1" [value]="step.durationMin"
+                            (change)="setPauseDuration(stageIndex, step.id, $any($event.target).value)"></label>
+                      }
+                      <span class="pr-step-actions">
+                        <button type="button" (click)="moveStepBy(stageIndex, stepIndex, -1)" title="Subir">↑</button>
+                        <button type="button" (click)="moveStepBy(stageIndex, stepIndex, 1)" title="Descer">↓</button>
+                        <button type="button" (click)="repeatStepAt(stageIndex, stepIndex)" title="Repetir dividindo o volume">⧉</button>
+                        <button type="button" (click)="removeStepAt(stageIndex, stepIndex)" title="Remover">✕</button>
+                      </span>
+                      @if (stepOverridden(step)) {
+                        <button type="button" class="pr-link pr-step-reset" (click)="resetStepQuantity(stageIndex, step.id)">Usar o volume calculado pelo simulador</button>
+                      }
+                    </li>
+                  }
+                </ol>
+                <div class="pr-step-add">
+                  <button tuiButton size="s" type="button" (click)="addSpacer(stageIndex)">Espaçador</button>
+                  <button tuiButton size="s" type="button" (click)="addPause(stageIndex)">Pausa</button>
+                </div>
+              </div>
+            }
+          </div>
+        </tui-expand>
+
+</tui-accordion></div></div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-paste"
+              [class.acc-group-label--open]="secPasteOpen" [attr.aria-expanded]="secPasteOpen"
+              aria-controls="primary-section-paste" (click)="secPasteOpen = !secPasteOpen">
+              <tui-icon icon="@tui.droplets"></tui-icon> 5. Pasta
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-paste" class="sidebar-section-content"
+            [hidden]="!secPasteOpen" aria-labelledby="primary-heading-paste"><div class="acc-body">            <button tuiButton size="s" type="button" (click)="addSlurry()">Acrescentar pasta</button>
+
+            <label>Composição da pasta
+              <select aria-label="Pasta de cimento para editar" [value]="selectedSlurryId()"
+                (change)="selectSlurry($any($event.target).value)">
+                @for (item of cementFluids(); track item.id) {
+                  <option [value]="item.id">{{ item.name }}</option>
+                }
+              </select>
+            </label>
+            <button tuiButton size="s" appearance="secondary" type="button" (click)="tab.set('receita')">Ver receita com aditivos</button>
+            <button tuiButton size="s" appearance="secondary" type="button" (click)="aditivosModalOpen.set(true)">Gerenciar aditivos desta pasta</button>
+            @if (selectedRecipe(); as recipe) {
+              <label>Nome da pasta<input [value]="selectedSlurryName()" (change)="renameSlurry($any($event.target).value)"></label><label>Densidade alvo (ppg)
+                <input type="number" step="0.1" [value]="recipe.density"
+                  (change)="setRecipeField('density', $any($event.target).value)"></label>
+              <label>Classe do cimento
+                <select [value]="recipe.cementClass" (change)="setRecipeField('cementClass', $any($event.target).value)">@for (entry of cimentoClasses; track entry.value) {<option [value]="entry.value">{{ entry.label }}</option>}</select></label>
+              <label>Água doce (%)
+                <input type="number" step="1" [value]="recipe.waterSplitFresh"
+                  (change)="setRecipeField('waterSplitFresh', $any($event.target).value)"></label>
+              <label>Sílica (% BWOC)
+                <input type="number" step="1" [value]="recipe.silica"
+                  (change)="setRecipeField('silica', $any($event.target).value)"></label>
+              <label>NaCl (% BWOW)
+                <input type="number" step="1" [value]="recipe.nacl"
+                  (change)="setRecipeField('nacl', $any($event.target).value)"></label>
+              <label>Temperatura de superfície (°C)
+                <input type="number" step="1" [value]="recipe.surfaceTemp"
+                  (change)="setRecipeField('surfaceTemp', $any($event.target).value)"></label>
+            }<label>BHCT (°C)<input type="number" [value]="selectedRecipe()?.bhct" (change)="setRecipeField('bhct', $any($event.target).value)"></label>
+<label>BHST (°C)<input type="number" [value]="selectedRecipe()?.bhst" (change)="setRecipeField('bhst', $any($event.target).value)"></label>
+<label>Densidade utilizada no bombeio (ppg)<input type="number" step="any" [value]="selectedPhysicalSlurry()?.densityPpg" (change)="setFluidDensity(selectedSlurryId(), $any($event.target).value)"></label>
+<label>Índice de comportamento n<input type="number" step="any" [value]="selectedPhysicalSlurry()?.rheology?.n" (input)="setFluidRheology(selectedSlurryId(), 'n', $any($event.target).value)"></label>
+<label>Consistência k (lbf·sⁿ/ft²)<input type="number" step="any" [value]="selectedPhysicalSlurry()?.rheology?.kLbfSnFt2" (input)="setFluidRheology(selectedSlurryId(), 'kLbfSnFt2', $any($event.target).value)"></label>
+<p class="acc-hint">Origem da densidade: {{ selectedPhysicalSlurry()?.propertySources?.densityPpg?.source === 'entered' ? 'Informada manualmente' : 'Estimada pela composição' }}. Um valor manual é preservado ao editar a composição.</p>
+<label>Água salgada (%)<input type="number" [value]="selectedRecipe()?.waterSplitSea" readonly></label>
+<label>Origem dos parâmetros<select [value]="selectedRecipeParameters()?.source || 'calculated'" (change)="setRecipeParameters('source', $any($event.target).value)"><option value="calculated">Calcular pela composição</option><option value="manual">Informar manualmente</option></select></label>
+@if (selectedRecipeParameters()?.source === 'manual') {
+  <label>Rendimento (ft³/ft³ cimento)<input type="number" step="any" [value]="selectedRecipeParameters()?.yieldFt3" (change)="setRecipeParameters('yieldFt3', $any($event.target).value)"></label>
+  <label>FAC (gal/ft³ cimento)<input type="number" step="any" [value]="selectedRecipeParameters()?.facGpc" (change)="setRecipeParameters('facGpc', $any($event.target).value)"></label>
+  <label>FAM (gal/ft³ cimento)<input type="number" step="any" [value]="selectedRecipeParameters()?.famGpc" (change)="setRecipeParameters('famGpc', $any($event.target).value)"></label>
+}
+<button tuiButton size="s" type="button" [disabled]="fluidInUse(selectedSlurryId())" (click)="removeFluid(selectedSlurryId())">Remover pasta sem uso</button></div></div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-additives"
+              [class.acc-group-label--open]="secAditivosOpen" [attr.aria-expanded]="secAditivosOpen"
+              aria-controls="primary-section-additives" (click)="secAditivosOpen = !secAditivosOpen">
+              <tui-icon icon="@tui.flask-conical"></tui-icon> 6. Aditivos
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-additives" class="sidebar-section-content"
+            [hidden]="!secAditivosOpen" aria-labelledby="primary-heading-additives"><div class="acc-body"><label>Pasta selecionada<select aria-label="Pasta de cimento dos aditivos" [value]="selectedSlurryId()" (change)="selectSlurry($any($event.target).value)">
+  @for (item of cementFluids(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
+</select></label>
+            <p class="acc-hint">
+              Aditivos de <strong>{{ selectedSlurryName() }}</strong>. Eles mudam o rendimento
+              da pasta; o volume bombeado continua vindo do TOC e da geometria.
+            </p>
+            @for (row of additiveForms.controls; track $index; let i = $index) {
+              <div class="acc-group">
+                <label>Produto<input [value]="row.get('name')?.value"
+                  (change)="row.get('name')?.setValue($any($event.target).value); onAditivoEdit()"></label>
+                <label class="acc-check"><input type="checkbox" [checked]="row.get('ativo')?.value !== false"
+                  (change)="row.get('ativo')?.setValue($any($event.target).checked); onAditivoEdit()">Ativo na receita</label>
+                <label>Concentração ({{ aditivoUnit(i) }})
+                  <input type="number" step="0.01" [value]="row.get('conc')?.value"
+                    (change)="row.get('conc')?.setValue(+$any($event.target).value); onAditivoEdit()"></label>
+                <label>Unidade de dosagem<select [value]="row.get('unidadeDosagem')?.value"
+                  (change)="row.get('unidadeDosagem')?.setValue($any($event.target).value); onAditivoEdit()">
+                  @for (unit of additiveUnits; track unit.value) { <option [value]="unit.value">{{ unit.label }}</option> }
+                </select></label>
+                <button tuiButton size="s" type="button" (click)="removeAditivo(i)">Remover</button>
+              </div>
+            }
+            @if (!additiveForms.length) {
+              <p class="acc-hint">Nenhum aditivo nesta pasta.</p>
+            }
+            <label>Acrescentar do catálogo
+              <select #catalogo aria-label="Acrescentar aditivo do catálogo" (change)="
+                catalogo.selectedIndex > 0
+                  && addAditivoCatalogo(catalogoAditivos[catalogo.selectedIndex - 1]);
+                catalogo.selectedIndex = 0">
+                <option value="">escolher…</option>
+                @for (entry of catalogoAditivos; track entry.catalogId) {
+                  <option [value]="entry.catalogId">{{ entry.name }}</option>
+                }
+              </select>
+            </label>
+            <button tuiButton size="s" type="button" (click)="addAditivo()">Aditivo manual</button>
+            <button tuiButton size="s" type="button"
+              (click)="aditivosModalOpen.set(true)">Gerenciar aditivos</button>
+            <button tuiButton size="s" appearance="secondary" type="button" (click)="tab.set('receita')">Ver receita com aditivos</button></div></div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-section-title">
+            <button type="button" class="acc-group-label" id="primary-heading-presentation"
+              [class.acc-group-label--open]="secPresentationOpen" [attr.aria-expanded]="secPresentationOpen"
+              aria-controls="primary-section-presentation" (click)="secPresentationOpen = !secPresentationOpen">
+              <tui-icon icon="@tui.chart-no-axes-combined"></tui-icon> 7. Medições e apresentação
+              <tui-icon icon="@tui.chevron-down" class="acc-group-chevron" aria-hidden="true"></tui-icon>
+            </button>
+          </h2>
+          <div id="primary-section-presentation" class="sidebar-section-content"
+            [hidden]="!secPresentationOpen" aria-labelledby="primary-heading-presentation"><div class="acc-body acc-body--sections"><tui-accordion [closeOthers]="false" size="s">        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secRefsOpen">
+          <tui-icon icon="@tui.crosshair"></tui-icon> 7.1 Apresentação e referências
+        </button>
+        <tui-expand [expanded]="secRefsOpen">
+          <div class="acc-body">
+            <label>Modo de volume
+              <select [value]="volumeAxis()" (change)="setVolumeAxis($any($event.target).value)">
+                <option value="total-pumped">Volume total bombeado</option>
+                <option value="cement-pumped">Volume de pasta bombeada</option>
+              </select>
+            </label>
+            @for (reference of references(); track reference.id) {
+              <div class="acc-row">
+                <span>{{ reference.name }} · {{ fmtDepth(reference.md) }} {{ depthUnit() }}</span>
+                @if (reference.id.startsWith('ref-')) {
+                  <button type="button" class="pr-mini"
+                    (click)="removeReference(reference.id)">✕</button>
+                }
+              </div>
+            }
+            <label>Nova referência de ECD (MD em {{ depthUnit() }})
+              <input type="number" step="1" #refMd></label>
+            <label>Nome
+              <input type="text" #refName></label>
+            <button tuiButton size="s" type="button"
+              (click)="addReference(depthRaw(refMd.value), refName.value); refMd.value = ''; refName.value = ''">
+              Adicionar referência
+            </button>
+          </div>
+        </tui-expand>
+
+        <button tuiAccordion class="acc-sub" type="button" [(tuiAccordion)]="secMeasureOpen">
+          <tui-icon icon="@tui.import"></tui-icon> 7.2 Medições
+        </button>
+        <tui-expand [expanded]="secMeasureOpen">
+          <div class="acc-body">
+            <label>Arquivo CSV
+              <input type="file" accept=".csv,text/csv" (change)="onCsvFile($event)"></label>
+            <label>Separador decimal
+              <select [value]="csvDecimal()" (change)="setCsvDecimal($any($event.target).value)">
+                <option value=".">ponto</option>
+                <option value=",">vírgula</option>
+              </select>
+            </label>
+            @if (csv(); as table) {
+              <label>Coluna de tempo
+                <select [value]="timeColumn()" (change)="timeColumn.set($any($event.target).value)">
+                  @for (header of table.headers; track header) {
+                    <option [value]="header">{{ header }}</option>
+                  }
+                </select>
+              </label>
+              <label>Unidade de tempo
+                <select [value]="timeUnit()" (change)="timeUnit.set($any($event.target).value)">
+                  <option value="min">min</option>
+                  <option value="s">s</option>
+                  <option value="h">h</option>
+                  <option value="timestamp">timestamp</option>
+                </select>
+              </label>
+              @if (timeUnit() === 'timestamp') {
+                <label>Fuso horário
+                  <input type="text" placeholder="UTC" [value]="timezone()"
+                    (change)="timezone.set($any($event.target).value)"></label>
+                <label>Origem
+                  <input type="text" placeholder="2026-09-18T12:00:00Z" [value]="originTimestamp()"
+                    (change)="originTimestamp.set($any($event.target).value)"></label>
+              }
+              <label>Offset (min)
+                <input type="number" step="0.1" [value]="importOffsetMin()"
+                  (change)="importOffsetMin.set(+$any($event.target).value)"></label>
+              <label class="acc-check"><input type="checkbox" [checked]="sortByTime()"
+                (change)="sortByTime.set($any($event.target).checked)"> Ordenar por tempo</label>
+              @for (channel of importChannels; track channel.id) {
+                <label>{{ channel.name }}
+                  <select [value]="channelColumn()[channel.id]"
+                    (change)="setChannelColumn(channel.id, $any($event.target).value)">
+                    <option value="">não mapear</option>
+                    @for (header of table.headers; track header) {
+                      <option [value]="header">{{ header }}</option>
+                    }
+                  </select>
+                </label>
+                <label>Unidade de {{ channel.name }}
+                  <select [value]="channelUnit()[channel.id]"
+                    (change)="setChannelUnit(channel.id, $any($event.target).value)">
+                    @for (unit of unitsFor(channel.quantity); track unit) {
+                      <option [value]="unit">{{ unit }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <button tuiButton size="s" type="button"
+                (click)="importDataset()">Incorporar ao cenário</button>
+            }
+            @for (entry of comparisons(); track entry.dataset.id) {
+              <div class="acc-row">
+                <label>Offset de {{ entry.dataset.name }} (min)
+                  <input type="number" step="0.1" [value]="entry.dataset.alignment.offsetMin"
+                    (change)="setDatasetOffset(entry.dataset.id, $any($event.target).value)"></label>
+                <button type="button" class="pr-mini" title="Remover conjunto"
+                  (click)="removeDataset(entry.dataset.id)">✕</button>
+              </div>
+            }
+          </div>
+        </tui-expand>
+
+</tui-accordion></div></div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ════ CONTEÚDO: só leitura ════ -->
+    <main class="sim-main">
+      @if (geometryIssues().length) {
+        <ul class="pr-issues">
+          @for (issue of geometryIssues(); track issue.code + issue.message) {
+            <li [class.pr-issue--error]="issue.level === 'error'">{{ issue.message }}</li>
+          }
+        </ul>
+      }
+
+      @switch (tab()) {
+
+        <!-- 1. Volumes e programa -->
+        @case ('volumes') {
+          <section class="pr-block"><h2>Sequência operacional</h2><ol>@for (line of sequencePreview(); track $index) { <li>{{ line }}</li> }</ol></section>
+          <section class="pr-block">
+            <h2>Resumo da operação</h2>
+            <div class="pr-metrics">
+              <div class="pr-metric"><span>Pasta dimensionada</span>
+                <strong>{{ fmt(volumes().totalCementPlannedBbl) }} bbl</strong></div>
+              <div class="pr-metric"><span>Pasta programada</span>
+                <strong>{{ fmt(volumes().totalCementProgrammedBbl) }} bbl</strong></div>
+              <div class="pr-metric"><span>Total bombeado</span>
+                <strong>{{ fmt(volumes().totalPumpedBbl) }} bbl</strong></div>
+              <div class="pr-metric"><span>Tempo total</span>
+                <strong>{{ fmt(volumes().totalTimeMin, 1) }} min</strong></div>
+            </div>
+          </section>
+
+          <section class="pr-block">
+            <h2>Volumes por colocação</h2>
+            @for (stage of volumes().stages; track stage.stageId) {
+              <h3>{{ stageName(stage.stageId) }}</h3>
+              <table class="pr-table">
+                <thead><tr><th>Colocação</th><th>Anular (bbl)</th><th>Retidos (bbl)</th>
+                  <th>Dimensionado (bbl)</th><th>Programado (bbl)</th><th>Reserva extra (bbl)</th>
+                  <th>Reserva de mistura (bbl)</th><th>Preparado (bbl)</th></tr></thead>
+                <tbody>
+                  @for (placement of stage.placements; track placement.placementId) {
+                    <tr>
+                      <td>{{ placement.placementId }}</td>
+                      <td>{{ fmt(placement.annularBbl) }}</td>
+                      <td>{{ fmt(placement.retainedBbl) }}</td>
+                      <td>{{ fmt(placement.plannedBbl) }}</td>
+                      <td>{{ fmt(placement.programmedBbl) }}</td>
+                      <td>{{ fmt(placement.reserveExtraBbl) }}</td>
+                      <td>{{ fmt(placement.mixingReserveBbl) }}</td>
+                      <td>{{ fmt(placement.preparedBbl) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <p class="pr-hint">
+                Deslocamento alvo {{ fmt(stage.displacementTargetBbl) }} bbl ·
+                programado {{ fmt(stage.displacementProgrammedBbl) }} bbl ·
+                TOC ideal {{ stage.idealToc ? fmt(stage.idealToc.tocMD, 1) + ' m' : 'indisponível' }} ·
+                tempo {{ fmt(stage.totalTimeMin, 1) }} min
+              </p>
+            }
+            <p class="pr-hint">
+              A reserva de mistura aumenta o material preparado e não entra no volume bombeado.
+            </p>
+          </section>
+
+          @if (transport(); as result) {
+            <section class="pr-block">
+              <h2>TOC ideal e colocação real</h2>
+              <table class="pr-table">
+                <thead><tr><th>Colocação</th><th>TOC ideal ({{ depthUnit() }})</th><th>TOC real ({{ depthUnit() }})</th>
+                  <th>Intervalos</th><th>Pasta retornada (bbl)</th></tr></thead>
+                <tbody>
+                  @for (placement of result.placements; track placement.placementId) {
+                    <tr>
+                      <td>{{ placement.placementId }}</td>
+                      <td>{{ idealTocOf(placement.stageId) }}</td>
+                      <td>{{ placement.actualTocMD === null ? 'não ficou no anular' : fmtDepth(placement.actualTocMD) }}</td>
+                      <td>{{ placement.actualIntervals.length }}{{ placement.fragmented ? ' (bolsões)' : '' }}</td>
+                      <td>{{ fmt(placement.returnedBbl) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <p class="pr-hint">
+                O TOC ideal vem do volume dimensionado; o real, das parcelas transportadas.
+                Quando a ordem bombeada diverge da intenção, vale o real.
+              </p>
+            </section>
+          }
+
+          <section class="pr-block">
+            <h2>Cronograma do programa</h2>
+            <table class="pr-table">
+              <thead><tr><th>Estágio</th><th>Passo</th><th>Tipo</th><th>Fluido</th>
+                <th>Origem da quantidade</th><th>Volume (bbl)</th><th>Vazão (bpm)</th>
+                <th>Duração (min)</th></tr></thead>
+              <tbody>
+                @for (stage of volumes().stages; track stage.stageId) {
+                  @for (step of stage.steps; track step.stepId) {
+                    <tr>
+                      <td>{{ stageName(stage.stageId) }}</td>
+                      <td>{{ step.stepId }}</td>
+                      <td>{{ step.kind }}</td>
+                      <td>{{ step.fluidId ?? '—' }}</td>
+                      <td>{{ step.source ?? '—' }}</td>
+                      <td>{{ fmt(step.volumeBbl) }}</td>
+                      <td>{{ step.rateBpm === null ? '—' : fmt(step.rateBpm, 2) }}</td>
+                      <td>{{ fmt(step.durationMin, 2) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+            <p class="pr-hint">
+              Pausa soma tempo e não soma volume. Este cronograma tem as mesmas durações
+              do motor, inclusive as pausas.
+            </p>
+          </section>
+        }
+
+        <!-- 2. Receita da pasta -->
+        @case ('receita') {
+          @if (!context().phase || context().issues.length && !baseRecipes().length) {
+            <p class="pr-hint" role="status">Selecione uma fase válida em Dados da operação → Poço e fases para calcular a receita.</p>
+          }
+          @for (entry of baseRecipes(); track entry.fluid.id) {
+            <section class="pr-block pr-base-recipe" [attr.data-fluid-id]="entry.fluid.id">
+              <h2>Receita da pasta de cimento — {{ entry.fluid.name }}</h2>
+              <p class="pr-hint">Base calculada por 1 pé³ de cimento / 1 saco de 94 lb. Cimento, água e aditivos ativos desta pasta.</p>
+              @if (entry.base; as base) {
+                @if (base.rows.length) {
+                  <div class="pr-metrics">
+                    <div class="pr-metric"><span>Peso específico calculado</span><strong>{{ fmt(base.densityPpg) }} ppg</strong></div>
+                    <div class="pr-metric"><span>Rendimento</span><strong>{{ fmt(base.yieldFt3PerFt3Cement, 3) }} ft³/ft³</strong></div>
+                    <div class="pr-metric"><span>FAC</span><strong>{{ fmt(base.facGpc) }} gpc</strong></div>
+                    <div class="pr-metric"><span>FAM</span><strong>{{ fmt(base.famGpc) }} gpc</strong></div>
+                    <div class="pr-metric"><span>Volume base</span><strong>{{ fmt(base.totalVolumeGal * 3.785411784) }} L</strong></div>
+                    <div class="pr-metric"><span>Massa base</span><strong>{{ fmt(base.totalMassLb * 0.45359237) }} kg</strong></div>
+                  </div>
+                  <table class="pr-table">
+                    <thead><tr><th>Produto</th><th>Código / origem</th><th>Concentração</th><th>Quantidade</th></tr></thead>
+                    <tbody>
+                      @for (row of base.rows; track $index) {
+                        <tr><td>{{ row.productName }}</td><td>{{ recipeCode(row, entry.fluid.id) }}</td>
+                          <td>{{ recipeConcentrationText(row) }}</td><td>{{ recipeQuantityText(row) }}</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                  @if (entry.fluid.recipeParameters?.source === 'manual') {
+                    <p class="pr-hint">Esta base mostra a composição calculada. A receita por volume abaixo usa os parâmetros manuais de rendimento, FAC e FAM.</p>
+                  }
+                } @else { <p class="pr-cell-warn">Composição inválida. Confira a densidade, a água e os aditivos.</p> }
+              } @else { <p class="pr-hint">Cadastre a composição desta pasta em Pasta.</p> }
+            </section>
+          }
+
+          @for (recipe of recipes().placements; track recipe.placementId) {
+            @if (recipe.rows.length) {
+              <section class="pr-block pr-volume-recipe" [attr.data-fluid-id]="recipe.fluidId">
+                <h2>Receita por volume — {{ fluidName(recipe.fluidId) }} · {{ stageName(recipe.stageId) }}</h2>
+                <p class="pr-hint">{{ fmt(recipe.preparedBbl) }} bbl preparados para {{ fmt(recipe.pumpedBbl) }} bbl bombeados. {{ recipe.parameterSource === 'manual' ? 'Parâmetros informados manualmente.' : 'Parâmetros calculados pela composição.' }}</p>
+                <div class="pr-metrics">
+                  <div class="pr-metric"><span>Sacos de cimento (94 lb)</span><strong>{{ fmt(recipe.sacks94lb, 2) }}</strong></div>
+                  <div class="pr-metric"><span>Água de mistura</span><strong>{{ fmt(recipe.mixWaterGal * 3.785411784, 2) }} L</strong></div>
+                  <div class="pr-metric"><span>Rendimento</span><strong>{{ fmt(recipe.yieldFt3PerFt3Cement, 3) }} ft³/ft³</strong></div>
+                  <div class="pr-metric"><span>FAC / FAM</span><strong>{{ fmt(recipe.facGpc) }} / {{ fmt(recipe.famGpc) }} gpc</strong></div>
+                </div>
+                <table class="pr-table">
+                  <thead><tr><th>Produto</th><th>Código / origem</th><th>Concentração</th><th>Quantidade</th></tr></thead>
+                  <tbody>
+                    @for (row of recipe.rows; track $index) {
+                      <tr>
+                        <td>{{ row.productName }}</td>
+                        <td>{{ recipeCode(row, recipe.fluidId) }}</td>
+                        <td>{{ recipeConcentrationText(row) }}</td>
+                        <td>{{ recipeQuantityText(row, true) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </section>
+            }
+          }
+
+
+          <section class="pr-block">
+            <h2>Fluidos e origem das propriedades</h2>
+            <table class="pr-table">
+              <thead><tr><th>Fluido</th><th>Tipo</th><th>Densidade (ppg)</th>
+                <th>Origem</th><th>n</th><th>k</th><th>Composição</th></tr></thead>
+              <tbody>
+                @for (item of form().fluids; track item.id) {
+                  <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.kind }}</td>
+                    <td>{{ fmt(item.densityPpg) }}</td>
+                    <td>{{ item.propertySources.densityPpg?.source ?? 'estimada' }}</td>
+                    <td>{{ fmt(item.rheology.n, 3) }}</td>
+                    <td>{{ fmt(item.rheology.kLbfSnFt2, 6) }}</td>
+                    <td>{{ item.recipe ? 'cadastrada' : 'sem composição' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+
+          <section class="pr-block">
+            <h2>Quantidades por colocação</h2>
+            @if (!recipes().placements.length) { <p class="pr-hint">Sem colocação dimensionada.</p> }
+            <table class="pr-table">
+              <thead><tr><th>Colocação</th><th>Bombeado (bbl)</th><th>Preparado (bbl)</th>
+                <th>Origem da receita</th><th>Rendimento (ft³/ft³)</th><th>FAC / FAM (gal/ft³)</th><th>Sacos 94 lb</th><th>Suprimento</th>
+                <th>Água (gal)</th><th>Origens substituídas</th></tr></thead>
+              <tbody>
+                @for (recipe of recipes().placements; track recipe.placementId) {
+                  <tr>
+                    <td>{{ fluidName(recipe.fluidId) }} · {{ stageName(recipe.stageId) }}</td>
+                    <td>{{ fmt(recipe.pumpedBbl) }}</td>
+                    <td>{{ fmt(recipe.preparedBbl) }}</td>
+                    <td>{{ recipe.parameterSource === 'manual' ? 'Manual' : 'Calculada' }}</td><td>{{ recipe.error ? 'Indisponível' : fmt(recipe.yieldFt3PerFt3Cement, 3) }}</td><td>{{ recipe.error ? 'Indisponível' : fmt(recipe.facGpc) + ' / ' + fmt(recipe.famGpc) }}</td>
+                    <td>{{ recipe.error ? 'Indisponível' : fmt(recipe.sacks94lb, 1) }}</td>
+                    <td>{{ recipe.error ? 'Indisponível' : recipe.supplySacks94 }}</td>
+                    <td>{{ recipe.error ? 'Indisponível' : fmt(recipe.mixWaterGal, 0) }}</td>
+                    <td>{{ recipe.overrides.length
+                      ? recipe.overrides.length + ' campo(s)' : 'nenhuma' }}</td>
+                  </tr>
+                  @if (recipe.error) { <tr><td colspan="10" class="pr-cell-warn">{{ recipe.error }}</td></tr> }
+                }
+              </tbody>
+            </table>
+            <p class="pr-hint">
+              Arredondar sacos para suprimento não muda o volume simulado. A reserva de
+              mistura entra no preparado e não no bombeado.
+            </p>
+          </section>
+
+          @if (recipes().totals.length) {
+            <section class="pr-block">
+              <h2>Total por produto</h2>
+              <p class="pr-hint">Somados apenas produtos com o mesmo tipo e a mesma unidade.</p>
+              <table class="pr-table">
+                <thead><tr><th>Produto</th><th>Tipo</th><th>Unidade</th>
+                  <th>Massa (lb)</th><th>Volume (gal)</th><th>Colocações</th></tr></thead>
+                <tbody>
+                  @for (total of recipes().totals; track total.productName + total.concentrationUnit) {
+                    <tr>
+                      <td>{{ total.productName }}</td>
+                      <td>{{ total.type }}</td>
+                      <td>{{ total.concentrationUnit }}</td>
+                      <td>{{ fmt(total.massLb, 1) }}</td>
+                      <td>{{ fmt(total.volumeGal, 1) }}</td>
+                      <td>{{ total.placementIds.join(', ') }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          }
+
+          <p class="pr-hint">
+            Curvas de espessamento e UCA são gráficos e foram removidas da tela; voltam
+            uma a uma. Quando voltarem, continuam sendo estimativa, não ensaio de laboratório.
+          </p>
+        }
+
+        <!-- 3. Simulador -->
+        @case ('simulador') {
+          @if (hydraulics()) {
+            <section class="pr-block">
+              <h2>Resumo</h2>
+              <div class="pr-metrics">
+                <div class="pr-metric"><span>Pressão de bombeio máxima</span>
+                  <strong>{{ fmt(hydraulicSummary().maxPumpPressurePsi, 0) }} psi</strong></div>
+                <div class="pr-metric"><span>BHP máximo</span>
+                  <strong>{{ fmt(hydraulicSummary().maxBhpPsi, 0) }} psi</strong></div>
+                <div class="pr-metric"><span>ECD máximo</span>
+                  <strong>{{ fmt(hydraulicSummary().maxEcdPpg, 2) }} ppg</strong></div>
+                <div class="pr-metric"><span>Uso da potência</span>
+                  <strong>{{ hydraulicSummary().powerUsagePct === null
+                    ? 'indisponível' : fmt(hydraulicSummary().powerUsagePct, 1) + '%' }}</strong></div>
+              </div>
+              @if (hydraulicSummary().narrowest; as margin) {
+                <p class="pr-hint">
+                  Menor margem até a fratura: {{ fmt(margin.psi, 1) }} psi a
+                  {{ fmtDepth(margin.md) }} {{ depthUnit() }}, aos {{ fmt(margin.timeMin, 2) }} min.
+                </p>
+              }
+              @if (hydraulicSummary().freeFall; as fall) {
+                <p class="pr-hint">
+                  Queda livre entre {{ fmt(fall.startMin, 1) }} e {{ fmt(fall.endMin, 1) }} min
+                  ({{ fmt(fall.durationMin, 1) }} min no total): a coluna interna desce mais rápido que o
+                  bombeio, com retorno de até {{ fmt(fall.maxOutletBpm, 2) }} bpm, vazio de até
+                  {{ fmt(fall.maxVoidBbl, 1) }} bbl no topo do revestimento e a cabeça em
+                  {{ fmt(fall.headPsi, 1) }} psi. Retorno acima do bombeado nesse período não é perda nem ganho.
+                </p>
+              }
+              @if (hydraulicSummary().outsideModel) {
+                <p class="pr-hint pr-cell-warn">
+                  {{ hydraulicSummary().outsideModel }} instante(s) fora do modelo. As curvas
+                  físicas param aí, sem truncar pressão em zero.
+                </p>
+              }
+            </section>
+
+            @if (operationCharts(); as charts) {
+              <app-operation-charts [data]="charts"
+                [selectedPhaseId]="selectedPhaseId()"></app-operation-charts>
+            }
+
+            @if (hydraulics()!.breaches.length) {
+              <section class="pr-block">
+                <h2>Limites excedidos</h2>
+                <table class="pr-table">
+                  <thead><tr><th>Limite</th><th>Início (min)</th><th>Fim (min)</th>
+                    <th>Pico</th><th>Limite</th><th>MD ({{ depthUnit() }})</th></tr></thead>
+                  <tbody>
+                    @for (breach of hydraulics()!.breaches; track breach.limit + breach.stageId) {
+                      <tr>
+                        <td>{{ breach.limit }}</td>
+                        <td>{{ fmt(breach.startTimeMin, 2) }}</td>
+                        <td>{{ fmt(breach.endTimeMin, 2) }}</td>
+                        <td>{{ fmt(breach.peakValue, 1) }}</td>
+                        <td>{{ fmt(breach.limitValue, 1) }}</td>
+                        <td>{{ breach.md === undefined ? '—' : fmt(breach.md, 1) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+                <p class="pr-hint">
+                  Limite excedido é demanda calculada fora do limite, não garantia de que o
+                  equipamento execute. O programa não foi podado.
+                </p>
+              </section>
+            }
+          } @else {
+            <p class="pr-hint">Sem simulação: o programa precisa estar dimensionado sem erro.</p>
+          }
+        }
+
+        <!-- 4. Esquemático -->
+        @case ('esquematico') {
+          <section class="pr-block">
+            <h2>Poço e revestimento-alvo</h2>
+            <table class="pr-table pr-kv">
+              <tbody>
+                <tr><th>Tipo</th><td>{{ form().targetKind === 'liner' ? 'Liner' : 'Convencional' }}</td></tr>
+                <tr><th>Sapata</th><td>{{ fmtDepth(form().shoeMD) }} {{ depthUnit() }}</td></tr>
+                <tr><th>Colar flutuante</th><td>{{ fmtDepth(form().floatCollarMD) }} {{ depthUnit() }}</td></tr>
+                @if (form().targetKind === 'liner') {
+                  <tr><th>Topo do liner</th><td>{{ fmtDepth(form().linerTopMD) }} {{ depthUnit() }}</td></tr>
+                  <tr><th>Coluna de assentamento</th>
+                    <td>{{ fmt(form().settingIdIn, 3) }} / {{ fmt(form().settingOdIn, 3) }} pol</td></tr>
+                }
+                <tr><th>Revestimento ID / OD</th>
+                  <td>{{ fmt(form().casingIdIn, 3) }} / {{ fmt(form().casingOdIn, 3) }} pol</td></tr>
+                <tr><th>Parede externa no trecho aberto</th>
+                  <td>{{ form().measuredHoleIn ? 'medida, ' + fmt(form().measuredHoleIn, 2) + ' pol'
+                    : 'nominal com excesso de ' + fmt(form().excessPct, 1) + '%' }}</td></tr>
+                <tr><th>Contrapressão no retorno</th><td>{{ fmt(form().returnPressurePsi, 1) }} psi</td></tr>
+                <tr><th>Condição da cabeça</th>
+                  <td>{{ form().headCondition === 'closed-head' ? 'Fechada' : 'Ventilada' }}</td></tr>
+                <tr><th>Atrito no interior do tubo</th>
+                  <td>{{ frictionLevelLabel(form().internalFrictionLevel) }}</td></tr>
+                <tr><th>Atrito no retorno anular</th>
+                  <td>{{ frictionLevelLabel(form().annularFrictionLevel) }}</td></tr>
+              </tbody>
+            </table>
+            <h3>Fases</h3>
+            <table class="pr-table">
+              <thead><tr><th>Fase</th><th>Topo ({{ depthUnit() }})</th><th>Base ({{ depthUnit() }})</th><th>Furo (pol)</th>
+                <th>Revestimento OD/ID (pol)</th><th>Sapata ({{ depthUnit() }})</th></tr></thead>
+              <tbody>
+                @for (phase of phases(); track phase.id) {
+                  <tr>
+                    <td>{{ phase.name }}</td>
+                    <td>{{ fmtDepth(phase.topMD) }}</td>
+                    <td>{{ fmtDepth(phase.bottomMD) }}</td>
+                    <td>{{ fmt(phase.holeDiameterIn, 3) }}</td>
+                    <td>{{ phase.casingOD === null ? '—' : fmt(phase.casingOD, 3) + ' / ' + fmt(phase.casingID, 3) }}</td>
+                    <td>{{ phase.shoeMD === null ? '—' : fmtDepth(phase.shoeMD) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+
+          <!-- A reprodução só move o esquemático, o 3D e o estado no instante: fica com eles. -->
+          <section class="pr-block">
+            <h2>Esquemático 2D</h2>
+            <ng-container *ngTemplateOutlet="playback"></ng-container>
+            <app-schematic-primaria [state]="schematicState()"></app-schematic-primaria>
+          </section>
+
+          @if (hydraulics()) {
+            <section class="pr-block">
+              <h2>Estado no instante selecionado</h2>
+              @if (selection().point; as point) {
+                <table class="pr-table pr-kv">
+                  <tbody>
+                    <tr><th>Estado</th><td>{{ point.state }}</td></tr>
+                    <tr><th>Vazão de bombeio</th><td>{{ fmt(point.pumpRateBpm, 2) }} bpm</td></tr>
+                    <tr><th>Pressão de bombeio</th>
+                      <td>{{ point.pumpPressurePsi === null ? 'indisponível' : fmt(point.pumpPressurePsi, 0) + ' psi' }}</td></tr>
+                    <tr><th>Hidrostática interna</th>
+                      <td>{{ point.internalHydrostaticPsi === null ? 'indisponível' : fmt(point.internalHydrostaticPsi, 0) + ' psi' }}</td></tr>
+                    <tr><th>Hidrostática anular</th>
+                      <td>{{ point.annularHydrostaticPsi === null ? 'indisponível' : fmt(point.annularHydrostaticPsi, 0) + ' psi' }}</td></tr>
+                    <tr><th>Atrito interno / anular</th>
+                      <td>{{ point.pipeFrictionPsi === null ? 'indisponível'
+                        : fmt(point.pipeFrictionPsi, 1) + ' / ' + fmt(point.annularFrictionPsi, 1) + ' psi' }}</td></tr>
+                    <tr><th>Tubo em U</th>
+                      <td>{{ point.uTubeDrivePsi === null ? 'indisponível' : fmt(point.uTubeDrivePsi, 0) + ' psi' }}</td></tr>
+                    <tr><th>BHP / ECD</th>
+                      <td>{{ point.bhpPsi === null ? 'indisponível'
+                        : fmt(point.bhpPsi, 0) + ' psi / ' + fmt(point.ecdPpg, 2) + ' ppg' }}</td></tr>
+                  </tbody>
+                </table>
+              } @else { <p class="pr-hint">Sem instante selecionado.</p> }
+
+              @if (selectedReferences().length) {
+                <h3>ECD nas referências</h3>
+                <table class="pr-table">
+                  <thead><tr><th>Referência</th><th>MD ({{ depthUnit() }})</th><th>TVD ({{ depthUnit() }})</th>
+                    <th>Pressão (psi)</th><th>ECD (ppg)</th></tr></thead>
+                  <tbody>
+                    @for (reference of selectedReferences(); track reference.id) {
+                      <tr>
+                        <td>{{ reference.id }}</td>
+                        <td>{{ fmtDepth(reference.md) }}</td>
+                        <td>{{ fmt(reference.tvd, 1) }}</td>
+                        <td>{{ reference.pressurePsi === null ? 'indisponível' : fmt(reference.pressurePsi, 0) }}</td>
+                        <td>{{ reference.ecdPpg === null ? 'indisponível' : fmt(reference.ecdPpg, 2) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </section>
+          }
+
+          <section class="pr-block">
+            <h2>Trajetória, arrombamento e direção</h2>
+            <app-primary-well-2d [views]="well2dViews()" [selectedPhaseId]="selectedPhaseId()"></app-primary-well-2d>
+          </section>
+
+          <section class="pr-block">
+            <h2>Visão 3D</h2>
+            <p class="pr-hint">
+              A <strong>meia seção</strong> mostra os fluidos no corte, com a bainha fora do OD do
+              revestimento. O desenho acompanha o instante escolhido na reprodução do esquemático.
+            </p>
+            @if (show3d()) {
+              <app-well-3d [geometry]="result().well" [overlays]="overlays()"
+                [depthUnit]="depthUnit()"></app-well-3d>
+            } @else {
+              <button tuiButton size="s" type="button" (click)="show3d.set(true)">Mostrar 3D</button>
+            }
+          </section>
+        }
+
+        <!-- 5. Dados medidos -->
+        @case ('medicoes') {
+          <p class="pr-hint">
+            Dado medido não altera o cálculo. Diferença entre medido e calculado é
+            discrepância, não diagnóstico de perda para a formação. O arquivo e o
+            mapeamento ficam no painel lateral.
+          </p>
+
+          @if (csv(); as table) {
+            <section class="pr-block">
+              <h2>Prévia do arquivo</h2>
+              <p class="pr-hint">
+                Separador sugerido: <strong>{{ table.delimiter === '\t' ? 'tabulação' : table.delimiter }}</strong>
+                · {{ table.rows.length }} linhas de dados. Confira antes de incorporar.
+              </p>
+              <table class="pr-table">
+                <thead><tr>@for (header of table.headers; track header) { <th>{{ header }}</th> }</tr></thead>
+                <tbody>
+                  @for (row of previewRows(); track $index) {
+                    <tr>@for (cell of row; track $index) { <td>{{ cell }}</td> }</tr>
+                  }
+                </tbody>
+              </table>
+              @if (previewOutOfOrder()) {
+                <p class="pr-hint pr-cell-warn">
+                  Há amostras fora de ordem. Elas são preservadas como estão, a menos que
+                  você peça a ordenação no painel.
+                </p>
+              }
+            </section>
+          }
+
+          @if (importErrors().length) {
+            <ul class="pr-issues">
+              @for (error of importErrors(); track error) { <li class="pr-issue--error">{{ error }}</li> }
+            </ul>
+          }
+
+          @for (entry of comparisons(); track entry.dataset.id) {
+            <section class="pr-block">
+              <h2>{{ entry.dataset.name }}</h2>
+              <p class="pr-hint">
+                Arquivo {{ entry.dataset.sourceFileName }} · importado em {{ entry.dataset.importedAt }} ·
+                {{ entry.dataset.samples.length }} amostras ·
+                offset {{ fmt(entry.dataset.alignment.offsetMin, 2) }} min ·
+                limite de lacuna {{ fmt(entry.dataset.maxInterpolationGapMin, 2) }} min
+              </p>
+              <table class="pr-table">
+                <thead><tr><th>Canal</th><th>Unidade original</th><th>Unidade canônica</th>
+                  <th>Pares</th><th>Diferença média</th><th>Maior desvio</th>
+                  <th>Observação</th></tr></thead>
+                <tbody>
+                  @for (item of entry.series; track item.series.channelId) {
+                    <tr>
+                      <td>{{ item.series.channelName }}</td>
+                      <td>{{ entry.dataset.mapping[item.series.channelId]?.originalUnit ?? '—' }}</td>
+                      <td>{{ item.series.unit }}</td>
+                      <td>{{ item.summary.pairs }}</td>
+                      <td>{{ fmt(item.summary.meanDifference, 3) }}</td>
+                      <td>{{ fmt(item.summary.maxAbsDifference, 3) }}</td>
+                      <td class="pr-cell-warn">{{ item.series.notes.join(' ') }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+
+              @if (entry.dataset.importDiagnostics.length) {
+                <h3>Procedência e ocorrências</h3>
+                <table class="pr-table">
+                  <thead><tr><th>Linha</th><th>Campo</th><th>Valor original</th>
+                    <th>Motivo</th><th>Resolução</th></tr></thead>
+                  <tbody>
+                    @for (item of entry.dataset.importDiagnostics; track item.sourceRow + item.field) {
+                      <tr>
+                        <td>{{ item.sourceRow }}</td>
+                        <td>{{ item.field }}</td>
+                        <td>{{ item.rawValue }}</td>
+                        <td>{{ item.reason }}</td>
+                        <td>{{ item.resolution }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </section>
+          }
+          @if (!comparisons().length) {
+            <p class="pr-hint">Nenhum conjunto de medições incorporado.</p>
+          }
+        }
+      }
+
+      @if (diagnostics().length) {
+        <section class="pr-block">
+          <h2>Diagnósticos</h2>
+          <ul class="pr-diagnostics">
+            @for (item of diagnostics(); track $index) {
+              <li [class]="'pr-diag pr-diag--' + item.severity">
+                <strong>{{ item.code }}</strong> {{ item.message }}
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </main>
+  </div>
+
+  <app-aditivo-modal
+    [open]="aditivosModalOpen()"
+    [formArray]="aditivosArray"
+    [catalogo]="catalogoAditivos"
+    (closed)="aditivosModalOpen.set(false); onAditivoEdit()"
+    (exportJson)="exportarAditivos()"
+    (importJson)="importarAditivos($event)">
+  </app-aditivo-modal>
+
+  <app-primary-scenario-modal
+    [open]="cenariosOpen()"
+    [scenarioName]="scenarioName()" [currentFolderId]="currentFolderId()" (scenarioDeleted)="deleteCurrentScenario($event)" (folderDeleted)="deleteCurrentFolder($event)"
+    [saveState]="saveState()"
+    [savedList]="savedList()"
+    [importSummary]="importSummary()"
+    [message]="scenarioMessage()"
+    (closed)="cenariosOpen.set(false)"
+    (nomeChange)="setScenarioName($event)"
+    (salvar)="salvarCenario($event)"
+    (listar)="listarSalvos()"
+    (abrir)="requestOpenScenario($event)"
+    (exportar)="baixarArquivo()"
+    (relatorioDoc)="baixarRelatorio()"
+    (arquivo)="onScenarioFile($event)"
+    (adotar)="requestImportScenario()"
+    (cancelar)="cancelarImportacao()">
+  </app-primary-scenario-modal>
+
+  <app-primary-report-modal [open]="reportModalOpen()" [report]="report()"
+    [visuals]="reportVisualCatalog()" [selection]="reportVisualSelection()"
+    [phaseOptions]="reportVisualPhaseOptions()" [selectedPhaseId]="reportVisualPhaseId()"
+    (phaseChanged)="setReportVisualPhase($event)"
+    (visualChanged)="setReportVisual($event)" (closed)="reportModalOpen.set(false)"
+    (preview)="visualizarRelatorio()" (print)="imprimirRelatorio()"
+    (download)="baixarRelatorio()"></app-primary-report-modal>
+  @if (replacementAction()) {
+    <div class="pr-dialog-shade"><section role="dialog" aria-modal="true" aria-label="Alterações não salvas" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" class="pr-dialog">
+      <h2>Alterações não salvas</h2><p>Salve o cenário atual antes de substituí-lo ou continue descartando as alterações.</p>
+      @if (scenarioMessage()) { <p role="alert">{{ scenarioMessage() }}</p> }
+      @if (saveState().message) { <p role="alert">{{ saveState().message }}</p> }
+      <button tuiButton size="s" type="button" [disabled]="saveState().status === 'saving'" (click)="resolveReplacement(true)">Salvar e continuar</button>
+      <button tuiButton size="s" type="button" [disabled]="saveState().status === 'saving'" (click)="resolveReplacement(false)">Descartar e continuar</button>
+      <button tuiButton size="s" type="button" (click)="replacementAction.set(null)">Cancelar</button>
+    </section></div>
+  }
+  <!-- ── Dock flutuante ── -->
+  <div class="sidebar-dock">
+    <button class="sidebar-dock-btn" type="button" [attr.aria-label]="sidebarOpen() ? 'Ocultar painel' : 'Exibir painel'" aria-controls="primary-sidebar" [attr.aria-expanded]="sidebarOpen()" (click)="sidebarOpen.set(!sidebarOpen())">
+      <tui-icon [icon]="sidebarOpen() ? '@tui.panel-left-close' : '@tui.panel-left-open'"></tui-icon>
+      <span>{{ sidebarOpen() ? 'Ocultar painel' : 'Exibir painel' }}</span>
+    </button>
+    <button class="sidebar-dock-btn sidebar-dock-btn--save" type="button" aria-label="Cenários" (click)="abrirCenarios()">
+      <tui-icon icon="@tui.bookmark"></tui-icon>
+      <span>Cenários · {{ saveState().status === 'saved' ? 'Salvo' : saveState().status === 'saving' ? 'Salvando…' : 'Não salvo' }}</span>
+    </button>
+    <button class="sidebar-dock-btn sidebar-dock-btn--report" type="button" aria-label="Relatório" (click)="abrirRelatorio()">
+      <tui-icon icon="@tui.file-text"></tui-icon>
+      <span>Relatório</span>
+    </button>
+  </div>
+</div>
+
+<ng-template #playback>
+  <section class="pr-playback">
+    <div class="pr-playback-controls">
+      <button tuiButton size="s" type="button" (click)="restart()" title="Voltar ao início">⏮</button>
+      <button tuiButton size="s" type="button" (click)="previousEvent()" title="Evento anterior">◀◀</button>
+      <button tuiButton size="s" type="button" (click)="togglePlay()">{{ playing() ? 'Pausar' : 'Reproduzir' }}</button>
+      <button tuiButton size="s" type="button" (click)="nextEvent()" title="Próximo evento">▶▶</button>
+      <button tuiButton size="s" type="button" (click)="toEnd()" title="Ir ao fim">⏭</button>
+      <button tuiButton size="s" type="button" (click)="marcarSnapshot()"
+        title="Incluir este instante no relatório">Marcar instante</button>
+      <label class="pr-inline pr-inline--tight">Velocidade
+        <select [value]="speed()" (change)="speed.set(+$any($event.target).value)">
+          <!-- Valores fixos: o [value] do select é aplicado antes de bindings nas opções. -->
+          <option value="3">3×</option>
+          <option value="5">5×</option>
+          <option value="20">20×</option>
+          <option value="60">60×</option>
+        </select>
+      </label>
+    </div>
+    <input class="pr-cursor" type="range" min="0" [max]="totalTimeMin()" step="0.01"
+      [value]="selectedTimeMin()" (input)="onCursor($any($event.target).value)"
+      [disabled]="totalTimeMin() <= 0">
+    <div class="pr-playback-read">
+      <span><strong>{{ fmt(selectedTimeMin(), 2) }}</strong> de {{ fmt(totalTimeMin(), 2) }} min</span>
+      @if (selection().point; as point) {
+        <span>Estado: {{ point.state }}</span>
+        <span>Bombeado: {{ fmt(point.pumpedVolumeBbl) }} bbl</span>
+        <span>BHP: {{ point.bhpPsi === null ? 'indisponível' : fmt(point.bhpPsi, 0) + ' psi' }}</span>
+        <span>ECD: {{ point.ecdPpg === null ? 'indisponível' : fmt(point.ecdPpg, 2) + ' ppg' }}</span>
+      }
+      @for (event of selection().events; track event.kind + event.md) {
+        <span class="pr-event">{{ eventLabel(event.kind) }} · {{ fmtDepth(event.md) }} {{ depthUnit() }}</span>
+      }
+    </div>
+  </section>
+</ng-template>

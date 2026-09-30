@@ -41,8 +41,10 @@ services:
       - --default-time-zone=-03:00
     volumes:
       - mysql-dev-data:/var/lib/mysql
-    # Sem mysql-init: em dev o perfil usa ddl-auto=update e o proprio Hibernate
-    # cria as tabelas. O schema pronto so e necessario em producao (validate).
+    # Sem mysql-init: quem cria e evolui o schema e o Flyway, no startup do
+    # backend, e em TODOS os perfis — dev incluido, onde ddl-auto passou de
+    # update para validate em 2026-09-06. Base vazia sobe e o baseline
+    # V2026.09.04 monta tudo. Ver DT-002.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pbilzao90"]
       interval: 10s

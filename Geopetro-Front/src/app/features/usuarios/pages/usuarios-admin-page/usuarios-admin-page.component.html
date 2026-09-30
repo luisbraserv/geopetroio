@@ -1,0 +1,166 @@
+<div class="usuarios-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Administração</p>
+      <h1>Usuários</h1>
+      <span>Cadastro e gerenciamento de usuários do sistema.</span>
+    </div>
+    <div class="page-header__actions">
+      <app-search-box placeholder="Buscar por nome, usuário ou e-mail..." (busca)="aoBuscar($event)" />
+      <button tuiButton type="button" appearance="secondary" size="m" (click)="listarUsuarios()">
+        <tui-icon icon="@tui.refresh-cw"></tui-icon>
+        Atualizar
+      </button>
+      <button tuiButton type="button" appearance="primary" size="m" (click)="abrirNovo()">
+        <tui-icon icon="@tui.plus"></tui-icon>
+        Novo usuário
+      </button>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h2>Usuários cadastrados</h2>
+      <span>{{ usuarios().length }} registro(s)</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Roles</th>
+            <th>Empresa</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usuario of usuarios(); track usuario.username) {
+            <tr>
+              <td>{{ usuario.username }}</td>
+              <td>{{ usuario.nome }}</td>
+              <td>{{ usuario.email }}</td>
+              <td>{{ usuario.roles.join(', ') }}</td>
+              <td>{{ usuario.empresaNome || usuario.empresa || '-' }}</td>
+              <td>{{ usuario.status }}</td>
+              <td>
+                <button tuiButton type="button" appearance="secondary" size="s" (click)="editar(usuario)">
+                  <tui-icon icon="@tui.pencil"></tui-icon>
+                  Editar
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7">Nenhum usuário encontrado.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-paginator [pagina]="pagina()" [totalPaginas]="totalPaginas()" [totalElementos]="totalElementos()" (mudarPagina)="irParaPagina($event)" />
+  </section>
+
+  <app-modal
+    [open]="modalAberto()"
+    [title]="editando() ? 'Editar usuário' : 'Cadastrar usuário'"
+    subtitle="Preencha os dados do usuário e seus vínculos."
+    width="860px"
+    (close)="fecharModal()"
+  >
+    <form id="form-usuario" class="user-form" (ngSubmit)="salvar()">
+      <div class="segmented wide">
+        <button type="button" [class.active]="tipo() === 'INTERNO'" [disabled]="editando()" (click)="selecionarTipo('INTERNO')">Interno</button>
+        <button type="button" [class.active]="tipo() === 'CLIENTE'" [disabled]="editando()" (click)="selecionarTipo('CLIENTE')">Cliente</button>
+      </div>
+
+      <label><span>Username</span><input name="username" [(ngModel)]="form.username" maxlength="60" [disabled]="editando()" required /></label>
+      <label><span>Senha</span><input name="password" [(ngModel)]="form.password" type="password" maxlength="20" [disabled]="editando()" [required]="!editando()" /></label>
+      <label><span>Nome</span><input name="nome" [(ngModel)]="form.nome" required /></label>
+      <label><span>E-mail</span><input name="email" [(ngModel)]="form.email" type="email" required /></label>
+      <label><span>Telefone</span><input name="telefone" [(ngModel)]="form.telefone" placeholder="(27) 99999-9999" required /></label>
+
+      @if (tipo() === 'INTERNO') {
+        <label><span>Matrícula</span><input name="matricula" [(ngModel)]="form.matricula" type="number" required /></label>
+
+      } @else {
+        <label><span>ID Cliente</span><input name="id" [(ngModel)]="form.id" type="number" required /></label>
+        <label>
+          <span>Empresa</span>
+          <select name="empresaId" [(ngModel)]="form.empresaId" required>
+            <option [ngValue]="0">Selecione</option>
+            @for (empresa of empresas(); track empresa.id) {
+              <option [ngValue]="empresa.id">{{ empresa.nome }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="vinculos-field wide">
+          <span class="field-title">Unidades/Sondas que este cliente pode visualizar</span>
+          <p class="field-hint">
+            O cliente só enxerga no monitoramento as sondas marcadas aqui. Sem nenhuma marcada, ele
+            acessa a tela mas não vê sonda alguma.
+          </p>
+
+          <div class="unidades-actions">
+            <button type="button" class="link-btn" (click)="marcarTodasUnidades()">Marcar todas</button>
+            <button type="button" class="link-btn" (click)="desmarcarTodasUnidades()">Desmarcar todas</button>
+            <span class="unidades-contador">{{ unidadesSelecionadas().length }} de {{ unidades().length }}</span>
+          </div>
+
+          <div class="chips">
+            @for (unidade of unidades(); track unidade.id) {
+              <button
+                type="button"
+                class="chip"
+                [class.chip--on]="unidadeSelecionada(unidade.id)"
+                (click)="alternarUnidade(unidade.id, !unidadeSelecionada(unidade.id))"
+              >
+                {{ rotuloUnidade(unidade) }}
+              </button>
+            } @empty {
+              <span class="setores-chips__empty">Nenhuma unidade/sonda cadastrada.</span>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="roles-field wide">
+        <span class="field-title">Roles</span>
+        <div class="chips">
+          <span class="chip chip--locked">{{ roleLabel(roleBase()) }}</span>
+          @for (role of rolesAdicionais; track role) {
+            <button type="button" class="chip" [class.chip--on]="roleSelecionada(role)" (click)="alternarRole(role, !roleSelecionada(role))">
+              {{ roleLabel(role) }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <label class="wide"><span>CEP</span>
+        <div class="input-cep" [class.input-cep--loading]="buscandoCep()">
+          <input name="cep" [(ngModel)]="form.cep" (blur)="buscarCep()" maxlength="9" placeholder="00000-000" [required]="!editando()" />
+          @if (buscandoCep()) { <span class="cep-spinner"></span> }
+        </div>
+        @if (buscandoCep()) { <span class="cep-feedback">Buscando endereço pelo CEP...</span> }
+      </label>
+      <label><span>Logradouro</span><input name="logradouro" [(ngModel)]="form.logradouro" [disabled]="buscandoCep()" [required]="!editando()" /></label>
+      <label><span>Número</span><input name="numero" [(ngModel)]="form.numero" [required]="!editando()" /></label>
+      <label><span>Bairro</span><input name="bairro" [(ngModel)]="form.bairro" [disabled]="buscandoCep()" [required]="!editando()" /></label>
+      <label><span>Cidade</span><input name="cidade" [(ngModel)]="form.cidade" [disabled]="buscandoCep()" [required]="!editando()" /></label>
+      <label><span>Estado</span><input name="estado" [(ngModel)]="form.estado" maxlength="2" [disabled]="buscandoCep()" [required]="!editando()" /></label>
+      <label class="wide"><span>Complemento</span><input name="complemento" [(ngModel)]="form.complemento" /></label>
+
+      @if (error()) { <p class="form-error wide">{{ error() }}</p> }
+    </form>
+
+    <ng-container modal-footer>
+      <button tuiButton type="button" appearance="secondary" size="m" (click)="fecharModal()">Cancelar</button>
+      <button tuiButton type="submit" form="form-usuario" appearance="primary" size="m" [disabled]="isLoading()">
+        {{ editando() ? 'Salvar alterações' : 'Cadastrar usuário' }}
+      </button>
+    </ng-container>
+  </app-modal>
+</div>

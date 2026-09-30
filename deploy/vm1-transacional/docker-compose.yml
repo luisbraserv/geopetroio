@@ -1,7 +1,7 @@
 # =====================================================================
 # VM-1 · TRANSACIONAL
 #
-# Frontend + Backend-Sonda + MySQL. Separado da telemetria porque a
+# Frontend + Geopetro-Backend + MySQL. Separado da telemetria porque a
 # ingestao e continua e write-heavy, enquanto esta VM e intermitente e
 # read-heavy — juntas, competiriam por I/O de disco.
 #
@@ -30,10 +30,9 @@ services:
       - --default-time-zone=-03:00
     volumes:
       - mysql-data:/var/lib/mysql
-      # Roda APENAS na primeira inicializacao, com o volume vazio.
-      # Necessario porque em producao o Hibernate usa ddl-auto=validate e nao
-      # cria tabelas — sem isto, a aplicacao falha no startup. Ver README.
-      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+      # Sem mysql-init desde 2026-09-06: quem cria e evolui o schema e o Flyway,
+      # no startup do backend. O antigo 01-schema.sql virou o baseline
+      # V2026.09.04 em app/src/main/resources/db/migration. Ver README.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 20s
@@ -43,12 +42,12 @@ services:
 
   backend:
     build:
-      context: ../../Backend-Sonda-Geopetro-IO
+      context: ../../Geopetro-Backend
       dockerfile: Dockerfile
-    image: geopetro/backend-sonda:${TAG:-latest}
-    # O nginx do frontend faz proxy para o host 'backend-sonda' — o nome do
+    image: geopetro/geopetro-backend:${TAG:-latest}
+    # O nginx do frontend faz proxy para o host 'geopetro-backend' — o nome do
     # servico e do alias precisam bater com o nginx.conf.
-    container_name: backend-sonda
+    container_name: geopetro-backend
     restart: unless-stopped
     depends_on:
       mysql:
@@ -63,16 +62,29 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
+      PASSWORD_RECOVERY_ENABLED: ${PASSWORD_RECOVERY_ENABLED:-false}
+      PASSWORD_RECOVERY_FRONTEND_URL: ${PASSWORD_RECOVERY_FRONTEND_URL:-}
+      PASSWORD_RECOVERY_FROM: ${PASSWORD_RECOVERY_FROM:-}
+      SMTP_SETTINGS_ENCRYPTION_KEY: ${SMTP_SETTINGS_ENCRYPTION_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-true}
       # Aponta para a VM-2. Substitua pelo IP/host real da maquina de telemetria.
       MONITORAMENTO_BASE_URL: ${MONITORAMENTO_BASE_URL:?defina o endereco da VM-2 no .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS}
+    volumes:
+      - smtp-secrets:/app/secrets
     expose:
       - "8080"
 
   front:
     build:
-      context: ../../Front-Sonda-Geopetro-IO
+      context: ../../Geopetro-Front
       dockerfile: Dockerfile
     image: geopetro/front:${TAG:-latest}
     container_name: geopetro-front
@@ -90,4 +102,5 @@ services:
       - "telemetria:${TELEMETRIA_HOST_IP:?defina o IP da VM-2 no .env}"
 
 volumes:
+  smtp-secrets:
   mysql-data:

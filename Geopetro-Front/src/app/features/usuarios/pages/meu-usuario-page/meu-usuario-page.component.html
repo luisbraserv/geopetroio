@@ -1,0 +1,100 @@
+<div class="profile-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Meu usuário</p>
+      <h1>{{ currentUser()?.nome }}</h1>
+      <span>{{ currentUser()?.username }} · {{ rolesLabel() }}</span>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h2>Informações cadastrais</h2>
+      <span>{{ currentUser()?.email }}</span>
+    </div>
+
+    <form class="profile-form" (ngSubmit)="salvar()">
+      <label>
+        <span>Nome</span>
+        <input name="nome" [(ngModel)]="form.nome" required />
+      </label>
+      <label>
+        <span>E-mail</span>
+        <input name="email" [(ngModel)]="form.email" type="email" required />
+      </label>
+      <label>
+        <span>Telefone</span>
+        <input name="telefone" [(ngModel)]="form.telefone" required />
+      </label>
+
+      <div class="section-title">Endereço</div>
+
+      <label>
+        <span>CEP</span>
+        <div class="input-cep" [class.input-cep--loading]="buscandoCep()">
+          <input name="cep" [(ngModel)]="form.cep" (blur)="buscarCep()" maxlength="9" placeholder="00000-000" required />
+          @if (buscandoCep()) { <span class="cep-spinner"></span> }
+        </div>
+        @if (buscandoCep()) { <span class="cep-feedback">Buscando endereÃ§o pelo CEP...</span> }
+      </label>
+      <label>
+        <span>Logradouro</span>
+        <input name="logradouro" [(ngModel)]="form.logradouro" [disabled]="buscandoCep()" required />
+      </label>
+      <label>
+        <span>Número</span>
+        <input name="numero" [(ngModel)]="form.numero" required />
+      </label>
+      <label>
+        <span>Bairro</span>
+        <input name="bairro" [(ngModel)]="form.bairro" [disabled]="buscandoCep()" required />
+      </label>
+      <label>
+        <span>Cidade</span>
+        <input name="cidade" [(ngModel)]="form.cidade" [disabled]="buscandoCep()" required />
+      </label>
+      <label>
+        <span>Estado</span>
+        <input name="estado" [(ngModel)]="form.estado" maxlength="2" [disabled]="buscandoCep()" required />
+      </label>
+      <label class="wide">
+        <span>Complemento</span>
+        <input name="complemento" [(ngModel)]="form.complemento" />
+      </label>
+
+      <div class="form-actions">
+        <button tuiButton type="submit" appearance="primary" size="m" [disabled]="isLoading()">
+          Salvar alterações
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel__header">
+      <h2>Segurança</h2>
+      <span>Altere sua senha de acesso.</span>
+    </div>
+
+    <form class="profile-form" (ngSubmit)="alterarSenha()">
+      <label>
+        <span>Senha atual</span>
+        <input name="senhaAtual" [(ngModel)]="passwordForm.senhaAtual" type="password" autocomplete="current-password" required />
+      </label>
+      <label>
+        <span>Nova senha</span>
+        <input name="novaSenha" [(ngModel)]="passwordForm.novaSenha" type="password" autocomplete="new-password" required />
+      </label>
+      <label>
+        <span>Repita a nova senha</span>
+        <input name="confirmacaoSenha" [(ngModel)]="passwordForm.confirmacaoSenha" type="password" autocomplete="new-password" required />
+      </label>
+
+      <div class="form-actions">
+        <button tuiButton type="submit" appearance="primary" size="m" [disabled]="isPasswordLoading()">
+          Alterar senha
+        </button>
+      </div>
+    </form>
+  </section>
+</div>

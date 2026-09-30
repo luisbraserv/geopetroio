@@ -1,0 +1,200 @@
+<div class="limites-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Telemetria</p>
+      <h1>Limites de Alarme</h1>
+      <span>
+        O sistema vigia a operação e registra cada excursão. Cada sonda é configurada
+        individualmente — sonda sem limite não alarma, e isso é estado normal.
+      </span>
+    </div>
+  </header>
+
+  <section class="painel">
+    <div class="topo">
+      <label class="field">
+        <span>Sonda / Unidade</span>
+        <select [(ngModel)]="sondaSelecionadaValue" (ngModelChange)="onSondaChange()">
+          <option [ngValue]="null" disabled selected>Selecione uma sonda</option>
+          @for (sonda of sondas(); track sonda.id) {
+            <option [ngValue]="sonda">{{ sonda.apelido || sonda.nome }}</option>
+          }
+        </select>
+      </label>
+
+      @if (autoria(); as autor) {
+        <p class="autoria">
+          Última alteração por <strong>{{ autor.por }}</strong>
+          em {{ autor.em | date: 'dd/MM/yyyy HH:mm' }}
+          · revisão {{ documento()?.revisao }}
+        </p>
+      } @else if (documento()) {
+        <p class="autoria">Esta sonda ainda não teve limites gravados.</p>
+      }
+    </div>
+
+    @if (erro()) {
+      <div class="alerta alerta--erro" role="alert">
+        <tui-icon icon="@tui.alert-circle"></tui-icon>
+        <span>{{ erro() }}</span>
+      </div>
+    }
+    @if (aviso()) {
+      <div class="alerta alerta--aviso" role="alert">
+        <tui-icon icon="@tui.triangle-alert"></tui-icon>
+        <span>{{ aviso() }}</span>
+      </div>
+    }
+    @if (salvo()) {
+      <div class="alerta alerta--ok" role="status">
+        <tui-icon icon="@tui.check"></tui-icon>
+        <span>{{ salvo() }}</span>
+      </div>
+    }
+  </section>
+
+  @if (carregando()) {
+    <div class="estado-vazio">
+      <tui-icon icon="@tui.loader-circle" class="spin estado-vazio__icon"></tui-icon>
+      <p>Lendo o que esta unidade mede e os limites gravados...</p>
+    </div>
+  } @else if (!sondaSelecionada()) {
+    <div class="estado-vazio">
+      <tui-icon icon="@tui.bell" class="estado-vazio__icon"></tui-icon>
+      <p>Selecione uma sonda para ajustar os limites dela.</p>
+    </div>
+  } @else if (unidadeSemCards()) {
+    <!-- RN-088: sem cards a unidade nao le nada, e nao ha grandeza que um limite possa vigiar. -->
+    <div class="estado-vazio">
+      <tui-icon icon="@tui.circle-off" class="estado-vazio__icon"></tui-icon>
+      <p>Esta unidade ainda não tem cards configurados, então não há grandeza para vigiar.</p>
+      <p class="estado-vazio__nota">
+        Os cards são configurados no Geopetro-Desktop instalado na própria unidade.
+      </p>
+    </div>
+  } @else if (linhas().length) {
+    <section class="tabela-painel">
+      <p class="legenda">
+        O alarme abre depois de <strong>ficar fora da faixa</strong> pelo tempo de abertura, e fecha
+        depois de <strong>voltar para dentro dela</strong> pelo tempo de fechamento. São dois tempos
+        diferentes: é o que evita um alarme que pisca a cada segundo na fronteira.
+      </p>
+
+      <div class="tabela-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th class="col-grandeza">Grandeza</th>
+              <th>Mín. crítico</th>
+              <th>Mín. atenção</th>
+              <th>Máx. atenção</th>
+              <th>Máx. crítico</th>
+              <th>Abrir (s)</th>
+              <th>Fechar (s)</th>
+              <th class="col-ativo">Vigiar</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (linha of linhas(); track linha.grandeza.chave; let i = $index) {
+              <tr [class.linha--inerte]="!linha.grandeza.cardAtivo">
+                <th scope="row" class="col-grandeza">
+                  <span class="rotulo">{{ linha.grandeza.rotulo }}</span>
+                  <span class="unidade">{{ linha.grandeza.unidade }}</span>
+
+                  @if (!linha.grandeza.cardAtivo) {
+                    <span class="marca marca--hibernando">
+                      Card desativado — o limite fica guardado e volta a valer se o card for reativado
+                    </span>
+                  } @else if (!linha.grandeza.cardVisivel) {
+                    <!-- OQ-050: RN-037 encontrando RN-102. A tela avisa, e nao recusa. -->
+                    <span class="marca marca--nao-avaliada">
+                      Card invisível — o limite é salvo, mas <strong>não é avaliado</strong> enquanto
+                      o card não aparecer no dashboard da unidade
+                    </span>
+                  }
+                </th>
+
+                <td>
+                  <input type="number" step="any" [ngModel]="linha.minimoCritico"
+                    (ngModelChange)="atualizar(i, 'minimoCritico', $event)" />
+                </td>
+                <td>
+                  <input type="number" step="any" [ngModel]="linha.minimoAtencao"
+                    (ngModelChange)="atualizar(i, 'minimoAtencao', $event)" />
+                </td>
+                <td>
+                  <input type="number" step="any" [ngModel]="linha.maximoAtencao"
+                    (ngModelChange)="atualizar(i, 'maximoAtencao', $event)" />
+                </td>
+                <td>
+                  <input type="number" step="any" [ngModel]="linha.maximoCritico"
+                    (ngModelChange)="atualizar(i, 'maximoCritico', $event)" />
+                </td>
+                <td>
+                  <input type="number" min="0" step="1" [ngModel]="linha.segundosParaAbrir"
+                    (ngModelChange)="atualizar(i, 'segundosParaAbrir', $event)" />
+                </td>
+                <td>
+                  <input type="number" min="0" step="1" [ngModel]="linha.segundosParaFechar"
+                    (ngModelChange)="atualizar(i, 'segundosParaFechar', $event)" />
+                </td>
+                <td class="col-ativo">
+                  <input type="checkbox" [ngModel]="linha.ativo"
+                    (ngModelChange)="atualizar(i, 'ativo', $event)"
+                    [attr.aria-label]="'Vigiar ' + linha.grandeza.rotulo" />
+                </td>
+              </tr>
+
+              @if (errosPorLinha()[i]; as problema) {
+                <tr class="linha-erro">
+                  <td colspan="8">
+                    <tui-icon icon="@tui.alert-circle"></tui-icon>
+                    <span>{{ problema }}</span>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (orfaos().length) {
+        <div class="alerta alerta--aviso orfaos" role="alert">
+          <tui-icon icon="@tui.triangle-alert"></tui-icon>
+          <div>
+            <strong>
+              {{ orfaos().length }} limite(s) gravado(s) para grandeza que esta unidade não declara
+              mais:
+            </strong>
+            <span class="orfaos__lista">
+              @for (orfao of orfaos(); track orfao.chave) {
+                <code>{{ orfao.chave }}</code>
+              }
+            </span>
+            <span>
+              Não há card que os explique, então nada os avalia. <strong>Salvar remove estes
+              limites.</strong>
+            </span>
+          </div>
+        </div>
+      }
+
+      <footer class="rodape">
+        <span class="rodape__nota">
+          Deixar os quatro limiares vazios remove o limite da grandeza. A lista substitui a anterior
+          por inteiro.
+        </span>
+        <button tuiButton type="button" appearance="primary" size="m"
+          [disabled]="!podeSalvar()" (click)="salvar()">
+          @if (salvando()) {
+            <tui-icon icon="@tui.loader-circle" class="spin"></tui-icon>
+            Salvando...
+          } @else {
+            <tui-icon icon="@tui.save"></tui-icon>
+            Salvar limites
+          }
+        </button>
+      </footer>
+    </section>
+  }
+</div>

@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-09-09T21:45:07.852Z",
+  "results": [
+    {
+      "method": "GET",
+      "url": "http://localhost:4200/",
+      "status": 0,
+      "error": "TypeError"
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:8080/actuator/health",
+      "status": 0,
+      "error": "TypeError"
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:8081/actuator/health",
+      "status": 0,
+      "error": "TypeError"
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:8080/api/auth/login",
+      "status": 0,
+      "error": "TypeError"
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:8080/v3/api-docs",
+      "status": 0,
+      "error": "TypeError"
+    }
+  ],
+  "documentedPaths": []
+}

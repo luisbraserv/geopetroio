@@ -1,107 +1,46 @@
-# Specs — Sistema GeopetroIO
+# Specs — GeopetroIO
 
-Base de **Spec Driven Development (SDD)** do ecossistema GeopetroIO (Braserv Petróleo).
+Esta pasta descreve o comportamento esperado do sistema e os contratos entre aplicações. As specs nasceram de engenharia reversa em 2026-08-26: código é evidência do que existe, mas não valida sozinho uma regra de negócio.
 
-Estes documentos foram produzidos por **engenharia reversa do código existente** em 2026-08-26.
-O código é tratado como **fonte de evidência**, não como definição de correção: comportamento
-implementado ≠ regra de negócio validada.
+## Onde encontrar a regra vigente
 
----
-
-## Estrutura híbrida
-
-O workspace **não é um monorepo** — são 5 repositórios Git independentes. A documentação segue
-essa realidade:
-
-| Nível | Local | Conteúdo | Versionado em |
-|---|---|---|---|
-| **Sistema** | `GeopetroIO/specs/` | Visão geral, mapa de domínios, contratos entre aplicações, dívida técnica, dúvidas | Repo próprio de specs |
-| **Feature** | `<cada-repo>/specs/` | Specs por domínio, evoluindo no mesmo commit do código que as implementa | Repo da própria aplicação |
-
-**Regra de ouro:** um contrato que atravessa aplicações (MQTT, REST entre serviços) mora em
-`specs/contracts/` no nível de sistema. Duplicá-lo dentro dos repos garante divergência.
-
-### Documentos de sistema
-
-| Documento | Conteúdo |
+| Assunto | Fonte principal |
 |---|---|
-| [`system-overview.md`](system-overview.md) | Arquitetura, aplicações, infraestrutura, deploy |
-| [`domain-map.md`](domain-map.md) | Domínios, módulos e relacionamentos |
-| [`current-features.md`](current-features.md) | Inventário de funcionalidades existentes |
-| [`business-rules.md`](business-rules.md) | Regras de negócio identificadas no código |
-| [`security-findings.md`](security-findings.md) | Falhas de autorização exploráveis — **ação imediata** |
-| [`technical-debt.md`](technical-debt.md) | Inconsistências, duplicação, código morto |
-| [`open-questions.md`](open-questions.md) | Dúvidas pendentes de confirmação |
-| [`contracts/`](contracts/) | Contratos de integração entre aplicações — MQTT, REST e **WebSocket tempo real** |
+| Produto, usuários e operação de campo | [Contexto de produto](product-context.md) |
+| Arquitetura e responsabilidades | [Visão do sistema](system-overview.md) e [Mapa de domínios](domain-map.md) |
+| Comportamento existente | [Funcionalidades](current-features.md) e [Regras de negócio](business-rules.md) |
+| Pendências de decisão | [Perguntas abertas](open-questions.md) |
+| Integrações entre aplicações | [Contratos](contracts/) |
+| Recursos transversais | [Features](features/) |
+| Segurança e manutenção | [Achados de segurança](security-findings.md) e [Dívida técnica](technical-debt.md) |
+| Detalhes de uma aplicação | `specs/` da aplicação correspondente |
 
----
+**Precedência:** o contrato transversal define a interface entre aplicações; a spec da feature define o comportamento; os catálogos RN/OQ/DT mantêm identificadores e referências. Auditorias e registros de entrega são evidência datada. Quando uma decisão substitui outra, o texto vigente deve indicá-la e o histórico deve apontar para ela.
 
 ## Convenção de marcação
 
-Toda afirmação nestes documentos carrega um marcador de confiança. **Isto é essencial**: o valor
-de uma spec de engenharia reversa depende de saber o que é verificado e o que é suposição.
-
 | Marcador | Significado |
 |---|---|
-| **[FATO]** | Verificável no código, com referência a arquivo/linha |
-| **[INFERÊNCIA]** | Dedução a partir de evidência indireta — pode estar errada |
-| **[PENDENTE]** | Não determinável pelo código; exige confirmação humana |
-| **[DECIDIDO]** | Confirmado pela equipe durante o levantamento, com data |
+| **[FATO]** | Comportamento conferido no código, com referência verificável |
+| **[DECIDIDO data]** | Regra confirmada pela equipe |
+| **[INFERÊNCIA]** | Dedução ainda não confirmada |
+| **[PENDENTE]** | Decisão ou verificação necessária |
 
-Ausência de marcador em texto descritivo (títulos, contexto) é aceitável. Em **afirmações sobre
-comportamento do sistema**, não é.
+Uma entrega de código não transforma automaticamente uma **[INFERÊNCIA]** em regra aprovada. Use um estado explícito para distinguir comportamento implementado, requisito decidido e proposta.
 
----
+## Como manter uma spec curta
 
-## Como evoluir uma spec
+1. Registre nela o comportamento vigente, entradas e saídas, exceções e critérios de aceite.
+2. Mantenha contratos e fórmulas com a precisão necessária para implementação e verificação.
+3. Coloque relato de investigação, decisões substituídas, contagens de testes e sequência de commits em um registro histórico, com link a partir da spec.
+4. Atualize a spec junto com a mudança de comportamento. Não deixe duas instruções vigentes para o mesmo assunto.
+5. Preserve IDs RN/OQ/DT e links existentes ao consolidar ou encerrar itens.
 
-1. Mudança de comportamento começa pela spec, **não pelo código**.
-2. A spec de feature muda **no mesmo commit/PR** do código que a implementa.
-3. Item marcado **[PENDENTE]** que for respondido vira **[DECIDIDO]** com data — nunca some silenciosamente.
-4. Regra descoberta depois vira **[FATO]** com a referência de código que a comprova.
+## Decisões que organizam o sistema
 
----
+- A telemetria histórica usa **MQTT → Geopetro-Telemetria → InfluxDB**; o tempo real usa **Desktop → Backend → Front por WebSocket/STOMP**. Veja os [contratos](contracts/).
+- Alarmes do **servidor** geram eventos e histórico a partir do tempo real. O alarme da **estação** usa limites locais independentes e apenas sinaliza no Desktop. Veja [alarmes](features/alarmes.md) e [configuração da estação](features/configuracao-da-estacao.md).
+- O simulador web e os dois desktops têm specs próprias. O relatório do simulador é entregável ao cliente; validação de entrada e rastreabilidade dos cálculos são requisitos.
+- [GeoPetro Vision](features/geopetro-vision.md) está especificado para uma integração futura. O [contrato proposto](contracts/geopetro-vision.md) ainda depende das decisões marcadas como pendentes.
 
-## Decisões registradas neste levantamento
-
-Respostas dadas pela equipe em **2026-08-26**, durante a entrevista de levantamento:
-
-| Tema | Decisão |
-|---|---|
-| Layout de specs | Híbrido (sistema na raiz + feature por repo) |
-| Backend-Telemetria | ✅ **Implementado em 2026-08-27**, spec-first — primeiro componente do sistema a nascer sob SDD |
-| Acesso ao InfluxDB | **Via proxy**, não direto. O Backend-Telemetria é o único dono do schema; o Backend-Sonda só consome REST |
-| Contrato MQTT alvo | **Batch com payload rico** — 1 mensagem por ciclo, campos ricos no array de leituras |
-| **Papéis MQTT** | **Produtor: Desktop-Sonda · Consumidor: Backend-Telemetria.** Backend-Sonda não participa |
-| **Módulo Químicos** | **Removido** do Backend-Sonda |
-| **Módulos Projetos, Processos, Observações** | **Removidos** do Backend-Sonda e do Front |
-| Almoxarifado / Compra | **Descontinuados**. Não entram como escopo ativo |
-| Política de senha | **Sem política definida** — pendente de definição formal |
-| Roles não utilizadas | **Roadmap de módulos** — mantidas no modelo de autorização |
-| Desktops (Sonda / Cimentação) | **Permanecem separados** — produtos distintos, duplicação aceita |
-| Falhas de segurança | Documento priorizado + correção imediata |
-| **Escopo de sondas** | Perfis operacionais veem a **frota inteira**; `CLIENTE` só as **concedidas no cadastro** |
-| **Tempo real** | **WebSocket/STOMP** Desktop → Backend-Sonda → Angular, **sem persistência** |
-
-### Escopo resultante
-
-**[FATO]** Após as remoções, o sistema tem **três domínios ativos**:
-
-1. **Identidade e Organização** — Empresa · Regional → Setor → Unidade/Sonda · Usuário
-2. **Telemetria** — captura no CLP, com **dois caminhos**: histórico (MQTT → InfluxDB) e tempo real (WebSocket)
-3. **Cimentação** — simulador web + desktop de monitoramento da bomba
-
-O backend passou de 13 para **9 módulos Maven**. Os testes foram de 61 → 43 (remoções) → **61**
-novamente, agora cobrindo autorização de sondas e do canal WebSocket.
-
-### A divisão que organiza a telemetria
-
-**[DECIDIDO 2026-08-27]** Duas responsabilidades, dois caminhos, nenhuma sobreposição:
-
-| | MQTT | WebSocket |
-|---|---|---|
-| Responde | "o que aconteceu?" | "o que está acontecendo?" |
-| Persistido | InfluxDB | **Não** |
-| Perda aceitável | Não | **Sim, por desenho** |
-
-Contratos em [`contracts/`](contracts/).
+As entrevistas e auditorias datadas continuam disponíveis como histórico; para agir hoje, comece pelos documentos da tabela acima.

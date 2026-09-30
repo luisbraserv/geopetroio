@@ -67,7 +67,7 @@ services:
 
   telemetria:
     build:
-      context: ../../Backend-Telemetria-Sonda-Geopetro-io
+      context: ../../Geopetro-Telemetria
       dockerfile: Dockerfile
     image: geopetro/telemetria:${TAG:-latest}
     container_name: geopetro-telemetria
@@ -78,7 +78,7 @@ services:
       mosquitto:
         condition: service_started
     ports:
-      # Consumido pelo Backend-Sonda, que esta na VM-1. Restrinja por firewall
+      # Consumido pelo Geopetro-Backend, que esta na VM-1. Restrinja por firewall
       # ao IP da VM-1 — nao ha autenticacao servico-a-servico ainda (OQ-029).
       - "8081:8081"
     environment:
