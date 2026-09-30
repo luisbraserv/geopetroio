@@ -2,6 +2,7 @@ package com.geopetro.alarmes;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -14,13 +15,17 @@ import com.geopetro.core.exception.BusinessException;
 /**
  * O que aconteceu — a leitura do log de eventos, agrupada em excursões.
  *
- * <h2>Duas consultas, e a segunda é o que torna o resumo honesto</h2>
+ * <h2>Três consultas, e as duas últimas são o que torna o resumo honesto</h2>
  * A primeira acha <b>quais episódios</b> tiveram algum fato na janela. A segunda traz os fatos
- * desses episódios <b>por inteiro</b>, sem recortá-los pela janela.
+ * desses episódios <b>por inteiro</b>, sem recortá-los pela janela. A terceira traz o <b>pico</b> de
+ * cada um.
  *
  * <p>⚠️ Sem a segunda, um episódio que abriu antes do início da janela apareceria começando por
  * {@code ESCALOU} — a tela mostraria uma escalada sem a abertura que a explica, e o "desde" seria a
  * hora errada.
+ *
+ * <p>⚠️ Sem a terceira, o extremo sairia dos fatos — e o pico de uma excursão quase nunca é um fato:
+ * 130 abre, 200 não muda severidade e não registra nada, 90 fecha. O histórico diria 130.
  *
  * <h2>⚠️ A janela é obrigatória, e o resultado tem teto</h2>
  * O log é <i>append-only</i> e não tem política de retenção
@@ -38,9 +43,11 @@ public class HistoricoDeAlarmes {
 	static final int MAXIMO_DIAS = 92;
 
 	private final EventoAlarmeRepository eventos;
+	private final ExtremoDoEpisodioRepository extremos;
 
-	public HistoricoDeAlarmes(EventoAlarmeRepository eventos) {
+	public HistoricoDeAlarmes(EventoAlarmeRepository eventos, ExtremoDoEpisodioRepository extremos) {
 		this.eventos = eventos;
+		this.extremos = extremos;
 	}
 
 	/**
@@ -76,10 +83,17 @@ public class HistoricoDeAlarmes {
 			porEpisodio.get(entity.episodioId).add(entity.paraDominio());
 		}
 
+		// ⚠️ Terceira consulta, e ela e o que torna o extremo honesto: o pico costuma acontecer
+		// entre duas transicoes e nao gera fato nenhum — deduzi-lo dos fatos subestima a excursao.
+		var picos = new HashMap<String, Double>();
+		for (ExtremoDoEpisodioEntity extremo : extremos.findByEpisodioIdIn(ids)) {
+			picos.put(extremo.episodioId, extremo.valor);
+		}
+
 		var episodios = new ArrayList<EpisodioAlarme>(porEpisodio.size());
-		for (List<EventoAlarme> fatos : porEpisodio.values()) {
-			if (!fatos.isEmpty()) {
-				episodios.add(EpisodioAlarme.de(fatos));
+		for (var entrada : porEpisodio.entrySet()) {
+			if (!entrada.getValue().isEmpty()) {
+				episodios.add(EpisodioAlarme.de(entrada.getValue(), picos.get(entrada.getKey())));
 			}
 		}
 		return new Pagina(List.copyOf(episodios), truncado);

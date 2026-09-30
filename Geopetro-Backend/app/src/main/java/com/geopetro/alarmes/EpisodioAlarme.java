@@ -45,8 +45,15 @@ public record EpisodioAlarme(String episodioId, long unidadeSondaId, String disp
 	 * <p>⚠️ Os fatos precisam ser os do episódio <b>inteiro</b>, e não só os que caíram na janela
 	 * consultada: um episódio que abriu antes do início da janela apareceria começando por
 	 * {@code ESCALOU}, e a tela mostraria uma escalada sem a abertura que a explica.
+	 *
+	 * @param extremoGravado o pico vindo de {@link ExtremoDoEpisodioEntity}. ⚠️ <b>Ele é a resposta
+	 *                       certa e os fatos não são</b>: o pico costuma acontecer entre duas
+	 *                       transições e não gera fato nenhum — 130 abre, 200 não muda severidade,
+	 *                       90 fecha, e olhar só os fatos devolveria 130. {@code null} apenas para
+	 *                       episódio anterior à linha de extremo existir, e aí os fatos são o melhor
+	 *                       disponível
 	 */
-	static EpisodioAlarme de(List<EventoAlarme> fatos) {
+	static EpisodioAlarme de(List<EventoAlarme> fatos, Double extremoGravado) {
 		EventoAlarme abertura = fatos.get(0);
 		EventoAlarme ultimo = fatos.get(fatos.size() - 1);
 
@@ -64,14 +71,18 @@ public record EpisodioAlarme(String episodioId, long unidadeSondaId, String disp
 		return new EpisodioAlarme(abertura.episodioId(), abertura.unidadeSondaId(), abertura.dispositivoId(),
 				abertura.serie(), maxima, lado, abertura.ocorridoEm(),
 				ultimo.tipo() == Tipo.FECHOU ? ultimo.ocorridoEm() : null,
-				extremo(fatos, lado),
+				extremoGravado != null ? extremoGravado : extremo(fatos, lado),
 				fatos.stream()
 						.map(f -> new Fato(f.tipo(), f.severidade(), f.ocorridoEm(), f.valor()))
 						.toList());
 	}
 
 	/**
-	 * O pior valor na direção violada.
+	 * O pior valor <b>entre os fatos</b>, na direção violada — só para episódio sem linha de extremo.
+	 *
+	 * <p>⚠️ Isto <b>subestima</b> a excursão sempre que o pico aconteceu entre duas transições, que é
+	 * o caso comum. Serve de último recurso para os episódios anteriores a
+	 * {@link ExtremoDoEpisodioEntity} existir: o pico deles não foi gravado por ninguém e não volta.
 	 *
 	 * <p>O {@code FECHOU} entra na conta sem estragá-la: fechar significa ter voltado para dentro da
 	 * faixa, e um valor de dentro nunca é mais extremo que um de fora, dos dois lados.

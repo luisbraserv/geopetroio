@@ -77,12 +77,22 @@ class HistoricoDeAlarmesTest {
 	@Autowired
 	EventoAlarmeRepository repository;
 
+	@Autowired
+	ExtremoDoEpisodioRepository extremos;
+
 	HistoricoDeAlarmes historico;
 
 	@BeforeEach
 	void setup() {
 		repository.deleteAll();
-		historico = new HistoricoDeAlarmes(repository);
+		extremos.deleteAll();
+		historico = new HistoricoDeAlarmes(repository, extremos);
+	}
+
+	/** O pico do episódio, gravado fora do log de fatos — é dele que o histórico tira o extremo. */
+	private void pico(String episodio, double valor, LimiteViolado lado) {
+		extremos.save(ExtremoDoEpisodioEntity.de(
+				new AvaliadorDeAlarme.Extremo(episodio, UNIDADE, valor, lado), T0));
 	}
 
 	private void gravar(String episodio, Tipo tipo, Severidade severidade, int segundos, double valor) {
@@ -117,6 +127,34 @@ class HistoricoDeAlarmesTest {
 			assertThat(episodio.fatos()).extracting(EpisodioAlarme.Fato::tipo)
 					.containsExactly(Tipo.ABRIU, Tipo.ESCALOU, Tipo.FECHOU);
 		});
+	}
+
+	/**
+	 * ⚠️ O pico quase nunca e um fato — e o historico precisa dele mesmo assim.
+	 *
+	 * <p>130 abre, 200 nao muda severidade e nao gera transicao, 90 fecha. Os fatos gravados sao
+	 * 130 e 90; deduzir o extremo deles diria 130 e subestimaria a excursao, com todas as leituras
+	 * tendo chegado corretamente ao servidor.
+	 */
+	@Test
+	@DisplayName("o extremo vem da linha do episodio, e nao do maior valor entre os fatos")
+	void oPicoGravadoPrevaleceSobreOsFatos() {
+		gravar("ep-1", Tipo.ABRIU, Severidade.CRITICO, 0, 130);
+		gravar("ep-1", Tipo.FECHOU, Severidade.CRITICO, 300, 90);
+		pico("ep-1", 200, LimiteViolado.MAX);
+
+		assertThat(consultar()).singleElement()
+				.satisfies(episodio -> assertThat(episodio.valorExtremo()).isEqualTo(200.0));
+	}
+
+	/** Episodio anterior a linha de extremo existir ainda responde — com o melhor que os fatos dao. */
+	@Test
+	void episodioSemLinhaDeExtremoCaiNosFatos() {
+		gravar("ep-1", Tipo.ABRIU, Severidade.ATENCAO, 0, 105);
+		gravar("ep-1", Tipo.ESCALOU, Severidade.CRITICO, 60, 130);
+
+		assertThat(consultar()).singleElement()
+				.satisfies(episodio -> assertThat(episodio.valorExtremo()).isEqualTo(130.0));
 	}
 
 	@Test

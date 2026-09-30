@@ -62,8 +62,28 @@ public final class AvaliadorDeAlarme {
 		}
 	}
 
-	/** @param evento {@code null} quando a leitura não mudou nada — o caso comum */
-	public record Resultado(Estado estado, EventoAlarme evento) {
+	/**
+	 * O pior valor de um episódio, para gravar <b>fora</b> do log de fatos — RN-076.
+	 *
+	 * <h2>⚠️ Por que o extremo não cabe no evento</h2>
+	 * O log guarda <b>transições</b>, e o pico costuma acontecer entre duas delas: 130 abre, 200 não
+	 * muda severidade nenhuma e não gera fato, 90 fecha. Ler o extremo dos fatos devolveria 130 —
+	 * subestimando a excursão com todas as leituras tendo chegado corretamente ao servidor.
+	 *
+	 * <p>Guardar o pico <b>dentro</b> do evento confundiria duas coisas diferentes: {@code valor} é a
+	 * leitura que provocou o fato, e continua sendo. O extremo é do episódio, não do fato — por isso
+	 * viaja separado, para uma linha por episódio que o motor atualiza enquanto ele estiver aberto.
+	 */
+	public record Extremo(String episodioId, long unidadeSondaId, double valor, LimiteViolado limiteViolado) {
+	}
+
+	/**
+	 * @param evento  {@code null} quando a leitura não mudou nada — o caso comum
+	 * @param extremo o pior valor do episódio tocado por esta leitura; {@code null} quando não há
+	 *                episódio nenhum envolvido. Vem preenchido também no {@code FECHOU}, onde o
+	 *                estado já foi zerado mas o pico da excursão ainda precisa ficar gravado
+	 */
+	public record Resultado(Estado estado, EventoAlarme evento, Extremo extremo) {
 	}
 
 	public static Resultado avaliar(Estado anterior, Limite limite, long unidadeSondaId, double valor,
@@ -79,9 +99,18 @@ public final class AvaliadorDeAlarme {
 				extremo, violado);
 
 		if (lida == estado.confirmada() || !tempoCumprido(limite, estado.confirmada(), lida, desde, agora)) {
-			return new Resultado(observando, null);
+			// Sem transicao, mas o extremo pode ter avancado — e este e exatamente o caso que o log
+			// de fatos nao registra sozinho.
+			return new Resultado(observando, null, extremoDe(observando, unidadeSondaId));
 		}
 		return transicao(observando, limite, unidadeSondaId, valor, agora, lida, violado);
+	}
+
+	/** {@code null} quando não há episódio aberto: não há excursão de que falar. */
+	private static Extremo extremoDe(Estado estado, long unidadeSondaId) {
+		return estado.temEpisodioAberto() && estado.valorExtremo() != null
+				? new Extremo(estado.episodioId(), unidadeSondaId, estado.valorExtremo(), estado.limiteViolado())
+				: null;
 	}
 
 	/**
@@ -107,7 +136,13 @@ public final class AvaliadorDeAlarme {
 		Estado depois = tipo == Tipo.FECHOU
 				? new Estado(null, null, null, null, agora, null, null)
 				: new Estado(episodioId, abertoEm, lida, lida, estado.desde(), estado.valorExtremo(), violado);
-		return new Resultado(depois, evento);
+
+		// No FECHOU o estado ja foi zerado, mas o pico da excursao e justamente o que o historico
+		// precisa: ele vem de `estado`, que ainda o carrega, e nao de `depois`.
+		Extremo extremo = estado.valorExtremo() == null ? null
+				: new Extremo(episodioId, unidadeSondaId, estado.valorExtremo(),
+						tipo == Tipo.FECHOU ? estado.limiteViolado() : violado);
+		return new Resultado(depois, evento, extremo);
 	}
 
 	/**
@@ -123,14 +158,16 @@ public final class AvaliadorDeAlarme {
 	public static Resultado encerrar(Estado estado, long unidadeSondaId, String dispositivoId, String serie,
 			Instant agora) {
 		if (estado == null || !estado.temEpisodioAberto()) {
-			return new Resultado(estado == null ? Estado.inicial() : estado, null);
+			return new Resultado(estado == null ? Estado.inicial() : estado, null, null);
 		}
 		// valorExtremo e nao-nulo sempre que ha episodio aberto: ele nasce na leitura que abriu, e a
-		// reconstrucao o traz do ultimo fato gravado. Deixar estourar aqui e melhor que inventar um
-		// numero — o log de eventos nao aceita valor que ninguem mediu.
+		// reconstrucao o traz da linha de extremo do episodio. Deixar estourar aqui e melhor que
+		// inventar um numero — o log de eventos nao aceita valor que ninguem mediu.
 		var evento = new EventoAlarme(null, estado.episodioId(), unidadeSondaId, dispositivoId, serie,
 				Tipo.FECHOU, estado.confirmada(), agora, estado.valorExtremo(), estado.limiteViolado());
-		return new Resultado(Estado.inicial(), evento);
+		var extremo = new Extremo(estado.episodioId(), unidadeSondaId, estado.valorExtremo(),
+				estado.limiteViolado());
+		return new Resultado(Estado.inicial(), evento, extremo);
 	}
 
 	private static Tipo tipoDaTransicao(Severidade confirmada, Severidade lida) {

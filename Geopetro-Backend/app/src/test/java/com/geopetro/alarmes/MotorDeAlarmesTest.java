@@ -1,6 +1,7 @@
 package com.geopetro.alarmes;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,9 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionSystemException;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.geopetro.alarmes.EventoAlarme.LimiteViolado;
 import com.geopetro.alarmes.EventoAlarme.Severidade;
@@ -70,14 +74,24 @@ class MotorDeAlarmesTest {
 	@Autowired
 	EventoAlarmeRepository repository;
 
+	@Autowired
+	ExtremoDoEpisodioRepository extremos;
+
+	@Autowired
+	PlatformTransactionManager transacoes;
+
+	@Autowired
+	EntityManagerFactory factory;
+
 	LimitesDeclarados limites;
 	MotorDeAlarmes motor;
 
 	@BeforeEach
 	void setup() {
 		repository.deleteAll();
+		extremos.deleteAll();
 		limites = mock(LimitesDeclarados.class);
-		motor = new MotorDeAlarmes(repository, limites);
+		motor = new MotorDeAlarmes(repository, extremos, limites, transacoes);
 	}
 
 	/** Pressao: atencao acima de 100, critico acima de 120, sem tempo minimo. */
@@ -96,6 +110,10 @@ class MotorDeAlarmesTest {
 	private List<EventoAlarme> gravados() {
 		return repository.findAll().stream().map(EventoAlarmeEntity::paraDominio)
 				.sorted((a, b) -> Long.compare(a.id(), b.id())).toList();
+	}
+
+	private MotorDeAlarmes reiniciado() {
+		return new MotorDeAlarmes(repository, extremos, limites, transacoes);
 	}
 
 	@Test
@@ -189,7 +207,7 @@ class MotorDeAlarmesTest {
 		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
 		String episodio = gravados().get(0).episodioId();
 
-		var reiniciado = new MotorDeAlarmes(repository, limites);
+		var reiniciado = reiniciado();
 		assertThat(reiniciado.ativos(UNIDADE)).as("sem reconstruir, o motor nao sabe de nada").isEmpty();
 
 		reiniciado.reconstruirProjecao();
@@ -214,7 +232,7 @@ class MotorDeAlarmesTest {
 		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
 		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 90.0)));
 
-		var reiniciado = new MotorDeAlarmes(repository, limites);
+		var reiniciado = reiniciado();
 		reiniciado.reconstruirProjecao();
 		assertThat(reiniciado.ativos(UNIDADE)).isEmpty();
 	}
@@ -229,5 +247,150 @@ class MotorDeAlarmesTest {
 		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
 
 		assertThat(vinculo.descreverVinculo(UNIDADE)).contains("historico de alarmes");
+	}
+
+	// --- A02: o pico medido entre duas transicoes -------------------------------
+
+	/**
+	 * ⚠️ O pico de uma excursao quase nunca e um fato.
+	 *
+	 * <p>130 abre em critico, 200 continua critico e nao gera transicao nenhuma, 90 fecha. O log tem
+	 * ABRIU(130) e FECHOU(90) — e nenhum dos dois e 200. Deduzir o extremo dos fatos diria 130, com
+	 * todas as leituras tendo chegado corretamente ao servidor.
+	 */
+	@Test
+	@DisplayName("o extremo do episodio sobrevive mesmo sem virar fato")
+	void oPicoEntreTransicoesFicaGravado() {
+		declara(pressao());
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
+		String episodio = gravados().get(0).episodioId();
+
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 200.0)));
+
+		assertThat(gravados()).as("200 nao muda severidade: nenhum fato novo")
+				.extracting(EventoAlarme::tipo).containsExactly(Tipo.ABRIU);
+		assertThat(motor.ativos(UNIDADE)).singleElement()
+				.satisfies(ativo -> assertThat(ativo.valorExtremo()).isEqualTo(200.0));
+		assertThat(extremos.findById(episodio)).get()
+				.satisfies(linha -> assertThat(linha.valor).isEqualTo(200.0));
+
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 90.0)));
+		assertThat(extremos.findById(episodio)).as("fechar nao rebaixa o pico para a leitura de volta")
+				.get().satisfies(linha -> assertThat(linha.valor).isEqualTo(200.0));
+	}
+
+	/** ⚠️ Reiniciar depois do pico reduzia a projecao ao valor do ABRIU. */
+	@Test
+	void oReinicioNaoRebaixaOExtremoAoUltimoFato() {
+		declara(pressao());
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 200.0)));
+
+		var reiniciado = reiniciado();
+		reiniciado.reconstruirProjecao();
+
+		assertThat(reiniciado.ativos(UNIDADE)).singleElement()
+				.satisfies(ativo -> assertThat(ativo.valorExtremo())
+						.as("o ultimo fato gravado vale 130; o pico medido foi 200")
+						.isEqualTo(200.0));
+	}
+
+	/** Uma leitura que nao bate o recorde nao escreve nada: o extremo e recorde, nao ultimo valor. */
+	@Test
+	void leituraMenosExtremaNaoRegridiOPico() {
+		declara(pressao());
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 200.0)));
+		String episodio = gravados().get(0).episodioId();
+
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 150.0)));
+
+		assertThat(extremos.findById(episodio)).get()
+				.satisfies(linha -> assertThat(linha.valor).isEqualTo(200.0));
+	}
+
+	// --- A03: a projecao so muda depois do commit -------------------------------
+
+	/**
+	 * ⚠️ {@code saveAll} ter retornado nao prova que a transacao confirmou.
+	 *
+	 * <p>Antes, o mapa era atualizado dentro da transacao: uma falha na confirmacao deixava a tela
+	 * anunciando um episodio que o banco nao tinha, e a proxima leitura na mesma severidade nao
+	 * gerava outro ABRIU porque a memoria ja o considerava ocorrido.
+	 */
+	@Test
+	@DisplayName("rollback nao deixa alarme na memoria sem evento gravado")
+	void falhaNoCommitNaoPublicaAProjecao() {
+		declara(pressao());
+		var comFalhaNoCommit = new MotorDeAlarmes(repository, extremos, limites,
+				new TransactionTemplate(gerenciadorQueFalhaAoConfirmar()));
+
+		assertThatThrownBy(() -> comFalhaNoCommit.avaliar(UNIDADE,
+				List.of(leitura("PRESSAO_01", null, 130.0))))
+				.isInstanceOf(TransactionSystemException.class);
+
+		assertThat(gravados()).as("a transacao voltou atras").isEmpty();
+		assertThat(comFalhaNoCommit.ativos(UNIDADE))
+				.as("e a memoria nao pode afirmar o que o banco nao guardou").isEmpty();
+	}
+
+	/** Depois da falha, a proxima leitura tenta de novo — e desta vez o episodio existe de fato. */
+	@Test
+	void depoisDoRollbackAProximaLeituraAbreOEpisodio() {
+		declara(pressao());
+		var comFalhaNoCommit = new MotorDeAlarmes(repository, extremos, limites,
+				new TransactionTemplate(gerenciadorQueFalhaAoConfirmar()));
+		assertThatThrownBy(() -> comFalhaNoCommit.avaliar(UNIDADE,
+				List.of(leitura("PRESSAO_01", null, 130.0)))).isInstanceOf(RuntimeException.class);
+
+		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
+
+		assertThat(gravados()).extracting(EventoAlarme::tipo).containsExactly(Tipo.ABRIU);
+		assertThat(motor.ativos(UNIDADE)).hasSize(1);
+	}
+
+	/** Confirma de verdade e depois estoura: o efeito e o rollback do que o ciclo escreveu. */
+	private PlatformTransactionManager gerenciadorQueFalhaAoConfirmar() {
+		return new JpaTransactionManager(factory) {
+			@Override
+			protected void doCommit(DefaultTransactionStatus status) {
+				super.doRollback(status);
+				throw new TransactionSystemException("Falha simulada na confirmacao.");
+			}
+		};
+	}
+
+	// --- A04: identidade repetida no mesmo ciclo --------------------------------
+
+	/**
+	 * ⚠️ Duas leituras da mesma grandeza no mesmo ciclo liam ambas o mapa anterior — vazio — e
+	 * abriam episodios diferentes, um deles sem estado correspondente para fechar depois.
+	 */
+	@Test
+	@DisplayName("identidade repetida no ciclo nao abre dois episodios")
+	void identidadeRepetidaNoCicloEncadeiaOEstado() {
+		declara(pressao());
+
+		motor.avaliar(UNIDADE, List.of(
+				leitura("PRESSAO_01", null, 130.0),
+				leitura("PRESSAO_01", null, 130.0)));
+
+		assertThat(gravados()).extracting(EventoAlarme::tipo)
+				.as("uma excursao, um ABRIU").containsExactly(Tipo.ABRIU);
+		assertThat(motor.ativos(UNIDADE)).hasSize(1);
+		assertThat(gravados().get(0).episodioId())
+				.isEqualTo(motor.ativos(UNIDADE).get(0).episodioId());
+	}
+
+	/** E a segunda leitura do ciclo continua contando para o extremo. */
+	@Test
+	void aSegundaLeituraDoCicloAindaAvancaOExtremo() {
+		declara(pressao());
+
+		motor.avaliar(UNIDADE, List.of(
+				leitura("PRESSAO_01", null, 130.0),
+				leitura("PRESSAO_01", null, 200.0)));
+
+		assertThat(motor.ativos(UNIDADE)).singleElement()
+				.satisfies(ativo -> assertThat(ativo.valorExtremo()).isEqualTo(200.0));
 	}
 }
