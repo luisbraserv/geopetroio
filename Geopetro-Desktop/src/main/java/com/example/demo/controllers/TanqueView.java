@@ -52,14 +52,20 @@ public class TanqueView extends Canvas {
 		desenhar();
 	}
 
-	private void desenhar() {
+	public void redimensionar(double largura, double altura) {
+        largura = Math.max(60, largura); altura = Math.max(60, altura);
+        if (getWidth() == largura && getHeight() == altura) return;
+        setWidth(largura); setHeight(altura); desenhar();
+    }
+
+    private void desenhar() {
 		GraphicsContext g = getGraphicsContext2D();
-		g.clearRect(0, 0, LARGURA, ALTURA);
+		g.clearRect(0, 0, getWidth(), getHeight());
 
 		double x = MARGEM;
 		double y = TOPO;
-		double largura = LARGURA - 2 * MARGEM;
-		double altura = ALTURA - TOPO - MARGEM;
+		double largura = getWidth() - 2 * MARGEM;
+		double altura = getHeight() - TOPO - MARGEM;
 
 		switch (forma) {
 			case CILINDRICO_VERTICAL -> desenharVertical(g, x, y, largura, altura);
@@ -152,7 +158,7 @@ public class TanqueView extends Canvas {
 	 * fundo. Quem olhar entende que <b>o que se mede é o vazio acima do líquido</b>.
 	 */
 	private void desenharSensor(GraphicsContext g, double topoTanque, double alturaTanque) {
-		double centroX = LARGURA / 2;
+		double centroX = getWidth() / 2;
 
 		g.setFill(Color.web("#334155"));
 		g.fillRect(centroX - 9, TOPO - 12, 18, 10);

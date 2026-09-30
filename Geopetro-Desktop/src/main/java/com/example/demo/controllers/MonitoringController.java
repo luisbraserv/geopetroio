@@ -1,32 +1,28 @@
 package com.example.demo.controllers;
 
 import com.example.demo.models.AppSettings;
-import com.example.demo.models.CardVisibilityConfig;
 import com.example.demo.services.SettingsService;
 import com.example.demo.services.SondaService;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
+import org.springframework.context.annotation.Scope;
+import com.example.demo.services.CardsDoMonitoramento;
+import com.example.demo.services.PlcConnectionService;
 
-import java.io.IOException;
 import com.example.demo.models.CardsDaUnidade;
 import com.example.demo.services.AlarmesLocais;
 import com.example.demo.services.AvaliadorLocalDeAlarme;
@@ -39,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Controller
+@Scope("prototype")
 public class MonitoringController {
 
     private static final Logger logger = LoggerFactory.getLogger(MonitoringController.class);
@@ -54,16 +51,35 @@ public class MonitoringController {
     @Autowired private ApplicationContext applicationContext;
     @Autowired private TelemetriaRealtimeService telemetriaRealtimeService;
     @Autowired private AlarmesLocais alarmesLocais;
+    @Autowired private PlcConnectionService plcConnectionService;
+    @Autowired private com.example.demo.services.AlarmesDaEstacao alarmesDaEstacao;
 
-    @FXML private FlowPane cardsPane;
+    @FXML private DashboardGrid cardsPane;
+    @FXML private Label estadoMonitoramento;
+    @FXML private javafx.scene.layout.HBox paginas;
+    @FXML private Label numeroPagina;
+    @FXML private void paginaAnterior() { cardsPane.showPage(cardsPane.page()-1); atualizarPaginas(); }
+    @FXML private void proximaPagina() { cardsPane.showPage(cardsPane.page()+1); atualizarPaginas(); }
+    private void atualizarPaginas() {
+        cardsPane.showPage(cardsPane.page());
+        paginas.setVisible(cardsPane.pageCount()>1);
+        paginas.setManaged(cardsPane.pageCount()>1);
+        numeroPagina.setText((cardsPane.page()+1) + " / " + cardsPane.pageCount());
+    }
+    private Timeline timeline;
+    private CardsDaUnidade documentoExibido;
+    private CardsDaUnidade documentoAtual;
 
 
     @FXML
     public void initialize() {
         logger.info("Inicializando MonitoringController");
-        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateData()));
+        timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateData()));
         timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.play();
+        cardsPane.sceneProperty().addListener((observable, anterior, atual) -> {
+            if (atual == null) timeline.stop();
+            else { updateData(); timeline.play(); }
+        });
         updateData();
     }
 
@@ -73,7 +89,7 @@ public class MonitoringController {
      * @param visual termômetro ou tanque, quando o tipo tem desenho próprio; senão {@code null}
      */
     private record CardDinamico(Node no, Label valor, Label bruto, Label estado, Node visual,
-                                Label alarme) {
+                                Label alarme, Button sininho) {
     }
 
     /** Chave de um card: o dispositivo mais a série, porque o stroke produz três. */
@@ -84,7 +100,7 @@ public class MonitoringController {
     private final Map<String, CardDinamico> cardsDinamicos = new LinkedHashMap<>();
 
     /**
-     * Monta a tela a partir das grandezas do último ciclo — passo 7.
+     * Monta a tela pelo documento, mesmo antes de haver uma leitura do CLP.
      *
      * <p>Antes eram seis cards fixos no código. Agora a tela é o que a unidade declarou: dois
      * tanques, três torques ou nenhum peso aparecem sem que este arquivo saiba de antemão.
@@ -94,17 +110,25 @@ public class MonitoringController {
      */
     private void sincronizarCards(List<LeituraDeCards.Grandeza> grandezas) {
         List<String> chaves = grandezas.stream().map(MonitoringController::chave).toList();
-        if (chaves.equals(List.copyOf(cardsDinamicos.keySet()))) {
+        if (java.util.Objects.equals(documentoExibido, documentoAtual)
+                && chaves.equals(List.copyOf(cardsDinamicos.keySet()))) {
             return;
         }
 
         cardsDinamicos.clear();
-        cardsPane.getChildren().clear();
+        cardsPane.clearCards();
+        documentoExibido = documentoAtual;
         for (LeituraDeCards.Grandeza g : grandezas) {
             CardDinamico card = construir(g);
             cardsDinamicos.put(chave(g), card);
-            cardsPane.getChildren().add(card.no());
+            int largura = g.tipo() == CardsDaUnidade.Tipo.TEMPERATURA || g.tipo() == CardsDaUnidade.Tipo.NIVEL_TANQUE ? 1 : 2;
+            if (!cardsPane.addCard(settingsService.loadSettings().getUnidadeSondaId() + "|" + chave(g), (javafx.scene.layout.Region) card.no(), largura)) {
+                estadoMonitoramento.setText("A grade está cheia. Reduza o tamanho dos cards para liberar espaço.");
+                estadoMonitoramento.setVisible(true);
+                estadoMonitoramento.setManaged(true);
+            }
         }
+        atualizarPaginas();
         logger.info("Dashboard montado com {} grandezas.", grandezas.size());
     }
 
@@ -128,9 +152,98 @@ public class MonitoringController {
         Button engrenagem = new Button("⚙");
         engrenagem.setOnAction(e -> abrirCalibracaoDoCard(g, engrenagem));
 
+        Button sininho = new Button();
+        sininho.setOnAction(e -> abrirAlarmeDoCard(g, sininho));
+
         Node no = buildCardDinamico(rotulo(g), g.unidade(), visual, iconeDe(g.tipo()),
-                valor, estado, engrenagem, bruto, alarme);
-        return new CardDinamico(no, valor, bruto, estado, visual, alarme);
+                valor, estado, engrenagem, bruto, alarme, sininho);
+        var card = new CardDinamico(no, valor, bruto, estado, visual, alarme, sininho);
+        atualizarSininho(card, g, null);
+        return card;
+    }
+
+    /**
+     * O sininho abre o ajuste do alarme desta estação — {@code configuracao-da-estacao.md §3.1}.
+     *
+     * <p>⚠️ <b>Sem login, e é o único assim.</b> Todo o resto da configuração do Desktop exige
+     * {@code ADMIN} ou {@code SUPORTE}; aqui não, porque o alarme local existe justamente para a
+     * sonda sem rede, e um portão de rede anularia a feature no cenário que a motiva (RN-109).
+     */
+    private void abrirAlarmeDoCard(LeituraDeCards.Grandeza g, Button dono) {
+        boolean mudou = AlarmeLocalDialog.abrir(dono.getScene().getWindow(), alarmesDaEstacao,
+                g.dispositivoId(), g.serie(), rotulo(g), g.unidade());
+        if (mudou) {
+            // Sem esperar o proximo ciclo: quem acabou de configurar precisa ver o sininho mudar,
+            // ou vai clicar de novo achando que nao salvou.
+            CardDinamico card = cardsDinamicos.get(chave(g));
+            if (card != null) {
+                atualizarSininho(card, g, alarmesLocais.severidadeDe(g));
+            }
+        }
+    }
+
+    /**
+     * O estado do sininho, sem precisar clicar nele.
+     *
+     * <table>
+     *   <tr><th>Aparência</th><th>Significa</th></tr>
+     *   <tr><td>Apagado</td><td>Sem alarme configurado nesta estação</td></tr>
+     *   <tr><td>Aceso</td><td>Vigiando, dentro da faixa</td></tr>
+     *   <tr><td>Aceso e destacado</td><td>Disparado agora</td></tr>
+     *   <tr><td>Riscado</td><td>Configurado e desligado — a faixa continua guardada</td></tr>
+     * </table>
+     *
+     * <p>⚠️ <b>Ligado sem faixa nenhuma conta como apagado.</b> Marcar o alarme e sair sem digitar
+     * número é o engano mais fácil de cometer; mostrar o sino aceso ali prometeria uma vigilância
+     * que não existe (RN-108).
+     */
+    private void atualizarSininho(CardDinamico card, LeituraDeCards.Grandeza g,
+                                  AvaliadorLocalDeAlarme.Severidade severidade) {
+        var alarme = alarmesDaEstacao.para(g.dispositivoId(), g.serie());
+        var classes = card.sininho().getStyleClass();
+        classes.removeAll("sininho-aceso", "sininho-desligado", "sininho-disparado");
+        classes.add("botao-icone");
+
+        boolean temFaixa = alarme != null && (alarme.minimo() != null || alarme.maximo() != null);
+
+        // ⚠️ Sem faixa e o mesmo que sem alarme, e a tela precisa dizer isso: um sino riscado
+        // prometendo "a faixa continua guardada" quando nao ha faixa nenhuma seria pior que o sino
+        // apagado — mandaria o operador procurar numeros que ninguem digitou.
+        if (!temFaixa) {
+            card.sininho().setText("🔔");
+            card.sininho().setTooltip(new javafx.scene.control.Tooltip(
+                    "Sem alarme nesta estação. Clique para informar mínimo ou máximo."));
+            return;
+        }
+
+        if (!alarme.ativo()) {
+            card.sininho().setText("🔕");
+            classes.add("sininho-desligado");
+            card.sininho().setTooltip(new javafx.scene.control.Tooltip(
+                    "Alarme desligado nesta estação. A faixa continua guardada: "
+                            + faixaLegivel(alarme, g.unidade())));
+            return;
+        }
+
+        card.sininho().setText("🔔");
+        classes.add(severidade == null ? "sininho-aceso" : "sininho-disparado");
+        card.sininho().setTooltip(new javafx.scene.control.Tooltip(
+                "Alarme desta estação: " + faixaLegivel(alarme, g.unidade())));
+    }
+
+    private static String faixaLegivel(com.example.demo.services.AlarmesDaEstacao.AlarmeLocal alarme,
+                                       String unidade) {
+        StringBuilder texto = new StringBuilder();
+        if (alarme.minimo() != null) {
+            texto.append("abaixo de ").append(alarme.minimo()).append(' ').append(unidade);
+        }
+        if (alarme.maximo() != null) {
+            if (texto.length() > 0) {
+                texto.append(" ou ");
+            }
+            texto.append("acima de ").append(alarme.maximo()).append(' ').append(unidade);
+        }
+        return texto.toString();
     }
 
     /** O nome do card é o rótulo; a série entra entre parênteses quando há mais de uma. */
@@ -176,8 +289,7 @@ public class MonitoringController {
 
     /** O card do documento, para chegar aos parâmetros de escala do desenho. */
     private CardsDaUnidade.Card cardDoDocumento(String dispositivoId) {
-        return telemetriaRealtimeService.cardsAtuais(settingsService.loadSettings())
-                .map(CardsDaUnidade::cards).orElse(List.of()).stream()
+        return (documentoAtual == null ? List.<CardsDaUnidade.Card>of() : documentoAtual.cards()).stream()
                 .filter(c -> dispositivoId.equals(c.dispositivoId()))
                 .findFirst().orElse(null);
     }
@@ -194,7 +306,7 @@ public class MonitoringController {
             card.estado().setVisible(true);
             card.estado().setManaged(true);
         }
-        card.bruto().setText(g.enderecoDb() + "  " + Math.round(g.bruto()));
+        card.bruto().setText(g.enderecoDb() + "  " + (Double.isFinite(g.bruto()) ? Math.round(g.bruto()) : "--"));
 
         if (card.visual() instanceof TermometroView termometro) {
             termometro.setValor(g.temValor() ? g.valor() : null);
@@ -202,7 +314,12 @@ public class MonitoringController {
             atualizarTanque(tanque, g);
         }
 
-        aplicarAlarme(card, alarmesLocais.severidadeDe(g));
+        // ⚠️ A severidade sai do MOTOR, e nao deste ciclo. Grandeza sem valor nao desmente alarme
+        // nenhum (RN-099): condicionar o destaque a temValor() apagava o aviso por FALTA DE DADO,
+        // desfazendo na tela exatamente o que o motor preserva.
+        var severidade = alarmesLocais.severidadeDe(g);
+        aplicarAlarme(card, severidade);
+        atualizarSininho(card, g, severidade);
     }
 
     /**
@@ -235,7 +352,7 @@ public class MonitoringController {
     private void atualizarTanque(TanqueView tanque, LeituraDeCards.Grandeza g) {
         var card = cardDoDocumento(g.dispositivoId());
         var p = card == null ? null : card.parametros();
-        Double alturaM = p == null ? null : ConversaoTanque.alturaDoLiquidoM(g.bruto(), p);
+        Double alturaM = p == null || !Double.isFinite(g.bruto()) ? null : ConversaoTanque.alturaDoLiquidoM(g.bruto(), p);
         tanque.atualizar(alturaM == null ? 0 : ConversaoTanque.fracaoCheia(alturaM, p),
                 alturaM != null && g.temValor());
     }
@@ -250,22 +367,35 @@ public class MonitoringController {
         };
     }
 
-    /** A engrenagem abre a calibração do card — a mesma janela que a tela de Cards abre. */
+    /**
+     * A engrenagem abre a calibração do card — a mesma janela que a tela de Cards abre.
+     *
+     * <p>⚠️ <b>Exige {@code ADMIN} ou {@code SUPORTE}</b> desde 2026-09-10
+     * ({@code configuracao-da-estacao.md §5}). A calibração decide como o número bruto do CLP vira
+     * a leitura que é gravada por cinco anos: errar aqui produz um <b>número plausível e errado</b>,
+     * que é o defeito mais caro desta base.
+     *
+     * <p>Contrasta com o sininho, ao lado, que não pede login — ele só decide quando esta máquina
+     * apita, e não altera dado nenhum (RN-109).
+     *
+     * <p>⚠️ <b>Custo aceito:</b> a calibração é medida em campo, com a unidade parada, e agora exige
+     * rede ao menos uma vez. Está registrado na spec como a consequência mais provável de doer.
+     */
     private void abrirCalibracaoDoCard(LeituraDeCards.Grandeza g, Button dono) {
-        switch (g.tipo()) {
-            case PESO -> openPesoColunaSettings(dono);
-            case TORQUE -> openChaveSettings(true, dono);
-            case CONTADOR_STROKE -> openPumpSettingsWindow(dono);
-            // Pressao, temperatura e tanque tem a escala no DOCUMENTO, nao nesta estacao: quem
-            // ajusta e a tela de Cards, com login. Mandar para a janela local seria oferecer um
-            // ajuste que nao tem efeito.
-            default -> CardsConfigController.abrir(dono.getScene().getWindow(), applicationContext);
+        if (!ConfiguracaoLoginController.exigirSessao(dono.getScene().getWindow(), applicationContext)) {
+            return;
         }
-    }
-
-    private Node buildCard(String title, String symbol, String unit, String iconSvg,
-                           Label valueLabel, Label statusLabel, Button gearButton) {
-        return buildCard(title, symbol, unit, iconSvg, valueLabel, statusLabel, gearButton, null, null);
+        CardsDaUnidade.Card card = cardDoDocumento(g.dispositivoId());
+        if (card == null || documentoAtual == null) {
+            return;
+        }
+        switch (g.tipo()) {
+            case PESO, TORQUE -> CalibracaoCardDialog.abrir(dono.getScene().getWindow(),
+                    applicationContext, documentoAtual, card, g.bruto());
+            // Os demais tipos editam os parametros do documento; abrir ja no card clicado.
+            default -> CardsConfigController.abrir(dono.getScene().getWindow(), applicationContext,
+                    card.dispositivoId());
+        }
     }
 
     /**
@@ -279,91 +409,17 @@ public class MonitoringController {
      * card ja reservava aquele lugar para a identificacao visual da grandeza.
      */
     private Node buildCardDinamico(String titulo, String unidade, Node visual, String iconSvg,
-                                   Label valor, Label estado, Button engrenagem, Label bruto, Label alarme) {
-        if (visual == null) {
-            return buildCard(titulo, "", unidade, iconSvg, valor, estado, engrenagem, bruto, alarme);
-        }
+                                   Label valor, Label estado, Button engrenagem, Label bruto, Label alarme, Button sininho) {
         styleValueLabel(valor);
-
-        Label titulos = new Label(titulo);
-        titulos.getStyleClass().add("card-grandeza-titulo");
-        titulos.setWrapText(true);
-        titulos.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
-        titulos.setAlignment(Pos.CENTER);
-        titulos.setMaxWidth(Double.MAX_VALUE);
-
-        Label unidades = new Label(unidade);
-        unidades.getStyleClass().add("muted");
         styleGearButton(engrenagem);
-
-        // Desenho a esquerda, numero a direita: o valor continua legivel de longe, e o desenho
-        // responde a pergunta que o numero sozinho nao responde.
-        VBox numeros = new VBox(6, titulos, valor, unidades, estado, alarme);
-        numeros.setAlignment(Pos.CENTER);
-        javafx.scene.layout.HBox corpo = new javafx.scene.layout.HBox(12, visual, numeros);
-        corpo.setAlignment(Pos.CENTER);
-        javafx.scene.layout.HBox.setHgrow(numeros, javafx.scene.layout.Priority.ALWAYS);
-
-        javafx.scene.layout.StackPane conteudo = new javafx.scene.layout.StackPane(corpo, engrenagem, bruto);
-        javafx.scene.layout.StackPane.setAlignment(engrenagem, Pos.TOP_RIGHT);
-        javafx.scene.layout.StackPane.setAlignment(bruto, Pos.BOTTOM_RIGHT);
-        conteudo.setPadding(new Insets(20));
-        conteudo.getStyleClass().add("card-grandeza");
-        conteudo.setPrefHeight(260);
-        conteudo.prefWidthProperty().bind(cardsPane.widthProperty().subtract(61).divide(4));
-        return conteudo;
-    }
-
-    private Node buildCard(String title, String symbol, String unit, String iconSvg,
-                           Label valueLabel, Label statusLabel, Button gearButton, Label rawLabel,
-                           Label alarmeLabel) {
-        styleValueLabel(valueLabel);
-
-        javafx.scene.shape.SVGPath icon = new javafx.scene.shape.SVGPath();
-        icon.setContent(iconSvg);
-        icon.setFill(javafx.scene.paint.Color.web("#5a667a"));
-        icon.setScaleX(1.6);
-        icon.setScaleY(1.6);
-        javafx.scene.layout.StackPane iconBox = new javafx.scene.layout.StackPane(icon);
-        iconBox.setMinSize(44, 44);
-        iconBox.setPrefSize(44, 44);
-        iconBox.setMaxSize(44, 44);
-
-        Label titleLabel = new Label(symbol == null || symbol.isBlank() ? title : title + " (" + symbol + ")");
-        titleLabel.getStyleClass().add("card-grandeza-titulo");
-        titleLabel.setWrapText(true);
-        titleLabel.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
-        titleLabel.setAlignment(Pos.CENTER);
-        titleLabel.setMaxWidth(Double.MAX_VALUE);
-
-        Label unitLabel = new Label(unit);
-        unitLabel.getStyleClass().add("muted");
-
-        styleGearButton(gearButton);
-
-        VBox body = new VBox(10, iconBox, titleLabel, valueLabel, unitLabel);
-        if (statusLabel != null) body.getChildren().add(statusLabel);
-        if (alarmeLabel != null) body.getChildren().add(alarmeLabel);
-        body.setAlignment(Pos.CENTER);
-
-        javafx.scene.layout.StackPane content = new javafx.scene.layout.StackPane(body, gearButton);
-        javafx.scene.layout.StackPane.setAlignment(gearButton, Pos.TOP_RIGHT);
-
-        if (rawLabel != null) {
-            // Valor cru do CLP, sobreposto no rodapé do card. Fica no StackPane em vez de dentro do
-            // body para não empurrar o valor principal do centro.
-            content.getChildren().add(rawLabel);
-            javafx.scene.layout.StackPane.setAlignment(rawLabel, Pos.BOTTOM_RIGHT);
+        boolean instrument = visual != null;
+        if (visual == null) {
+            var icon = new javafx.scene.shape.SVGPath();
+            icon.setContent(iconSvg);
+            icon.setFill(javafx.scene.paint.Color.web("#5a667a"));
+            visual = icon;
         }
-
-        content.setPadding(new Insets(20));
-        content.getStyleClass().add("card-grandeza");
-        content.setPrefHeight(260);
-
-        // Máximo de 4 cards por linha: largura acompanha a tela
-        content.prefWidthProperty().bind(cardsPane.widthProperty().subtract(61).divide(4));
-
-        return content;
+        return new IndicatorCardView(titulo, unidade, visual, instrument, valor, bruto, alarme, estado, sininho, engrenagem);
     }
 
     /**
@@ -424,105 +480,46 @@ public class MonitoringController {
     }
 
     /**
-     * Atualiza a tela a cada ciclo a partir das grandezas convertidas.
+     * Atualiza os indicadores configurados e preenche as medições disponíveis a cada segundo.
      *
      * <p>⚠️ <b>A visibilidade nao filtra mais aqui.</b> Ela controla PUBLICACAO, nao exibicao
      * (RN-037), e quem a aplica e {@code LeituraDeCards.paraPublicar}. Filtrar tambem na tela
      * escondia da estacao um card que ela esta lendo e gravando — e o operador nao teria como
      * saber que ele existe.
      */
-    private void updateData() {
-        List<LeituraDeCards.Grandeza> grandezas = sondaService.grandezas();
+    void updateData() {
+        AppSettings settings = settingsService.loadSettings();
+        documentoAtual = telemetriaRealtimeService.cardsAtuais(settings).orElse(null);
+        List<LeituraDeCards.Grandeza> grandezas = CardsDoMonitoramento.montar(documentoAtual,
+                sondaService.grandezas(documentoAtual), plcConnectionService.isConnected());
+        String mensagem = null;
+        if (settings.getUnidadeSondaId() == null) {
+            mensagem = "Selecione a unidade em Configurações para carregar os cards.";
+        } else if (documentoAtual == null) {
+            mensagem = "A configuração dos cards ainda não está disponível nesta estação. Verifique a conexão e o acesso ao servidor em Configurações.";
+        } else if (documentoAtual.cards().isEmpty()) {
+            mensagem = "Esta unidade ainda não tem cards configurados. Abra Cards para adicionar ou copiar de outra unidade.";
+        } else if (grandezas.isEmpty()) {
+            mensagem = "Todos os cards desta unidade estão desativados. Abra Cards para ativar os que deseja monitorar.";
+        } else if (!plcConnectionService.isConnected()) {
+            String erro = plcConnectionService.getUltimoErro();
+            mensagem = erro == null || erro.isBlank()
+                    ? "PLC desconectado. Clique em Conectar para iniciar a leitura."
+                    : "Leitura interrompida: " + erro;
+        } else if (plcConnectionService.getUltimaLeitura() != null) {
+            mensagem = "Última leitura do PLC: " + java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+                    .withZone(java.time.ZoneId.systemDefault()).format(plcConnectionService.getUltimaLeitura())
+                    + " · Valores brutos do DB no rodapé de cada card.";
+        }
+        estadoMonitoramento.setText(mensagem);
+        estadoMonitoramento.setVisible(mensagem != null);
+        estadoMonitoramento.setManaged(mensagem != null);
         sincronizarCards(grandezas);
         for (LeituraDeCards.Grandeza g : grandezas) {
             CardDinamico card = cardsDinamicos.get(chave(g));
             if (card != null) {
                 atualizarCard(card, g);
             }
-        }
-    }
-
-    private void openSensorSettings(int sensorIndex, String nomeSensor, boolean ignored, Button ownerButton) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/sensor-settings.fxml"));
-            loader.setControllerFactory(applicationContext::getBean);
-            Parent root = loader.load();
-
-            SensorSettingsController controller = loader.getController();
-            controller.configurarSensor(sensorIndex, nomeSensor);
-
-            Stage stage = new Stage();
-            stage.setTitle("Configuração do Sensor");
-            stage.setScene(new Scene(root));
-            stage.setMinWidth(440);
-            stage.setMinHeight(300);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.initOwner((Stage) ownerButton.getScene().getWindow());
-            stage.setResizable(true);
-            stage.showAndWait();
-        } catch (IOException e) {
-            logger.error("Erro ao abrir configuracao do sensor {}", sensorIndex, e);
-        }
-    }
-
-    private void openPesoColunaSettings(Button ownerButton) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/peso-coluna-settings.fxml"));
-            loader.setControllerFactory(applicationContext::getBean);
-            Parent root = loader.load();
-
-            Stage stage = new Stage();
-            stage.setTitle("Configuração — Peso da Coluna");
-            stage.setScene(new Scene(root));
-            stage.setMinWidth(460);
-            stage.setMinHeight(420);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.initOwner((Stage) ownerButton.getScene().getWindow());
-            stage.setResizable(false);
-            stage.showAndWait();
-        } catch (IOException e) {
-            logger.error("Erro ao abrir configuracao de peso da coluna", e);
-        }
-    }
-
-    private void openChaveSettings(boolean tubos, Button ownerButton) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/chave-settings.fxml"));
-            loader.setControllerFactory(applicationContext::getBean);
-            Parent root = loader.load();
-
-            ChaveSettingsController controller = loader.getController();
-            controller.configurar(tubos);
-
-            Stage stage = new Stage();
-            stage.setTitle("Configuração da Chave Hidráulica");
-            stage.setScene(new Scene(root));
-            stage.setMinWidth(460);
-            stage.setMinHeight(650);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.initOwner((Stage) ownerButton.getScene().getWindow());
-            stage.setResizable(true);
-            stage.showAndWait();
-        } catch (IOException e) {
-            logger.error("Erro ao abrir configuracao da chave", e);
-        }
-    }
-
-    private void openPumpSettingsWindow(Button ownerButton) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/pump-settings.fxml"));
-            loader.setControllerFactory(applicationContext::getBean);
-            Parent root = loader.load();
-
-            Stage settingsStage = new Stage();
-            settingsStage.setTitle("Configuracao da Bomba");
-            settingsStage.setScene(new Scene(root, 420, 180));
-            settingsStage.initModality(Modality.APPLICATION_MODAL);
-            settingsStage.initOwner((Stage) ownerButton.getScene().getWindow());
-            settingsStage.setResizable(false);
-            settingsStage.showAndWait();
-        } catch (IOException e) {
-            logger.error("Erro ao abrir configuracao da bomba", e);
         }
     }
 

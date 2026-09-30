@@ -499,6 +499,34 @@
 }
 
 /* =====================================================================
+   Sininho do card: o alarme DESTA estacao.
+
+   Quatro estados, e a diferenca entre eles precisa ser legivel de longe
+   e sem depender de cor -- o sino desligado troca de simbolo (nao so de
+   tom), porque numa sonda quem olha pode estar sob sol ou nao distinguir
+   cinza de ambar.
+
+   Fica na esquerda do card, oposto a engrenagem: sao autoridades
+   diferentes e nao devem parecer o mesmo botao. A engrenagem exige login
+   e muda o que a unidade le; o sininho, nao.
+   ===================================================================== */
+
+/* Apagado: sem alarme configurado. Herda .botao-icone, so mais discreto. */
+.botao-icone.sininho-aceso {
+    -fx-text-fill: #1c6b3c;
+}
+
+.botao-icone.sininho-desligado {
+    -fx-text-fill: #98a2b3;
+}
+
+/* Disparado agora: acompanha a borda do card, que ja esta vermelha. */
+.botao-icone.sininho-disparado {
+    -fx-text-fill: #b42318;
+    -fx-font-size: 18px;
+}
+
+/* =====================================================================
    Aviso de configuracao: uma escolha valida que tem consequencia nao
    obvia. Nao e erro -- o campo continua aceitando o valor.
 
@@ -515,4 +543,10 @@
     -fx-background-radius: 4;
     -fx-padding: 6 8 6 8;
     -fx-wrap-text: true;
+}
+
+.card-grandeza:dragging {
+    -fx-border-color: #2563eb;
+    -fx-border-width: 3;
+    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.28), 14, 0.12, 0, 2);
 }

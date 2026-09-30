@@ -39,6 +39,7 @@ class FxmlLigadoAoControllerTest {
 	@DisplayName("campo @FXML sem fx:id vira NullPointerException ao abrir a janela")
 	@CsvSource({
 			"/views/cards-config.fxml, com.example.demo.controllers.CardsConfigController",
+			"/views/monitoring.fxml, com.example.demo.controllers.MonitoringController",
 	})
 	void todoCampoAnotadoTemIdNoFxml(String fxml, String controller) throws Exception {
 		Set<String> ids = idsDe(fxml);

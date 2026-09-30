@@ -46,12 +46,18 @@ public class TermometroView extends Canvas {
 		desenhar();
 	}
 
-	private void desenhar() {
-		GraphicsContext g = getGraphicsContext2D();
-		g.clearRect(0, 0, LARGURA, ALTURA);
+	public void redimensionar(double largura, double altura) {
+        largura = Math.max(60, largura); altura = Math.max(60, altura);
+        if (getWidth() == largura && getHeight() == altura) return;
+        setWidth(largura); setHeight(altura); desenhar();
+    }
 
-		double centroX = LARGURA / 2;
-		double baseBulbo = ALTURA - RAIO_BULBO - 2;
+    private void desenhar() {
+		GraphicsContext g = getGraphicsContext2D();
+		g.clearRect(0, 0, getWidth(), getHeight());
+
+		double centroX = getWidth() * 0.38;
+		double baseBulbo = getHeight() - RAIO_BULBO - 2;
 		double topoTubo = 14;
 		double alturaTubo = baseBulbo - topoTubo;
 
@@ -82,13 +88,13 @@ public class TermometroView extends Canvas {
 		g.strokeLine(centroX + LARGURA_TUBO / 2 + 2, baseBulbo, centroX + LARGURA_TUBO / 2 + 8, baseBulbo);
 
 		g.setFill(Color.web("#64748b"));
-		g.setFont(Font.font(9));
+		g.setFont(Font.font(Math.min(13, Math.max(9, getWidth() * .10))));
 		g.setTextAlign(TextAlignment.LEFT);
 		g.fillText(formatar(maximo), centroX + LARGURA_TUBO / 2 + 10, topoTubo + 3);
 		g.fillText(formatar(minimo), centroX + LARGURA_TUBO / 2 + 10, baseBulbo + 3);
 
 		g.setTextAlign(TextAlignment.CENTER);
-		g.setFont(Font.font(9));
+		g.setFont(Font.font(Math.min(13, Math.max(9, getWidth() * .10))));
 		g.fillText(unidade, centroX, 9);
 	}
 

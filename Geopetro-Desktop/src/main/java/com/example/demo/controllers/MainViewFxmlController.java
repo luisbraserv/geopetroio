@@ -19,6 +19,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -97,6 +98,7 @@ public class MainViewFxmlController {
     @FXML
     public void initialize() {
         logger.info("Inicializando MainViewFxmlController");
+        recortarConteudo();
         setupActions();
         plcConnectionService.setStatusListener(connected -> Platform.runLater(this::updatePlcStatus));
         updatePlcStatus();
@@ -141,8 +143,14 @@ public class MainViewFxmlController {
 
     private void togglePlcConnection() {
         if (plcConnectionService.isConnected()) {
-            plcConnectionService.disconnect();
-            updatePlcStatus();
+            btnPlcConnection.setDisable(true);
+            Thread.ofVirtual().name("plc-disconnect").start(() -> {
+                try { plcConnectionService.disconnect(); }
+                finally { Platform.runLater(() -> {
+                    btnPlcConnection.setDisable(false);
+                    updatePlcStatus();
+                }); }
+            });
             return;
         }
 
@@ -163,16 +171,16 @@ public class MainViewFxmlController {
 
             switch (connectionTask.getValue()) {
                 case PlcConnectionService.Resultado.Conectado ignorado ->
-                    showResultModal(Alert.AlertType.INFORMATION, "Conectado", "Conectado ao PLC com sucesso.");
+                    showResultModal(Alert.AlertType.INFORMATION, "Conectado", "PLC conectado e primeira leitura dos cards recebida.");
                 // Nao e erro: e uma unidade que ainda nao foi configurada (RN-092), e a saida
                 // esta na propria tela. Mandar chamar o suporte aqui gastaria uma visita.
                 case PlcConnectionService.Resultado.SemConfiguracao motivo ->
                     showResultModal(Alert.AlertType.WARNING, "Sem configuração",
                             "Não há o que ler: " + motivo.oQueFalta()
                                     + ".\n\nAbra \"Cards\" na barra superior para configurar a unidade.");
-                case PlcConnectionService.Resultado.Falhou ignorado ->
+                case PlcConnectionService.Resultado.Falhou falha ->
                     showResultModal(Alert.AlertType.ERROR, "Erro ao conectar",
-                            "Erro ao conectar! Entre em contato com suporte se a falha persistir.");
+                            falha.motivo());
             }
         });
 
@@ -181,7 +189,8 @@ public class MainViewFxmlController {
             btnPlcConnection.setDisable(false);
             updatePlcStatus();
             logger.error("Erro ao conectar ao PLC", connectionTask.getException());
-            showResultModal(Alert.AlertType.ERROR, "Erro ao conectar", "Erro ao conectar! Entre em contato com suporte se a falha persistir.");
+            showResultModal(Alert.AlertType.ERROR, "Erro ao conectar",
+                    "Não foi possível iniciar a leitura do PLC: " + connectionTask.getException().getMessage());
         });
 
         Thread connectionThread = new Thread(connectionTask, "plc-connection-task");
@@ -205,7 +214,9 @@ public class MainViewFxmlController {
 
         content.getChildren().add(createLoadingGraphic());
 
-        Label label = new Label("Conectando...");
+        Label label = new Label("Conectando e verificando a leitura...");
+        label.setWrapText(true);
+        label.setAlignment(Pos.CENTER);
         label.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #051833;");
         content.getChildren().add(label);
 
@@ -269,7 +280,13 @@ public class MainViewFxmlController {
             settingsStage.showAndWait();
             loadPage(currentPage);
         } catch (IOException e) {
+            // ⚠️ Nao basta logar: quem clicou nao le log. Antes disto, uma LoadException — que e uma
+            // IOException — fazia o botao da engrenagem nao fazer NADA, sem alerta e sem mensagem, e
+            // o unico rastro ficava num terminal que ninguem tem aberto na sonda.
             logger.error("Erro ao abrir tela de configuracoes", e);
+            showResultModal(Alert.AlertType.ERROR, "Configuracoes",
+                    "Nao foi possivel abrir as Configuracoes: " + e.getMessage()
+                            + "\n\nSe o app foi atualizado com ele aberto, feche e abra de novo.");
         }
     }
 
@@ -314,6 +331,25 @@ public class MainViewFxmlController {
         internetStatusCircle.setFill(online ? Color.web("#2e8b3a") : Color.web("#d92d20"));
     }
 
+    /**
+     * Prende o desenho das páginas dentro da área do centro.
+     *
+     * <p>O JavaFX não recorta nada por padrão: um filho maior que o pai desenha para fora dele, por
+     * cima do que estiver em volta. Foi assim que o menu sumia em tela pequena — o monitoramento com
+     * seis cards ficava mais alto que o espaço disponível e pintava seu fundo opaco sobre a barra de
+     * marca (ver o comentário no {@code main-view.fxml}).
+     *
+     * <p>O {@code minHeight="0"} do FXML já impede o centro de subir. O recorte é a segunda tranca:
+     * vale para <b>qualquer</b> página, inclusive as que ainda não existem, e não depende de nenhuma
+     * delas se comportar.
+     */
+    private void recortarConteudo() {
+        Rectangle recorte = new Rectangle();
+        recorte.widthProperty().bind(contentPane.widthProperty());
+        recorte.heightProperty().bind(contentPane.heightProperty());
+        contentPane.setClip(recorte);
+    }
+
     private void loadPage(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
@@ -322,7 +358,12 @@ public class MainViewFxmlController {
             contentPane.getChildren().setAll(page);
             currentPage = fxmlPath;
         } catch (IOException e) {
+            // Mesmo motivo da engrenagem: sem isto o item de menu clicado deixa a pagina ANTERIOR na
+            // tela, e quem clicou conclui que errou o clique — nao que a tela quebrou.
             logger.error("Erro ao carregar pagina {}", fxmlPath, e);
+            showResultModal(Alert.AlertType.ERROR, "Tela indisponivel",
+                    "Nao foi possivel abrir esta tela: " + e.getMessage()
+                            + "\n\nSe o app foi atualizado com ele aberto, feche e abra de novo.");
         }
     }
 

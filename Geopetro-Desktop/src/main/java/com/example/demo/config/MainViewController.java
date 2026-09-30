@@ -7,6 +7,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,14 +70,23 @@ public class MainViewController {
                 mainViewFxmlController.setStage(stage);
             }
 
-            Scene scene = new Scene(root, 1200, 800);
+            // O tamanho sai da area util do monitor, e nao de 1200x800 fixo: numa tela menor que
+            // isso o show() centralizaria com y negativo e a barra de menu abriria acima da borda
+            // da tela. Ver GeometriaDaJanela.
+            GeometriaDaJanela geometria = GeometriaDaJanela.paraTela(Screen.getPrimary().getVisualBounds());
+
+            Scene scene = new Scene(root, geometria.largura(), geometria.altura());
 
             stage.setTitle("Geopetro Desktop");
             stage.setScene(scene);
-            stage.setWidth(1200);
-            stage.setHeight(800);
-            stage.setMinWidth(1000);
-            stage.setMinHeight(600);
+            stage.setWidth(geometria.largura());
+            stage.setHeight(geometria.altura());
+            stage.setMinWidth(geometria.larguraMinima());
+            stage.setMinHeight(geometria.alturaMinima());
+            // Posicao explicita: o centerOnScreen() implicito do show() e exatamente o que colocava
+            // o topo fora da tela.
+            stage.setX(geometria.x());
+            stage.setY(geometria.y());
             configureBackgroundTray();
 
             try (InputStream iconStream = getClass().getResourceAsStream(APP_ICON_PATH)) {
