@@ -47,7 +47,7 @@ class ConfiguracaoCardsAccessTest {
 	@DisplayName("quem enxerga a sonda le os cards, mesmo sem configurar")
 	void monitoramentoLe() {
 		when(monitoramento.permite("supervisao", 7L)).thenReturn(true);
-		usuarioCom("supervisao", Role.SONDA);
+		usuarioCom("supervisao", Role.INTERNO, Role.MONITORAMENTO);
 
 		assertThat(access.podeLer("supervisao", 7L)).isTrue();
 		assertThat(access.podeGravar("supervisao", 7L)).isFalse();

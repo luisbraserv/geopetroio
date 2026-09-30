@@ -52,9 +52,11 @@ class SondaMonitoramentoServiceTest {
 	}
 
 	@Test
-	@DisplayName("SONDA, CIMENTACAO, GERENCIA e DIRETORIA enxergam toda a frota")
+	@DisplayName("conta interna com permissao de monitoramento enxerga toda a frota")
 	void perfisOperacionaisVeemTodaFrota() {
-		for (Role role : List.of(Role.SONDA, Role.CIMENTACAO, Role.GERENCIA, Role.DIRETORIA)) {
+		// As duas permissoes valem, e cada uma sozinha basta: quem recebeu so o tempo real tambem
+		// enxerga a frota inteira dentro do que aquela permissao abre.
+		for (Role role : List.of(Role.MONITORAMENTO, Role.MONITORAMENTO_REAL)) {
 			UsuarioInternoEntity usuario = interno("user-" + role, role, Role.INTERNO);
 			when(usuarioRepository.findById(usuario.getUsername())).thenReturn(Optional.of(usuario));
 			when(unidadeSondaRepository.findAll()).thenReturn(List.of(unidade(1L, "SPT-144")));
@@ -73,7 +75,7 @@ class SondaMonitoramentoServiceTest {
 	void acessoTotalIgnoraRegional() {
 		// Ate 2026-08-27 o interno era limitado a sua regional. A regra mudou: os perfis
 		// operacionais veem a frota inteira, independentemente do vinculo regional.
-		darUsuario(interno("op", Role.SONDA, Role.INTERNO));
+		darUsuario(interno("op", Role.MONITORAMENTO, Role.INTERNO));
 		when(unidadeSondaRepository.findAll()).thenReturn(List.of(unidade(1L, "SPT-144"), unidade(2L, "UC-01")));
 
 		assertThat(service.listarSondasDoUsuario("op")).hasSize(2);
@@ -142,6 +144,29 @@ class SondaMonitoramentoServiceTest {
 
 		assertThat(service.listarSondasDoUsuario("interno")).isEmpty();
 		assertThat(service.usuarioPossuiAcessoASonda("interno", "SPT-144")).isFalse();
+	}
+
+	@Test
+	@DisplayName("conta interna com simulador, mas sem monitoramento, nao enxerga sondas")
+	void internoDeOutroModuloNaoVeSondas() {
+		// Regressao a defender: a rota de monitoramento ja barra este perfil, mas o escopo nao pode
+		// depender disso. Se o filtro por permissao saisse daqui, quem tem apenas o Simulador de
+		// Cimentacao passaria a enxergar a frota inteira por qualquer endpoint que reuse o servico.
+		darUsuario(interno("cimentador", Role.INTERNO, Role.SIMULADOR, Role.CIMENTACAO));
+
+		assertThat(service.listarSondasDoUsuario("cimentador")).isEmpty();
+		assertThat(service.usuarioPossuiAcessoASonda("cimentador", "SPT-144")).isFalse();
+	}
+
+	@Test
+	@DisplayName("permissao de modulo sem tipo de conta nao enxerga sondas")
+	void permissaoSemTipoDeContaNaoVeNada() {
+		// Cadastro incompleto (a migration de 2026-09-17 preenche o tipo): MONITORAMENTO sozinha
+		// nao e acesso — ela vale somada a CLIENTE ou INTERNO.
+		darUsuario(interno("orfao", Role.MONITORAMENTO, Role.MONITORAMENTO_REAL));
+
+		assertThat(service.listarSondasDoUsuario("orfao")).isEmpty();
+		assertThat(service.usuarioPossuiAcessoASonda("orfao", "SPT-144")).isFalse();
 	}
 
 	// --- Helpers ----------------------------------------------------------------

@@ -1,6 +1,5 @@
 package com.geopetro.cards;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -39,29 +38,6 @@ public class CardsDeclarados {
 	@Transactional(readOnly = true)
 	public List<Card> de(long unidadeSondaId) {
 		return repository.findById(unidadeSondaId).map(CardsDeclarados::cards).orElseGet(List::of);
-	}
-
-	/**
-	 * Quantos cards cada unidade declara — sem carregar o documento inteiro para quem chama.
-	 *
-	 * <p>Uma consulta para a frota toda, e não uma por unidade: a tela de prontidão pergunta por
-	 * todas de uma vez, e {@code N} idas ao banco cresceriam com a frota sem necessidade.
-	 *
-	 * @param ativos cards que a unidade realmente lê; {@code declarados} inclui os desativados,
-	 *               porque eles continuam no documento (RN-091)
-	 */
-	public record Resumo(long unidadeSondaId, long revisao, int ativos, int declarados,
-			String atualizadoPor, Instant atualizadoEm) {
-	}
-
-	@Transactional(readOnly = true)
-	public List<Resumo> resumos() {
-		return repository.findAll().stream().map(entity -> {
-			List<Card> cards = cards(entity);
-			int ativos = (int) cards.stream().filter(Card::ativo).count();
-			return new Resumo(entity.unidadeSondaId, entity.version + 1, ativos, cards.size(),
-					entity.atualizadoPor, entity.atualizadoEm);
-		}).toList();
 	}
 
 	/** Um só lugar desserializa a coluna, para os dois caminhos não divergirem. */

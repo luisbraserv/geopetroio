@@ -43,6 +43,37 @@ public class ApiExceptionHandler {
 		return build(HttpStatus.BAD_REQUEST, exception.getMessage(), request.getRequestURI(), List.of());
 	}
 
+	/**
+	 * Parâmetro obrigatório que não veio — 400, e não 500.
+	 *
+	 * <p>Sem este handler, {@code GET /api/sondas/1/alarmes/historico} sem {@code inicio} caía no
+	 * {@code Exception} genérico abaixo e respondia "Erro interno do servidor": o cliente não tinha
+	 * como distinguir uma chamada malfeita — que ele corrige — de um servidor com problema, que ele
+	 * só pode reportar.
+	 */
+	@ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+	ResponseEntity<ApiErrorResponse> handleParametroAusente(
+			org.springframework.web.bind.MissingServletRequestParameterException exception,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, "Parâmetro obrigatório ausente.", request.getRequestURI(),
+				List.of(exception.getParameterName() + ": obrigatório"));
+	}
+
+	/**
+	 * Parâmetro presente e ilegível — {@code inicio=invalid} num campo de data, por exemplo.
+	 *
+	 * <p>A conversão falha antes de o controller rodar, então nenhuma validação de negócio a alcança.
+	 * ⚠️ A resposta nomeia o parâmetro e <b>não</b> devolve a mensagem da exceção: ela carrega o nome
+	 * da classe alvo e o valor recebido, detalhe interno que não ajuda quem chamou.
+	 */
+	@ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+	ResponseEntity<ApiErrorResponse> handleParametroIlegivel(
+			org.springframework.web.method.annotation.MethodArgumentTypeMismatchException exception,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, "Parâmetro inválido.", request.getRequestURI(),
+				List.of(exception.getName() + ": valor inválido"));
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception,
 			HttpServletRequest request) {

@@ -73,7 +73,7 @@ class MigracaoFlywayTest {
 	void baseVaziaMigraDoZero() throws SQLException {
 		flyway().migrate();
 
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
         assertThat(existeTabela("recuperacao_senha")).isTrue();
         assertThat(existeTabela("configuracao_smtp")).isTrue();
@@ -82,6 +82,9 @@ class MigracaoFlywayTest {
         // serie e nula para card de uma grandeza so: NOT NULL aqui impediria todo evento que nao
         // viesse de um contador de stroke (RN-098).
         assertThat(colunaAceitaNulo("evento_alarme", "serie")).isTrue();
+        // O pico do episodio mora fora do log de fatos: ele muda enquanto a excursao dura, e a
+        // leitura que o estabelece normalmente nao gera transicao nenhuma.
+        assertThat(existeTabela("episodio_alarme_extremo")).isTrue();
 		assertThat(existeColuna("unidades_sondas", "tipo")).isTrue();
 		assertThat(colunaAceitaNulo("unidades_sondas", "tipo")).isFalse();
 		assertThat(existeColuna("simulador_cenarios", "poco_id")).isTrue();
@@ -172,7 +175,7 @@ class MigracaoFlywayTest {
 
 		// Se o baseline tivesse sido executado, os CREATE TABLE teriam colidido e a migracao
 		// falharia. Ele entra so como registro.
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1");
 		assertThat(tipoDoRegistro("2026.09.04")).isEqualTo("BASELINE");
 		assertThat(tipoDoRegistro("2026.09.05")).isEqualTo("SQL");
 
@@ -288,6 +291,58 @@ class MigracaoFlywayTest {
         assertThat(contar("SELECT COUNT(*) FROM configuracao_sonda WHERE unidade_sonda_id = 7 AND version = 0")).isEqualTo(1);
     }
 
+    /**
+     * A conversao de roles e a unica migration que mexe em DADOS de autorizacao.
+     *
+     * <p>Errar aqui tem dois sintomas caros: sobrar uma linha extinta (o {@code valueOf} estoura no
+     * login, longe da causa) ou nao conceder (o usuario perde no deploy o que usava ontem).
+     */
+    @Test
+    @DisplayName("roles extintas somem e o alcance anterior de cada usuario e preservado")
+    void rolesExtintasViramPermissoesDeModulo() throws SQLException {
+        Flyway.configure().dataSource(URL_SCHEMA, USUARIO, SENHA)
+            .locations("classpath:db/migration").target("2026.09.09.2").load().migrate();
+        executarNoSchema("""
+            INSERT INTO usuarios (username, password, email, nome, telefone, status, tipo_usuario)
+            VALUES ('op', 'test-hash', 'op@example.test', 'Op', '1', 'ATIVO', 'INTERNO'),
+                   ('gerente', 'test-hash', 'g@example.test', 'G', '2', 'ATIVO', 'INTERNO'),
+                   ('cimentador', 'test-hash', 'c@example.test', 'C', '3', 'ATIVO', 'INTERNO'),
+                   ('cliente', 'test-hash', 'cl@example.test', 'Cl', '4', 'ATIVO', 'CLIENTE'),
+                   ('orfao', 'test-hash', 'o@example.test', 'O', '5', 'ATIVO', 'INTERNO')
+            """);
+        executarNoSchema("""
+            INSERT INTO usuario_roles (username, role) VALUES
+                ('op', 'INTERNO'), ('op', 'SONDA'),
+                ('gerente', 'INTERNO'), ('gerente', 'GERENCIA'),
+                ('cimentador', 'INTERNO'), ('cimentador', 'CIMENTACAO'),
+                ('cliente', 'CLIENTE'),
+                ('orfao', 'SONDA')
+            """);
+
+        flyway().migrate();
+
+        assertThat(contar("SELECT COUNT(*) FROM usuario_roles WHERE role IN ('SONDA', 'GERENCIA', 'DIRETORIA')"))
+            .as("nenhuma linha com valor que o enum Java nao conhece mais")
+            .isEqualTo(0);
+        assertThat(rolesDe("op")).containsExactly("INTERNO", "MONITORAMENTO", "MONITORAMENTO_REAL");
+        assertThat(rolesDe("gerente"))
+            .as("GERENCIA abria monitoramento E simulador; as duas coisas seguem abertas")
+            .containsExactly("CIMENTACAO", "INTERNO", "MONITORAMENTO", "MONITORAMENTO_REAL", "SIMULADOR");
+        assertThat(rolesDe("cimentador"))
+            .as("CIMENTACAO sozinha abria o simulador; agora precisa de SIMULADOR ao lado")
+            .containsExactly("CIMENTACAO", "INTERNO", "MONITORAMENTO", "MONITORAMENTO_REAL", "SIMULADOR");
+        assertThat(rolesDe("cliente"))
+            .as("o cliente via as quatro telas de Sonda/Unidade so por ser CLIENTE")
+            .containsExactly("CLIENTE", "MONITORAMENTO", "MONITORAMENTO_REAL");
+        assertThat(rolesDe("orfao"))
+            .as("cadastro sem tipo de conta ganha o seu, senao sobreviveria sem acesso a nada")
+            .containsExactly("INTERNO", "MONITORAMENTO", "MONITORAMENTO_REAL");
+
+        // Idempotencia: reaplicar a mesma conversao a mao nao duplica nem reintroduz nada.
+        flyway().migrate();
+        assertThat(rolesDe("op")).containsExactly("INTERNO", "MONITORAMENTO", "MONITORAMENTO_REAL");
+    }
+
 	// --- utilitarios -------------------------------------------------------------
 
 	private static boolean servidorDisponivel() {
@@ -310,6 +365,19 @@ class MigracaoFlywayTest {
 				Statement statement = conexao.createStatement()) {
 			statement.execute(sql);
 		}
+	}
+
+	private static List<String> rolesDe(String username) throws SQLException {
+		List<String> roles = new ArrayList<>();
+		try (Connection conexao = DriverManager.getConnection(URL_SCHEMA, USUARIO, SENHA);
+				Statement statement = conexao.createStatement();
+				ResultSet rs = statement.executeQuery(
+						"SELECT role FROM usuario_roles WHERE username = '" + username + "' ORDER BY role")) {
+			while (rs.next()) {
+				roles.add(rs.getString(1));
+			}
+		}
+		return roles;
 	}
 
 	private static List<String> versoesAplicadas() throws SQLException {

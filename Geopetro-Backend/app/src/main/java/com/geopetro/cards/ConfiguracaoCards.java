@@ -36,7 +36,11 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeSondaId, long rev
 	 * <p>Rack, slot e número do DB saíam do código; com o modelo de CLP variando por unidade,
 	 * deixam de ser premissa global.
 	 */
-	public record Conexao(String ip, int rack, int slot, int dbNumero, int intervaloLeituraMs) {
+	public record Conexao(String ip, int rack, int slot, int dbNumero, int intervaloLeituraMs,
+			Integer tsapLocal, Integer tsapRemoto) {
+		public Conexao(String ip, int rack, int slot, int dbNumero, int intervaloLeituraMs) {
+			this(ip, rack, slot, dbNumero, intervaloLeituraMs, null, null);
+		}
 	}
 
 	/**
@@ -174,6 +178,13 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeSondaId, long rev
 		}
 		if (conexao.intervaloLeituraMs() < 100) {
 			throw new BusinessException("O intervalo de leitura deve ser de ao menos 100 ms.");
+		}
+		if (conexao.tsapLocal() != null || conexao.tsapRemoto() != null) {
+			if (conexao.tsapLocal() == null || conexao.tsapRemoto() == null
+					|| conexao.tsapLocal() < 0 || conexao.tsapLocal() > 0xffff
+					|| conexao.tsapRemoto() < 0 || conexao.tsapRemoto() > 0xffff) {
+				throw new BusinessException("Informe os dois TSAPs, entre 0000 e FFFF (hexadecimal).");
+			}
 		}
 	}
 

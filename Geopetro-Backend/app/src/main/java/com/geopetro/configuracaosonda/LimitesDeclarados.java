@@ -1,6 +1,5 @@
 package com.geopetro.configuracaosonda;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,26 +34,6 @@ public class LimitesDeclarados {
 	@Transactional(readOnly = true)
 	public List<Limite> de(long unidadeSondaId) {
 		return repository.findById(unidadeSondaId).map(LimitesDeclarados::limites).orElseGet(List::of);
-	}
-
-	/**
-	 * Quantos limites cada unidade tem — uma consulta para a frota toda.
-	 *
-	 * @param ativos os que realmente vigiam; {@code declarados} inclui os hibernando com o card
-	 *               desativado (RN-091)
-	 */
-	public record Resumo(long unidadeSondaId, long revisao, int ativos, int declarados,
-			String atualizadoPor, Instant atualizadoEm) {
-	}
-
-	@Transactional(readOnly = true)
-	public List<Resumo> resumos() {
-		return repository.findAll().stream().map(entity -> {
-			List<Limite> limites = limites(entity);
-			int ativos = (int) limites.stream().filter(Limite::ativo).count();
-			return new Resumo(entity.unidadeSondaId, entity.version + 1, ativos, limites.size(),
-					entity.atualizadoPor, entity.atualizadoEm);
-		}).toList();
 	}
 
 	private static List<Limite> limites(ConfiguracaoSondaEntity entity) {

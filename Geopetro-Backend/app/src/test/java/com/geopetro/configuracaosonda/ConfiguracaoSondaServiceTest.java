@@ -18,7 +18,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.*;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import static com.geopetro.configuracaosonda.ConfiguracaoSonda.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -45,7 +44,6 @@ class ConfiguracaoSondaServiceTest {
     @Autowired PlatformTransactionManager manager;
     ConfiguracaoSondaService service;
     ConfiguracaoSondaAccess access;
-    SimpMessagingTemplate messages;
     CardsDeclarados cards;
 
     /** Um card por tipo, mais um desativado — o vocabulario que a unidade 7 declara nos testes. */
@@ -55,9 +53,9 @@ class ConfiguracaoSondaServiceTest {
     void declara(Card... declarados) { when(cards.de(7L)).thenReturn(List.of(declarados)); }
 
     @BeforeEach void setup() {
-        repository.deleteAll(); access = mock(ConfiguracaoSondaAccess.class); messages = mock(SimpMessagingTemplate.class);
+        repository.deleteAll(); access = mock(ConfiguracaoSondaAccess.class);
         cards = mock(CardsDeclarados.class);
-        service = new ConfiguracaoSondaService(repository, access, messages, cards);
+        service = new ConfiguracaoSondaService(repository, access, cards);
         declara(card("PRESSAO_01", Tipo.PRESSAO, true), card("TEMPERATURA_01", Tipo.TEMPERATURA, true));
     }
     ConfiguracaoSonda save(long revision, List<Limite> limits) {
@@ -66,40 +64,38 @@ class ConfiguracaoSondaServiceTest {
     @Test void emptyUnitDoesNotInventLimitsOrWriteToDatabase() {
         var view = service.ler("ana", 7);
         assertEquals(0, view.revisao()); assertTrue(view.limites().isEmpty()); assertNull(view.atualizadoEm());
-        assertEquals(0, repository.count()); verify(access).exigir("ana", 7); verifyNoInteractions(messages);
+        assertEquals(0, repository.count()); verify(access).exigir("ana", 7);
         assertTrue(new ConfiguracaoSondaVinculo(repository).descreverVinculo(7L).isEmpty());
     }
-    @Test void persistsRevisionAuthorAndLimitsAndPublishesOnlyAfterCommit() {
+    @Test void persistsRevisionAuthorAndLimitsAndSurvivesRestart() {
         var limit = new Limite("PRESSAO_01", null, null, 100.0, null, 120.0, 3, 5, true);
         var first = new TransactionTemplate(manager).execute(status -> {
             var saved = service.salvar("ana", 7, new Alteracao(0, List.of(limit)));
-            verifyNoInteractions(messages); return saved;
+            return saved;
         });
         assertEquals(1, first.revisao()); assertEquals("ana", first.atualizadoPor()); assertNotNull(first.atualizadoEm());
-        verify(messages).convertAndSend("/topic/config/unidades-sondas/7", first);
-        var restarted = new ConfiguracaoSondaService(repository, access, messages, cards);
+        var restarted = new ConfiguracaoSondaService(repository, access, cards);
         assertEquals(List.of(limit), restarted.ler("ana", 7).limites());
         assertEquals(2, save(1, List.of()).revisao());
         assertEquals(409, assertThrows(BusinessException.class, () -> save(1, List.of(limit))).getStatus().value());
         assertTrue(service.ler("ana", 7).limites().isEmpty());
         assertTrue(new ConfiguracaoSondaVinculo(repository).descreverVinculo(7L).isPresent());
     }
-    @Test void rollbackNeverPublishesUncommittedConfiguration() {
+    @Test void rollbackNaoDeixaConfiguracaoPelaMetade() {
         new TransactionTemplate(manager).executeWithoutResult(status -> {
             service.salvar("ana", 7, new Alteracao(0, List.of())); status.setRollbackOnly();
         });
-        assertEquals(0, repository.count()); verifyNoInteractions(messages);
+        assertEquals(0, repository.count());
     }
-    @Test void brokerFailureDoesNotLoseTheCommittedSnapshot() {
-        doThrow(new IllegalStateException("offline")).when(messages).convertAndSend(anyString(), any(ConfiguracaoSonda.class));
-        assertEquals(1, save(0, List.of()).revisao());
-        assertEquals(1, service.ler("ana", 7).revisao());
-    }
+    // ⚠️ `brokerFailureDoesNotLoseTheCommittedSnapshot` saiu em 2026-09-09 junto com a publicacao
+    // que ele cobria: este documento nao viaja mais por STOMP, entao nao ha broker que possa falhar.
+    // O que ele protegia — o snapshot sobreviver ao commit — continua coberto pelo teste de
+    // persistencia acima, que relê o documento com um service novo.
     @Test void authorizationRunsBeforeReadAndWrite() {
         doThrow(new BusinessException("denied")).when(access).exigir("ana", 7);
         assertThrows(BusinessException.class, () -> service.ler("ana", 7));
         assertThrows(BusinessException.class, () -> save(0, List.of()));
-        assertEquals(0, repository.count()); verifyNoInteractions(messages);
+        assertEquals(0, repository.count());
     }
     @Test void rejectsMalformedLimitsWithoutPersistingThem() {
         for (var limit : List.of(
@@ -116,7 +112,7 @@ class ConfiguracaoSondaServiceTest {
         var valid = new Limite("PRESSAO_01", null, null, 10.0, null, null, 0, 0, true);
         assertThrows(BusinessException.class, () -> save(0, List.of(valid, valid)));
         assertThrows(BusinessException.class, () -> save(0, null));
-        assertEquals(0, repository.count()); verifyNoInteractions(messages);
+        assertEquals(0, repository.count());
     }
 
     /**

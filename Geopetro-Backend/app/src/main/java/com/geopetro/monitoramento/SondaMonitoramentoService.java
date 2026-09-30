@@ -7,7 +7,8 @@ import com.geopetro.unidadesonda.adapter.out.persistence.entity.UnidadeSondaEnti
 import com.geopetro.unidadesonda.repository.UnidadeSondaJpaRepository;
 import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioClienteEntity;
 import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioEntity;
-import com.geopetro.usuario.domain.model.Role;
+import com.geopetro.security.authorization.RegraDeAcesso;
+import com.geopetro.security.authorization.RegrasDeAcesso;
 import com.geopetro.usuario.adapter.out.persistence.repository.UsuarioJpaRepository;
 import org.springframework.stereotype.Service;
 
@@ -15,17 +16,23 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * Controle de acesso ao monitoramento de sondas.
  *
  * <h2>Regra de escopo</h2>
  * <ul>
- *   <li><b>ADMIN, SONDA, CIMENTACAO, GERENCIA, DIRETORIA</b> — enxergam <b>toda a frota</b>.</li>
+ *   <li><b>ADMIN</b>, e <b>conta interna com permissao de monitoramento</b> — enxergam
+ *       <b>toda a frota</b>.</li>
  *   <li><b>CLIENTE</b> — enxerga <b>apenas</b> as Unidades/Sondas concedidas no seu cadastro.</li>
  *   <li>Qualquer outro perfil — nenhuma sonda.</li>
  * </ul>
+ *
+ * <p><b>Escopo nao e permissao.</b> Quem <i>entra</i> no monitoramento e decidido por
+ * {@code RegrasDeAcesso.MONITORAMENTO} (tipo de conta somado a permissao de modulo); esta classe
+ * responde apenas <i>quanto</i> quem entrou enxerga — mas repete a permissao de modulo de proposito,
+ * para que um endpoint futuro que reuse este servico sem declarar regra nao entregue a frota a
+ * qualquer funcionario.
  *
  * <p><b>Nota sobre a regional.</b> Ate 2026-08-27 o acesso de usuario interno era limitado a sua
  * regional principal. Essa restricao foi <b>removida</b>: os perfis operacionais passam a ver a frota
@@ -35,9 +42,16 @@ import java.util.Set;
 @Service
 public class SondaMonitoramentoService {
 
-    /** Perfis que enxergam toda a frota, sem recorte por vinculo. */
-    private static final Set<Role> ACESSO_TOTAL = Set.of(
-            Role.ADMIN, Role.SONDA, Role.CIMENTACAO, Role.GERENCIA, Role.DIRETORIA);
+    /**
+     * Perfis que enxergam toda a frota, sem recorte por vinculo —
+     * {@link RegrasDeAcesso#ESCOPO_FROTA_INTEIRA}.
+     *
+     * <p>Em 2026-09-17 deixou de ser uma lista de roles: SONDA, GERENCIA e DIRETORIA nao existem
+     * mais, e CIMENTACAO virou permissao de dominio, combinavel com CLIENTE (Simulador de
+     * Cimentacao) — uma lista que a contivesse entregaria a frota inteira a um cliente que so tem
+     * simulador.
+     */
+    private static final RegraDeAcesso ACESSO_TOTAL = RegrasDeAcesso.ESCOPO_FROTA_INTEIRA;
 
     private final UnidadeSondaJpaRepository unidadeSondaRepository;
     private final UsuarioJpaRepository usuarioRepository;
@@ -144,8 +158,7 @@ public class SondaMonitoramentoService {
     }
 
     private boolean possuiAcessoTotal(UsuarioEntity usuario) {
-        Set<Role> roles = usuario.getRoles();
-        return roles != null && roles.stream().anyMatch(ACESSO_TOTAL::contains);
+        return ACESSO_TOTAL.satisfeitaPor(usuario.getRoles());
     }
 
     private SondaDisponivelDTO paraDto(UnidadeSondaEntity unidade) {
