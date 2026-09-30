@@ -93,7 +93,9 @@ export class ChartZoomModalComponent implements AfterViewInit, OnDestroy {
       // opções destes gráficos são dados puros (sem funções) — clone profundo seguro
       options: cfg.options ? JSON.parse(JSON.stringify(cfg.options)) : undefined,
     } as ChartConfiguration;
-    this.chart = new Chart(this.canvasRef.nativeElement.getContext('2d')!, cloned);
+    const ctx = this.canvasRef.nativeElement.getContext('2d');
+    if (!ctx) return;
+    this.chart = new Chart(ctx, cloned);
   }
 
   ngOnDestroy(): void { this.chart?.destroy(); }

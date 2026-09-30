@@ -10,7 +10,12 @@ export interface SlurryInputs {
   bhct: number | null;
   bhst: number | null;
   surfaceTemp: number;
-  additivos: { name: string; category: string; type: string; conc: number }[];
+  /** Campos opcionais preservam a dosagem e a procedência do catálogo. */
+  additivos: {
+    name: string; category: string; type: string; conc: number;
+    catalogId?: string; unidadeDosagem?: string; misturadoEm?: string;
+    ativo?: boolean; funcaoPrincipal?: string;
+  }[];
   surfacePressure?: number;
   mudWeightFront?: number;
   mudWeightBack?: number;

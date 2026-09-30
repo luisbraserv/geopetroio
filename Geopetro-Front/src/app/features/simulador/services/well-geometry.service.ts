@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
 import { MinimumCurvature } from './minimum-curvature';
 import { BBL_M } from '../models/constantes';
+import type { ConventionalPrimaryGeometryInput, PrimaryAssemblyGeometryInput, PrimaryGeometryResolution, PrimaryGeometrySegment, PrimaryStageGeometryResolution } from '../models/primary-geometry.model';
+import type { PrimaryConfiguration } from '../models/primary-cementing.model';
+import { primaryGeometryVolume, resolveAssemblyGeometry } from './primary-geometry';
+import { resolveStageGeometry } from './primary-stage-geometry';
+import { resolvePrimaryConnectivity } from './primary-connectivity';
+import type { PrimaryDeviceConnectionState } from '../models/primary-cementing.model';
 import {
   GeometrySegment,
   LegacySectionFields,
@@ -84,6 +90,33 @@ export function formatInches(value: number): string {
 export class WellGeometryService {
   private readonly surveys = new WeakMap<WellTrajectory, { key: string; curve: MinimumCurvature }>();
 
+  /** Anular externo do revestimento-alvo; não altera CapacityKind do squeeze. */
+  resolveConventionalPrimaryGeometry(geometry: WellGeometry, input: ConventionalPrimaryGeometryInput): PrimaryGeometryResolution {
+    return this.resolvePrimaryAssemblyGeometry(geometry, input);
+  }
+
+  resolvePrimaryAssemblyGeometry(geometry: WellGeometry, input: PrimaryAssemblyGeometryInput): PrimaryGeometryResolution {
+    const issues = this.validate(geometry);
+    if (this.hasErrors(issues)) return { segments: [], capacities: null, issues };
+    const effective = this.deriveTrajectoryTvd(geometry);
+    const result = resolveAssemblyGeometry(effective, input, md => this.mdToTvd(effective, md));
+    return { ...result, issues: [...issues, ...result.issues] };
+  }
+
+  resolvePrimaryStageGeometry(geometry: WellGeometry, primary: PrimaryConfiguration): PrimaryStageGeometryResolution {
+    return resolveStageGeometry(primary, input => this.resolvePrimaryAssemblyGeometry(geometry, input));
+  }
+
+  resolvePrimaryConnectivity(geometry: WellGeometry, primary: PrimaryConfiguration,
+    states: PrimaryDeviceConnectionState[], activeStageId: string | null) {
+    return resolvePrimaryConnectivity(primary, this.resolvePrimaryStageGeometry(geometry, primary), states, activeStageId);
+  }
+
+  primaryVolumeBetween(segments: PrimaryGeometrySegment[], zone: 'internal' | 'casing-annulus',
+    topMD: number, bottomMD: number): number {
+    return primaryGeometryVolume(segments, zone, topMD, bottomMD);
+  }
+
   private survey(trajectory: WellTrajectory): MinimumCurvature {
     const key = JSON.stringify(trajectory.stations);
     const cached = this.surveys.get(trajectory);
@@ -165,6 +198,20 @@ export class WellGeometryService {
     const phase = this.phaseAtMD(geometry, md);
     if (!phase) throw new Error(`Nenhuma fase encontrada para MD ${md}`);
     return phaseTvdAtMD(phase, md);
+  }
+
+  /**
+   * Mesma conversão de `mdToTvd`, com o survey resolvido uma única vez. Para laços
+   * densos, como a hidráulica da primária, evita reconferir o survey a cada chamada.
+   */
+  mdToTvdResolver(geometry: WellGeometry): (md: number) => number {
+    if (!geometry.trajectory) return md => this.mdToTvd(geometry, md);
+    const curve = this.survey(geometry.trajectory);
+    const finalMD = geometry.finalMD;
+    return md => {
+      if (md > finalMD) throw new Error('Profundidade abaixo do fundo do poço.');
+      return curve.at(md).tvd;
+    };
   }
 
   /** Versão não-lançante: null quando o MD está fora das fases cadastradas. */
@@ -413,7 +460,7 @@ export class WellGeometryService {
         at('PHASE_BELOW_TD', `base MD (${phase.bottomMD} m) está abaixo do fundo do poço (${geometry.finalMD} m).`);
       }
       if (!Number.isFinite(phase.holeDiameterIn) || !(phase.holeDiameterIn > 0)) {
-        at('PHASE_HOLE_DIAMETER', 'informe um diâmetro de poço válido.');
+        at('PHASE_HOLE_DIAMETER', 'informe o diâmetro do furo desta fase, nominal ou medido, em Estrutura do Poço.');
       }
 
       const casing = phase.casing;
@@ -428,7 +475,7 @@ export class WellGeometryService {
           at('CASING_DEPTH_INVALID', 'informe profundidades válidas para o revestimento.');
         }
         if (casing.odIn > 0 && phase.holeDiameterIn > 0 && casing.odIn > phase.holeDiameterIn + MD_EPS) {
-          at('CASING_OD_GT_HOLE', `OD do revestimento (${casing.odIn}") não cabe no poço de ${phase.holeDiameterIn}".`);
+          at('CASING_OD_GT_HOLE', `OD do revestimento (${casing.odIn}") não cabe no furo informado (${phase.holeDiameterIn}"). Revise o diâmetro do furo e o revestimento desta fase em Estrutura do Poço.`);
         }
         if (casing.topMD != null && casing.topMD >= casing.bottomMD) {
           at('CASING_MD_ORDER', 'o topo do revestimento deve ficar acima da sapata.');

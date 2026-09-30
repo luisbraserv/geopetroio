@@ -53,8 +53,14 @@ export class MinimumCurvature {
 
   at(md: number): SurveyPosition {
     if (!Number.isFinite(md) || md < 0 || md > this.positions.at(-1)!.md) throw new Error('Survey: profundidade fora das estações cadastradas.');
-    const arc = this.arcs.find(a => md <= a.endMD)!;
-    return this.onArc(arc, md);
+    // Primeiro arco cujo fim alcança o MD, por busca binária: os fins são crescentes.
+    let low = 0;
+    let high = this.arcs.length - 1;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (md <= this.arcs[middle].endMD) high = middle; else low = middle + 1;
+    }
+    return this.onArc(this.arcs[low], md);
   }
 
   /** Menor MD para TVD em trajetória não decrescente; evita ambiguidade em retorno ascendente. */

@@ -31,5 +31,12 @@ export class SimuladorIndexComponent {
       icon: '🧱',
       route: ['tampao'],
     },
+    {
+      title: 'Cimentação primária',
+      description:
+        'Volumes por TOC, programa de bombeio, transporte das parcelas e hidráulica do circuito.',
+      icon: '🛢️',
+      route: ['primaria'],
+    },
   ];
 }

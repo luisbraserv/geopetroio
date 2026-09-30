@@ -39,7 +39,8 @@ describe('createSqueezeSchematicModel', () => {
     const metres = createSqueezeSchematicModel('withTubing', geom, simulation);
     const feet = createSqueezeSchematicModel('withTubing', geom, simulation, 'ft');
     const cement = feet.segments.find(s => s.key === 'cement')!;
-    expect(cement.sub).toBe('6,00 bbl | 262,5 ft');
+    // Antes da compressão, a pasta inteira bombeada (slurryTotal).
+    expect(cement.sub).toBe('8,00 bbl | 262,5 ft');
     const positions = (segments: typeof feet.segments) => segments.map(({ sub, ...rest }) => rest);
     expect(positions(feet.segments)).toEqual(positions(metres.segments));
     expect(positions(feet.tubingSegments)).toEqual(positions(metres.tubingSegments));

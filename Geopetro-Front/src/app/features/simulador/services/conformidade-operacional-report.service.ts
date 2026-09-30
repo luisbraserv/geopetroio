@@ -34,6 +34,12 @@ export interface PlacementInfo {
   displacementBbl: number;
   /** Topo alvo (m MD) — padrão = topo planejado. */
   targetTopMD?: number;
+  /**
+   * Topo da pasta calculado pelo motor da primária (transporte conservativo até o
+   * equilíbrio e retirada da coluna). Com ele, o topo previsto não é estimado pela
+   * integral da queda livre.
+   */
+  predictedTopMD?: number;
 }
 
 export interface ConformidadeParams {
@@ -47,6 +53,16 @@ export interface ConformidadeParams {
   placement?: PlacementInfo;
   /** Re-simula a hidráulica com sobreposições (varredura de otimização/sensibilidade). */
   reSimulate?: (o: VarreduraOverride) => SqueezeHydraulicSimulation | null;
+  /**
+   * Motor que produziu `sim`. `primaria`: o da cimentação primária (BHP pelo anular,
+   * atrito R3 §4-6, queda livre conservativa); ausente: a simulação antiga (F-40).
+   */
+  motor?: 'primaria';
+  /**
+   * Topo da pasta (m MD) simulado com o deslocamento multiplicado pelo fator. Com ele,
+   * a sensibilidade do sub-deslocamento roda o motor linha a linha.
+   */
+  predictTopMD?: (displacementFactor: number) => number | null;
 }
 
 interface CriterioRow {
@@ -254,7 +270,16 @@ export class ConformidadeOperacionalReportService {
             `K = ${HYDRO_K} psi/(ppg·m)   |   TVD de referência = ${this.fmt(tvd, 1)} m`,
           ],
         },
-        {
+        p.motor === 'primaria' ? {
+          title: 'Composição do BHP na profundidade de referência',
+          formulas: [
+            'BHP = P.retorno + P.hidrostática (anular acima da referência) + Fricção anular (acima da referência)',
+          ],
+          notes: [
+            'Calculado pelo lado por onde o fluido sai (o anular), como na cimentação primária: com o retorno aberto a P.retorno é zero, e parado o BHP é só a hidrostática do anular.',
+            'A fricção da coluna entra na pressão de bombeio, não no BHP.',
+          ],
+        } : {
           title: 'Composição do BHP na profundidade de referência',
           formulas: [
             'BHP = P.superfície + P.hidrostática (coluna) − Fricção coluna + Fricção anular (retorno)',
@@ -266,7 +291,11 @@ export class ConformidadeOperacionalReportService {
         },
         {
           title: 'BHP máximo (ponto crítico)',
-          formulas: [
+          formulas: p.motor === 'primaria' ? [
+            `P.hidrostática do anular = ${this.fmt(ptMax?.hydrostaticPsi, 0)} psi   |   Fricção anular = ${this.fmt(ptMax?.annularFrictionPsi, 0)} psi`,
+            `BHPmáx = ${this.fmt(ptMax?.hydrostaticPsi, 0)} + ${this.fmt(ptMax?.annularFrictionPsi, 0)} = ${this.fmt(s.bhpMaxPsi, 0)} psi`,
+            `Margem até a fratura = ${this.fmt(s.fracturePsi, 0)} − ${this.fmt(s.bhpMaxPsi, 0)} = ${this.fmt(s.marginToFracturePsi, 0)} psi`,
+          ] : [
             `P.superfície = ${this.fmt(ptMax?.surfacePressurePsi, 0)} psi`,
             `P.hidrostática = ${this.fmt(ptMax?.hydrostaticPsi, 0)} psi`,
             `Fricção coluna = ${this.fmt(ptMax?.frictionPsi, 0)} psi   |   Fricção anular = ${this.fmt(ptMax?.annularFrictionPsi, 0)} psi`,
@@ -447,6 +476,8 @@ export class ConformidadeOperacionalReportService {
     const volumeRatio = totalPumped > 0 ? s.freeFallAccumBbl / totalPumped : 0;
     const atendeRate = rateRatio <= 0.5;
     const atendeVol = volumeRatio <= 0.10;
+    if (p.motor === 'primaria') return this.avaliarFreeFallMotor(p, { maxExtraRate, maxProgrammedRate, totalPumped,
+      rateRatio, volumeRatio, atendeRate, atendeVol });
 
     return {
       titulo: 'Relatório de conformidade — Free Fall / Tubo em U',
@@ -469,7 +500,9 @@ export class ConformidadeOperacionalReportService {
           title: 'Origem do free fall (tubo em U)',
           formulas: [
             'A pasta é mais pesada que o fluido do anular → a coluna tende a cair sozinha (queda livre).',
-            'Vazão natural: a fricção da coluna (Petroguia F-40) equilibra o desbalanço hidrostático (drive).',
+            p.motor === 'primaria'
+              ? 'Vazão de saída: a cada passo o motor fecha o balanço de pressão do tubo em U, com vazio no topo da coluna (transporte conservativo; atrito R3 §4-6).'
+              : 'Vazão natural: a fricção da coluna (Petroguia F-40) equilibra o desbalanço hidrostático (drive).',
             'Free fall extra = máx(0, vazão natural − vazão bombeada) integrada no tempo = volume acumulado.',
           ],
         },
@@ -510,6 +543,89 @@ export class ConformidadeOperacionalReportService {
           'Rever a sequência e as vazões antes de executar — o topo da pasta pode ficar fora da profundidade projetada (reduz incerteza de posicionamento).',
           'Reduzir o contraste de densidade ou aumentar a fricção da coluna (reduz volume em queda livre).',
         ]),
+      ]),
+    };
+  }
+
+  /**
+   * Posicionamento final pelo motor: o topo da pasta depois do equilíbrio e da retirada
+   * contra o alvo, com a tolerância do relatório de interfaces (15 m e 10% da coluna).
+   */
+  private posicionamentoFinal(p: ConformidadeParams): { disponivel: boolean; topo: number; alvo: number;
+    desvio: number; desvioRelPct: number; atende: boolean } {
+    const pl = p.placement;
+    const { topoPrevisto, topoPlanejado, doMotor } = this.sobreDeslocamento(p);
+    const alvo = pl?.targetTopMD ?? topoPlanejado;
+    const desvio = topoPrevisto - alvo;
+    const coluna = pl ? Math.abs(pl.cementBaseMD - pl.cementTopMD) : 0;
+    const desvioRelPct = coluna > 0 ? Math.abs(desvio) / coluna * 100 : 0;
+    return { disponivel: doMotor, topo: topoPrevisto, alvo, desvio, desvioRelPct,
+      atende: !doMotor || (Math.abs(desvio) <= 15 && (coluna <= 0 || desvioRelPct <= 10)) };
+  }
+
+  /**
+   * Free fall com o motor da primária (decisão do usuário de 2026-09-24, SPEC §7.1). A
+   * queda livre é calculada, não estimada: vazão extra e volume em queda livre viram
+   * alerta, e a reprovação vem só do que ela causa, o topo final da pasta fora da
+   * tolerância e a pressão no fundo fora da janela poro × fratura.
+   */
+  private avaliarFreeFallMotor(p: ConformidadeParams, ff: { maxExtraRate: number; maxProgrammedRate: number;
+    totalPumped: number; rateRatio: number; volumeRatio: number; atendeRate: boolean; atendeVol: boolean }): Avaliacao {
+    const s = p.sim.summary;
+    const pos = this.posicionamentoFinal(p);
+    const atendeFrat = s.bhpMaxPsi < s.fracturePsi;
+    const atendePoro = s.bhpMinPsi > s.porePsi;
+    const alerta = (ok: boolean) => ok ? '' : ' — alerta';
+    return {
+      titulo: 'Relatório de conformidade — Free Fall / Tubo em U',
+      subtitulo: 'Queda livre calculada pelo motor da primária: a vazão extra e o volume são alerta; o que reprova é o topo final da pasta e a pressão no fundo.',
+      resultados: [
+        { label: `Vazão adicional máx. de free fall${alerta(ff.atendeRate)}`, value: `${this.fmt(ff.maxExtraRate)} bpm (${this.fmt(ff.rateRatio * 100, 0)}% da programada; referência 50%)` },
+        { label: `Volume acumulado em free fall${alerta(ff.atendeVol)}`, value: `${this.fmt(s.freeFallAccumBbl)} bbl (${this.fmt(ff.volumeRatio * 100, 0)}% do bombeado; referência 10%)` },
+        { label: 'Volume total bombeado', value: `${this.fmt(ff.totalPumped)} bbl` },
+        ...(pos.disponivel ? [
+          { label: 'Topo final da pasta (motor)', value: `${this.fmt(pos.topo, 1)} m MD` },
+          { label: 'Topo alvo', value: `${this.fmt(pos.alvo, 1)} m MD` },
+          { label: 'Desvio do topo', value: `${this.fmt(pos.desvio, 1)} m (${this.fmt(pos.desvioRelPct, 0)}% da coluna)` },
+        ] : []),
+        { label: 'BHP máximo / mínimo', value: `${this.fmt(s.bhpMaxPsi, 0)} / ${this.fmt(s.bhpMinPsi, 0)} psi` },
+      ],
+      criterios: [
+        ...(pos.disponivel ? [{ criterio: 'Topo final da pasta dentro da tolerância', valor: `${this.fmt(pos.desvio, 1)} m`,
+          limite: '|Δ| ≤ 15 m e ≤ 10% da coluna', atende: pos.atende }] : []),
+        { criterio: 'BHP máximo abaixo da fratura', valor: `${this.fmt(s.bhpMaxPsi, 0)} psi`, limite: `< ${this.fmt(s.fracturePsi, 0)} psi`, atende: atendeFrat },
+        { criterio: 'BHP mínimo acima do poro', valor: `${this.fmt(s.bhpMinPsi, 0)} psi`, limite: `> ${this.fmt(s.porePsi, 0)} psi`, atende: atendePoro },
+      ],
+      memoria: [
+        {
+          title: 'Critério com o motor da primária',
+          formulas: [
+            'Queda livre: a cada passo o motor fecha o balanço de pressão do tubo em U, com vazio no topo da coluna (transporte conservativo; atrito R3 §4-6).',
+            `Razão de vazão = ${this.fmt(ff.maxExtraRate)} / ${this.fmt(ff.maxProgrammedRate)} = ${this.fmt(ff.rateRatio * 100, 0)}%   |   fração do volume = ${this.fmt(s.freeFallAccumBbl)} / ${this.fmt(ff.totalPumped)} = ${this.fmt(ff.volumeRatio * 100, 0)}%`,
+            'Os limites de 50% e 10% vinham da simulação antiga, que estimava a queda livre; aqui ficam como referência de alerta.',
+            'Reprova: topo final da pasta fora da tolerância (15 m e 10% da coluna) ou BHP fora da janela poro × fratura.',
+          ],
+          notes: ['Com a queda livre calculada, a pasta pode terminar no lugar certo mesmo com muita queda livre: o vazio que ela deixa é enchido pela bomba, e só a drenagem depois do bombeio muda as posições.'],
+        },
+      ],
+      explicacao: [
+        ff.maxExtraRate <= 0
+          ? 'Neste cenário não houve queda livre: o desbalanço hidrostático não superou o atrito na vazão programada.'
+          : `A queda livre chega a ${this.fmt(ff.rateRatio * 100, 0)}% da vazão programada e soma ${this.fmt(ff.volumeRatio * 100, 0)}% do volume bombeado${ff.atendeRate && ff.atendeVol ? ', dentro das referências de 50% e 10%.' : '. Fica como alerta: a coluna cai mais rápido do que a bomba empurra, e o operador deve contar com o vazio na coluna e a vazão de retorno maior.'}`,
+        pos.disponivel
+          ? pos.atende
+            ? `O topo final da pasta, calculado pelo motor, fica a ${this.fmt(Math.abs(pos.desvio), 1)} m do alvo: dentro da tolerância.`
+            : `O topo final da pasta, calculado pelo motor, fica a ${this.fmt(Math.abs(pos.desvio), 1)} m do alvo: FORA da tolerância.`
+          : 'Sem o topo calculado pelo motor, o posicionamento não entra na avaliação.',
+        atendeFrat && atendePoro
+          ? 'O BHP fica dentro da janela poro × fratura em todo o bombeio.'
+          : 'O BHP sai da janela poro × fratura: ver os relatórios de BHP e ECD.',
+      ],
+      ajustes: this.dedupe([
+        ...(pos.atende ? [] : ['Rever o deslocamento (ver o relatório de sub-deslocamento) para o topo final da pasta cair no alvo.']),
+        ...(atendeFrat ? [] : ['Reduzir a vazão ou aliviar as densidades para o BHP ficar abaixo da fratura.']),
+        ...(atendePoro ? [] : ['Aumentar a densidade dos fluidos ou a contrapressão para o BHP ficar acima do poro.']),
+        ...(ff.atendeRate && ff.atendeVol ? [] : ['Para reduzir a queda livre (alerta): menor contraste de densidade entre pasta e anular, contrapressão na superfície ou cabeça fechada.']),
       ]),
     };
   }
@@ -677,6 +793,8 @@ export class ConformidadeOperacionalReportService {
     sim: SqueezeHydraulicSimulation,
     v: any,
     operacao: 'SQUEEZE' | 'TAMPÃO',
+    /** Motor da primária: a queda livre só reprova pelo topo final da pasta (SPEC §7.1). */
+    motor?: { posicionamentoOk: boolean },
   ): { fatores: FatorRisco[]; score: number; hardFail: boolean; injNaoAvaliada: boolean } {
     const s = sim.summary;
     const window = Math.max(1, s.fracturePsi - s.porePsi);
@@ -715,13 +833,15 @@ export class ConformidadeOperacionalReportService {
       correcao: 'aumentar a densidade dos fluidos de deslocamento ou aplicar contrapressão na superfície; revisar coluna parcialmente preenchida e a pressão de poros (ver relatório de BHP/ECD).',
     });
     // 3. Free fall / tubo em U
-    const ffHard = rateRatio > 0.5 || volRatio > 0.10;
+    const ffHard = motor ? !motor.posicionamentoOk : rateRatio > 0.5 || volRatio > 0.10;
     fatores.push({
       nome: 'Free fall / tubo em U',
       risco: Math.max(clamp01((rateRatio - 0.2) / 0.3), clamp01((volRatio - 0.03) / 0.07)),
       peso: operacao === 'SQUEEZE' ? 0.18 : 0.25,
       hardFail: ffHard,
-      detalhe: `Vazão de queda livre ${this.fmt(rateRatio * 100, 0)}% (lim. 50%); volume ${this.fmt(volRatio * 100, 0)}% (lim. 10%).`,
+      detalhe: motor
+        ? `Vazão de queda livre ${this.fmt(rateRatio * 100, 0)}% e volume ${this.fmt(volRatio * 100, 0)}% (referências 50% e 10%): alerta; reprova só se o topo final da pasta sair da tolerância${motor.posicionamentoOk ? ', e ele está no alvo' : ', e ele está fora'}.`
+        : `Vazão de queda livre ${this.fmt(rateRatio * 100, 0)}% (lim. 50%); volume ${this.fmt(volRatio * 100, 0)}% (lim. 10%).`,
       correcao: 'reduzir o contraste de densidade pasta × fluido do anular, aplicar contrapressão (back-pressure) na superfície e/ou sub-deslocar o volume de queda livre (ver relatórios de Free Fall e Sub-deslocamento).',
     });
     // 4. Equipamento
@@ -819,29 +939,26 @@ export class ConformidadeOperacionalReportService {
   }
 
   private avaliarRisco(p: ConformidadeParams): Avaliacao {
-    const base = this.computeRiskFactors(p.sim, p.v, p.operacao);
+    const motor = p.motor === 'primaria' ? { posicionamentoOk: this.posicionamentoFinal(p).atende } : undefined;
+    const base = this.computeRiskFactors(p.sim, p.v, p.operacao, motor);
     const cls = this.classeScore(base.score, base.hardFail);
 
-    // ── Varredura de otimização (standoff × vazão × densidade) ──
+    // ── Varredura de otimização (vazão × densidade; o atrito é o da primária, sem standoff) ──
     const densAtual = this.toNumber(p.v.density, this.toNumber(p.v.densidadePastaPpg, 15.8));
-    const stoAtual = this.clamp(this.toNumber(p.v.standoffPct, 80), 0, 100);
-    const combos: Array<{ label: string; o: VarreduraOverride; score: number; hardFail: boolean; sto: number; rateF: number; dens: number }> = [];
+    const combos: Array<{ label: string; o: VarreduraOverride; score: number; hardFail: boolean; rateF: number; dens: number }> = [];
     let melhor: typeof combos[number] | null = null;
     if (p.reSimulate) {
       const rateFactors = [0.5, 0.7, 0.85, 1.0];
-      const standoffs = this.uniqNum([stoAtual, 70, 85, 100]);
       const densidades = this.uniqNum([densAtual, densAtual - 0.5, densAtual + 0.5]).filter(d => d >= 12 && d <= 19);
-      if (!densidades.length) densidades.push(densAtual); // densidade fora da faixa típica: varre só vazão × standoff
+      if (!densidades.length) densidades.push(densAtual); // densidade fora da faixa típica: varre só a vazão
       for (const rateF of rateFactors) {
-        for (const sto of standoffs) {
-          for (const dens of densidades) {
-            const alt = p.reSimulate({ rateFactor: rateF, standoffPct: sto, density: dens });
-            if (!alt) continue;
-            const r = this.computeRiskFactors(alt, p.v, p.operacao);
-            const combo = { label: '', o: { rateFactor: rateF, standoffPct: sto, density: dens }, score: r.score, hardFail: r.hardFail, sto, rateF, dens };
-            combos.push(combo);
-            if (!melhor || combo.score > melhor.score) melhor = combo;
-          }
+        for (const dens of densidades) {
+          const alt = p.reSimulate({ rateFactor: rateF, density: dens });
+          if (!alt) continue;
+          const r = this.computeRiskFactors(alt, p.v, p.operacao, motor);
+          const combo = { label: '', o: { rateFactor: rateF, density: dens }, score: r.score, hardFail: r.hardFail, rateF, dens };
+          combos.push(combo);
+          if (!melhor || combo.score > melhor.score) melhor = combo;
         }
       }
     }
@@ -868,14 +985,12 @@ export class ConformidadeOperacionalReportService {
       { label: 'Score de sucesso (atual)', value: `${base.score}/100 — ${cls.rotulo}` },
       { label: 'Reprovação dura', value: base.hardFail ? 'SIM — há fator crítico' : 'Não' },
       { label: 'Vazão de referência atual', value: `${this.fmt(rateBaseBpm, 2)} bpm` },
-      { label: 'Standoff atual', value: `${this.fmt(stoAtual, 0)}%` },
       { label: 'Densidade da pasta atual', value: `${this.fmt(densAtual, 1)} ppg` },
     ];
     if (melhor) {
       resultados.push(
         { label: 'Melhor combinação encontrada', value: `${melhor.score}/100 (${this.classeScore(melhor.score, melhor.hardFail).rotulo})` },
         { label: '→ Vazão recomendada', value: `${this.fmt(rateBaseBpm * melhor.rateF, 2)} bpm (${this.fmt(melhor.rateF * 100, 0)}% da atual)` },
-        { label: '→ Standoff recomendado', value: `${this.fmt(melhor.sto, 0)}%` },
         { label: '→ Densidade avaliada', value: `${this.fmt(melhor.dens, 1)} ppg` },
         { label: 'Ganho de score', value: `${ganho >= 0 ? '+' : ''}${ganho} pontos` },
       );
@@ -888,16 +1003,15 @@ export class ConformidadeOperacionalReportService {
       const destaqueIdx = melhor ? ordenadas.findIndex(c => c === melhor) : -1;
       tabelas.push({
         titulo: 'Varredura de otimização (melhores combinações)',
-        colunas: ['Vazão (bpm)', 'Standoff (%)', 'Densidade (ppg)', 'Score', 'Classe'],
+        colunas: ['Vazão (bpm)', 'Densidade (ppg)', 'Score', 'Classe'],
         linhas: ordenadas.map(c => [
           this.fmt(rateBaseBpm * c.rateF, 2),
-          this.fmt(c.sto, 0),
           this.fmt(c.dens, 1),
           `${c.score}/100`,
           this.classeScore(c.score, c.hardFail).rotulo,
         ]),
         destaqueIdx: destaqueIdx >= 0 ? destaqueIdx : undefined,
-        legenda: `${combos.length} combinações avaliadas (vazão × standoff × densidade). A densidade é sensibilizada apenas como estudo — alterá-la muda a receita e exige validação laboratorial.`,
+        legenda: `${combos.length} combinações avaliadas (vazão × densidade). A densidade é sensibilizada apenas como estudo — alterá-la muda a receita e exige validação laboratorial.`,
       });
     }
 
@@ -911,9 +1025,9 @@ export class ConformidadeOperacionalReportService {
       explicacao.push('A injetividade da formação NÃO entrou no score: os dados de injeção estão incompletos (Pressão de Operação, Volume injetado p/ formação e Tempo de pressurização devem ser > 0). O score acima é PARCIAL — consolida apenas os fatores hidráulicos — e o cenário permanece não operacional até completar os dados e reavaliar.');
     }
     if (melhor && ganho > 0) {
-      explicacao.push(`A varredura de otimização encontrou uma combinação que eleva o score para ${melhor.score}/100 (ganho de ${ganho} pontos): vazão ${this.fmt(rateBaseBpm * melhor.rateF, 2)} bpm, standoff ${this.fmt(melhor.sto, 0)}% e densidade ${this.fmt(melhor.dens, 1)} ppg. Trate como ponto de partida para a engenharia, não como ajuste automático.`);
+      explicacao.push(`A varredura de otimização encontrou uma combinação que eleva o score para ${melhor.score}/100 (ganho de ${ganho} pontos): vazão ${this.fmt(rateBaseBpm * melhor.rateF, 2)} bpm e densidade ${this.fmt(melhor.dens, 1)} ppg. Trate como ponto de partida para a engenharia, não como ajuste automático.`);
     } else if (melhor) {
-      explicacao.push(`A varredura não encontrou combinação melhor que a atual dentro do espaço avaliado — o cenário atual já é o melhor ponto na grade de vazão × standoff × densidade testada.`);
+      explicacao.push(`A varredura não encontrou combinação melhor que a atual dentro do espaço avaliado — o cenário atual já é o melhor ponto na grade de vazão × densidade testada.`);
     }
 
     const ajustes = this.dedupe([
@@ -928,7 +1042,7 @@ export class ConformidadeOperacionalReportService {
 
     return {
       titulo: `Score de risco e otimização — ${p.operacao === 'TAMPÃO' ? 'Tampão' : 'Squeeze'}`,
-      subtitulo: 'Consolida ECD/BHP, free fall, equipamento' + (p.operacao === 'SQUEEZE' ? ' e injetividade' : '') + ' em um único score de sucesso, e varre vazão × standoff × densidade em busca do melhor conjunto.',
+      subtitulo: 'Consolida ECD/BHP, free fall, equipamento' + (p.operacao === 'SQUEEZE' ? ' e injetividade' : '') + ' em um único score de sucesso, e varre vazão × densidade em busca do melhor conjunto.',
       scoreBanner: { valor: base.score, rotulo: base.injNaoAvaliada ? `${cls.rotulo} (score parcial)` : cls.rotulo, classe: cls.classe },
       estado: base.injNaoAvaliada
         ? { rotulo: 'Score parcial — injetividade não avaliada (dados de injeção incompletos)', ok: false }
@@ -973,11 +1087,13 @@ export class ConformidadeOperacionalReportService {
         ...(combos.length ? [{
           title: 'Varredura de otimização',
           formulas: [
-            `Grade avaliada: vazão × {50, 70, 85, 100%} · standoff × {atual, 70, 85, 100%} · densidade × {atual ±0,5 ppg}`,
+            `Grade avaliada: vazão × {50, 70, 85, 100%} · densidade × {atual ±0,5 ppg}`,
             `Total de combinações válidas: ${combos.length}`,
-            melhor ? `Melhor: vazão ${this.fmt(rateBaseBpm * melhor.rateF, 2)} bpm · standoff ${this.fmt(melhor.sto, 0)}% · densidade ${this.fmt(melhor.dens, 1)} ppg → score ${melhor.score}/100` : '—',
+            melhor ? `Melhor: vazão ${this.fmt(rateBaseBpm * melhor.rateF, 2)} bpm · densidade ${this.fmt(melhor.dens, 1)} ppg → score ${melhor.score}/100` : '—',
           ],
-          notes: ['Cada combinação re-executa a simulação hidráulica completa (tubo em U, fricção F-40) e recalcula o score.'],
+          notes: [p.motor === 'primaria'
+            ? 'Cada combinação re-executa o motor da primária completo (transporte, tubo em U até o equilíbrio e hidráulica) e recalcula o score.'
+            : 'Cada combinação re-executa a simulação hidráulica completa (tubo em U, fricção F-40) e recalcula o score.'],
         }] : []),
       ],
       explicacao,
@@ -986,16 +1102,30 @@ export class ConformidadeOperacionalReportService {
   }
 
   // ── Movimento de interfaces (posicionamento da pasta) ──────────────────────
-  private avaliarInterfaces(p: ConformidadeParams): Avaliacao {
+  /**
+   * Sobre-deslocamento e topo previsto da pasta. Com o topo do motor da primária, Δh é
+   * a diferença para o planejado e Vff o volume equivalente no trecho da pasta; sem ele,
+   * o volume em queda livre empurra o trem além do programado e o topo desce Vff / cap.
+   */
+  private sobreDeslocamento(p: ConformidadeParams): { Vff: number; deltaH: number; cap: number;
+    topoPlanejado: number; topoPrevisto: number; doMotor: boolean } {
     const s = p.sim.summary;
     const pl = p.placement;
-    const Vff = Math.max(0, s.freeFallAccumBbl);
     const cap = pl && pl.capBblM > 0 ? pl.capBblM : 0;
-    // Sobre-deslocamento por queda livre: o volume em free fall empurra o trem
-    // além do programado → o topo da pasta desce Δh = Vff / capacidade.
-    const deltaH = cap > 0 ? Vff / cap : s.freeFallHeightM;
     const topoPlanejado = pl ? pl.cementTopMD : s.referenceMD;
-    const topoPrevisto = topoPlanejado + deltaH; // mais fundo = maior MD
+    const predicted = pl?.predictedTopMD;
+    if (predicted != null && Number.isFinite(predicted)) {
+      const deltaH = predicted - topoPlanejado;
+      return { Vff: deltaH * cap, deltaH, cap, topoPlanejado, topoPrevisto: predicted, doMotor: true };
+    }
+    const Vff = Math.max(0, s.freeFallAccumBbl);
+    const deltaH = cap > 0 ? Vff / cap : s.freeFallHeightM;
+    return { Vff, deltaH, cap, topoPlanejado, topoPrevisto: topoPlanejado + deltaH, doMotor: false };
+  }
+
+  private avaliarInterfaces(p: ConformidadeParams): Avaliacao {
+    const pl = p.placement;
+    const { Vff, cap, deltaH, topoPlanejado, topoPrevisto, doMotor } = this.sobreDeslocamento(p);
     const alvo = pl?.targetTopMD ?? topoPlanejado;
     const desvio = topoPrevisto - alvo;
     const colHeight = pl ? Math.abs(pl.cementBaseMD - pl.cementTopMD) : 0;
@@ -1011,22 +1141,23 @@ export class ConformidadeOperacionalReportService {
     const desvioRelPct = colHeight > 0 ? (Math.abs(desvio) / colHeight) * 100 : 0;
     const atendeAbs = Math.abs(desvio) <= LIMITE_ABS_M;
     const atendeRel = colHeight <= 0 || desvioRelPct <= 10;
-    const atendeControle = maxProg <= 0 || maxExtra / maxProg <= 0.5;
+    // Com o motor da primária, o controle pela bomba é alerta (SPEC §7.1): o topo já é o calculado.
+    const atendeControle = p.motor === 'primaria' || maxProg <= 0 || maxExtra / maxProg <= 0.5;
 
     const criterios: CriterioRow[] = [
       { criterio: 'Desvio do topo da pasta dentro da tolerância', valor: `${this.fmt(desvio, 1)} m`, limite: `|Δ| ≤ ${LIMITE_ABS_M} m`, atende: atendeAbs },
       { criterio: 'Desvio relativo à altura da coluna de pasta', valor: `${this.fmt(desvioRelPct, 0)}%`, limite: '≤ 10%', atende: atendeRel },
-      { criterio: 'Movimento controlável pela bomba (free fall)', valor: `${this.fmt(maxProg > 0 ? maxExtra / maxProg * 100 : 0, 0)}%`, limite: '≤ 50%', atende: atendeControle },
+      ...(p.motor === 'primaria' ? [] : [{ criterio: 'Movimento controlável pela bomba (free fall)', valor: `${this.fmt(maxProg > 0 ? maxExtra / maxProg * 100 : 0, 0)}%`, limite: '≤ 50%', atende: atendeControle }]),
     ];
 
     // Recomendação de minimização: sub-deslocar pelo volume esperado de free fall
     const subDeslocRecomendadoBbl = Vff;
 
     const resultados: Array<{ label: string; value: string }> = [
-      { label: 'Volume em queda livre (over-displacement)', value: `${this.fmt(Vff, 2)} bbl` },
+      { label: doMotor ? 'Sobre-deslocamento equivalente (motor)' : 'Volume em queda livre (over-displacement)', value: `${this.fmt(Vff, 2)} bbl` },
       { label: 'Capacidade no trecho da pasta', value: cap > 0 ? `${this.fmt(cap, 4)} bbl/m` : '— (usando altura equivalente)' },
       { label: 'Topo da pasta planejado', value: `${this.fmt(topoPlanejado, 1)} m MD` },
-      { label: 'Topo da pasta previsto (com free fall)', value: `${this.fmt(topoPrevisto, 1)} m MD` },
+      { label: doMotor ? 'Topo da pasta previsto (motor, após a retirada)' : 'Topo da pasta previsto (com free fall)', value: `${this.fmt(topoPrevisto, 1)} m MD` },
       { label: 'Desvio do topo (previsto − alvo)', value: `${this.fmt(desvio, 1)} m (${desvio >= 0 ? 'mais fundo' : 'mais raso'})` },
       { label: 'Altura da coluna de pasta', value: colHeight > 0 ? `${this.fmt(colHeight, 1)} m` : '—' },
       { label: 'Desbalanço hidrostático (drive) máx.', value: `${this.fmt(maxDrive, 0)} psi` },
@@ -1035,15 +1166,17 @@ export class ConformidadeOperacionalReportService {
     ];
 
     const explicacao: string[] = [
-      `A pasta é mais pesada que o fluido do anular; o desbalanço hidrostático (drive de até ${this.fmt(maxDrive, 0)} psi) puxa a coluna em queda livre e sobre-desloca o trem em ${this.fmt(Vff, 2)} bbl além do programado.`,
-      cap > 0
+      doMotor
+        ? `A pasta é mais pesada que o fluido do anular; o desbalanço hidrostático (drive de até ${this.fmt(maxDrive, 0)} psi) puxa a coluna em queda livre. O motor transporta cada fluido com conservação de volume até o equilíbrio do tubo em U e a retirada da coluna: o topo da pasta fica em ${this.fmt(topoPrevisto, 1)} m MD, ${this.fmt(Math.abs(deltaH), 1)} m ${deltaH >= 0 ? 'abaixo' : 'acima'} do planejado (${this.fmt(Vff, 2)} bbl no trecho da pasta).`
+        : `A pasta é mais pesada que o fluido do anular; o desbalanço hidrostático (drive de até ${this.fmt(maxDrive, 0)} psi) puxa a coluna em queda livre e sobre-desloca o trem em ${this.fmt(Vff, 2)} bbl além do programado.`,
+      doMotor ? '' : cap > 0
         ? `Convertido em profundidade pela capacidade do trecho da pasta (${this.fmt(cap, 4)} bbl/m), isso desce o topo da pasta em ${this.fmt(deltaH, 1)} m: do planejado ${this.fmt(topoPlanejado, 1)} m para ${this.fmt(topoPrevisto, 1)} m MD.`
         : `Sem a capacidade do trecho, usa-se a altura equivalente de queda livre (${this.fmt(deltaH, 1)} m) como estimativa do movimento do topo.`,
       atendeAbs && atendeRel && atendeControle
         ? `O desvio previsto (${this.fmt(desvio, 1)} m) está dentro da tolerância — o posicionamento da pasta é previsível e a bomba controla a descida.`
         : `O desvio previsto (${this.fmt(desvio, 1)} m) excede a tolerância adotada: o topo da pasta pode não cair na profundidade projetada.`,
       `Para minimizar o movimento e acertar o alvo, sub-deslocar ~${this.fmt(subDeslocRecomendadoBbl, 2)} bbl (deixar de bombear o volume que o poço vai “ganhar” em queda livre) e/ou aplicar contrapressão de ~${this.fmt(maxDrive, 0)} psi para segurar a coluna.`,
-    ];
+    ].filter(Boolean);
 
     const ajustes = this.dedupe([
       ...(atendeAbs && atendeRel && atendeControle ? [] : [
@@ -1062,7 +1195,15 @@ export class ConformidadeOperacionalReportService {
       resultados,
       criterios,
       memoria: [
-        {
+        doMotor ? {
+          title: 'Topo da pasta pelo motor da primária',
+          formulas: [
+            `Topo previsto = topo do transporte depois do equilíbrio e da retirada = ${this.fmt(topoPrevisto, 1)} m MD`,
+            `Δh = topo previsto − topo planejado = ${this.fmt(topoPrevisto, 1)} − ${this.fmt(topoPlanejado, 1)} = ${this.fmt(deltaH, 1)} m`,
+            `Vff equivalente = Δh × capacidade = ${this.fmt(deltaH, 1)} × ${this.fmt(cap, 4)} = ${this.fmt(Vff, 2)} bbl`,
+          ],
+          notes: ['A queda livre durante o bombeio não desloca o trem além do volume bombeado: o que sai adiantado deixa vazio na coluna, que a bomba volta a encher. Só a drenagem depois do bombeio muda as posições.'],
+        } : {
           title: 'Sobre-deslocamento por queda livre',
           formulas: [
             `Volume em queda livre Vff = ${this.fmt(Vff, 2)} bbl  (integral da vazão extra no tempo)`,
@@ -1093,9 +1234,10 @@ export class ConformidadeOperacionalReportService {
     const pl = p.placement;
     const cap = pl && pl.capBblM > 0 ? pl.capBblM : 0;
     const deslocPlanejado = pl ? pl.displacementBbl : 0;
-    const Vff = Math.max(0, s.freeFallAccumBbl);
-    const topoPlanejado = pl ? pl.cementTopMD : s.referenceMD;
+    const { Vff, topoPlanejado } = this.sobreDeslocamento(p);
     const alvo = pl?.targetTopMD ?? topoPlanejado;
+    // Com o motor da primária, cada linha é uma simulação: o topo sai do transporte.
+    const doMotor = !!p.predictTopMD && deslocPlanejado > 0;
 
     // Sensibilidade: variar o deslocamento e ver onde o topo da pasta assenta.
     // Sub-deslocar ΔV deixa o topo Δh = ΔV/cap mais raso (compensa a queda livre).
@@ -1107,16 +1249,20 @@ export class ConformidadeOperacionalReportService {
     const deltas = this.uniqNum([0, ...offsets.map(o => -Vff + o)])
       .filter(dv => deslocPlanejado + dv >= 0)
       .sort((a, b) => a - b);
-    const subRecomendado = Vff; // sub-deslocar o volume esperado de queda livre
     const linhas: string[][] = [];
+    /** Δ de cada linha da tabela, na mesma ordem. */
+    const simulados: number[] = [];
     let destaqueIdx = -1;
     let melhorDesvio = Infinity;
-    deltas.forEach((dv, idx) => {
+    deltas.forEach(dv => {
       const desloc = deslocPlanejado + dv; // dv<0 = sub-deslocamento
       const subDesloc = -dv;               // volume não bombeado (positivo = sub-desloca)
-      const topoAssentado = cap > 0 ? topoPlanejado + (Vff - subDesloc) / cap : topoPlanejado - dv;
+      const topoAssentado = doMotor ? p.predictTopMD!(desloc / deslocPlanejado) ?? NaN
+        : cap > 0 ? topoPlanejado + (Vff - subDesloc) / cap : topoPlanejado - dv;
+      if (!Number.isFinite(topoAssentado)) return;
       const desvio = topoAssentado - alvo;
-      if (Math.abs(desvio) < melhorDesvio) { melhorDesvio = Math.abs(desvio); destaqueIdx = idx; }
+      if (Math.abs(desvio) < melhorDesvio) { melhorDesvio = Math.abs(desvio); destaqueIdx = linhas.length; }
+      simulados.push(dv);
       linhas.push([
         `${dv >= 0 ? '+' : ''}${this.fmt(dv, 1)}`,
         this.fmt(desloc, 2),
@@ -1126,8 +1272,11 @@ export class ConformidadeOperacionalReportService {
       ]);
     });
 
-    // Deslocamento ótimo contínuo: aquele que zera o desvio → desloc = planejado − Vff
-    const deslocOtimo = deslocPlanejado - Vff;
+    // Deslocamento ótimo contínuo: aquele que zera o desvio → desloc = planejado − Vff.
+    // Com o motor, é a linha simulada de menor desvio.
+    const melhorDv = doMotor && destaqueIdx >= 0 ? simulados[destaqueIdx] : -Vff;
+    const deslocOtimo = deslocPlanejado + melhorDv;
+    const subRecomendado = -melhorDv; // sub-deslocar o volume esperado de queda livre
     const LIMITE_ABS_M = 15;
     const atende = melhorDesvio <= LIMITE_ABS_M;
 
@@ -1145,16 +1294,21 @@ export class ConformidadeOperacionalReportService {
       { label: 'Capacidade no trecho da pasta', value: cap > 0 ? `${this.fmt(cap, 4)} bbl/m` : '—' },
     ];
 
-    const explicacao: string[] = [
+    const explicacao: string[] = doMotor ? [
+      'O sub-deslocamento é a técnica de deixar de bombear parte do fluido de deslocamento para que a pasta assente na profundidade projetada (R3 §14-3.1). Cada linha da tabela é uma simulação completa do motor: bombeio, drenagem do tubo em U até o equilíbrio e retirada da coluna.',
+      `Pelo motor, o deslocamento de menor desvio é ${this.fmt(deslocOtimo, 2)} bbl (${subRecomendado >= 0 ? 'sub-deslocar' : 'sobre-deslocar'} ${this.fmt(Math.abs(subRecomendado), 2)} bbl), com o topo a ${this.fmt(melhorDesvio, 1)} m do alvo (${this.fmt(alvo, 1)} m MD). No tampão balanceado, a drenagem até o equilíbrio compensa o sub-deslocamento, e o topo depois da retirada depende sobretudo do volume de pasta.`,
+    ] : [
       `O sub-deslocamento é a técnica de deixar de bombear parte do fluido de deslocamento para que a pasta assente na profundidade projetada. Como a queda livre sobre-desloca ${this.fmt(Vff, 2)} bbl, deslocar 100% deixaria o topo ~${this.fmt(cap > 0 ? Vff / cap : s.freeFallHeightM, 1)} m fundo demais.`,
       `Sub-deslocando ~${this.fmt(subRecomendado, 2)} bbl (deslocamento efetivo ${this.fmt(deslocOtimo, 2)} bbl), a queda livre completa o posicionamento e o topo cai no alvo (${this.fmt(alvo, 1)} m MD).`,
+    ];
+    explicacao.push(
       atende
         ? `A tabela de sensibilidade mostra uma janela viável de deslocamento com desvio mínimo de ${this.fmt(melhorDesvio, 1)} m.`
         : `Nenhum deslocamento na faixa testada zera o desvio (mínimo ${this.fmt(melhorDesvio, 1)} m): rever geometria, contraste de densidade ou usar tampão de fundo.`,
-    ];
+    );
 
     const ajustes = this.dedupe([
-      `Programar o deslocamento efetivo em ~${this.fmt(deslocOtimo, 2)} bbl (sub-deslocar ${this.fmt(subRecomendado, 2)} bbl) para acertar o topo da pasta.`,
+      `Programar o deslocamento efetivo em ~${this.fmt(deslocOtimo, 2)} bbl (${subRecomendado >= 0 ? 'sub-deslocar' : 'sobre-deslocar'} ${this.fmt(Math.abs(subRecomendado), 2)} bbl) para acertar o topo da pasta.`,
       'Confirmar o volume de queda livre no dia da operação (nível/retorno) antes de fixar o sub-deslocamento.',
       'Manter o restante do deslocamento para circular após o assentamento, se o procedimento previr.',
       ...(atende ? [] : [
@@ -1177,7 +1331,18 @@ export class ConformidadeOperacionalReportService {
         legenda: 'Δ negativo = sub-deslocamento (topo mais raso). A linha destacada é a de menor desvio ao alvo.',
       }],
       memoria: [
-        {
+        doMotor ? {
+          title: 'Modelo de posicionamento',
+          formulas: [
+            'Topo assentado = topo da pasta no motor da primária, com o deslocamento da linha',
+            'Cada linha: bombeio → drenagem do tubo em U até o equilíbrio → retirada da coluna até a extremidade do relatório de retirada',
+            `Deslocamento de menor desvio = ${this.fmt(deslocOtimo, 2)} bbl (planejado ${this.fmt(deslocPlanejado, 2)} bbl)`,
+          ],
+          notes: [
+            'Transporte 1D com conservação de volume por fluido, sem contaminação/mistura nas interfaces. Com o anular mais pesado (sobredeslocamento), o motor não simula o retorno pela coluna e avisa.',
+            'A tolerância de posicionamento (15 m) é critério de engenharia ajustável.',
+          ],
+        } : {
           title: 'Modelo de posicionamento',
           formulas: [
             `Sobre-deslocamento por queda livre Vff = ${this.fmt(Vff, 2)} bbl`,
@@ -1206,7 +1371,9 @@ export class ConformidadeOperacionalReportService {
       ['Sonda', p.dadosRelatorio.sonda || '-'],
       ['Gerado em', new Date().toLocaleString('pt-BR')],
       ['Profundidade de referência', `${this.fmt(s.referenceMD, 1)} m MD / ${this.fmt(s.referenceTVD, 1)} m TVD`],
-      ['Fonte', 'Simulação hidráulica (tubo em U; fricção Petroguia F-40 c/ standoff)'],
+      ['Fonte', p.motor === 'primaria'
+        ? 'Motor da cimentação primária (transporte conservativo com tubo em U; atrito R3 §4-6 com standoff; BHP pelo anular)'
+        : 'Simulação hidráulica (tubo em U; fricção Petroguia F-40 c/ standoff)'],
     ];
     const resultadoRows = a.resultados.map(r => [r.label, r.value]);
     const criteriosHtml = a.criterios.map(c => `

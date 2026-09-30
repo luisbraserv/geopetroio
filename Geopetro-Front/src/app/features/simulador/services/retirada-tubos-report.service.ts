@@ -3,6 +3,7 @@ import { RelatorioBuilderService } from '../components/relatorio/relatorio-build
 import { RelatorioCapaData } from '../components/relatorio/relatorio-capa-modal.component';
 import { ReverseCirculationCalculoService, ReverseCirculationResult } from './reverse-circulation-calculo.service';
 import { DadosRelatorio } from './simulador-state-store.service';
+import { RETIRADA_PADRAO, retiradaTubos, type RetiradaTubosResult } from './retirada-tubos';
 
 export interface CalculationRow {
   label: string;
@@ -16,21 +17,12 @@ export interface CalculationSection {
   notes?: string[];
 }
 
-export interface RetiradaTubosCalculation {
-  tubeLengthM: number;
-  sectionsAboveTop: number;
-  tubesPerSection: number;
-  baseDepth: number;
-  cementTopDepth: number;
-  tampaoTubesCount: number;
-  sectionTubesCount: number;
-  totalTubesCount: number;
-  openEndDepthM: number;
-}
+export type RetiradaTubosCalculation = RetiradaTubosResult;
 
 type Sequencia = RelatorioCapaData['sequenciaOperacional'];
 
 interface RetiradaParams {
+  faseOperacao?: string;
   operacao: string;
   v: any;
   dadosRelatorio: DadosRelatorio;
@@ -57,26 +49,15 @@ export class RetiradaTubosReportService {
     topoCimentoRetiradaM: number | string,
     sequencia?: Sequencia,
   ): RetiradaTubosCalculation {
-    const tubeLengthM = this.toNumber(sequencia?.comprimentoTuboM, 9.4);
-    const sectionsAboveTop = this.toNumber(sequencia?.secoesAcimaTopoCimento, 2);
-    const tubesPerSection = this.toNumber(sequencia?.tubosPorSecao, 2);
+    // A regra mora em retirada-tubos.ts, a mesma que o motor usa para a extremidade.
     const baseDepth = this.toNumber(v.sectionEndMD, 0);
-    const cementTopDepth = this.toNumber(topoCimentoRetiradaM, this.toNumber(v.sectionStartMD, baseDepth));
-    const tampaoTubesCount = Math.max(0, Math.round(Math.abs(baseDepth - cementTopDepth) / tubeLengthM));
-    const sectionTubesCount = Math.max(0, Math.round(sectionsAboveTop * tubesPerSection));
-    const totalTubesCount = tampaoTubesCount + sectionTubesCount;
-    const openEndDepthM = Math.max(0, baseDepth - (totalTubesCount * tubeLengthM));
-    return {
-      tubeLengthM,
-      sectionsAboveTop,
-      tubesPerSection,
-      baseDepth,
-      cementTopDepth,
-      tampaoTubesCount,
-      sectionTubesCount,
-      totalTubesCount,
-      openEndDepthM,
-    };
+    return retiradaTubos({
+      baseDepthMD: baseDepth,
+      cementTopMD: this.toNumber(topoCimentoRetiradaM, this.toNumber(v.sectionStartMD, baseDepth)),
+      tubeLengthM: this.toNumber(sequencia?.comprimentoTuboM, RETIRADA_PADRAO.tubeLengthM),
+      sectionsAboveTop: this.toNumber(sequencia?.secoesAcimaTopoCimento, RETIRADA_PADRAO.sectionsAboveTop),
+      tubesPerSection: this.toNumber(sequencia?.tubosPorSecao, RETIRADA_PADRAO.tubesPerSection),
+    });
   }
 
   abrirRetirada(p: RetiradaParams): void {
@@ -85,7 +66,7 @@ export class RetiradaTubosReportService {
       'Cálculo completo da retirada de tubos',
       'Cálculo gerado com a mesma regra usada na sequência operacional do relatório.',
       [
-        this.buildScenarioSection(p.operacao, p.v, p.dadosRelatorio),
+        this.buildScenarioSection(p.operacao, p.v, p.dadosRelatorio, p.faseOperacao),
         ...this.buildRetiradaTubosSections(calc),
       ],
     );
@@ -101,18 +82,19 @@ export class RetiradaTubosReportService {
       'Cálculo completo da circulação reversa',
       'A profundidade aberta é recalculada após a retirada dos tubos, igual ao relatório.',
       [
-        this.buildScenarioSection(p.operacao, p.v, p.dadosRelatorio),
+        this.buildScenarioSection(p.operacao, p.v, p.dadosRelatorio, p.faseOperacao),
         ...this.buildRetiradaTubosSections(retirada),
         this.buildCirculacaoReversaSection(p.tubingIdIn, result),
       ],
     );
   }
 
-  private buildScenarioSection(operacao: string, v: any, dadosRelatorio: DadosRelatorio): CalculationSection {
+  private buildScenarioSection(operacao: string, v: any, dadosRelatorio: DadosRelatorio, faseOperacao?: string): CalculationSection {
     return {
       title: 'Dados do cenário',
       rows: [
         { label: 'Operação', value: operacao },
+        ...(faseOperacao ? [{ label: 'Fase da operação', value: faseOperacao }] : []),
         { label: 'Cliente', value: dadosRelatorio.cliente || '-' },
         { label: 'Poço', value: dadosRelatorio.poco || '-' },
         { label: 'Campo', value: dadosRelatorio.campo || '-' },
@@ -262,7 +244,9 @@ export class RetiradaTubosReportService {
   }
 
   private toNumber(value: unknown, fallback = 0): number {
-    const n = Number(String(value ?? '').replace(',', '.'));
+    // Campo vazio usa o padrão: Number('') é 0, e tubo de 0 m levava a extremidade a 0 m.
+    if (value === null || value === undefined || String(value).trim() === '') return fallback;
+    const n = Number(String(value).replace(',', '.'));
     return Number.isFinite(n) ? n : fallback;
   }
 }

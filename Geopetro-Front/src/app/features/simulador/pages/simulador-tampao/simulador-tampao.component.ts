@@ -1,4 +1,6 @@
+import { OperationPhaseSelectorComponent } from '../../components/well/operation-phase-selector.component';
 import { Well3dComponent } from '../../components/well/well-3d.component';
+import { WorkString3d, workString3d } from '../../components/well/well-3d-layers';
 import { PocoApi } from '../../models/poco.model';
 import { PocoSelectorComponent } from '../../components/well/poco-selector.component';
 ﻿import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ChangeDetectorRef } from '@angular/core';
@@ -20,17 +22,15 @@ import { RelatorioBuilderService } from '../../components/relatorio/relatorio-bu
 import { RetiradaTubosReportService } from '../../services/retirada-tubos-report.service';
 import { ConformidadeOperacionalReportService, FatorConformidade, VarreduraOverride } from '../../services/conformidade-operacional-report.service';
 import { SimuladorBaseComponent } from '../simulador-base.component';
-import { ThickeningChartComponent } from '../../components/charts/thickening-chart.component';
-import { UcaChartComponent } from '../../components/charts/uca-chart.component';
-import { PressureChartComponent } from '../../components/charts/pressure-chart.component';
-import { OpsChartComponent, OpsPhase } from '../../components/charts/ops-chart.component';
+import { OperationChartsComponent } from '../../components/charts/operation-charts.component';
+import { PrimaryWell2dComponent, type PrimaryWellVisualView } from '../../components/charts/primary-well-2d.component';
 import { SchematicTampaoComponent } from '../../components/charts/schematic-tampao.component';
 import { AditivoModalComponent } from '../../components/aditivos/aditivo-modal.component';
 import { SimuladorStateModalComponent } from '../../components/state-modal/simulador-state-modal.component';
 
 import { RheologyAdjustmentService, BASE_SLURRY_RHEOLOGY } from '../../services/rheology-adjustment.service';
 
-import { PlugGeometry, TampaoInputs, PressureProfile } from '../../models/tampao.model';
+import { PlugGeometry, TampaoInputs } from '../../models/tampao.model';
 import { WellStructureFormComponent } from '../../components/well/well-structure-form.component';
 import { DepthInputDirective } from '../../components/well/depth-input.directive';
 import { WellTrajectoryFormComponent } from '../../components/well/well-trajectory-form.component';
@@ -38,17 +38,44 @@ import { createTrajectoryForm, trajectoryFromForm } from '../../models/well-traj
 import { WellSchematicComponent, WellSchematicState } from '../../components/well/well-schematic.component';
 import { IntervalDescription, WellGeometryService } from '../../services/well-geometry.service';
 import { OperationInterval, WellGeometry, WellGeometryIssue, WellOverlay } from '../../models/well-geometry.model';
-import { WellPhaseFormValue, buildWellGeometry, emptyPhaseForm, geometryNumber, wellGeometryToForms } from '../../models/well-geometry.form';
-import { SqueezeGeometry, SqueezeHydraulicSimulation, SqueezeInputs } from '../../models/squeeze.model';
-import { SqueezeHydraulicSimulationService } from '../../services/squeeze-hydraulic-simulation.service';
-import { SqueezeOperationChartsComponent } from '../../components/charts/squeeze-operation-charts.component';
+import { WellPhaseFormValue, buildWellGeometry, emptyPhaseForm, exampleWellPhaseForms, geometryNumber, wellGeometryToForms } from '../../models/well-geometry.form';
+import { SqueezeHydraulicSimulation } from '../../models/squeeze.model';
+import type { PrimaryDiagnostic, PrimaryFrictionLevel } from '../../models/primary-cementing.model';
+import { PrimaryProgramService } from '../../services/primary-program.service';
+import { operationReportVisuals, type OperationCharts } from '../../services/operation-charts';
+import { expandReportChartSelection, reportChartId, TAMPAO_REPORT_CHARTS } from '../../services/report-chart-selection';
+import { PressureWindowInputsComponent, PRESSURE_WINDOW_FORM_DEFAULTS, setPressurePoints } from '../../components/pressure-window/pressure-window-inputs.component';
+import { PressureWindowPanelComponent } from '../../components/pressure-window/pressure-window-panel.component';
+import { buildCriticalPoints, criticalPointsTableSvg, wellElementOf, type OperationCriticalPoints } from '../../services/operation-critical-points';
+import { gradientsAt } from '../../services/pressure-profile';
+import { buildCronograma, svgDataUrl, tableReportSvg, ucaMilestones,
+  type CronogramaRow, type CronogramaStep, type UcaMilestones } from '../../services/operation-tables';
+import { buildWellVisualModel, primaryReportVisuals, type WellVisualOptions } from '../../services/primary-well-visuals';
+import { buildTampaoOperationCharts, runTampaoEngine, tampaoLegacyHydraulics,
+  TAMPAO_STEP_LABELS, type TampaoEngineInput, type TampaoEngineOverrides, type TampaoEngineResult } from '../../services/tampao-engine';
+import { PRIMARY_REFERENCE_RHEOLOGY_SOURCE, primaryDefaultRheology } from '../../models/primary-default-rheology';
 import { Diagnostic } from '../../models/pasta.model';
 import { ThickeningResult, UCAResult } from '../../models/reologia.model';
 import { ADITIVOS_CATALOGO, AditivoCatalogo, Aditivo, hydrateAditivosFromCatalog } from '../../models/aditivo.model';
 import { CEMENT_CLASSES } from '../../models/constantes';
 import { API_CASING_SIZES, API_TUBING_SIZES, ApiTubular } from '../../models/api-tubulares';
 
-type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'pressure' | 'schematic' | 'wellView';
+type TabId = 'recipe' | 'manualRecipe' | 'pressure' | 'schematic' | 'wellView';
+
+/** O que o motor faz e o que ele não modela, para o relatório (SPEC squeeze-tampao §7). */
+const TAMPAO_PREMISSAS: string[][] = [
+  ['Motor', 'Cimentação primária com coluna de trabalho de extremidade aberta'],
+  ['Transporte', 'Parcelas 1D com conservação de volume por fluido'],
+  ['Queda livre', 'Vazão de saída pelo balanço do tubo em U, com vazio no topo da coluna'],
+  ['Atrito', 'R3 §4-6 por fluido (n, k), como na primária: multiplicadores de interior e anular, sem standoff'],
+  ['Reologia', 'Pasta com a referência da primária (R3 §12-7, pasta tail); fluidos aquosos pela viscosidade'],
+  ['Equilíbrio', 'Drena depois do bombeio até a vazão cair abaixo de 0,001 bpm'],
+  ['Retirada', 'Estática, até a extremidade do relatório de retirada de tubos'],
+  ['Não modela', 'Mistura e contaminação nas interfaces'],
+  ['Não modela', 'Gel e limite de escoamento: o fluido real para antes'],
+  ['Não modela', 'Retorno pela coluna com o anular mais pesado (só avisa)'],
+  ['Não modela', 'Circulação reversa depois da retirada'],
+];
 
 @Component({
   selector: 'app-simulador-tampao',
@@ -59,13 +86,12 @@ type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'pressure' | 'schematic' |
     ReactiveFormsModule,
     RelatorioViewerComponent,
     RelatorioCapaModalComponent,
-    ThickeningChartComponent,
-    UcaChartComponent,
-    PressureChartComponent,
-    OpsChartComponent,
-    SqueezeOperationChartsComponent,
+    OperationChartsComponent,
+    PressureWindowInputsComponent,
+    PressureWindowPanelComponent,
+    PrimaryWell2dComponent,
     SchematicTampaoComponent,
-    WellStructureFormComponent,
+    WellStructureFormComponent, OperationPhaseSelectorComponent,
     DepthInputDirective,
     WellTrajectoryFormComponent,
     WellSchematicComponent,
@@ -87,10 +113,9 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   readonly tabs: { id: TabId; label: string }[] = [
     { id: 'recipe', label: '1. Receita da Simulação' },
     { id: 'manualRecipe', label: '2. Receita por Volume' },
-    { id: 'rheology', label: '3. Reologia' },
-    { id: 'pressure', label: '4. Simulação' },
-    { id: 'schematic', label: '5. Esquemático' },
-    { id: 'wellView', label: '6. Visualização do poço' },
+    { id: 'pressure', label: '3. Simulação' },
+    { id: 'schematic', label: '4. Esquemático' },
+    { id: 'wellView', label: '5. Visualização do poço' },
   ];
 
   readonly cimentoClasses = Object.entries(CEMENT_CLASSES).map(([k, v]) => ({ value: k, label: v.label }));
@@ -111,9 +136,16 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   tampaoInputsSnapshot: TampaoInputs | null = null;
   tt: ThickeningResult | null = null;
   uca: UCAResult | null = null;
-  pressureProfile: PressureProfile | null = null;
-  // Simulação hidráulica temporal (tubo em U) — mesma engine do squeeze, sem fase de injeção
+  ucaMarcos: UcaMilestones = ucaMilestones(null);
+  /** Tampão no motor da primária (SPEC squeeze-tampao S4). */
+  tampaoResult: TampaoEngineResult | null = null;
+  /** O resultado do motor no formato que as métricas e o relatório de conformidade leem. */
   hydraulicSim: SqueezeHydraulicSimulation | null = null;
+  operationCharts: OperationCharts | null = null;
+  /** Janela operacional: o ponto crítico por etapa (SPEC janela-operacional §3.3). */
+  criticalPoints: OperationCriticalPoints | null = null;
+  engineDiagnostics: PrimaryDiagnostic[] = [];
+  well2dViews: PrimaryWellVisualView[] = [];
   rheoDiags: Diagnostic[] = [];
   recipeDiags: Diagnostic[] = [];
   reverseCirculation: ReverseCirculationResult | null = null;
@@ -127,14 +159,17 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   intervalDescription: IntervalDescription | null = null;
   /** Overlays do tampão — posições JÁ calculadas pelos services, só para desenho. */
   wellOverlays: WellOverlay[] = [];
+  /** Coluna do 3D nos diâmetros reais; objeto novo só quando a simulação refaz o desenho. */
+  wellWorkString: WorkString3d | null = null;
   wellSchematicState: 'comTubing' | 'semTubing' = 'comTubing';
   readonly wellSchematicStates: WellSchematicState[] = [
     { id: 'comTubing', label: 'Com coluna' },
     { id: 'semTubing', label: 'Sem coluna' },
   ];
 
-  // Cronograma
-  opsPhases: OpsPhase[] = [];
+  // Cronograma (tabela, como na primária)
+  cronograma: CronogramaRow[] = [];
+  manualCronograma: CronogramaRow[] = [];
 
   // Sidebar toggle
   sidebarOpen = true;
@@ -149,14 +184,14 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   sec8Open = false;
   sec10Open = false;
   secPocoOpen = false;
-  secEstruturaOpen = false;
+  secEstruturaOpen = true;
   secTampaoOpen = false;
   secSimuladorOpen = false;
 
   // Padrões capturados após buildForm() — usados ao carregar cenários antigos
   private formDefaults: Record<string, unknown> = {};
   private defaultManualVolumeBbl = 10;
-  secDadosOpen = false;
+  secDadosOpen = true;
   secCondOpen = false;
   secPesosOpen = false;
   secVazoesOpen = false;
@@ -174,8 +209,6 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
 
   @ViewChild('stateModal') stateModal!: SimuladorStateModalComponent;
   @ViewChild('reportSchematics') reportSchematics?: SchematicTampaoComponent;
-  @ViewChild('reportOpsChart') reportOpsChart?: OpsChartComponent;
-  @ViewChild('reportPressureChart') reportPressureChart?: PressureChartComponent;
 
   protected readonly operacaoKey = 'tampao' as const;
 
@@ -187,7 +220,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     private relatorioBuilder: RelatorioBuilderService,
     private retiradaReport: RetiradaTubosReportService,
     private conformidadeReport: ConformidadeOperacionalReportService,
-    private plugHydraulics: SqueezeHydraulicSimulationService,
+    private primaryProgram: PrimaryProgramService,
     private wellGeo: WellGeometryService,
     private cdr: ChangeDetectorRef,
   ) { super(); }
@@ -198,7 +231,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     this.buildForm();
     // Snapshot dos padrões do formulário: ao carregar um cenário salvo antes de
     // novos campos existirem, os ausentes voltam ao padrão (reprodução exata).
-    const { additivos: _a, fases: _f, ...defaults } = this.form.getRawValue();
+    const { additivos: _a, fases: _f, gradPoints: _g, ...defaults } = this.form.getRawValue();
     this.formDefaults = defaults;
     this.defaultManualVolumeBbl = this.manualVolumeBbl;
     this.restoreAditivos();
@@ -229,14 +262,9 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     });
   }
 
-  /** Poço padrão: uma fase de diâmetro único — reproduz o comportamento anterior. */
+  /** Exemplo inicial da superfície até o poço aberto; dimensões editáveis por fase. */
   private defaultPhaseRows(): WellPhaseFormValue[] {
-    return [{
-      id: 'phase-1', name: 'Fase única', type: 'PRODUCTION',
-      topMD: 0, bottomMD: 1500, topTVD: 0, bottomTVD: 1500,
-      holeDiameterIn: 8.535,
-      casingOD: null, casingID: null, shoeMD: null, shoeTVD: null,
-    }];
+    return exampleWellPhaseForms('tampao');
   }
 
   addFase(): void {
@@ -261,6 +289,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
 
   private buildForm(): void {
     this.form = this.fb.group({
+      selectedPhaseId: [null as string | null],
       operacaoTopoMD: [1400], operacaoBaseMD: [1500],
       fases: this.fb.array(this.defaultPhaseRows().map(row => this.phaseGroup(row))),
       trajectory: createTrajectoryForm(this.fb),
@@ -276,18 +305,19 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
       bhst: [{ value: null, disabled: true }],
       bhct: [{ value: null, disabled: true }],
       completionWeight: [8.4], displacementWeight: [8.4], mudWeightBack: [8.4], mudWeightFront: [8.4],
-      fracGrad: [16.0], poreGrad: [9.0], pumpRate: [3.0], pressaoOperacao: [2000],
+      fracGrad: [16.0], poreGrad: [9.0], gradUnit: [PRESSURE_WINDOW_FORM_DEFAULTS.gradUnit], gradMode: [PRESSURE_WINDOW_FORM_DEFAULTS.gradMode],
+      margemAtencaoPpg: [PRESSURE_WINDOW_FORM_DEFAULTS.margemAtencaoPpg], margemAlertaPpg: [PRESSURE_WINDOW_FORM_DEFAULTS.margemAlertaPpg],
+      margemCriticoPpg: [PRESSURE_WINDOW_FORM_DEFAULTS.margemCriticoPpg], gradPoints: this.fb.array([]),
+      pumpRate: [3.0], pressaoOperacao: [2000],
       pause1: [0], pause2: [0], pause3: [0],
       density: [15.8], cementClass: ['G'],
       waterSplitFresh: [100], waterSplitSea: [0],
       silica: [35], nacl: [0],
-      theta300: [181], theta200: [132], theta100: [79],
-      theta60: [53], theta30: [31], theta20: [23],
-      theta10: [13], theta6: [9], theta3: [6],
-      roughness: ['medium'],
+      internalFrictionLevel: ['medium'], annularFrictionLevel: ['medium'],
       viscosidadeAguaCp: [1.0],
+      // Não entra mais no cálculo (queda livre conservativa); fica para os cenários antigos.
       freeFallMaxFactor: [3.5],
-      standoffPct: [80],
+      headCondition: ['vented-free-surface'],
       motorHP: [1000], pumpEff: [90],
       maxSurfacePressure: [5000], maxPumpRate: [8.0],
       additivos: this.fb.array([]),
@@ -301,18 +331,21 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
    */
   private syncWellGeometry(): { geometry: WellGeometry; interval: OperationInterval } | null {
     const raw = this.form.getRawValue();
-    const geometry = this.wellGeo.deriveTrajectoryTvd({
+    const fullGeometry = this.wellGeo.deriveTrajectoryTvd({
       ...buildWellGeometry(raw.wellFinalMD, raw.wellFinalTVD, (raw.fases ?? []) as WellPhaseFormValue[]),
       trajectory: trajectoryFromForm(raw.trajectory),
     });
+    const context = this.operationContext.resolve(fullGeometry, raw.selectedPhaseId ?? null, 'tampao');
+    const geometry = context.geometry;
     const interval: OperationInterval = {
       topMD: geometryNumber(raw.operacaoTopoMD),
       bottomMD: geometryNumber(raw.operacaoBaseMD),
     };
 
     this.wellGeometry = geometry;
-    this.wellIssues = this.wellGeo.validate(geometry);
-    this.operationIssues = this.wellGeo.validateInterval(geometry, interval, 'Tampão');
+    this.wellIssues = context.issues;
+    this.operationIssues = [...this.wellGeo.validateInterval(geometry, interval, 'Tampão'),
+      ...this.operationContext.validateInterval(context, interval, 'Tampão')];
     if (!this.wellGeo.hasErrors(this.wellIssues)) this.operationIssues.push(...this.wellGeo.validateWorkString(
       geometry, interval.bottomMD, geometryNumber(raw.pipeOD), geometryNumber(raw.pipeID),
     ));
@@ -359,19 +392,26 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     this.schematicPlug = null;
     this.tampaoInputsSnapshot = null;
     this.hydraulicSim = null;
+    this.tampaoResult = null;
+    this.operationCharts = null;
+    this.criticalPoints = null;
+    this.engineDiagnostics = [];
+    this.well2dViews = [];
     this.reverseCirculation = null;
     this.wellOverlays = [];
+    this.wellWorkString = null;
     this.tt = null;
     this.uca = null;
+    this.ucaMarcos = ucaMilestones(null);
     this.freeWater = 0;
     this.geoFormula = '';
-    this.opsPhases = [];
+    this.cronograma = [];
+    this.manualCronograma = [];
     this.recipeDiags = [];
     this.rheoDiags = [];
     this.relatorioVisivel = false;
     this.relatorioConteudo = '';
     this.capaModalOpen = false;
-    this.pressureProfile = null;
     this.form.patchValue({ bhst: null, bhct: null }, { emitEvent: false });
     this.cdr.markForCheck();
   }
@@ -402,7 +442,6 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
       bhst: this.temperatureResult.bhstF,
     };
 
-    const thetaReadings = this.buildThetaReadings(v);
     const aditivosRaw = hydrateAditivosFromCatalog((v.additivos || []) as Aditivo[]);
 
     this.tampaoInputsSnapshot = inputs;
@@ -414,20 +453,24 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
       ? this.tampaoCalc.calcPlug(inputs, this.manualVolumeBbl, well)
       : this.plug;
     this.wellOverlays = this.buildWellOverlays(this.schematicPlug);
+    this.wellWorkString = workString3d(v.pipeOD, v.pipeID);
     this.reverseCirculation = this.buildReverseCirculationResult(v);
     this.slurry = this.slurryCalc.calculateSlurryDesign({ ...vWithBHT, additivos: aditivosRaw } as any);
     this.recipe = this.slurryCalc.buildSlurryRecipe(this.plug.volCementTotal, this.slurry);
     this.computeManualRecipe();
 
-    this.tt = this.testsCalc.simulateThickening(this.slurry, v.sectionEndTVD, thetaReadings);
+    // Sem leituras Fann na tela: a reologia é a da pasta base com o efeito dos aditivos, e é
+    // ela que alimenta o tempo de espessamento e o atrito do motor.
+    this.rheologyResult = this.rheologyAdj.applyAdditiveRheologyEffects(BASE_SLURRY_RHEOLOGY, aditivosRaw);
+    this.tt = this.testsCalc.simulateThickening(this.slurry, v.sectionEndTVD, this.estimatedThetaReadings());
     this.uca = this.testsCalc.simulateUCA(this.slurry, this.tt);
+    this.ucaMarcos = ucaMilestones(this.uca);
     this.freeWater = this.testsCalc.estimateFreeWater(this.slurry);
     this.rheoDiags = this.testsCalc.rheoDiagnostics(this.slurry, this.tt, this.freeWater);
 
-    this.rheologyResult = this.rheologyAdj.applyAdditiveRheologyEffects(BASE_SLURRY_RHEOLOGY, aditivosRaw, { thetaReadings });
 
-    this.pressureProfile = this.tampaoCalc.calcPressureProfile(this.plug, this.slurry, inputs, well);
-    this.hydraulicSim = this.buildHydraulicSimulation(v, aditivosRaw, thetaReadings);
+    this.runEngine(v);
+    this.well2dViews = this.buildWell2dViews();
 
     this.updateEngineeringIssues();
     this.buildOpsPhases();
@@ -440,62 +483,115 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   }
 
   /**
-   * Reaproveita a simulação hidráulica do squeeze (tubo em U, fricção F-40)
-   * para o tampão: mesmas fases de bombeio, sem a fase de injeção. A referência
-   * de pressão é a base do tampão (ponto mais crítico do plug balanceado).
+   * Tampão no motor da cimentação primária (SPEC squeeze-tampao §6): o dimensionamento
+   * de hoje vira o programa da coluna de trabalho; o motor transporta, drena o tubo em U
+   * até o equilíbrio e retira a coluna até a extremidade do relatório de retirada.
    */
-  private buildHydraulicSimulation(v: any, aditivos: Aditivo[], thetaReadings: any, override: VarreduraOverride = {}): SqueezeHydraulicSimulation | null {
-    if (!this.plug || !this.slurry) return null;
-    const plug = this.plug;
-    const dispFactor = override.displacementFactor && override.displacementFactor !== 1 ? override.displacementFactor : 1;
-    const f = override.rateFactor ?? 1;
-    const geom = {
-      tubingID_m: plug.capPipe,
-      annulusCasing_m: plug.capAnn,
-      tID: Number(v.pipeID) || 2.764,
-      // Geometria do anular para a fricção do retorno (F-40 c/ standoff)
-      cID: Number(v.holeID) || 8.535,
-      tOD: Number(v.pipeOD) || 3.5,
-      frontPhysicalVolumeBbl: plug.frontPhysicalVolumeBbl,
-      slurryTotal: plug.volCementTotal,
-      volBackSpacer: plug.volBackSpacer,
-      operationalDisplacementVolumeBbl: plug.volDisplacement * dispFactor,
-      slurryInjectedVolumeBbl: 0,
-    } as SqueezeGeometry;
-    const inputs = {
-      ...v,
-      modoOperacao: 'tampao',
-      rugosidadeTubo: v.roughness,
-      standoffPct: override.standoffPct ?? v.standoffPct,
-      densidadePastaPpg: override.density,
-      topoCanhoneadoMD: plug.pTop,
-      baseCanhoneadoMD: plug.pBase,
-      topoCanhoneadoTVD: Number(v.sectionStartTVD) || plug.pTop,
-      baseCanhoneadoTVD: Number(v.sectionEndTVD) || plug.pBase,
-      profundidadeReferenciaSqueezeMD: plug.pBase,
-      profundidadeReferenciaSqueezeTVD: Number(v.sectionEndTVD) || plug.pBase,
-      vazaoAguaFrenteBpm: this.vazaoFluido('fluidoFrenteBpm') * f,
-      vazaoPastaBpm: this.vazaoFluido('pastaBpm') * f,
-      vazaoAguaAtrasBpm: this.vazaoFluido('fluidoAtrasBpm') * f,
-      vazaoDeslocamentoBpm: this.vazaoFluido('deslocamentoBpm') * f,
-    } as SqueezeInputs;
+  private tampaoEngineInput(v: any): TampaoEngineInput | null {
+    if (!this.plug || !this.slurry || !this.wellGeometry) return null;
+    const num = (value: unknown, fallback: number) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    // A mesma sequência do relatório de retirada: a extremidade do motor é a do relatório.
+    const retirada = this.retiradaReport.buildCalculation(v, this.plug.topCementWithoutTubing,
+      this.dadosRelatorio.sequenciaOperacional as unknown as RelatorioCapaData['sequenciaOperacional']);
+    const levels: PrimaryFrictionLevel[] = ['low', 'medium', 'high'];
+    return {
+      geometry: this.wellGeometry, plug: this.plug,
+      pipeODIn: num(v.pipeOD, 3.5), pipeIDIn: num(v.pipeID, 2.764),
+      densities: {
+        completion: num(v.completionWeight, 8.4), front: num(v.mudWeightFront, 8.4), back: num(v.mudWeightBack, 8.4),
+        displacement: num(v.displacementWeight ?? v.completionWeight, 8.4), slurry: num(this.slurry.density ?? v.density, 15.8),
+      },
+      waterViscosityCp: num(v.viscosidadeAguaCp, 1),
+      // Como na primária: a pasta entra com a reologia de referência (R3 §12-7, pasta tail).
+      slurryRheology: { ...primaryDefaultRheology('cement'), origin: 'base', reference: PRIMARY_REFERENCE_RHEOLOGY_SOURCE },
+      rates: { front: this.vazaoFluido('fluidoFrenteBpm'), slurry: this.vazaoFluido('pastaBpm'),
+        back: this.vazaoFluido('fluidoAtrasBpm'), displacement: this.vazaoFluido('deslocamentoBpm') },
+      pausesMin: [Math.max(0, num(v.pause1, 0)), Math.max(0, num(v.pause2, 0)), Math.max(0, num(v.pause3, 0))],
+      friction: { internal: levels.includes(v.internalFrictionLevel) ? v.internalFrictionLevel : 'medium',
+        annular: levels.includes(v.annularFrictionLevel) ? v.annularFrictionLevel : 'medium' },
+      headCondition: v.headCondition === 'vented-free-surface' ? 'vented-free-surface' : 'closed-head',
+      // Poro e fratura do perfil do cenário; os valores únicos são os da base do tampão.
+      ...this.engineGradients(v, this.tampaoTvdOf()(this.plug.pBase)),
+      equipment: { maxSurfacePressurePsi: num(v.maxSurfacePressure, 0) || null, maxPumpRateBpm: num(v.maxPumpRate, 0) || null,
+        motorHp: num(v.motorHP, 0) || null, pumpEffPct: num(v.pumpEff, 0) || null },
+      retirada: { tubeLengthM: retirada.tubeLengthM, sectionsAboveTop: retirada.sectionsAboveTop,
+        tubesPerSection: retirada.tubesPerSection },
+    };
+  }
+
+  private tampaoTvdOf(): (md: number) => number {
+    return this.wellGeometry ? this.wellGeo.mdToTvdResolver(this.wellGeometry) : (md: number) => md;
+  }
+
+  private runTampao(v: any, override: TampaoEngineOverrides = {}): { input: TampaoEngineInput; result: TampaoEngineResult } | null {
+    const input = this.tampaoEngineInput(v);
+    if (!input) return null;
     try {
-      return this.plugHydraulics.simulate(geom, this.slurry, inputs, [], aditivos, { thetaReadings }, this.wellGeometry ? {
-        geometry: this.wellGeometry,
-        interval: { topMD: plug.pTop, bottomMD: plug.pBase },
-      } : null);
+      return { input, result: runTampaoEngine(this.primaryProgram, input, this.tampaoTvdOf(), override) };
     } catch (e) {
-      console.error('[tampao] hydraulic sim error:', e);
+      console.error('[tampao] engine error:', e);
       return null;
     }
   }
 
-  /** Re-simula a hidráulica do tampão com sobreposições (varredura de risco/sensibilidade). */
+  private runEngine(v: any): void {
+    const run = this.runTampao(v);
+    const tvdOf = this.tampaoTvdOf();
+    this.tampaoResult = run?.result ?? null;
+    this.hydraulicSim = run ? tampaoLegacyHydraulics(run.result, run.input, tvdOf) : null;
+    const phases = (this.wellGeometry?.phases ?? []).map(phase =>
+      ({ id: phase.id, name: phase.name, topMD: phase.topMD, bottomMD: phase.bottomMD }));
+    this.operationCharts = run ? buildTampaoOperationCharts(run.result, phases, v.selectedPhaseId ?? null, tvdOf) : null;
+    this.criticalPoints = run ? buildCriticalPoints({ hydraulics: run.result.resolution.hydraulics, stepLabels: TAMPAO_STEP_LABELS,
+      gradientsAt: tvd => gradientsAt(run.input, tvd), tvdOf, elementOf: wellElementOf(this.wellGeometry, []),
+      classes: this.marginClasses(v) }) : null;
+    const resolution = run?.result.resolution;
+    this.engineDiagnostics = [
+      ...(resolution?.geometry.issues ?? []).filter(issue => issue.level === 'error')
+        .map(issue => ({ code: issue.code, message: issue.message, severity: 'error' as const, category: 'configuration' as const })),
+      ...(resolution?.volumes.diagnostics ?? []), ...(resolution?.transport?.diagnostics ?? []),
+      ...(resolution?.hydraulics?.diagnostics ?? []),
+    ].filter(d => d.severity !== 'info' && d.code !== 'PRIMARY_RHEOLOGY_ESTIMATED');
+  }
+
+  /** n e k da pasta que o motor usa: a referência da primária (R3 §12-7). */
+  slurryN(): number | null {
+    return this.tampaoResult?.primary.fluids.find(fluid => fluid.id === 'slurry')?.rheology.n ?? null;
+  }
+  slurryK(): number | null {
+    return this.tampaoResult?.primary.fluids.find(fluid => fluid.id === 'slurry')?.rheology.kLbfSnFt2 ?? null;
+  }
+
+  /** Re-simula o tampão no motor com sobreposições (varredura de risco/sensibilidade). */
   private reSimulateHidraulica(o: VarreduraOverride): SqueezeHydraulicSimulation | null {
-    const v = this.form.getRawValue();
-    const aditivosRaw = hydrateAditivosFromCatalog((v.additivos || []) as Aditivo[]);
-    const thetaReadings = this.buildThetaReadings(v);
-    return this.buildHydraulicSimulation(v, aditivosRaw, thetaReadings, o);
+    const run = this.runTampao(this.form.getRawValue(), o);
+    return run ? tampaoLegacyHydraulics(run.result, run.input, this.tampaoTvdOf()) : null;
+  }
+
+  /** Perfil e planta da primária, sem caliper, com o tampão depois da retirada (SPEC §5.4). */
+  private buildWell2dViews(): PrimaryWellVisualView[] {
+    const geometry = this.wellGeometry;
+    const plug = this.schematicPlug ?? this.plug;
+    if (!geometry || !plug) return [];
+    const options = (interval?: WellVisualOptions['interval']): WellVisualOptions => ({
+      caliper: null, showCaliper: false, interval, tubulars: [],
+      cement: [{ topMD: plug.topCementWithoutTubing, bottomMD: plug.pBase, location: 'wellbore' }],
+      markers: [{ md: plug.topCementWithoutTubing, label: 'Topo do tampão' }, { md: plug.pBase, label: 'Base do tampão' }],
+    });
+    const views: PrimaryWellVisualView[] = [];
+    try {
+      views.push({ id: 'all', name: 'Todas as fases', model: buildWellVisualModel(geometry, options()) });
+    } catch { return []; }
+    for (const phase of geometry.phases) {
+      try {
+        views.push({ id: phase.id, name: phase.name, model: buildWellVisualModel(geometry,
+          options({ phaseId: phase.id, topMD: phase.topMD, bottomMD: phase.bottomMD })) });
+      } catch { /* A vista completa continua disponível se apenas uma fase for inválida. */ }
+    }
+    return views;
   }
 
   private buildReverseCirculationResult(v: any): ReverseCirculationResult | null {
@@ -549,52 +645,54 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     return Number(plug?.workVolumeBbl ?? plug?.volCementTotal) || 0;
   }
 
+  /** Passos de bombeio do tampão com o volume de pasta dado; o equilíbrio do tubo em U vem do motor. */
+  private cronogramaSteps(slurryBbl: number): CronogramaStep[] {
+    if (!this.plug) return [];
+    const v = this.form.getRawValue();
+    const plug = this.plug;
+    const pump = (label: string, fluid: string, volumeBbl: number, rateBpm: number): CronogramaStep =>
+      ({ label, fluid, volumeBbl: Math.max(0, volumeBbl || 0), rateBpm,
+        durationMin: rateBpm > 0 ? Math.max(0, volumeBbl || 0) / rateBpm : 0 });
+    const pause = (label: string, minutes: unknown): CronogramaStep =>
+      ({ label, fluid: null, volumeBbl: null, rateBpm: null, durationMin: Math.max(0, Number(minutes) || 0) });
+    const slurryDensity = Number(this.slurry?.density ?? v.density);
+    const settleMin = this.tampaoResult?.summary.settleMin ?? 0;
+    return [
+      pump('Água à frente', `Água ${this.fmt(v.mudWeightFront, 1)} ppg`, plug.frontPhysicalVolumeBbl, this.vazaoFluido('fluidoFrenteBpm')),
+      pause('Pausa 1', v.pause1),
+      pump('Pasta', Number.isFinite(slurryDensity) ? `Pasta ${this.fmt(slurryDensity, 1)} ppg` : 'Pasta', slurryBbl, this.vazaoFluido('pastaBpm')),
+      pause('Pausa 2', v.pause2),
+      pump('Água atrás', `Água ${this.fmt(v.mudWeightBack, 1)} ppg`, plug.backPhysicalVolumeBbl, this.vazaoFluido('fluidoAtrasBpm')),
+      pause('Pausa 3', v.pause3),
+      pump('Deslocamento', `Deslocamento ${this.fmt(v.displacementWeight ?? v.completionWeight, 1)} ppg`, plug.volDisplacement, this.vazaoFluido('deslocamentoBpm')),
+      { label: 'Equilíbrio do tubo em U', fluid: null, volumeBbl: null, rateBpm: null, durationMin: settleMin },
+    ];
+  }
+
   private buildOpsPhases(): void {
     if (!this.plug || !this.slurry || !this.tt) return;
-    const v = this.form.getRawValue();
-    // Cada fluido usa a vazão informada em "Dados do Relatório" (bpm)
-    const bbl2min = (vol: number, rate: number) => rate > 0 ? Math.max(0, vol || 0) / rate : 0;
-    const pause1 = Math.max(0, Number(v.pause1) || 0);
-    const pause2 = Math.max(0, Number(v.pause2) || 0);
-    const pause3 = Math.max(0, Number(v.pause3) || 0);
-    this.opsPhases = [
-      { label: 'Água Frente', durationMin: bbl2min(this.plug.volWashTotal, this.vazaoFluido('fluidoFrenteBpm')), color: '#bae6fd' },
-      ...(pause1 > 0 ? [{ label: 'Pausa 1', durationMin: pause1, color: '#cbd5e1' }] : []),
-      { label: 'Pasta', durationMin: bbl2min(this.pastaBombeioVolumeBbl(), this.vazaoFluido('pastaBpm')), color: '#bbf7d0' },
-      ...(pause2 > 0 ? [{ label: 'Pausa 2', durationMin: pause2, color: '#94a3b8' }] : []),
-      { label: 'Água Atrás', durationMin: bbl2min(this.plug.volBackSpacer, this.vazaoFluido('fluidoAtrasBpm')), color: '#e9d5ff' },
-      ...(pause3 > 0 ? [{ label: 'Pausa 3', durationMin: pause3, color: '#64748b' }] : []),
-      { label: 'Deslocamento', durationMin: bbl2min(this.plug.volDisplacement, this.vazaoFluido('deslocamentoBpm')), color: '#fed7aa' },
-    ].filter(phase => phase.durationMin > 0);
+    this.cronograma = buildCronograma(this.cronogramaSteps(this.pastaBombeioVolumeBbl()));
   }
 
   protected buildManualRecipeOpsPhases(): void {
     if (!this.plug || !this.manualRecipeResult) {
-      this.manualRecipeOpsPhases = [];
+      this.manualCronograma = [];
       return;
     }
-    const v = this.form.getRawValue();
-    const bbl2min = (vol: number, rate: number) => rate > 0 ? Math.max(0, vol || 0) / rate : 0;
-    const pause1 = Math.max(0, Number(v.pause1) || 0);
-    const pause2 = Math.max(0, Number(v.pause2) || 0);
-    const pause3 = Math.max(0, Number(v.pause3) || 0);
     const manualSlurryBbl = Number(this.manualRecipeResult.targetSlurryVolumeBbl) || this.manualVolumeBbl || this.plug.volCementTotal;
-    this.manualRecipeOpsPhases = [
-      { label: 'Água Frente', durationMin: bbl2min(this.plug.volWashTotal, this.vazaoFluido('fluidoFrenteBpm')), color: '#bae6fd' },
-      ...(pause1 > 0 ? [{ label: 'Pausa 1', durationMin: pause1, color: '#cbd5e1' }] : []),
-      { label: 'Pasta', durationMin: bbl2min(manualSlurryBbl, this.vazaoFluido('pastaBpm')), color: '#bbf7d0' },
-      ...(pause2 > 0 ? [{ label: 'Pausa 2', durationMin: pause2, color: '#94a3b8' }] : []),
-      { label: 'Água Atrás', durationMin: bbl2min(this.plug.volBackSpacer, this.vazaoFluido('fluidoAtrasBpm')), color: '#e9d5ff' },
-      ...(pause3 > 0 ? [{ label: 'Pausa 3', durationMin: pause3, color: '#64748b' }] : []),
-      { label: 'Deslocamento', durationMin: bbl2min(this.plug.volDisplacement, this.vazaoFluido('deslocamentoBpm')), color: '#fed7aa' },
-    ].filter(phase => phase.durationMin > 0);
+    this.manualCronograma = buildCronograma(this.cronogramaSteps(manualSlurryBbl));
+  }
+
+  /** Tempo total do cronograma, que as tabelas comparam ao TT 50 Bc. */
+  cronogramaTotalMin(rows: CronogramaRow[]): number {
+    return rows.at(-1)?.accumulatedMin ?? 0;
   }
 
   private buildRecipeDiags(): void {
     if (!this.plug || !this.slurry || !this.tt) return;
     const v = this.form.getRawValue();
     const diags: Diagnostic[] = [];
-    const pumpTime = this.opsPhases.reduce((s, p) => s + p.durationMin, 0);
+    const pumpTime = this.cronogramaTotalMin(this.cronograma);
     const tt50min = this.tt.t50 * 60;
     if (pumpTime > tt50min * 0.85) diags.push({ text: 'Tempo de bombeio próximo do TT 50 Bc', cls: 'danger' });
     else if (pumpTime > tt50min * 0.70) diags.push({ text: 'Margem de TT moderada', cls: 'warn' });
@@ -611,7 +709,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     if (!this.plug) this.simulate();
     const v = this.form.getRawValue();
     const topoCimentoRetiradaM = this.plug?.topCementWithoutTubing ?? v.sectionStartMD;
-    this.retiradaReport.abrirRetirada({ operacao: 'TAMPÃO', v, dadosRelatorio: this.dadosRelatorio, topoCimentoRetiradaM });
+    this.retiradaReport.abrirRetirada({ operacao: 'TAMPÃO', v, dadosRelatorio: this.dadosRelatorio, faseOperacao: this.phaseReportLabel, topoCimentoRetiradaM });
   }
 
   gerarCalculoCirculacaoReversa(): void {
@@ -620,7 +718,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     if (!this.plug) this.simulate();
     const v = this.form.getRawValue();
     const topoCimentoRetiradaM = this.plug?.topCementWithoutTubing ?? v.sectionStartMD;
-    this.retiradaReport.abrirCirculacaoReversa({ operacao: 'TAMPÃO', v, dadosRelatorio: this.dadosRelatorio, topoCimentoRetiradaM, tubingIdIn: Number(v.pipeID) });
+    this.retiradaReport.abrirCirculacaoReversa({ operacao: 'TAMPÃO', v, dadosRelatorio: this.dadosRelatorio, faseOperacao: this.phaseReportLabel, topoCimentoRetiradaM, tubingIdIn: Number(v.pipeID) });
   }
 
   gerarRelatorioConformidade(fator: FatorConformidade): void {
@@ -633,15 +731,19 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
       fator,
       sim: this.hydraulicSim,
       dadosRelatorio: this.dadosRelatorio,
-      v: this.form.getRawValue(),
+      v: this.formInPpg(this.form.getRawValue(), this.tampaoTvdOf()(plug.pBase)),
       placement: {
         cementTopMD: plug.topCementWithoutTubing,
         cementBaseMD: plug.pBase,
         capBblM: plug.cementPhysicalCapacityBblM,
         displacementBbl: plug.volDisplacement,
         targetTopMD: plug.topCementWithoutTubing,
+        predictedTopMD: this.tampaoResult?.summary.cementTopAfterPullMD ?? undefined,
       },
       reSimulate: (o) => this.reSimulateHidraulica(o),
+      motor: 'primaria',
+      predictTopMD: factor => this.runTampao(this.form.getRawValue(), { displacementFactor: factor })
+        ?.result.summary.cementTopAfterPullMD ?? null,
     });
   }
 
@@ -669,7 +771,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     this.poco = (formValue['_poco'] as PocoApi | null) ?? null;
     // Mantém holeID/pipeOD/pipeID em `rest` para que a geometria (poço/coluna) também
     // seja restaurada ao carregar o cenário.
-    const { additivos, fases,
+    const { additivos, fases, gradPoints,
             _dadosRelatorio, _manualVolumeBbl, _manualYieldFt3, _manualFacGpc, _manualFamGpc,
             _pastaParametrosSource, _manualBhstValue, _manualBhstUnit, _cementVolumeSource, _reportTemperatureMode,
             ...rest } = formValue as any;
@@ -677,9 +779,14 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     // não herdam o valor da tela — voltam ao padrão do simulador.
     // Cenários antigos usavam completionWeight também como fluido de deslocamento.
     if (rest.displacementWeight == null && rest.completionWeight != null) rest.displacementWeight = rest.completionWeight;
+    // Cenário salvo antes: o estado do tubo vale para o interior e para o anular.
+    if (rest.roughness != null && rest.internalFrictionLevel == null) {
+      rest.internalFrictionLevel = rest.roughness; rest.annularFrictionLevel = rest.roughness;
+    }
     this.form.patchValue(this.formDefaults, { emitEvent: false });
-    this.form.patchValue(rest, { emitEvent: false });
+    this.form.patchValue({ ...rest, selectedPhaseId: rest.selectedPhaseId ?? null }, { emitEvent: false });
     this.form.setControl('trajectory', createTrajectoryForm(this.fb, rest.trajectory), { emitEvent: false });
+    setPressurePoints(this.form, this.fb, gradPoints);
     // Cenário salvo antes das fases: a estrutura é migrada dos campos legados
     // de seção (adapter), e o intervalo da operação herda o antigo tampão.
     this.setFases(Array.isArray(fases) && fases.length
@@ -738,6 +845,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     const reportPlug = this.schematicPlug ?? this.plug;
     this.relatorioPrefill = {
       ...this.dadosRelatorio,
+      faseOperacao: this.phaseReportLabel,
       tipoReceitaRelatorio: tipoReceita,
       vazoesBombeio,
       calculoTampaoPor: this.cementVolumeSource === 'receita' ? 'volume' : 'altura',
@@ -756,6 +864,7 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
   }
 
   onCapaGerada(data: RelatorioCapaData): void {
+    data = { ...data, faseOperacao: this.phaseReportLabel };
     this.simulate();
     if (!this.plug) return;
     const v = this.form.getRawValue();
@@ -837,17 +946,57 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
     ];
   }
 
+  /** Um checkbox por gráfico na capa do relatório. */
+  readonly reportChartOptions = TAMPAO_REPORT_CHARTS;
+
+  /**
+   * Gráficos operacionais do relatório em SVG (SPEC squeeze-tampao §7), um a um, na ordem do
+   * catálogo. As seleções antigas valem por grupo: `pressao` → premissas, os gráficos da
+   * primária, perfil e planta; `cronograma` → as tabelas do cronograma e dos marcos de UCA.
+   */
   private async captureGraficosImages(selecionados: GraficoOperacionalTipo[]): Promise<{ label: string; imagem: string }[]> {
+    const chosen = new Set(expandReportChartSelection(selecionados, TAMPAO_REPORT_CHARTS));
     const result: { label: string; imagem: string }[] = [];
-    if (selecionados.includes('cronograma') && this.reportOpsChart) {
-      const imgs = await this.reportOpsChart.renderForReport();
-      result.push(...imgs);
+    if (chosen.has('cronograma') && this.cronograma.length) {
+      const total = this.cronogramaTotalMin(this.cronograma);
+      const tt50 = this.tt ? this.tt.t50 * 60 : null;
+      result.push({ label: 'Cronograma operacional', imagem: svgDataUrl(tableReportSvg('Cronograma operacional',
+        ['Passo', 'Fluido', 'Volume (bbl)', 'Vazão (bpm)', 'Duração (min)', 'Acumulado (min)'],
+        this.cronograma.map(row => [row.label, row.fluid ?? '—', row.volumeBbl === null ? '—' : this.fmt(row.volumeBbl),
+          row.rateBpm === null ? '—' : this.fmt(row.rateBpm, 1), this.fmt(row.durationMin, 1), this.fmt(row.accumulatedMin, 1)]),
+        [`Tempo total ${this.fmt(total, 1)} min` + (tt50 !== null ? ` | TT 50 Bc ${this.fmt(tt50, 0)} min | margem ${this.fmt(tt50 - total, 0)} min` : ''),
+          'Durações do motor: o equilíbrio do tubo em U é o tempo que a coluna drenou depois do bombeio.'])) });
     }
-    if (selecionados.includes('pressao') && this.reportPressureChart) {
-      const url = await this.reportPressureChart.renderForReport();
-      if (url) result.push({ label: 'Envelope de Pressão', imagem: url });
-    }
+    if (chosen.has('uca') && this.cronograma.length)
+      result.push({ label: 'Resistência à compressão (UCA)', imagem: svgDataUrl(tableReportSvg('Marcos de resistência (UCA)',
+        ['Marco', 'Valor'], this.ucaRows(), ['Lidos da curva de UCA estimada da pasta.'])) });
+    if (!this.operationCharts) return result;
+    if (chosen.has('premissas'))
+      result.push({ label: 'Premissas da simulação', imagem: svgDataUrl(tableReportSvg('Premissas da simulação hidráulica',
+        ['Item', 'Tratamento'], TAMPAO_PREMISSAS)) });
+    if (chosen.has('janela-operacional') && this.criticalPoints)
+      result.push({ label: 'Janela operacional - ponto crítico', imagem: svgDataUrl(criticalPointsTableSvg(this.criticalPoints)) });
+    const phaseId = this.form.getRawValue().selectedPhaseId ?? 'all';
+    for (const visual of operationReportVisuals(this.operationCharts, phaseId))
+      if (chosen.has(reportChartId(visual.id))) result.push({ label: visual.title, imagem: svgDataUrl(visual.svg) });
+    // Perfil e planta da fase da operação, sem caliper (SPEC §5.4).
+    const view = this.well2dViews.find(entry => entry.id === phaseId) ?? this.well2dViews[0];
+    if (view)
+      for (const visual of primaryReportVisuals(view.model, view.id === 'all' ? undefined : { id: view.id, name: view.name }))
+        if (chosen.has(reportChartId(visual.id))) result.push({ label: visual.title, imagem: svgDataUrl(visual.svg) });
     return result;
+  }
+
+  /** Marcos de UCA para a tela e o relatório. */
+  ucaRows(): string[][] {
+    const hours = (value: number | null) => value === null ? 'não alcançado em 72 h' : this.fmtTime(value);
+    const psi = (value: number | null) => value === null ? '—' : `${this.fmt(value, 0)} psi`;
+    return [
+      ['Tempo até 50 psi', hours(this.ucaMarcos.t50PsiH)],
+      ['Tempo até 500 psi', hours(this.ucaMarcos.t500PsiH)],
+      ['Resistência em 12 h', psi(this.ucaMarcos.strength12hPsi)],
+      ['Resistência em 24 h', psi(this.ucaMarcos.strength24hPsi)],
+    ];
   }
 
   private formatCasing(id: unknown): string {
@@ -895,9 +1044,8 @@ export class SimuladorTampaoComponent extends SimuladorBaseComponent implements 
       completionWeight: 8.4, displacementWeight: 8.4, mudWeightBack: 8.4, mudWeightFront: 8.4,
       fracGrad: 16.0, poreGrad: 9.0, pumpRate: 3.0, density: 15.8, cementClass: 'G',
       waterSplitFresh: 100, waterSplitSea: 0, silica: 35, nacl: 0,
-      theta300: 181, theta200: 132, theta100: 79, theta60: 53, theta30: 31, theta20: 23,
-      theta10: 13, theta6: 9, theta3: 6, roughness: 'medium',
-      viscosidadeAguaCp: 1.0, freeFallMaxFactor: 3.5, standoffPct: 80,
+      internalFrictionLevel: 'medium', annularFrictionLevel: 'medium',
+      viscosidadeAguaCp: 1.0, freeFallMaxFactor: 3.5, headCondition: 'vented-free-surface',
       motorHP: 1000, pumpEff: 90, maxSurfacePressure: 5000, maxPumpRate: 8.0,
     });
     while (this.additivos.length) this.additivos.removeAt(0);

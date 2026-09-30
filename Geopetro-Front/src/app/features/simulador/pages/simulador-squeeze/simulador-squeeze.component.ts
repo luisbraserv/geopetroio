@@ -1,4 +1,6 @@
+import { OperationPhaseSelectorComponent } from '../../components/well/operation-phase-selector.component';
 import { Well3dComponent } from '../../components/well/well-3d.component';
+import { WorkString3d, workString3d } from '../../components/well/well-3d-layers';
 import { PocoApi } from '../../models/poco.model';
 import { PocoSelectorComponent } from '../../components/well/poco-selector.component';
 ﻿import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
@@ -17,14 +19,30 @@ import { ReverseCirculationCalculoService, ReverseCirculationResult } from '../.
 import { RelatorioViewerComponent } from '../../components/relatorio/relatorio-viewer.component';
 import { RelatorioCapaModalComponent, RelatorioCapaData, GraficoOperacionalTipo } from '../../components/relatorio/relatorio-capa-modal.component';
 import { RelatorioBuilderService } from '../../components/relatorio/relatorio-builder.service';
-import { ThickeningChartComponent } from '../../components/charts/thickening-chart.component';
-import { UcaChartComponent } from '../../components/charts/uca-chart.component';
-import { OpsChartComponent, OpsPhase } from '../../components/charts/ops-chart.component';
+import { OperationChartsComponent } from '../../components/charts/operation-charts.component';
+import { PrimaryWell2dComponent, type PrimaryWellVisualView } from '../../components/charts/primary-well-2d.component';
 import { SqueezeSchematicsComponent } from '../../components/charts/squeeze-schematics.component';
-import { SqueezeOperationChartsComponent } from '../../components/charts/squeeze-operation-charts.component';
 import { AditivoModalComponent } from '../../components/aditivos/aditivo-modal.component';
 import { SimuladorStateModalComponent } from '../../components/state-modal/simulador-state-modal.component';
-import { SqueezeHydraulicSimulationService } from '../../services/squeeze-hydraulic-simulation.service';
+import type { PrimaryDiagnostic, PrimaryFrictionLevel } from '../../models/primary-cementing.model';
+import { PrimaryProgramService } from '../../services/primary-program.service';
+import { operationReportVisuals, type OperationCharts } from '../../services/operation-charts';
+import { expandReportChartSelection, reportChartId, SQUEEZE_REPORT_CHARTS } from '../../services/report-chart-selection';
+import { PressureWindowInputsComponent, PRESSURE_WINDOW_FORM_DEFAULTS, setPressurePoints } from '../../components/pressure-window/pressure-window-inputs.component';
+import { PressureWindowPanelComponent } from '../../components/pressure-window/pressure-window-panel.component';
+import { buildCriticalPoints, criticalPointsTableSvg, wellElementOf, type OperationCriticalPoints } from '../../services/operation-critical-points';
+import { gradientsAt } from '../../services/pressure-profile';
+import { TAMPAO_STEP_LABELS } from '../../services/tampao-engine';
+import { buildCronograma, svgDataUrl, tableReportSvg, ucaMilestones,
+  type CronogramaRow, type CronogramaStep, type UcaMilestones } from '../../services/operation-tables';
+import { buildWellVisualModel, primaryReportVisuals, type WellVisualOptions } from '../../services/primary-well-visuals';
+import { balancedSqueezeDisplacement, buildSqueezeOperationCharts, legacySqueezeBlocks, runSqueezeEngine,
+  squeezeInjectionFields, squeezeLegacyHydraulics, SQUEEZE_TECHNIQUE_LABELS,
+  type SqueezeEngineInput, type SqueezeEngineResult, type SqueezeTechnique } from '../../services/squeeze-engine';
+import { retainerSqueezeVolumes } from '../../services/squeeze-retainer';
+import type { TampaoEngineOverrides } from '../../services/tampao-engine';
+import type { CompressionBlock } from '../../services/work-string-compression';
+import { PRIMARY_REFERENCE_RHEOLOGY_SOURCE, primaryDefaultRheology } from '../../models/primary-default-rheology';
 import { RheologyAdjustmentService, BASE_SLURRY_RHEOLOGY } from '../../services/rheology-adjustment.service';
 import { RetiradaTubosReportService } from '../../services/retirada-tubos-report.service';
 import { ConformidadeOperacionalReportService, FatorConformidade, VarreduraOverride } from '../../services/conformidade-operacional-report.service';
@@ -38,14 +56,32 @@ import { createTrajectoryForm, trajectoryFromForm } from '../../models/well-traj
 import { WellSchematicComponent, WellSchematicState } from '../../components/well/well-schematic.component';
 import { IntervalDescription, WellGeometryService } from '../../services/well-geometry.service';
 import { OperationInterval, PerforationInterval, WellGeometry, WellGeometryIssue, WellOverlay } from '../../models/well-geometry.model';
-import { WellPhaseFormValue, buildWellGeometry, emptyPhaseForm, geometryNumber, wellGeometryToForms } from '../../models/well-geometry.form';
+import { WellPhaseFormValue, buildWellGeometry, emptyPhaseForm, exampleWellPhaseForms, geometryNumber, wellGeometryToForms } from '../../models/well-geometry.form';
 import { Diagnostic } from '../../models/pasta.model';
 import { ThickeningResult, UCAResult } from '../../models/reologia.model';
 import { ADITIVOS_CATALOGO, AditivoCatalogo, Aditivo, hydrateAditivosFromCatalog } from '../../models/aditivo.model';
 import { CEMENT_CLASSES } from '../../models/constantes';
 import { API_CASING_SIZES, API_TUBING_SIZES, ApiTubular } from '../../models/api-tubulares';
 
-type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'simulations' | 'schematic' | 'wellView';
+type TabId = 'recipe' | 'manualRecipe' | 'simulations' | 'schematic' | 'wellView';
+
+/** Volumes que o motor bombeia, pela técnica (a Bradenhead e o packer equilibram a pasta inteira). */
+interface SqueezeProgramVolumes { front: number; slurry: number; back: number; displacement: number }
+
+/** O que o motor faz e o que ele não modela, para o relatório (SPEC squeeze-tampao §7). */
+const SQUEEZE_PREMISSAS: string[][] = [
+  ['Motor', 'Cimentação primária com coluna de trabalho de extremidade aberta'],
+  ['Posicionamento', 'Transporte 1D com conservação de volume e tubo em U; atrito R3 §4-6 como na primária'],
+  ['Reologia', 'Pasta com a referência da primária (R3 §12-7, pasta tail); fluidos aquosos pela viscosidade'],
+  ['Compressão', 'Retorno fechado (BOP, packer ou retentor); pressão de superfície e vazão por bloco'],
+  ['Canhoneados', 'Saída pelo canhoneado de base; pressão pelo percurso coluna, extremidade e revestimento'],
+  ['Limite de baixa pressão', 'Pressão de superfície que leva o canhoneado mais crítico à fratura'],
+  ['Não modela', 'Desidratação da pasta, reboco e nodes: o volume injetado sai como pasta inteira'],
+  ['Não modela', 'Aceitação da formação: não há teste de injetividade no cenário'],
+  ['Não modela', 'Mistura nas interfaces e gel do fluido parado'],
+  ['Não modela', 'Circulação reversa depois da retirada'],
+];
+const TECHNIQUES: SqueezeTechnique[] = ['bradenhead', 'packer', 'retainer'];
 
 @Component({
   selector: 'app-simulador-squeeze',
@@ -55,12 +91,12 @@ type TabId = 'recipe' | 'manualRecipe' | 'rheology' | 'simulations' | 'schematic
     FormsModule,
     ReactiveFormsModule,
     RelatorioViewerComponent,
-    ThickeningChartComponent,
-    UcaChartComponent,
-    OpsChartComponent,
+    OperationChartsComponent,
+    PressureWindowInputsComponent,
+    PressureWindowPanelComponent,
+    PrimaryWell2dComponent,
     SqueezeSchematicsComponent,
-    SqueezeOperationChartsComponent,
-    WellStructureFormComponent,
+    WellStructureFormComponent, OperationPhaseSelectorComponent,
     DepthInputDirective,
     WellTrajectoryFormComponent,
     WellSchematicComponent,
@@ -83,10 +119,9 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   readonly tabs: { id: TabId; label: string }[] = [
     { id: 'recipe', label: '1. Receita da Simulação' },
     { id: 'manualRecipe', label: '2. Receita por Volume' },
-    { id: 'rheology', label: '3. Reologia' },
-    { id: 'simulations', label: '4. Simulações' },
-    { id: 'schematic', label: '5. Esquemático' },
-    { id: 'wellView', label: '6. Visualização do poço' },
+    { id: 'simulations', label: '3. Simulações' },
+    { id: 'schematic', label: '4. Esquemático' },
+    { id: 'wellView', label: '5. Visualização do poço' },
   ];
 
   readonly cimentoClasses = Object.entries(CEMENT_CLASSES).map(([k, v]) => ({ value: k, label: v.label }));
@@ -101,14 +136,27 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   uca: UCAResult | null = null;
   rheoDiags: Diagnostic[] = [];
   recipeDiags: Diagnostic[] = [];
-  fracResult: { fracPsi: number; porePsi: number; squeezePsi: number } | null = null;
+  /** Squeeze no motor da primária (SPEC squeeze-tampao S7). */
+  squeezeResult: SqueezeEngineResult | null = null;
+  /** O resultado do motor no formato que as métricas e o relatório de conformidade leem. */
   hydraulicSim: SqueezeHydraulicSimulation | null = null;
+  operationCharts: OperationCharts | null = null;
+  engineDiagnostics: PrimaryDiagnostic[] = [];
+  well2dViews: PrimaryWellVisualView[] = [];
+  programVolumes: SqueezeProgramVolumes | null = null;
+  /** Janela operacional: o ponto crítico por etapa (SPEC janela-operacional §3.3). */
+  criticalPoints: OperationCriticalPoints | null = null;
+  ucaMarcos: UcaMilestones = ucaMilestones(null);
+  /** Cenário salvo antes das técnicas: a Bradenhead foi assumida (T-20). */
+  legacyScenarioNotice: string | null = null;
+  readonly techniqueOptions = TECHNIQUES.map(value => ({ value, label: SQUEEZE_TECHNIQUE_LABELS[value] }));
   /** Limiar de injetividade sugerido p/ o cenário (2 × Q ÷ janela poro→fratura). */
   limiarInjetividadeSugerido: number | null = null;
   reverseCirculation: ReverseCirculationResult | null = null;
   freeWater = 0;
   geoFormula = '';
-  opsPhases: OpsPhase[] = [];
+  cronograma: CronogramaRow[] = [];
+  manualCronograma: CronogramaRow[] = [];
 
   // ── Estrutura do poço (fonte da verdade da geometria) ──
   wellGeometry: WellGeometry | null = null;
@@ -118,6 +166,8 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   intervalDescription: IntervalDescription | null = null;
   /** Overlays do squeeze — posições JÁ calculadas pelos services, só para desenho. */
   wellOverlays: WellOverlay[] = [];
+  /** Coluna do 3D nos diâmetros reais; objeto novo só quando a simulação refaz o desenho. */
+  wellWorkString: WorkString3d | null = null;
   wellSchematicState: 'antes' | 'depois' = 'antes';
   readonly wellSchematicStates: WellSchematicState[] = [
     { id: 'antes', label: 'Antes do squeeze' },
@@ -133,8 +183,6 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
 
   @ViewChild('stateModal') stateModal!: SimuladorStateModalComponent;
   @ViewChild('reportSchematics') reportSchematics?: SqueezeSchematicsComponent;
-  @ViewChild('reportOpsChart') reportOpsChart?: OpsChartComponent;
-  @ViewChild('reportPressureCharts') reportPressureCharts?: SqueezeOperationChartsComponent;
 
   // Sidebar toggle
   sidebarOpen = true;
@@ -150,14 +198,14 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   sec8Open = false;
   sec10Open = false;
   secPocoOpen = false;
-  secEstruturaOpen = false;
+  secEstruturaOpen = true;
   secTampaoOpen = false;
   secSimuladorOpen = false;
 
   // Padrões capturados após buildForm() — usados ao carregar cenários antigos
   private formDefaults: Record<string, unknown> = {};
   private defaultManualVolumeBbl = 5;
-  secDadosOpen = false;
+  secDadosOpen = true;
   secCondOpen = false;
   secPesosOpen = false;
   secVazoesOpen = false;
@@ -183,7 +231,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     private testsCalc: TestsCalculoService,
     private squeezeCalc: SqueezeCalculoService,
     private reverseCirculationCalc: ReverseCirculationCalculoService,
-    private squeezeHydraulics: SqueezeHydraulicSimulationService,
+    private primaryProgram: PrimaryProgramService,
     private rheologyAdj: RheologyAdjustmentService,
     private relatorioBuilder: RelatorioBuilderService,
     private retiradaReport: RetiradaTubosReportService,
@@ -198,7 +246,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     this.buildForm();
     // Snapshot dos padrões do formulário: ao carregar um cenário salvo antes de
     // novos campos existirem, os ausentes voltam ao padrão (reprodução exata).
-    const { additivos: _a, perforacoes: _p, fases: _f, ...defaults } = this.form.getRawValue();
+    const { additivos: _a, perforacoes: _p, fases: _f, blocosCompressao: _b, gradPoints: _g, ...defaults } = this.form.getRawValue();
     this.formDefaults = defaults;
     this.defaultManualVolumeBbl = this.manualVolumeBbl;
     this.restoreAditivos();
@@ -214,6 +262,87 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
 
   get perforacoes(): FormArray { return this.form.get('perforacoes') as FormArray; }
+  get blocosCompressao(): FormArray { return this.form.get('blocosCompressao') as FormArray; }
+
+  private blockGroup(block: CompressionBlock): FormGroup {
+    return this.fb.group({
+      tipo: [block.kind],
+      volumeBbl: [block.kind === 'inject' ? block.volumeBbl : 0],
+      vazaoBpm: [block.kind === 'inject' ? block.rateBpm : 0],
+      duracaoMin: [block.kind === 'pressurize' ? block.durationMin : 0],
+      pressaoPsi: [block.surfacePressurePsi],
+    });
+  }
+
+  private setBlocks(blocks: CompressionBlock[]): void {
+    while (this.blocosCompressao.length) this.blocosCompressao.removeAt(0, { emitEvent: false });
+    for (const block of blocks) this.blocosCompressao.push(this.blockGroup(block), { emitEvent: false });
+  }
+
+  /** Blocos de compressão do formulário (hesitação: injeções e pressurizações alternadas). */
+  compressionBlocks(): CompressionBlock[] {
+    return (this.blocosCompressao.getRawValue() as { tipo: string; volumeBbl: unknown; vazaoBpm: unknown;
+      duracaoMin: unknown; pressaoPsi: unknown }[]).map(row => row.tipo === 'pressurize'
+      ? { kind: 'pressurize' as const, durationMin: Math.max(0, Number(row.duracaoMin) || 0), surfacePressurePsi: Math.max(0, Number(row.pressaoPsi) || 0) }
+      : { kind: 'inject' as const, volumeBbl: Math.max(0, Number(row.volumeBbl) || 0), rateBpm: Math.max(0, Number(row.vazaoBpm) || 0),
+        surfacePressurePsi: Math.max(0, Number(row.pressaoPsi) || 0) });
+  }
+
+  addBloco(tipo: CompressionBlock['kind']): void {
+    const last = this.compressionBlocks().at(-1);
+    const pressure = last?.surfacePressurePsi ?? 1000;
+    this.blocosCompressao.push(this.blockGroup(tipo === 'inject'
+      ? { kind: 'inject', volumeBbl: 0.5, rateBpm: 0.25, surfacePressurePsi: pressure }
+      : { kind: 'pressurize', durationMin: 15, surfacePressurePsi: pressure }));
+  }
+
+  removeBloco(index: number): void {
+    if (this.blocosCompressao.length > 1) this.blocosCompressao.removeAt(index);
+  }
+
+  /**
+   * Maior pressão de superfície que mantém o canhoneado mais crítico abaixo da fratura,
+   * calculada pelo motor com a coluna de fluidos da compressão (squeeze de baixa pressão).
+   * A pressão dos blocos é do usuário; este é o teto que não fratura.
+   */
+  get pressaoMaxSemFraturarPsi(): number | null {
+    const value = this.squeezeResult?.summary.lowPressureLimitPsi;
+    return value != null && Number.isFinite(value) ? value : null;
+  }
+
+  /** A pressão máxima de injeção: a maior "P sup." dos blocos. */
+  get pressaoMaxInjecaoPsi(): number {
+    return Math.max(0, ...this.compressionBlocks().map(block => block.surfacePressurePsi));
+  }
+
+  /**
+   * Muda a pressão máxima de injeção: os blocos que estavam no máximo vão para o valor novo e
+   * um bloco acima dele é limitado; degraus menores (hesitação) ficam como estão.
+   */
+  setPressaoMaxInjecao(value: string | number): void {
+    const target = Number(value);
+    if (!Number.isFinite(target) || target < 0) return;
+    const current = this.pressaoMaxInjecaoPsi;
+    for (const control of this.blocosCompressao.controls) {
+      const psi = Number(control.value.pressaoPsi) || 0;
+      if (psi >= current - 1e-9 || psi > target) control.patchValue({ pressaoPsi: target });
+    }
+  }
+
+  /** Leva a pressão de todos os blocos ao teto sem fraturar, arredondado para baixo de 50 em 50 psi. */
+  aplicarPressaoSemFraturar(): void {
+    const limit = this.pressaoMaxSemFraturarPsi;
+    if (limit === null) return;
+    const psi = Math.max(0, Math.floor(limit / 50) * 50);
+    for (const control of this.blocosCompressao.controls) control.patchValue({ pressaoPsi: psi });
+  }
+
+  techniqueLabel(): string { return SQUEEZE_TECHNIQUE_LABELS[this.technique]; }
+
+  get technique(): SqueezeTechnique {
+    const value = this.form?.get('tecnicaSqueeze')?.value;
+    return TECHNIQUES.includes(value) ? value : 'bradenhead';
+  }
 
   // ── Estrutura do poço: fases ──────────────────────────────────────────
 
@@ -231,14 +360,9 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     });
   }
 
-  /** Poço padrão: uma fase revestida de diâmetro único — comportamento anterior. */
+  /** Exemplo inicial da superfície até a produção; dimensões editáveis por fase. */
   private defaultPhaseRows(): WellPhaseFormValue[] {
-    return [{
-      id: 'phase-1', name: 'Fase única', type: 'PRODUCTION',
-      topMD: 0, bottomMD: 1500, topTVD: 0, bottomTVD: 1500,
-      holeDiameterIn: 8.535,
-      casingOD: 5.5, casingID: 4.778, shoeMD: 1500, shoeTVD: 1500,
-    }];
+    return exampleWellPhaseForms('squeeze');
   }
 
   addFase(): void {
@@ -263,6 +387,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
 
   private buildForm(): void {
     this.form = this.fb.group({
+      selectedPhaseId: [null as string | null],
       operacaoTopoMD: [1400], operacaoBaseMD: [1500],
       fases: this.fb.array(this.defaultPhaseRows().map(row => this.phaseGroup(row))),
       trajectory: createTrajectoryForm(this.fb),
@@ -277,24 +402,37 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       bhst: [{ value: null, disabled: true }],
       bhct: [{ value: null, disabled: true }],
       mudWeightFront: [8.4], mudWeightBack: [8.4], completionWeight: [8.4], displacementWeight: [8.4],
-      fracGrad: [16.0], poreGrad: [9.0], pumpRate: [2.0],
+      fracGrad: [16.0], poreGrad: [9.0], gradUnit: [PRESSURE_WINDOW_FORM_DEFAULTS.gradUnit], gradMode: [PRESSURE_WINDOW_FORM_DEFAULTS.gradMode],
+      margemAtencaoPpg: [PRESSURE_WINDOW_FORM_DEFAULTS.margemAtencaoPpg], margemAlertaPpg: [PRESSURE_WINDOW_FORM_DEFAULTS.margemAlertaPpg],
+      margemCriticoPpg: [PRESSURE_WINDOW_FORM_DEFAULTS.margemCriticoPpg], gradPoints: this.fb.array([]),
+      pumpRate: [2.0],
+      // Derivados dos blocos de compressão (squeezeInjectionFields): o dimensionamento e o
+      // relatório de injetividade continuam lendo estes três campos.
       pressaoOperacao: [2000],
       volMaxInjetadoBbl: [2.0],
       tempoPressurizacaoMin: [0],
       limiarInjetividadeBpmPsi: [0.001],
-      roughness: ['low'],
+      tecnicaSqueeze: ['bradenhead'],
+      retentorMD: [null as number | null],
+      retentorFundoMD: [null as number | null],
+      contrapressaoAnularPsi: [0],
+      diferencialFerramentaPsi: [null as number | null],
+      rupturaRevestimentoPsi: [null as number | null],
+      blocosCompressao: this.fb.array([
+        this.blockGroup({ kind: 'inject', volumeBbl: 2, rateBpm: 0.5, surfacePressurePsi: 2000 }),
+        this.blockGroup({ kind: 'pressurize', durationMin: 15, surfacePressurePsi: 2000 }),
+      ]),
+      internalFrictionLevel: ['medium'], annularFrictionLevel: ['medium'],
       viscosidadeAguaCp: [1.0],
+      // Não entra mais no cálculo (queda livre conservativa); fica para os cenários antigos.
       freeFallMaxFactor: [3.5],
-      standoffPct: [80],
+      headCondition: ['vented-free-surface'],
       motorHP: [1000], pumpEff: [90],
       maxSurfacePressure: [5000], maxPumpRate: [8.0],
       pause1: [0], pause2: [0], pause3: [0],
       density: [15.8], cementClass: ['G'],
       waterSplitFresh: [100], waterSplitSea: [0],
       silica: [35], nacl: [0],
-      theta300: [181], theta200: [132], theta100: [79],
-      theta60: [53], theta30: [31], theta20: [23],
-      theta10: [13], theta6: [9], theta3: [6],
       additivos: this.fb.array([]),
       perforacoes: this.fb.array([
         this.fb.group({ top: [1420], base: [1440] }),
@@ -309,10 +447,12 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
    */
   private syncWellGeometry(perfs: Perfuracao[]): { geometry: WellGeometry; interval: OperationInterval } | null {
     const raw = this.form.getRawValue();
-    const geometry = this.wellGeo.deriveTrajectoryTvd({
+    const fullGeometry = this.wellGeo.deriveTrajectoryTvd({
       ...buildWellGeometry(raw.wellFinalMD, raw.wellFinalTVD, (raw.fases ?? []) as WellPhaseFormValue[]),
       trajectory: trajectoryFromForm(raw.trajectory),
     });
+    const context = this.operationContext.resolve(fullGeometry, raw.selectedPhaseId ?? null, 'squeeze');
+    const geometry = context.geometry;
     const interval: OperationInterval = {
       topMD: geometryNumber(raw.operacaoTopoMD),
       bottomMD: geometryNumber(raw.operacaoBaseMD),
@@ -322,12 +462,14 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     }));
 
     this.wellGeometry = geometry;
-    this.wellIssues = this.wellGeo.validate(geometry);
-    this.operationIssues = this.wellGeo.validateInterval(geometry, interval, 'Squeeze');
+    this.wellIssues = context.issues;
+    this.operationIssues = [...this.wellGeo.validateInterval(geometry, interval, 'Squeeze'),
+      ...this.operationContext.validateInterval(context, interval, 'Squeeze')];
     if (!this.wellGeo.hasErrors(this.wellIssues)) this.operationIssues.push(...this.wellGeo.validateWorkString(
       geometry, interval.bottomMD, geometryNumber(raw.tubingOD), geometryNumber(raw.tubingID),
     ));
-    this.perforationIssues = this.wellGeo.validatePerforations(geometry, perforations);
+    this.perforationIssues = [...this.wellGeo.validatePerforations(geometry, perforations),
+      ...perforations.flatMap(perf => this.operationContext.validateInterval(context, perf, 'Canhoneado'))];
     this.intervalDescription = null;
 
     if (this.wellGeo.hasErrors(this.wellIssues) || this.wellGeo.hasErrors(this.operationIssues) || this.wellGeo.hasErrors(this.perforationIssues)) return null;
@@ -383,19 +525,27 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     this.schematicGeom = null;
     this.squeezeInputsSnapshot = null;
     this.hydraulicSim = null;
+    this.squeezeResult = null;
+    this.operationCharts = null;
+    this.criticalPoints = null;
+    this.engineDiagnostics = [];
+    this.well2dViews = [];
+    this.programVolumes = null;
     this.reverseCirculation = null;
     this.wellOverlays = [];
+    this.wellWorkString = null;
     this.tt = null;
     this.uca = null;
+    this.ucaMarcos = ucaMilestones(null);
     this.freeWater = 0;
     this.geoFormula = '';
-    this.opsPhases = [];
+    this.cronograma = [];
+    this.manualCronograma = [];
     this.recipeDiags = [];
     this.rheoDiags = [];
     this.relatorioVisivel = false;
     this.relatorioConteudo = '';
     this.capaModalOpen = false;
-    this.fracResult = null;
     this.limiarInjetividadeSugerido = null;
     this.form.patchValue({ bhst: null, bhct: null }, { emitEvent: false });
     this.cdr.markForCheck();
@@ -411,6 +561,8 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
         this.invalidateSimulation();
         return;
       }
+      // Os campos de injeção de hoje saem dos blocos de compressão.
+      this.form.patchValue(squeezeInjectionFields(this.compressionBlocks()), { emitEvent: false });
       const v = this.form.getRawValue();
 
       const autoBht = this.coreCalc.calcBHT(v.surfaceTemp, v.geoGradient, v.sectionEndTVD);
@@ -433,44 +585,42 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       const inputs = {
         ...v,
         expectedLoss: Math.max(0, Number(v.volMaxInjetadoBbl) || 0),
-        rugosidadeTubo: v.roughness,
+        rugosidadeTubo: v.internalFrictionLevel,
       } as SqueezeInputs;
       this.squeezeInputsSnapshot = inputs;
       // Geometria base (volume do simulador) — sempre alimenta "1. Receita da Simulação" e a hidráulica
       this.geom = this.squeezeCalc.calcVolumes(inputs, perfs, null, well);
-      this.simuladorVolumeBbl = this.geom.slurryPhysicalVolumeBbl;
+      // A opção "Altura do tampão" mostra a pasta bombeada: a do intervalo e a que vai para a formação.
+      this.simuladorVolumeBbl = this.geom.slurryTotal;
       // Geometria SÓ do esquemático/relatório: segue a escolha do seletor, de forma independente
       this.schematicGeom = (this.cementVolumeSource === 'receita' && this.manualVolumeBbl > 0)
         ? this.squeezeCalc.calcVolumes(inputs, perfs, this.manualVolumeBbl, well)
         : this.geom;
       this.wellOverlays = this.buildWellOverlays(this.schematicGeom);
+      this.wellWorkString = workString3d(v.tubingOD, v.tubingID);
       this.reverseCirculation = this.buildReverseCirculationResult(v);
-      const thetaReadings = this.buildThetaReadings(v);
       const aditivosRaw = hydrateAditivosFromCatalog((v.additivos || []) as Aditivo[]);
 
       this.slurry = this.slurryCalc.calculateSlurryDesign({ ...vWithBHT, additivos: aditivosRaw } as any);
-      this.recipe = this.slurryCalc.buildSlurryRecipe(this.geom.slurryTotal, this.slurry);
+      this.programVolumes = this.buildProgramVolumes(v, well.geometry, perfs);
+      this.recipe = this.slurryCalc.buildSlurryRecipe(this.programVolumes.slurry, this.slurry);
       this.computeManualRecipe();
 
-      this.tt = this.testsCalc.simulateThickening(this.slurry, v.sectionEndTVD, thetaReadings);
+      // Sem leituras Fann na tela: a reologia é a da pasta base com o efeito dos aditivos, e é
+      // ela que alimenta o tempo de espessamento e o atrito do motor.
+      this.rheologyResult = this.rheologyAdj.applyAdditiveRheologyEffects(BASE_SLURRY_RHEOLOGY, aditivosRaw);
+      this.tt = this.testsCalc.simulateThickening(this.slurry, v.sectionEndTVD, this.estimatedThetaReadings());
       this.uca = this.testsCalc.simulateUCA(this.slurry, this.tt);
+      this.ucaMarcos = ucaMilestones(this.uca);
       this.freeWater = this.testsCalc.estimateFreeWater(this.slurry);
       this.rheoDiags = this.testsCalc.rheoDiagnostics(this.slurry, this.tt, this.freeWater);
-      this.fracResult = this.squeezeCalc.calcFractureGradient(this.geom, inputs, well);
 
-      this.rheologyResult = this.rheologyAdj.applyAdditiveRheologyEffects(BASE_SLURRY_RHEOLOGY, aditivosRaw, { thetaReadings });
-      // Cada fluido é bombeado com a vazão informada em "Dados do Relatório"
-      this.hydraulicSim = this.squeezeHydraulics.simulate(this.geom, this.slurry, {
-        ...inputs,
-        vazaoAguaFrenteBpm: this.vazaoFluido('fluidoFrenteBpm'),
-        vazaoPastaBpm: this.vazaoFluido('pastaBpm'),
-        vazaoAguaAtrasBpm: this.vazaoFluido('fluidoAtrasBpm'),
-        vazaoDeslocamentoBpm: this.vazaoFluido('deslocamentoBpm'),
-      }, perfs, aditivosRaw, { thetaReadings }, well);
+      this.runEngine(v, perfs);
+      this.well2dViews = this.buildWell2dViews(perfs);
 
       // Limiar de injetividade sugerido p/ o cenário (arredondado a 2 algarismos
       // significativos p/ exibição/aplicação); null quando faltam volume/tempo.
-      const limiarRaw = this.conformidadeReport.limiarInjetividadeSugerido(this.hydraulicSim, v);
+      const limiarRaw = this.hydraulicSim ? this.conformidadeReport.limiarInjetividadeSugerido(this.hydraulicSim, this.reportForm()) : null;
       this.limiarInjetividadeSugerido = limiarRaw != null ? +limiarRaw.toPrecision(2) : null;
 
       this.updateEngineeringIssues({ referenceMD: this.hydraulicSim?.summary.referenceMD, perforations: perfs });
@@ -487,6 +637,151 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       this.invalidateSimulation();
       console.error('[squeeze] simulate error:', e);
     }
+  }
+
+  /** Volumes que o motor bombeia (Bradenhead e packer: a pasta inteira equilibrada; retentor: §6.6). */
+  private buildProgramVolumes(v: any, geometry: WellGeometry, perfs: Perfuracao[]): SqueezeProgramVolumes {
+    const geom = this.geom!;
+    if (this.technique === 'retainer') {
+      const retainer = this.retainerDepths(v, perfs);
+      const volumes = retainerSqueezeVolumes(geometry, { retainerMD: retainer.md, bottomMD: retainer.bottomMD,
+        perforations: { topMD: geom.shallowestPerf, baseMD: geom.deepestPerf }, pipeIDIn: Number(v.tubingID) || 2.441,
+        volumes: { injectBbl: Number(v.volMaxInjetadoBbl) || 0, frontBbl: geom.frontPhysicalVolumeBbl, backBbl: geom.backPhysicalVolumeBbl } });
+      return { front: geom.frontPhysicalVolumeBbl, slurry: volumes.slurryBbl, back: geom.backPhysicalVolumeBbl,
+        displacement: volumes.totalDisplacementBbl };
+    }
+    return { front: geom.frontPhysicalVolumeBbl, slurry: geom.slurryTotal, back: geom.backPhysicalVolumeBbl,
+      displacement: balancedSqueezeDisplacement(geometry, geom).displacementBbl };
+  }
+
+  /** Retentor: padrão 10 m acima do canhoneado de topo; o trecho isolado vai até a base da operação. */
+  private retainerDepths(v: any, perfs: Perfuracao[]): { md: number; bottomMD: number } {
+    const top = Math.min(...perfs.map(p => Math.min(p.top, p.base)));
+    const md = Number(v.retentorMD);
+    const bottom = Number(v.retentorFundoMD);
+    return { md: Number.isFinite(md) && md > 0 ? md : Math.max(0, top - 10),
+      bottomMD: Number.isFinite(bottom) && bottom > 0 ? bottom : Number(v.operacaoBaseMD) || Number(v.sectionEndMD) };
+  }
+
+  private squeezeEngineInput(v: any, perfs: Perfuracao[]): SqueezeEngineInput | null {
+    if (!this.geom || !this.slurry || !this.wellGeometry) return null;
+    const num = (value: unknown, fallback: number) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    const optional = (value: unknown) => {
+      const n = Number(value);
+      return value !== null && value !== '' && Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const retirada = this.retiradaReport.buildCalculation(v, this.geom.topCementAfterPullMD,
+      this.dadosRelatorio.sequenciaOperacional as unknown as RelatorioCapaData['sequenciaOperacional']);
+    const levels: PrimaryFrictionLevel[] = ['low', 'medium', 'high'];
+    const reference = Number(v.profundidadeReferenciaSqueezeMD);
+    const referenceMD = Number.isFinite(reference) && reference > 0 ? reference : (this.geom.shallowestPerf + this.geom.deepestPerf) / 2;
+    return {
+      technique: this.technique, geom: this.geom, geometry: this.wellGeometry, perforations: perfs,
+      referenceMD,
+      blocks: this.compressionBlocks(),
+      retainer: this.technique === 'retainer' ? this.retainerDepths(v, perfs) : undefined,
+      annulusPressurePsi: Math.max(0, num(v.contrapressaoAnularPsi, 0)),
+      toolDifferentialLimitPsi: optional(v.diferencialFerramentaPsi), casingBurstPsi: optional(v.rupturaRevestimentoPsi),
+      pipeODIn: num(v.tubingOD, 2.875), pipeIDIn: num(v.tubingID, 2.441),
+      densities: { completion: num(v.completionWeight, 8.4), front: num(v.mudWeightFront, 8.4), back: num(v.mudWeightBack, 8.4),
+        displacement: num(v.displacementWeight ?? v.completionWeight, 8.4), slurry: num(this.slurry.density ?? v.density, 15.8) },
+      waterViscosityCp: num(v.viscosidadeAguaCp, 1),
+      // Como na primária: a pasta entra com a reologia de referência (R3 §12-7, pasta tail).
+      slurryRheology: { ...primaryDefaultRheology('cement'), origin: 'base', reference: PRIMARY_REFERENCE_RHEOLOGY_SOURCE },
+      rates: { front: this.vazaoFluido('fluidoFrenteBpm'), slurry: this.vazaoFluido('pastaBpm'),
+        back: this.vazaoFluido('fluidoAtrasBpm'), displacement: this.vazaoFluido('deslocamentoBpm') },
+      pausesMin: [Math.max(0, num(v.pause1, 0)), Math.max(0, num(v.pause2, 0)), Math.max(0, num(v.pause3, 0))],
+      friction: { internal: levels.includes(v.internalFrictionLevel) ? v.internalFrictionLevel : 'medium',
+        annular: levels.includes(v.annularFrictionLevel) ? v.annularFrictionLevel : 'medium' },
+      headCondition: v.headCondition === 'vented-free-surface' ? 'vented-free-surface' : 'closed-head',
+      // Poro e fratura do perfil do cenário; os valores únicos são os da referência dos canhoneados.
+      ...this.engineGradients(v, this.squeezeTvdOf()(referenceMD)),
+      equipment: { maxSurfacePressurePsi: num(v.maxSurfacePressure, 0) || null, maxPumpRateBpm: num(v.maxPumpRate, 0) || null,
+        motorHp: num(v.motorHP, 0) || null, pumpEffPct: num(v.pumpEff, 0) || null },
+      retirada: { tubeLengthM: retirada.tubeLengthM, sectionsAboveTop: retirada.sectionsAboveTop,
+        tubesPerSection: retirada.tubesPerSection },
+    };
+  }
+
+  private squeezeTvdOf(): (md: number) => number {
+    return this.wellGeometry ? this.wellGeo.mdToTvdResolver(this.wellGeometry) : (md: number) => md;
+  }
+
+  private runSqueeze(v: any, perfs: Perfuracao[], override: TampaoEngineOverrides = {}): SqueezeEngineResult | null {
+    const input = this.squeezeEngineInput(v, perfs);
+    if (!input) return null;
+    try {
+      return runSqueezeEngine(this.primaryProgram, input, this.squeezeTvdOf(), override);
+    } catch (e) {
+      console.error('[squeeze] engine error:', e);
+      return null;
+    }
+  }
+
+  private runEngine(v: any, perfs: Perfuracao[]): void {
+    const result = this.runSqueeze(v, perfs);
+    const tvdOf = this.squeezeTvdOf();
+    this.squeezeResult = result;
+    this.hydraulicSim = result ? squeezeLegacyHydraulics(result, tvdOf) : null;
+    const phases = (this.wellGeometry?.phases ?? []).map(phase =>
+      ({ id: phase.id, name: phase.name, topMD: phase.topMD, bottomMD: phase.bottomMD }));
+    this.operationCharts = result ? buildSqueezeOperationCharts(result, phases, v.selectedPhaseId ?? null, tvdOf) : null;
+    this.criticalPoints = result ? buildCriticalPoints({ hydraulics: result.positioning.hydraulics, stepLabels: TAMPAO_STEP_LABELS,
+      compression: result.compression, gradientsAt: tvd => gradientsAt(result.input, tvd), tvdOf,
+      elementOf: wellElementOf(this.wellGeometry, perfs), classes: this.marginClasses(v),
+      casingBurstPsi: result.input.casingBurstPsi }) : null;
+    const positioning = result?.positioning;
+    this.engineDiagnostics = [
+      ...(positioning?.geometry.issues ?? []).filter(issue => issue.level === 'error')
+        .map(issue => ({ code: issue.code, message: issue.message, severity: 'error' as const, category: 'configuration' as const })),
+      ...(positioning?.volumes.diagnostics ?? []), ...(positioning?.transport?.diagnostics ?? []),
+      ...(positioning?.hydraulics?.diagnostics ?? []), ...(result?.diagnostics ?? []),
+    ].filter(d => d.severity !== 'info' && d.code !== 'PRIMARY_RHEOLOGY_ESTIMATED');
+  }
+
+  /** Perfil e planta da primária, sem caliper, com a pasta depois do squeeze (SPEC §5.4). */
+  private buildWell2dViews(perfs: Perfuracao[]): PrimaryWellVisualView[] {
+    const geometry = this.wellGeometry;
+    const geom = this.schematicGeom ?? this.geom;
+    if (!geometry || !geom) return [];
+    const summary = this.squeezeResult?.summary;
+    const cementTop = summary?.cementTopAfterSqueezeMD ?? geom.topCementAfterInjectionMD;
+    const cementBase = this.technique === 'retainer' ? Math.max(...perfs.map(p => Math.max(p.top, p.base))) : geom.base;
+    const options = (interval?: WellVisualOptions['interval']): WellVisualOptions => ({
+      caliper: null, showCaliper: false, interval, tubulars: [],
+      cement: cementBase > cementTop ? [{ topMD: cementTop, bottomMD: cementBase, location: 'wellbore' }] : [],
+      markers: [
+        ...perfs.map((p, i) => ({ md: Math.min(p.top, p.base), label: `Canhoneado ${i + 1}` })),
+        ...(this.technique !== 'bradenhead' && summary?.toolMD != null
+          ? [{ md: summary.toolMD, label: this.technique === 'packer' ? 'Packer' : 'Retentor' }] : []),
+      ],
+    });
+    const views: PrimaryWellVisualView[] = [];
+    try {
+      views.push({ id: 'all', name: 'Todas as fases', model: buildWellVisualModel(geometry, options()) });
+    } catch { return []; }
+    for (const phase of geometry.phases) {
+      try {
+        views.push({ id: phase.id, name: phase.name, model: buildWellVisualModel(geometry,
+          options({ phaseId: phase.id, topMD: phase.topMD, bottomMD: phase.bottomMD })) });
+      } catch { /* A vista completa continua disponível se apenas uma fase for inválida. */ }
+    }
+    return views;
+  }
+
+  /**
+   * Topo da pasta que a regra da retirada usa, com o volume do seletor (como o esquemático
+   * e o relatório): a pasta inteira em poço cheio, com a que ainda vai para a formação,
+   * porque ela está no poço até a compressão (S7).
+   */
+  private cementTopForPull(): number {
+    const g = this.schematicGeom ?? this.geom!;
+    return this.technique !== 'retainer' && this.wellGeometry
+      ? balancedSqueezeDisplacement(this.wellGeometry, g).topWithoutStringMD
+      : g.topCementAfterPullMD;
   }
 
   private buildReverseCirculationResult(v: any): ReverseCirculationResult | null {
@@ -535,68 +830,73 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       : this.coreCalc.calcSqtFromBhst(automaticBhst, 'F', depthTVD, 'automatica');
   }
 
+  /**
+   * Pasta bombeada, com a que vai para a formação, pelo volume do seletor. Com o volume do
+   * simulador, a do programa: no retentor, a do trecho isolado (§6.6). Antes era a do
+   * intervalo só, e a receita do relatório saía sem o volume a injetar.
+   */
   pastaBombeioVolumeBbl(): number {
-    return this.resolvePastaBombeioVolumeBbl(this.schematicGeom ?? this.geom);
+    if (this.cementVolumeSource !== 'receita' && this.programVolumes) return this.programVolumes.slurry;
+    return Number((this.schematicGeom ?? this.geom)?.slurryTotal) || 0;
   }
 
-  private resolvePastaBombeioVolumeBbl(geom?: SqueezeGeometry | null): number {
-    if (!geom) return 0;
-    const physical = Number(geom.slurryPhysicalVolumeBbl);
-    if (Number.isFinite(physical) && physical > 0) return physical;
-    const work = Number(geom.workVolumeBbl);
-    if (Number.isFinite(work) && work > 0) return work;
-    return Number(geom.slurryTotal) || 0;
+  /** Passos do programa com o volume de pasta dado: posicionamento, equilíbrio e blocos de compressão. */
+  private cronogramaSteps(slurryBbl: number): CronogramaStep[] {
+    const volumes = this.programVolumes;
+    if (!volumes) return [];
+    const v = this.form.getRawValue();
+    const pump = (label: string, fluid: string, volumeBbl: number, rateBpm: number): CronogramaStep =>
+      ({ label, fluid, volumeBbl: Math.max(0, volumeBbl || 0), rateBpm,
+        durationMin: rateBpm > 0 ? Math.max(0, volumeBbl || 0) / rateBpm : 0 });
+    const pause = (label: string, minutes: unknown): CronogramaStep =>
+      ({ label, fluid: null, volumeBbl: null, rateBpm: null, durationMin: Math.max(0, Number(minutes) || 0) });
+    const slurryDensity = Number(this.slurry?.density ?? v.density);
+    const settle = this.squeezeResult?.tampao?.summary.settleMin ?? 0;
+    const spot = this.squeezeResult?.retainer?.spotDisplacementBbl;
+    const displacement = this.technique === 'retainer' && spot != null ? spot : volumes.displacement;
+    const blocks = this.squeezeResult?.compression?.blocks ?? [];
+    return [
+      pump('Água à frente', `Água ${this.fmt(v.mudWeightFront, 1)} ppg`, volumes.front, this.vazaoFluido('fluidoFrenteBpm')),
+      pause('Pausa 1', v.pause1),
+      pump('Pasta', Number.isFinite(slurryDensity) ? `Pasta ${this.fmt(slurryDensity, 1)} ppg` : 'Pasta', slurryBbl, this.vazaoFluido('pastaBpm')),
+      pause('Pausa 2', v.pause2),
+      pump('Água atrás', `Água ${this.fmt(v.mudWeightBack, 1)} ppg`, volumes.back, this.vazaoFluido('fluidoAtrasBpm')),
+      pause('Pausa 3', v.pause3),
+      pump(this.technique === 'retainer' ? 'Deslocamento até o retentor' : 'Deslocamento',
+        `Deslocamento ${this.fmt(v.displacementWeight ?? v.completionWeight, 1)} ppg`, displacement, this.vazaoFluido('deslocamentoBpm')),
+      ...(this.technique === 'retainer' ? [] : [{ label: 'Equilíbrio do tubo em U', fluid: null, volumeBbl: null,
+        rateBpm: null, durationMin: settle }]),
+      ...blocks.map(block => ({ label: `${block.kind === 'inject' ? 'Injeção' : 'Pressurização'} (bloco ${block.index + 1})`,
+        fluid: block.kind === 'inject' ? 'Deslocamento' : null,
+        volumeBbl: block.kind === 'inject' ? block.pumpedBbl : null,
+        rateBpm: block.kind === 'inject' && block.endMin > block.startMin ? block.pumpedBbl / (block.endMin - block.startMin) : null,
+        durationMin: block.endMin - block.startMin })),
+    ];
   }
 
   private buildOpsPhases(): void {
-    if (!this.geom || !this.tt) return;
-    const v = this.form.getRawValue();
-    // Cada fluido usa a vazão informada em "Dados do Relatório" (bpm)
-    const bbl2min = (vol: number, rate: number) => rate > 0 ? Math.max(0, vol || 0) / rate : 0;
-    const pause1 = Math.max(0, Number(v.pause1) || 0);
-    const pause2 = Math.max(0, Number(v.pause2) || 0);
-    const pause3 = Math.max(0, Number(v.pause3) || 0);
-    const pressurizacao = Math.max(0, Number(v.tempoPressurizacaoMin) || 0);
-    this.opsPhases = [
-      { label: 'Água Frente', durationMin: bbl2min(this.geom.frontPhysicalVolumeBbl, this.vazaoFluido('fluidoFrenteBpm')), color: '#bae6fd' },
-      ...(pause1 > 0 ? [{ label: 'Pausa 1', durationMin: pause1, color: '#cbd5e1' }] : []),
-      { label: 'Pasta', durationMin: bbl2min(this.pastaBombeioVolumeBbl(), this.vazaoFluido('pastaBpm')), color: '#bbf7d0' },
-      ...(pause2 > 0 ? [{ label: 'Pausa 2', durationMin: pause2, color: '#94a3b8' }] : []),
-      { label: 'Água Atrás', durationMin: bbl2min(this.geom.volBackSpacer, this.vazaoFluido('fluidoAtrasBpm')), color: '#e9d5ff' },
-      ...(pause3 > 0 ? [{ label: 'Pausa 3', durationMin: pause3, color: '#64748b' }] : []),
-      { label: 'Deslocamento', durationMin: bbl2min(this.geom.operationalDisplacementVolumeBbl, this.vazaoFluido('deslocamentoBpm')), color: '#fed7aa' },
-      ...(pressurizacao > 0 ? [{ label: 'Pressurização', durationMin: pressurizacao, color: '#fecaca' }] : []),
-    ].filter(phase => phase.durationMin > 0);
+    if (!this.geom || !this.tt || !this.programVolumes) return;
+    this.cronograma = buildCronograma(this.cronogramaSteps(this.programVolumes.slurry));
   }
 
   protected buildManualRecipeOpsPhases(): void {
     if (!this.geom || !this.manualRecipeResult) {
-      this.manualRecipeOpsPhases = [];
+      this.manualCronograma = [];
       return;
     }
-    const v = this.form.getRawValue();
-    const bbl2min = (vol: number, rate: number) => rate > 0 ? Math.max(0, vol || 0) / rate : 0;
-    const pause1 = Math.max(0, Number(v.pause1) || 0);
-    const pause2 = Math.max(0, Number(v.pause2) || 0);
-    const pause3 = Math.max(0, Number(v.pause3) || 0);
-    const pressurizacao = Math.max(0, Number(v.tempoPressurizacaoMin) || 0);
     const manualSlurryBbl = Number(this.manualRecipeResult.targetSlurryVolumeBbl) || this.manualVolumeBbl || this.geom.slurryTotal;
-    this.manualRecipeOpsPhases = [
-      { label: 'Água Frente', durationMin: bbl2min(this.geom.frontPhysicalVolumeBbl, this.vazaoFluido('fluidoFrenteBpm')), color: '#bae6fd' },
-      ...(pause1 > 0 ? [{ label: 'Pausa 1', durationMin: pause1, color: '#cbd5e1' }] : []),
-      { label: 'Pasta', durationMin: bbl2min(manualSlurryBbl, this.vazaoFluido('pastaBpm')), color: '#bbf7d0' },
-      ...(pause2 > 0 ? [{ label: 'Pausa 2', durationMin: pause2, color: '#94a3b8' }] : []),
-      { label: 'Água Atrás', durationMin: bbl2min(this.geom.volBackSpacer, this.vazaoFluido('fluidoAtrasBpm')), color: '#e9d5ff' },
-      ...(pause3 > 0 ? [{ label: 'Pausa 3', durationMin: pause3, color: '#64748b' }] : []),
-      { label: 'Deslocamento', durationMin: bbl2min(this.geom.operationalDisplacementVolumeBbl, this.vazaoFluido('deslocamentoBpm')), color: '#fed7aa' },
-      ...(pressurizacao > 0 ? [{ label: 'Pressurização', durationMin: pressurizacao, color: '#fecaca' }] : []),
-    ].filter(phase => phase.durationMin > 0);
+    this.manualCronograma = buildCronograma(this.cronogramaSteps(manualSlurryBbl));
+  }
+
+  /** Tempo total do cronograma, que as tabelas comparam ao TT 50 Bc. */
+  cronogramaTotalMin(rows: CronogramaRow[]): number {
+    return rows.at(-1)?.accumulatedMin ?? 0;
   }
 
   private buildRecipeDiags(): void {
     if (!this.geom || !this.tt) return;
     const diags: Diagnostic[] = [];
-    const pumpTime = this.opsPhases.reduce((s, p) => s + p.durationMin, 0);
+    const pumpTime = this.cronogramaTotalMin(this.cronograma);
     const tt50min = this.tt.t50 * 60;
     if (pumpTime > tt50min * 0.85) diags.push({ text: 'Tempo de bombeio próximo do TT 50 Bc', cls: 'danger' });
     else if (pumpTime > tt50min * 0.70) diags.push({ text: 'Margem de TT moderada', cls: 'warn' });
@@ -610,16 +910,16 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     this.simulate();
     if (!this.geom) return;
     const v = this.form.getRawValue();
-    const topoCimentoRetiradaM = (this.schematicGeom ?? this.geom).topCementAfterPullMD;
-    this.retiradaReport.abrirRetirada({ operacao: 'SQUEEZE', v, dadosRelatorio: this.dadosRelatorio, topoCimentoRetiradaM });
+    const topoCimentoRetiradaM = this.cementTopForPull();
+    this.retiradaReport.abrirRetirada({ operacao: 'SQUEEZE', v, dadosRelatorio: this.dadosRelatorio, faseOperacao: this.phaseReportLabel, topoCimentoRetiradaM });
   }
 
   gerarCalculoCirculacaoReversa(): void {
     this.simulate();
     if (!this.geom) return;
     const v = this.form.getRawValue();
-    const topoCimentoRetiradaM = (this.schematicGeom ?? this.geom).topCementAfterPullMD;
-    this.retiradaReport.abrirCirculacaoReversa({ operacao: 'SQUEEZE', v, dadosRelatorio: this.dadosRelatorio, topoCimentoRetiradaM, tubingIdIn: Number(v.tubingID) });
+    const topoCimentoRetiradaM = this.cementTopForPull();
+    this.retiradaReport.abrirCirculacaoReversa({ operacao: 'SQUEEZE', v, dadosRelatorio: this.dadosRelatorio, faseOperacao: this.phaseReportLabel, topoCimentoRetiradaM, tubingIdIn: Number(v.tubingID) });
   }
 
   addPerfuracao(): void {
@@ -649,53 +949,40 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     if (!this.geom) return;
     if (!this.hydraulicSim || !this.geom) return;
     const geom = this.geom;
+    const summary = this.squeezeResult?.summary;
+    const retainer = this.technique === 'retainer';
+    const plannedTop = retainer ? summary?.toolMD ?? geom.topCementAfterPullMD : this.cementTopForPull();
     this.conformidadeReport.abrir({
       operacao: 'SQUEEZE',
       fator,
       sim: this.hydraulicSim,
       dadosRelatorio: this.dadosRelatorio,
-      v: this.form.getRawValue(),
-      // Topo planejado da pasta = topo sem coluna antes da injeção (redistribuída
-      // no poço cheio), calculado pelo serviço de geometria.
+      v: this.reportForm(),
+      // Topo planejado da pasta antes da compressão, em poço cheio: a pasta inteira
+      // (Bradenhead, packer) ou o retentor, que é o topo da pasta abaixo dele.
       placement: {
-        cementTopMD: geom.topCementAfterPullMD,
+        cementTopMD: plannedTop,
         cementBaseMD: geom.base,
         capBblM: geom.cementPhysicalCapacityBblM,
-        displacementBbl: geom.operationalDisplacementVolumeBbl,
-        targetTopMD: geom.topCementAfterPullMD,
+        displacementBbl: this.programVolumes?.displacement ?? geom.operationalDisplacementVolumeBbl,
+        targetTopMD: plannedTop,
+        predictedTopMD: (retainer ? summary?.cementTopAfterSqueezeMD : summary?.cementTopBeforeSqueezeMD) ?? undefined,
       },
       reSimulate: (o) => this.reSimulateHidraulica(o),
+      motor: 'primaria',
+      ...(retainer ? {} : { predictTopMD: (factor: number) => this.runSqueeze(this.form.getRawValue(), this.currentPerfs(),
+        { displacementFactor: factor })?.summary.cementTopBeforeSqueezeMD ?? null }),
     });
   }
 
-  /** Re-simula a hidráulica com sobreposições (varredura de risco/sensibilidade). */
+  private currentPerfs(): Perfuracao[] {
+    return (this.form.getRawValue().perforacoes || []).map((p: any) => ({ top: geometryNumber(p.top), base: geometryNumber(p.base) }));
+  }
+
+  /** Re-simula o squeeze no motor com sobreposições (varredura de risco/sensibilidade). */
   private reSimulateHidraulica(o: VarreduraOverride): SqueezeHydraulicSimulation | null {
-    if (!this.geom || !this.slurry || !this.squeezeInputsSnapshot) return null;
-    const v = this.form.getRawValue();
-    const perfs: Perfuracao[] = (v.perforacoes || []).map((pp: any) => ({ top: +pp.top, base: +pp.base }));
-    const aditivosRaw = hydrateAditivosFromCatalog((v.additivos || []) as Aditivo[]);
-    const thetaReadings = this.buildThetaReadings(v);
-    const f = o.rateFactor ?? 1;
-    const geom = (o.displacementFactor && o.displacementFactor !== 1)
-      ? { ...this.geom, operationalDisplacementVolumeBbl: this.geom.operationalDisplacementVolumeBbl * o.displacementFactor }
-      : this.geom;
-    try {
-      return this.squeezeHydraulics.simulate(geom, this.slurry, {
-        ...this.squeezeInputsSnapshot,
-        standoffPct: o.standoffPct ?? this.squeezeInputsSnapshot.standoffPct,
-        densidadePastaPpg: o.density,
-        vazaoAguaFrenteBpm: this.vazaoFluido('fluidoFrenteBpm') * f,
-        vazaoPastaBpm: this.vazaoFluido('pastaBpm') * f,
-        vazaoAguaAtrasBpm: this.vazaoFluido('fluidoAtrasBpm') * f,
-        vazaoDeslocamentoBpm: this.vazaoFluido('deslocamentoBpm') * f,
-      }, perfs, aditivosRaw, { thetaReadings }, this.wellGeometry ? {
-        geometry: this.wellGeometry,
-        interval: { topMD: this.geom.top, bottomMD: this.geom.base },
-      } : null);
-    } catch (e) {
-      console.error('[squeeze] reSimulate error:', e);
-      return null;
-    }
+    const result = this.runSqueeze(this.form.getRawValue(), this.currentPerfs(), o);
+    return result ? squeezeLegacyHydraulics(result, this.squeezeTvdOf()) : null;
   }
 
   openStateModal(): void {
@@ -722,17 +1009,25 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     this.poco = (formValue['_poco'] as PocoApi | null) ?? null;
     // Mantém casingOD/casingID/tubingOD/tubingID/caliper em `rest` para que a geometria
     // (revestimento/tubing/caliper) também seja restaurada ao carregar o cenário.
-    const { additivos, perforacoes, fases,
+    const { additivos, perforacoes, fases, blocosCompressao, gradPoints,
             _dadosRelatorio, _manualVolumeBbl, _manualYieldFt3, _manualFacGpc, _manualFamGpc,
             _pastaParametrosSource, _manualBhstValue, _manualBhstUnit, _cementVolumeSource, _reportTemperatureMode,
             ...rest } = formValue as any;
+    // Cenário salvo antes das técnicas (SPEC §8, T-20): Bradenhead, com a injeção de hoje.
+    // Nada é gravado até o usuário salvar.
+    const legacy = !('tecnicaSqueeze' in (formValue as object));
     // Padrões primeiro: campos que não existiam quando o cenário foi salvo
     // não herdam o valor da tela — voltam ao padrão do simulador.
     // Cenários antigos usavam completionWeight também como fluido de deslocamento.
     if (rest.displacementWeight == null && rest.completionWeight != null) rest.displacementWeight = rest.completionWeight;
+    // Cenário salvo antes: o estado do tubo vale para o interior e para o anular.
+    if (rest.roughness != null && rest.internalFrictionLevel == null) {
+      rest.internalFrictionLevel = rest.roughness; rest.annularFrictionLevel = rest.roughness;
+    }
     this.form.patchValue(this.formDefaults, { emitEvent: false });
-    this.form.patchValue(rest, { emitEvent: false });
+    this.form.patchValue({ ...rest, selectedPhaseId: rest.selectedPhaseId ?? null }, { emitEvent: false });
     this.form.setControl('trajectory', createTrajectoryForm(this.fb, rest.trajectory), { emitEvent: false });
+    setPressurePoints(this.form, this.fb, gradPoints);
     if (_dadosRelatorio) {
       this.dadosRelatorio = _dadosRelatorio;
       this.ensureSequenciaDefaults();
@@ -750,6 +1045,20 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     while (this.additivos.length) this.additivos.removeAt(0);
     if (Array.isArray(additivos)) {
       additivos.forEach((d: any) => this.additivos.push(this.createAditivoGroup(d)));
+    }
+    if (legacy) {
+      this.form.patchValue({ tecnicaSqueeze: 'bradenhead' }, { emitEvent: false });
+      this.setBlocks(legacySqueezeBlocks(rest));
+      this.legacyScenarioNotice = 'Cenário salvo antes das técnicas de squeeze: foi assumida a Bradenhead, com a injeção '
+        + 'de hoje (volume, pressão e tempo de pressurização) como um bloco de compressão. Nada foi gravado; salve para manter.';
+    } else {
+      const saved = Array.isArray(blocosCompressao) ? blocosCompressao as { tipo: string; volumeBbl: number; vazaoBpm: number;
+        duracaoMin: number; pressaoPsi: number }[] : [];
+      this.setBlocks(saved.length ? saved.map(row => row.tipo === 'pressurize'
+        ? { kind: 'pressurize' as const, durationMin: +row.duracaoMin || 0, surfacePressurePsi: +row.pressaoPsi || 0 }
+        : { kind: 'inject' as const, volumeBbl: +row.volumeBbl || 0, rateBpm: +row.vazaoBpm || 0, surfacePressurePsi: +row.pressaoPsi || 0 })
+        : legacySqueezeBlocks(rest));
+      this.legacyScenarioNotice = null;
     }
     while (this.perforacoes.length > 0) this.perforacoes.removeAt(0);
     if (Array.isArray(perforacoes) && perforacoes.length > 0) {
@@ -799,12 +1108,13 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     const reportGeom = this.schematicGeom ?? this.geom;
     this.relatorioPrefill = {
       ...this.dadosRelatorio,
+      faseOperacao: this.phaseReportLabel,
       tipoReceitaRelatorio: tipoReceita,
       vazoesBombeio,
       calculoTampaoPor: this.cementVolumeSource === 'receita' ? 'volume' : 'altura',
       inicioTampao: String(v.sectionStartMD ?? ''),
       fimTampao: String(v.sectionEndMD ?? ''),
-      topoCimento: String(reportGeom?.topCementAfterInjectionMD ?? v.sectionStartMD ?? ''),
+      topoCimento: String(this.squeezeResult?.summary.cementTopAfterSqueezeMD ?? reportGeom?.topCementAfterInjectionMD ?? v.sectionStartMD ?? ''),
       baseTampao: String(reportGeom?.base ?? v.sectionEndMD ?? ''),
       geoGradient: v.geoGradient,
       bhst: reportTemperature.bhstF,
@@ -817,6 +1127,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   }
 
   onCapaGerada(data: RelatorioCapaData): void {
+    data = { ...data, faseOperacao: this.phaseReportLabel };
     this.simulate();
     if (!this.geom) return;
     const v = this.form.getRawValue();
@@ -824,7 +1135,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     const reportTemperature = this.getReportTemperature(v);
     const vazoesBombeio = this.mergeVazoesBombeio(data.vazoesBombeio);
     const tubingODFormatted = v.tubingOD ? this.fmtInches(v.tubingOD) : '';
-    const topoCimentoRetiradaM = (this.schematicGeom ?? this.geom).topCementAfterPullMD;
+    const topoCimentoRetiradaM = this.cementTopForPull();
     const reverseCircBbl = this.buildReverseCirculationAfterPullingResult(
       v,
       topoCimentoRetiradaM,
@@ -857,7 +1168,7 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
         calculoTampaoPor: this.cementVolumeSource === 'receita' ? 'volume' : 'altura',
         inicioTampao: String(v.sectionStartMD ?? ''),
         fimTampao: String(v.sectionEndMD ?? ''),
-        topoCimento: String(reportGeom?.topCementAfterInjectionMD ?? v.sectionStartMD ?? ''),
+        topoCimento: String(this.squeezeResult?.summary.cementTopAfterSqueezeMD ?? reportGeom?.topCementAfterInjectionMD ?? v.sectionStartMD ?? ''),
         baseTampao: String(reportGeom?.base ?? v.sectionEndMD ?? ''),
         revestimento: this.formatCasing(v.casingOD, v.casingID),
         geoGradient: v.geoGradient,
@@ -890,26 +1201,102 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
     };
     const slurryDensity = Number(this.slurry?.density ?? v.density);
     const pastaLabel = Number.isFinite(slurryDensity) ? `Pasta ${this.fmt(slurryDensity, 1)} ppg` : 'Pasta';
-    const slurryVolBbl = this.pastaBombeioVolumeBbl();
+    // O que o motor bombeia: a pasta inteira (com a injetada) e o deslocamento da técnica.
+    const volumes = this.programVolumes;
     return [
-      { fluido: 'Água a frente', volumeBbl: this.geom?.washVolFront ?? this.geom?.frontPhysicalVolumeBbl ?? 0, vazaoBpm: vazao(vazoes?.fluidoFrenteBpm), densidadePpg: v.mudWeightFront },
-      { fluido: pastaLabel, volumeBbl: slurryVolBbl, vazaoBpm: vazao(vazoes?.pastaBpm), densidadePpg: slurryDensity },
-      { fluido: 'Água atrás', volumeBbl: this.geom?.volBackSpacer ?? 0, vazaoBpm: vazao(vazoes?.fluidoAtrasBpm), densidadePpg: v.mudWeightBack },
-      { fluido: 'Deslocamento', volumeBbl: this.geom?.operationalDisplacementVolumeBbl ?? this.geom?.displacementVolume ?? 0, vazaoBpm: vazao(vazoes?.deslocamentoBpm), densidadePpg: v.displacementWeight ?? v.completionWeight },
+      { fluido: 'Água a frente', volumeBbl: volumes?.front ?? this.geom?.frontPhysicalVolumeBbl ?? 0, vazaoBpm: vazao(vazoes?.fluidoFrenteBpm), densidadePpg: v.mudWeightFront },
+      { fluido: pastaLabel, volumeBbl: volumes?.slurry ?? this.pastaBombeioVolumeBbl(), vazaoBpm: vazao(vazoes?.pastaBpm), densidadePpg: slurryDensity },
+      { fluido: 'Água atrás', volumeBbl: volumes?.back ?? this.geom?.volBackSpacer ?? 0, vazaoBpm: vazao(vazoes?.fluidoAtrasBpm), densidadePpg: v.mudWeightBack },
+      { fluido: 'Deslocamento', volumeBbl: volumes?.displacement ?? this.geom?.operationalDisplacementVolumeBbl ?? 0, vazaoBpm: vazao(vazoes?.deslocamentoBpm), densidadePpg: v.displacementWeight ?? v.completionWeight },
     ];
   }
 
+  /** Um checkbox por gráfico na capa do relatório. */
+  readonly reportChartOptions = SQUEEZE_REPORT_CHARTS;
+
+  /** O formulário em ppg na TVD dos canhoneados, para os relatórios que leem um gradiente só. */
+  private reportForm(): any {
+    const v = this.form.getRawValue();
+    const md = this.squeezeResult?.input.referenceMD;
+    return this.formInPpg(v, md != null ? this.squeezeTvdOf()(md) : Number(v.sectionEndTVD) || 0);
+  }
+
+  /**
+   * Gráficos operacionais do relatório em SVG (SPEC squeeze-tampao §7), um a um, na ordem do
+   * catálogo. As seleções antigas valem por grupo: `pressao` → premissas, compressão, os
+   * gráficos, perfil e planta; `cronograma` → as tabelas do cronograma e dos marcos de UCA.
+   */
   private async captureGraficosImages(selecionados: GraficoOperacionalTipo[]): Promise<{ label: string; imagem: string }[]> {
+    const chosen = new Set(expandReportChartSelection(selecionados, SQUEEZE_REPORT_CHARTS));
     const result: { label: string; imagem: string }[] = [];
-    if (selecionados.includes('cronograma') && this.reportOpsChart) {
-      const imgs = await this.reportOpsChart.renderForReport();
-      result.push(...imgs);
+    if (chosen.has('cronograma') && this.cronograma.length) {
+      const total = this.cronogramaTotalMin(this.cronograma);
+      const tt50 = this.tt ? this.tt.t50 * 60 : null;
+      result.push({ label: 'Cronograma operacional', imagem: svgDataUrl(tableReportSvg('Cronograma operacional',
+        ['Passo', 'Fluido', 'Volume (bbl)', 'Vazão (bpm)', 'Duração (min)', 'Acumulado (min)'],
+        this.cronograma.map(row => [row.label, row.fluid ?? '—', row.volumeBbl === null ? '—' : this.fmt(row.volumeBbl),
+          row.rateBpm === null ? '—' : this.fmt(row.rateBpm, 2), this.fmt(row.durationMin, 1), this.fmt(row.accumulatedMin, 1)]),
+        [`Tempo total ${this.fmt(total, 1)} min` + (tt50 !== null ? ` | TT 50 Bc ${this.fmt(tt50, 0)} min | margem ${this.fmt(tt50 - total, 0)} min` : ''),
+          'Durações do motor, com a compressão bloco a bloco.'])) });
     }
-    if (selecionados.includes('pressao') && this.reportPressureCharts) {
-      const imgs = await this.reportPressureCharts.renderForReport();
-      result.push(...imgs);
-    }
+    if (chosen.has('uca') && this.cronograma.length)
+      result.push({ label: 'Resistência à compressão (UCA)', imagem: svgDataUrl(tableReportSvg('Marcos de resistência (UCA)',
+        ['Marco', 'Valor'], this.ucaRows(), ['Lidos da curva de UCA estimada da pasta.'])) });
+    if (!this.operationCharts) return result;
+    if (chosen.has('premissas'))
+      result.push({ label: 'Premissas da simulação', imagem: svgDataUrl(tableReportSvg('Premissas da simulação hidráulica',
+        ['Item', 'Tratamento'], SQUEEZE_PREMISSAS)) });
+    if (chosen.has('compressao'))
+      result.push({ label: 'Técnica e compressão', imagem: svgDataUrl(tableReportSvg(
+        `Compressão - ${SQUEEZE_TECHNIQUE_LABELS[this.technique]}`,
+        ['Bloco', 'Volume (bbl)', 'Vazão (bpm)', 'Tempo (min)', 'P sup. (psi)', 'P canh. máx (psi)', 'Limite (psi)'],
+        this.compressionRows(), this.compressionNotes())) });
+    if (chosen.has('janela-operacional') && this.criticalPoints)
+      result.push({ label: 'Janela operacional - ponto crítico', imagem: svgDataUrl(criticalPointsTableSvg(this.criticalPoints)) });
+    const phaseId = this.form.getRawValue().selectedPhaseId ?? 'all';
+    for (const visual of operationReportVisuals(this.operationCharts, phaseId))
+      if (chosen.has(reportChartId(visual.id))) result.push({ label: visual.title, imagem: svgDataUrl(visual.svg) });
+    const view = this.well2dViews.find(entry => entry.id === phaseId) ?? this.well2dViews[0];
+    if (view)
+      for (const visual of primaryReportVisuals(view.model, view.id === 'all' ? undefined : { id: view.id, name: view.name }))
+        if (chosen.has(reportChartId(visual.id))) result.push({ label: visual.title, imagem: svgDataUrl(visual.svg) });
     return result;
+  }
+
+  /** Blocos da compressão para a tela e o relatório. */
+  compressionRows(): string[][] {
+    return (this.squeezeResult?.compression?.blocks ?? []).map(block => [
+      `${block.index + 1}. ${block.kind === 'inject' ? 'Injeção' : 'Pressurização'}`,
+      block.kind === 'inject' ? this.fmt(block.pumpedBbl) : '—',
+      block.kind === 'inject' && block.endMin > block.startMin ? this.fmt(block.pumpedBbl / (block.endMin - block.startMin), 2) : '—',
+      this.fmt(block.endMin - block.startMin, 1),
+      this.fmt(block.surfacePressurePsi, 0),
+      this.fmt(block.maxPerforationPressurePsi, 0),
+      `${this.fmt(block.maxLowPressureSurfacePsi, 0)}${block.highPressure ? ' (acima)' : ''}`,
+    ]);
+  }
+
+  private compressionNotes(): string[] {
+    const s = this.squeezeResult?.summary;
+    if (!s) return [];
+    return [
+      `Extremidade na compressão: ${this.fmt(s.toolMD, 1)} m MD | pasta injetada ${this.fmt(s.injectedSlurryBbl)} bbl | fluido antes da pasta ${this.fmt(s.fluidAheadBbl)} bbl`,
+      `Topo da pasta depois do squeeze: ${this.fmt(s.cementTopAfterSqueezeMD, 1)} m MD | cabeça do revestimento máx. ${this.fmt(s.maxCasingHeadPsi, 0)} psi`
+        + (s.maxToolDifferentialPsi !== null ? ` | diferencial na ferramenta máx. ${this.fmt(s.maxToolDifferentialPsi, 0)} psi` : ''),
+      'Limite = maior pressão de superfície que mantém o canhoneado mais crítico abaixo da fratura (squeeze de baixa pressão).',
+    ];
+  }
+
+  /** Marcos de UCA para a tela e o relatório. */
+  ucaRows(): string[][] {
+    const hours = (value: number | null) => value === null ? 'não alcançado em 72 h' : this.fmtTime(value);
+    const psi = (value: number | null) => value === null ? '—' : `${this.fmt(value, 0)} psi`;
+    return [
+      ['Tempo até 50 psi', hours(this.ucaMarcos.t50PsiH)],
+      ['Tempo até 500 psi', hours(this.ucaMarcos.t500PsiH)],
+      ['Resistência em 12 h', psi(this.ucaMarcos.strength12hPsi)],
+      ['Resistência em 24 h', psi(this.ucaMarcos.strength24hPsi)],
+    ];
   }
 
   private formatCasing(od: unknown, id: unknown): string {

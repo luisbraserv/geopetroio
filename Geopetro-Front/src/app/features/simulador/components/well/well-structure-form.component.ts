@@ -27,8 +27,10 @@ export const WELL_PHASE_TYPES: { value: WellPhaseType; label: string }[] = [
   imports: [DepthInputDirective, CommonModule, ReactiveFormsModule, TuiButton],
   template: `
     <p class="acc-hint">
-      Estrutura física do poço. A base de uma fase deve coincidir com o topo da seguinte —
-      a operação (tampão/squeeze) é posicionada dentro dessa estrutura, não a define.
+      Cadastre as fases da superfície para o fundo, começando pelo condutor ou pela fase
+      de superfície, quando presentes. A base de uma fase deve coincidir com o topo da
+      seguinte. Os valores iniciais são exemplos editáveis; informe a estrutura do seu poço.
+      A operação (tampão/squeeze) é posicionada dentro dessa estrutura.
     </p>
 
     @if (issues.length) {
@@ -70,11 +72,20 @@ export const WELL_PHASE_TYPES: { value: WellPhaseType; label: string }[] = [
               @if (derivedGeometry) { <output>{{ depth(derivedGeometry.phases[i]?.bottomTVD) }}</output> }
               @else { <input type="number" step="1" formControlName="bottomTVD" [appDepthInput]="depthUnit"> }
             </div>
-            <div class="col-span-2"><label>Diâmetro do poço (pol)</label><input type="number" step="0.001" formControlName="holeDiameterIn"></div>
+            <div class="col-span-2">
+              <label [attr.for]="'phase-hole-' + i">Diâmetro do furo (pol)</label>
+              <input [id]="'phase-hole-' + i" type="number" step="0.001" formControlName="holeDiameterIn"
+                [attr.aria-describedby]="'phase-hole-hint-' + i">
+              <small class="wsf-field-hint" [id]="'phase-hole-hint-' + i">
+                Diâmetro nominal da broca ou medido por caliper nesta fase. É diferente do
+                OD (externo) e do ID (interno) do revestimento.
+              </small>
+            </div>
             @if (casingOptions.length) {
               <div class="col-span-2">
                 <label>Revestimento (API)</label>
-                <select (change)="onCasingSelect(i, $any($event.target).value)">
+                <select [attr.aria-label]="'Revestimento API da fase ' + (i + 1)"
+                  (change)="onCasingSelect(i, $any($event.target).value)">
                   <option value="">— sem revestimento —</option>
                   @for (c of casingOptions; track $index) {
                     <option [value]="$index"
@@ -113,6 +124,7 @@ export const WELL_PHASE_TYPES: { value: WellPhaseType; label: string }[] = [
     .g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .col-span-2 { grid-column: span 2; }
     label { display: block; margin-bottom: 4px; color: var(--color-text-body); font-size: .7rem; font-weight: 750; line-height: 1.25; }
+    .wsf-field-hint { display: block; margin-top: 4px; color: var(--color-text-body); font-size: .68rem; line-height: 1.4; }
     input[type="number"], input[type="text"], select {
       width: 100%; min-height: 30px; box-sizing: border-box; padding: 5px 7px;
       border: 1px solid rgba(77, 87, 97, .22); border-radius: 8px; background: rgba(255,255,255,.86);

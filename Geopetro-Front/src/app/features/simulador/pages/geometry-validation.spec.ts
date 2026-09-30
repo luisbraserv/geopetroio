@@ -23,6 +23,7 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
       });
       page = TestBed.inject(component as typeof SimuladorSqueezeComponent);
       page.ngOnInit();
+      page.selectOperationPhase('phase-2');
       expect(result()).not.toBeNull();
     });
 
@@ -33,12 +34,81 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
       localStorage.clear();
     });
 
+    it('starts with a valid surface phase followed by the operation phase', () => {
+      const phases = page.form.getRawValue().fases;
+      expect(phases).toHaveLength(2);
+      expect(phases[0]).toMatchObject({
+        id: 'phase-1', name: 'Superfície', type: 'SURFACE',
+        topMD: 0, bottomMD: 300, topTVD: 0, bottomTVD: 300,
+        holeDiameterIn: 17.5, casingOD: 13.375, casingID: 12.415,
+        shoeMD: 300, shoeTVD: 300,
+      });
+      expect(phases[1]).toMatchObject({
+        id: 'phase-2', topMD: 300, bottomMD: 1500, topTVD: 300, bottomTVD: 1500,
+        holeDiameterIn: 8.535,
+        ...(page instanceof SimuladorSqueezeComponent
+          ? { name: 'Produção', type: 'PRODUCTION', casingOD: 5.5, casingID: 4.778 }
+          : { name: 'Poço aberto', type: 'OPEN_HOLE', casingOD: null, casingID: null }),
+      });
+      expect(page.wellIssues).toEqual([]);
+      expect(page.operationIssues).toEqual([]);
+      expect(page.hydraulicSim).not.toBeNull();
+    });
+
+    it('recovers after the operation phase hole is enlarged to fit its casing, independently of the surface diameter', () => {
+      const surface = structuredClone(page.fases.at(0).getRawValue());
+      const bottomPhase = page.fases.at(page.fases.length - 1);
+      bottomPhase.patchValue({
+        type: 'PRODUCTION', casingOD: 9.625, casingID: 8.835,
+        shoeMD: 1500, shoeTVD: 1500,
+      }, { emitEvent: false });
+      page.simulate();
+      expect(page.wellIssues.some(issue => issue.code === 'CASING_OD_GT_HOLE' && issue.phaseId === 'phase-2')).toBe(true);
+      expect(result()).toBeNull();
+      expect(page.hydraulicSim).toBeNull();
+
+      bottomPhase.patchValue({ holeDiameterIn: 12.25 }, { emitEvent: false });
+      page.simulate();
+      expect(page.wellIssues).toEqual([]);
+      expect(result()).not.toBeNull();
+      expect(page.hydraulicSim).not.toBeNull();
+      expect(page.fases.at(0).getRawValue()).toEqual(surface);
+      expect(page.form.getRawValue()).toMatchObject(page instanceof SimuladorSqueezeComponent
+        ? { caliper: 12.25, casingOD: 9.625, casingID: 8.835 }
+        : { holeID: 8.835 });
+
+      page.fases.at(0).patchValue({ holeDiameterIn: 20 }, { emitEvent: false });
+      page.simulate();
+      expect(result()).not.toBeNull();
+      expect(page.form.getRawValue()).toMatchObject(page instanceof SimuladorSqueezeComponent
+        ? { caliper: 12.25, casingOD: 9.625, casingID: 8.835 }
+        : { holeID: 8.835 });
+    });
+
+    it('restores a legacy single phase without adding the new default surface phase', () => {
+      const legacy = structuredClone(page.form.getRawValue());
+      legacy.fases = [{
+        ...legacy.fases[legacy.fases.length - 1],
+        id: 'legacy-single', name: 'Fase única', type: 'PRODUCTION', topMD: 0, topTVD: 0,
+      }];
+      delete legacy.selectedPhaseId;
+      page.onCarregarEstado(legacy);
+      expect(result()).toBeNull();
+      page.selectOperationPhase('legacy-single');
+      expect(page.fases.getRawValue()).toEqual(legacy.fases);
+      expect(page.wellGeometry!.phases).toHaveLength(1);
+      expect(page.wellGeometry!.phases[0].id).toBe('legacy-single');
+      expect(page.wellIssues).toEqual([]);
+      expect(result()).not.toBeNull();
+      expect(page.hydraulicSim).not.toBeNull();
+    });
+
     it('warns about engineering relations without blocking results or the report, and clears warnings on scenario load', () => {
       const original = structuredClone(page.form.getRawValue());
-      page.form.patchValue({ fracGrad: 8, poreGrad: 9, displacementWeight: 20, theta200: 200 }, { emitEvent: false });
+      page.form.patchValue({ fracGrad: 8, poreGrad: 9, displacementWeight: 20 }, { emitEvent: false });
       page.simulate();
       expect(page.engineeringIssues.map(i => i.code)).toEqual(expect.arrayContaining([
-        'FRACTURE_PORE_ORDER', 'SLURRY_DISPLACEMENT_DENSITY', 'FANN_READING_ORDER',
+        'FRACTURE_PORE_ORDER', 'SLURRY_DISPLACEMENT_DENSITY',
       ]));
       expect(page.engineeringIssues.every(i => i.level === 'warning')).toBe(true);
       expect(result()).not.toBeNull();
@@ -84,6 +154,7 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
       page.manualVolumeBbl = 20;
       page.setDepthUnit('ft');
       page.applyPoco(poco);
+      page.selectOperationPhase('phase-2');
       expect(page.form.getRawValue().operacaoTopoMD).toBe(legacy.operacaoTopoMD);
       expect(page.manualVolumeBbl).toBe(20);
       expect(page.dadosRelatorio.poco).toBe('Poço A');
@@ -91,8 +162,11 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
       expect(JSON.parse(payload.formValue).fases).toBeUndefined();
       const geometry = structuredClone(poco.geometria);
       geometry.wellFinalTVD = 1200;
-      geometry.fases[0].bottomTVD = 1200;
-      if (geometry.fases[0].shoeTVD != null) geometry.fases[0].shoeTVD = 1200;
+      for (const phase of geometry.fases) {
+        phase.topTVD = phase.topMD! * 0.8;
+        phase.bottomTVD = phase.bottomMD! * 0.8;
+        if (phase.shoeMD != null) phase.shoeTVD = phase.shoeMD * 0.8;
+      }
       page.onCarregarEstado(scenarioForm({ formValue: payload.formValue, poco: { ...poco, version: 1, geometria: geometry } }));
       expect(page.wellGeometry!.finalTVD).toBe(1200);
       expect(page.hydraulicSim!.summary.referenceTVD).toBeCloseTo(page.hydraulicSim!.summary.referenceMD * 0.8, 9);
@@ -126,6 +200,7 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
     });
 
     it('clears a previous simulation when a required phase depth is erased, and recovers after correction', () => {
+      const originalBottomTVD = page.fases.at(0).value.bottomTVD;
       page.fases.at(0).patchValue({ bottomTVD: null }, { emitEvent: false });
       page.simulate();
       expect(page.wellIssues.some(issue => issue.code === 'PHASE_DEPTH_INVALID')).toBe(true);
@@ -134,18 +209,22 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
       expect(page.recipe).toBeNull();
       expect(page.hydraulicSim).toBeNull();
       expect(page.wellOverlays).toEqual([]);
-      expect(page.opsPhases).toEqual([]);
-      page.fases.at(0).patchValue({ bottomTVD: 1500 }, { emitEvent: false });
+      // Tampão e squeeze trocaram o gráfico do cronograma pela tabela (SPEC squeeze-tampao S4 e S7).
+      expect(page.cronograma).toEqual([]);
+      page.fases.at(0).patchValue({ bottomTVD: originalBottomTVD }, { emitEvent: false });
       page.simulate();
       expect(result()).not.toBeNull();
       expect(page.wellIssues).toEqual([]);
     });
 
     it('uses geometry TVD in the hydraulic simulation and sensitivity runs', () => {
-      page.fases.at(0).patchValue({
-        bottomTVD: 1200,
-        ...(page.fases.at(0).value.shoeMD != null ? { shoeTVD: 1200 } : {}),
-      }, { emitEvent: false });
+      for (const phase of page.fases.controls) {
+        phase.patchValue({
+          topTVD: phase.value.topMD * 0.8,
+          bottomTVD: phase.value.bottomMD * 0.8,
+          ...(phase.value.shoeMD != null ? { shoeTVD: phase.value.shoeMD * 0.8 } : {}),
+        }, { emitEvent: false });
+      }
       page.form.patchValue({ wellFinalTVD: 1200 }, { emitEvent: false });
       page.simulate();
       expect(page.hydraulicSim).not.toBeNull();
@@ -252,7 +331,7 @@ for (const component of [SimuladorSqueezeComponent, SimuladorTampaoComponent]) {
 }
 
 describe('Squeeze — integração da geometria', () => {
-  it('uses every phase for the simulation and manual recipe, including the withdrawal report', () => {
+  it('retains the preceding path while limiting the operation and withdrawal recipe to the selected phase', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [SimuladorSqueezeComponent, { provide: ChangeDetectorRef, useValue: { markForCheck: vi.fn() } }],
@@ -260,29 +339,46 @@ describe('Squeeze — integração da geometria', () => {
     const page = TestBed.inject(SimuladorSqueezeComponent);
     try {
       page.ngOnInit();
-      page.fases.at(0).patchValue({
-        bottomMD: 1000, bottomTVD: 1000, holeDiameterIn: 12.25,
-        casingOD: 9.625, casingID: 8.835, shoeMD: 1000, shoeTVD: 1000,
-      }, { emitEvent: false });
-      page.addFase();
-      page.fases.at(1).patchValue({
-        bottomMD: 1500, bottomTVD: 1500, holeDiameterIn: 8.5,
-      }, { emitEvent: false });
+      page.onCarregarEstado({
+        ...page.form.getRawValue(),
+        fases: [
+          {
+            id: 'cased', name: 'Revestido', type: 'SURFACE',
+            topMD: 0, bottomMD: 1000, topTVD: 0, bottomTVD: 1000, holeDiameterIn: 12.25,
+            casingOD: 9.625, casingID: 8.835, shoeMD: 1000, shoeTVD: 1000,
+          },
+          {
+            id: 'open', name: 'Poço aberto', type: 'OPEN_HOLE',
+            topMD: 1000, bottomMD: 1500, topTVD: 1000, bottomTVD: 1500, holeDiameterIn: 8.5,
+            casingOD: null, casingID: null, shoeMD: null, shoeTVD: null,
+          },
+        ],
+      });
+      page.selectOperationPhase('open');
       page.form.patchValue({ operacaoTopoMD: 950, operacaoBaseMD: 1050 }, { emitEvent: false });
-      page.perforacoes.at(0).patchValue({ top: 990, base: 1040 }, { emitEvent: false });
+      page.simulate();
+      expect(page.operationIssues.some(i => i.code === 'OPERATION_OUTSIDE_SELECTED_PHASE')).toBe(true);
+      expect(page.geom).toBeNull();
+      page.form.patchValue({ operacaoTopoMD: 1000, operacaoBaseMD: 1100 }, { emitEvent: false });
+      page.perforacoes.at(0).patchValue({ top: 1010, base: 1040 }, { emitEvent: false });
       page.cementVolumeSource = 'receita';
       page.manualVolumeBbl = 5;
       page.simulate();
       expect(page.wellIssues).toEqual([]);
-      expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(BBL_M * 50 * (8.835 ** 2 + 8.5 ** 2), 9);
-      expect(page.geom!.topCementAfterPullMD).toBeCloseTo(950, 9);
-      const manualTop = 1050 - 5 / (BBL_M * 8.5 ** 2);
+      expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(BBL_M * 100 * 8.5 ** 2, 9);
+      // O intervalo é o cimento depois da injeção; antes dela, a pasta inteira está no poço.
+      expect(page.geom!.topCementAfterInjectionMD).toBeCloseTo(1000, 9);
+      expect(page.geom!.topCementAfterPullMD).toBeCloseTo(1000 - 2 / (BBL_M * 8.835 ** 2), 9);
+      // "Volume de pasta" é o bombeado: os 5 bbl já contam os 2 bbl a injetar.
+      const manualTop = 1100 - 5 / (BBL_M * 8.5 ** 2);
       expect(page.schematicGeom!.topCementAfterPullMD).toBeCloseTo(manualTop, 9);
       expect(page.wellOverlays.find(o => o.type === 'CEMENT')?.topMD).toBe(page.schematicGeom!.topCementImmersedMD);
       const withdrawal = vi.spyOn(TestBed.inject(RetiradaTubosReportService), 'abrirRetirada').mockImplementation(() => {});
       const reverse = vi.spyOn(TestBed.inject(RetiradaTubosReportService), 'abrirCirculacaoReversa').mockImplementation(() => {});
       page.gerarCalculoRetiradaTubos();
       page.gerarCalculoCirculacaoReversa();
+      // A retirada conta a pasta inteira no poço, com os 2 bbl que ainda vão para a formação
+      // (SPEC squeeze-tampao S7): com "Volume de pasta", eles já estão nos 5 bbl informados.
       expect(withdrawal.mock.calls[0][0].topoCimentoRetiradaM).toBeCloseTo(manualTop, 9);
       expect(reverse.mock.calls[0][0].topoCimentoRetiradaM).toBeCloseTo(manualTop, 9);
     } finally {

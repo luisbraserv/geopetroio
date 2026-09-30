@@ -63,15 +63,16 @@ export class SqueezeCalculoService {
       ? this.wellGeo.calculateVolumeBetween(well.geometry, top, base, holeResolver)
       : finalCapacity_m * len;
     const expectedLoss = Math.max(0, inputs.expectedLoss || 0);
-    // Volume total de pasta (bombeado). Quando o usuário escolhe "Receita por Volume",
-    // o valor informado substitui o volume geométrico e a geometria é recalculada a partir dele.
+    // Pasta bombeada = a que cobre o intervalo + a que vai para a formação (SPEC squeeze-tampao §2):
+    // o intervalo é o cimento que fica depois da injeção. Quando o usuário escolhe "Volume de
+    // pasta", o valor informado é o bombeado, e o que fica no poço é ele menos o injetado.
     const geometricSlurryPhysicalVolume = annulusVolume;
     const hasSlurryVolumeOverride = slurryVolumeOverrideBbl != null && slurryVolumeOverrideBbl > 0;
-    const slurryPhysicalVolume = hasSlurryVolumeOverride
+    const slurryTotal = hasSlurryVolumeOverride
       ? slurryVolumeOverrideBbl
-      : geometricSlurryPhysicalVolume;
-    const slurryTotal = slurryPhysicalVolume + expectedLoss;
-    const workVolumeBbl = slurryPhysicalVolume;
+      : geometricSlurryPhysicalVolume + expectedLoss;
+    const slurryPhysicalVolume = Math.max(0, slurryTotal - expectedLoss);
+    const workVolumeBbl = slurryTotal;
     const capWithTubing = annulusCasing_m + tubingID_m;
     // Altura do cimento com a coluna imersa (balanceado): pasta ocupa o anular
     // casing×tubing E o interior da coluna na mesma altura (capWithTubing).
@@ -86,15 +87,18 @@ export class SqueezeCalculoService {
     // antes/depois de injetar na formação × com/sem coluna (tubing) no poço.
     // - com coluna (imersa): pasta no anular + interior da coluna (capWithTubing)
     // - sem coluna: pasta redistribuída no revestimento cheio (finalCapacity_m)
-    // - depois: desconta o volume squeezado para a formação (expectedLoss)
-    const slurryAfterInjection = Math.max(0, slurryPhysicalVolume - expectedLoss);
-    const topCementImmersedMD = topFromVolume(slurryPhysicalVolume, true);
-    const topCementAfterPullMD = topFromVolume(slurryPhysicalVolume, false);
-    const topCementImmersedAfterInjectionMD = topFromVolume(slurryAfterInjection, true);
-    const topCementAfterInjectionMD = topFromVolume(slurryAfterInjection, false);
+    // - antes: a pasta inteira bombeada está no poço; depois: fica a do intervalo, porque o
+    //   injetado sai uma vez só (antes descontava duas: do volume do intervalo, que já não o tinha)
+    const topCementImmersedMD = topFromVolume(slurryTotal, true);
+    const topCementAfterPullMD = topFromVolume(slurryTotal, false);
+    const topCementImmersedAfterInjectionMD = topFromVolume(slurryPhysicalVolume, true);
+    const topCementAfterInjectionMD = topFromVolume(slurryPhysicalVolume, false);
     const cementHeightWithTubing = well ? base - topCementImmersedMD
-      : capWithTubing > 0 ? slurryPhysicalVolume / capWithTubing : 0;
-    const cementPhysicalHeight = well ? base - topCementAfterPullMD
+      : capWithTubing > 0 ? slurryTotal / capWithTubing : 0;
+    const cementHeightWithoutTubing = well ? base - topCementAfterPullMD
+      : finalCapacity_m > 0 ? slurryTotal / finalCapacity_m : 0;
+    // Cimento que fica no poço depois do squeeze.
+    const cementPhysicalHeight = well ? base - topCementAfterInjectionMD
       : finalCapacity_m > 0 ? slurryPhysicalVolume / finalCapacity_m : 0;
     const mwFront = Math.max(0, inputs.mudWeightFront || 9.5);
     const mwBack = Math.max(0, inputs.mudWeightBack || 9.5);
@@ -134,7 +138,7 @@ export class SqueezeCalculoService {
           displacementVolume + frontPhysicalVolumeBbl + backPhysicalVolumeBbl, holeResolver,
         ).topMD,
       } : {}),
-      cementHeightWithoutTubing: cementPhysicalHeight,
+      cementHeightWithoutTubing,
       topCementImmersedMD,
       topCementAfterPullMD,
       topCementImmersedAfterInjectionMD,
@@ -145,7 +149,7 @@ export class SqueezeCalculoService {
       slurryInjectedVolumeBbl: expectedLoss,
       slurryPhysicalVolumeBbl: slurryPhysicalVolume,
       cementPhysicalHeight,
-      cementPhysicalTopMD: well ? topCementAfterPullMD : top,
+      cementPhysicalTopMD: well ? topCementAfterInjectionMD : top,
       cementPhysicalBaseMD: well ? base : top + cementPhysicalHeight,
       cementPhysicalCapacityBblM: finalCapacity_m,
       washVolFront: frontPhysicalVolumeBbl,

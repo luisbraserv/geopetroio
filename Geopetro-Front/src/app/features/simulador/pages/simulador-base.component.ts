@@ -1,5 +1,7 @@
+import { OperationContextService } from '../services/operation-context.service';
+import { buildWellGeometry } from '../models/well-geometry.form';
 import { PocoApi, PocoGeometry, pocoGeometryFromForm } from '../models/poco.model';
-import { createTrajectoryForm } from '../models/well-trajectory.form';
+import { createTrajectoryForm, trajectoryFromForm } from '../models/well-trajectory.form';
 import { inject } from '@angular/core';
 import { DepthUnit, depthToMetres, formatDepthNumber } from '../models/depth-unit';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -12,9 +14,10 @@ import { CoreCalculoService, SqtTemperatureResult, TemperatureUnit } from '../se
 import { SimuladorStateStoreService, DadosRelatorio } from '../services/simulador-state-store.service';
 import { RheologyAdjustmentResult } from '../services/rheology-adjustment.service';
 import { RelatorioCapaData } from '../components/relatorio/relatorio-capa-modal.component';
-import { OpsPhase } from '../components/charts/ops-chart.component';
 import { WellGeometryIssue } from '../models/well-geometry.model';
 import { EngineeringValidationInput, validateEngineeringRelations } from '../services/engineering-validation';
+import type { MarginClasses } from '../models/pressure-profile.model';
+import { normalizeMarginClasses, pressureProfileFromForm, profileAt } from '../services/pressure-profile';
 
 /**
  * Lógica compartilhada entre os simuladores de squeeze e tampão:
@@ -23,11 +26,26 @@ import { EngineeringValidationInput, validateEngineeringRelations } from '../ser
  * `form`, `operacaoKey`, `simulate()` e `buildManualRecipeOpsPhases()`.
  */
 export abstract class SimuladorBaseComponent {
+  protected readonly operationContext = inject(OperationContextService);
+  get phaseReportLabel(): string {
+    const raw = this.form?.getRawValue();
+    if (!raw?.fases) return '';
+    const geometry = { ...buildWellGeometry(raw.wellFinalMD, raw.wellFinalTVD, raw.fases), trajectory: trajectoryFromForm(raw.trajectory) };
+    const phase = this.operationContext.resolve(geometry, raw.selectedPhaseId, this.operacaoKey).phase;
+    return phase ? phase.name + ' · MD ' + this.fmtDepth(phase.topMD) + '–' + this.fmtDepth(phase.bottomMD)
+      + ' ' + this.depthUnit + ' · TVD ' + this.fmtDepth(phase.topTVD) + '–' + this.fmtDepth(phase.bottomTVD)
+      + ' ' + this.depthUnit + (phase.casing ? ' · revestimento OD ' + phase.casing.odIn + ' / ID ' + phase.casing.idIn + ' pol' : '') : '';
+  }
+  selectOperationPhase(id: string | null): void {
+    this.form.get('selectedPhaseId')?.setValue(id, { emitEvent: false });
+    this.simulate();
+  }
   poco: PocoApi | null = null;
   get pocoGeometry(): PocoGeometry { return pocoGeometryFromForm(this.form.getRawValue()); }
   applyPoco(poco: PocoApi | null): void {
+    if (this.poco?.id !== poco?.id) this.form.get('selectedPhaseId')?.setValue(null, { emitEvent: false });
     this.poco = poco;
-    if (!poco) return;
+    if (!poco) { this.simulate(); return; }
     const g = poco.geometria;
     this.form.patchValue({ wellFinalMD: g.wellFinalMD, wellFinalTVD: g.wellFinalTVD }, { emitEvent: false });
     this.form.setControl('fases', this.fb.array(g.fases.map(row => this.fb.group(row))), { emitEvent: false });
@@ -65,8 +83,26 @@ export abstract class SimuladorBaseComponent {
   slurry: SlurryDesign | null = null;
   engineeringIssues: WellGeometryIssue[] = [];
 
+  // ── Janela operacional (SPEC janela-operacional §3.1) ──
+  /** Poro e fratura do cenário para o motor: o perfil e os valores na TVD de referência, em ppg. */
+  protected engineGradients(v: any, referenceTVD: number) {
+    const pressureProfile = pressureProfileFromForm(v);
+    const at = profileAt(pressureProfile, referenceTVD);
+    return { poreGradPpg: at.porePpg, fracGradPpg: at.fracturePpg, pressureProfile };
+  }
+
+  /** O formulário com `fracGrad` e `poreGrad` em ppg na TVD dada, para quem ainda lê um valor só. */
+  protected formInPpg(v: any = this.form.getRawValue(), tvd = Number(v.sectionEndTVD) || 0): any {
+    const at = profileAt(pressureProfileFromForm(v), tvd);
+    return { ...v, fracGrad: at.fracturePpg, poreGrad: at.porePpg, gradUnit: 'ppg' };
+  }
+
+  protected marginClasses(v: any): MarginClasses {
+    return normalizeMarginClasses({ atencaoPpg: v.margemAtencaoPpg, alertaPpg: v.margemAlertaPpg, criticoPpg: v.margemCriticoPpg });
+  }
+
   protected updateEngineeringIssues(squeeze?: EngineeringValidationInput['squeeze']): void {
-    const v = this.form.getRawValue();
+    const v = this.formInPpg(this.form.getRawValue());
     this.engineeringIssues = validateEngineeringRelations({
       fractureGradient: v.fracGrad,
       poreGradient: v.poreGrad,
@@ -80,7 +116,6 @@ export abstract class SimuladorBaseComponent {
   manualRecipeResult: SlurryRecipeByVolume | null = null;
   temperatureResult: SqtTemperatureResult | null = null;
   rheologyResult: RheologyAdjustmentResult | null = null;
-  manualRecipeOpsPhases: OpsPhase[] = [];
 
   manualVolumeBbl = 10;
   manualYieldFt3: number | null = null;
@@ -110,7 +145,6 @@ export abstract class SimuladorBaseComponent {
     this.manualRecipeResult = null;
     this.temperatureResult = null;
     this.rheologyResult = null;
-    this.manualRecipeOpsPhases = [];
     this.simuladorVolumeBbl = 0;
   }
 
@@ -295,18 +329,20 @@ export abstract class SimuladorBaseComponent {
     return 'Base';
   }
 
-  protected buildThetaReadings(v: any): Rheology {
-    return {
-      theta300: +v.theta300,
-      theta200: +v.theta200,
-      theta100: +v.theta100,
-      theta60: +v.theta60,
-      theta30: +v.theta30,
-      theta20: +v.theta20,
-      theta10: +v.theta10,
-      theta6: +v.theta6,
-      theta3: +v.theta3,
-    };
+  /**
+   * Leituras Fann da reologia estimada (pasta base com o efeito dos aditivos), no formato
+   * do ensaio, para o tempo de espessamento. 20 e 10 rpm, que a estimativa não traz, saem
+   * por interpolação log-log entre 30 e 6 rpm.
+   */
+  protected estimatedThetaReadings(): Rheology | undefined {
+    const r = this.rheologyResult?.rheology;
+    const at = (value: number | null | undefined) => Number.isFinite(value) && (value as number) > 0 ? value as number : null;
+    const [t300, t200, t100, t60, t30, t6, t3] = [r?.rpm300, r?.rpm200, r?.rpm100, r?.rpm60, r?.rpm30, r?.rpm6, r?.rpm3].map(at);
+    if (t300 === null || t100 === null || t3 === null) return undefined;
+    const between = (rpm: number) => t30 !== null && t6 !== null
+      ? t6 * Math.pow(t30 / t6, Math.log(rpm / 6) / Math.log(30 / 6)) : (t30 ?? t6 ?? t3);
+    return { theta300: t300, theta200: t200 ?? t300, theta100: t100, theta60: t60 ?? t100, theta30: t30 ?? between(30),
+      theta20: between(20), theta10: between(10), theta6: t6 ?? t3, theta3: t3 };
   }
 
   protected resolveTemperatureResult(v: any, automaticBhstF: number): SqtTemperatureResult {
@@ -337,7 +373,7 @@ export abstract class SimuladorBaseComponent {
   }
 
   protected computeManualRecipe(): void {
-    if (!this.slurry) { this.manualRecipeResult = null; this.manualRecipeOpsPhases = []; return; }
+    if (!this.slurry) { this.manualRecipeResult = null; this.buildManualRecipeOpsPhases(); return; }
     const useManual = this.pastaParametrosSource === 'manual';
     const fac    = useManual ? this.manualFacGpc : this.recipe?.baseRecipe?.facGpc ?? null;
     const fam    = useManual ? this.manualFamGpc : this.recipe?.baseRecipe?.famGpc ?? null;

@@ -5,7 +5,7 @@
     <div>
       <p class="eyebrow">Simulador</p>
       <h1>Tampão Balanceado</h1>
-      <p class="subtitle">Cálculo de volumes, pasta, reologia e pressão para tampão de cimento.</p>
+      <p class="subtitle">Cálculo de volumes, pasta e pressão para tampão de cimento.</p>
     </div>
     <div class="head-actions">
       <label>Profundidades
@@ -23,6 +23,7 @@
       </button>
     </div>
   </header>
+  <p class="subtitle" role="status"><strong>Fase da operação:</strong> {{ phaseReportLabel || 'Selecione uma fase para calcular' }}</p>
 
   @if (wellIssues.length || operationIssues.length) {
     <div class="sim-validation" role="alert">
@@ -142,10 +143,11 @@
                   <input type="number" step="1" formControlName="wellFinalTVD" [appDepthInput]="depthUnit">
                 }
               </div>
-              <div>
-                <label>ID poço / revest. (pol)</label>
-                <input type="number" step="0.001" formControlName="holeID" class="field-readonly" readonly
-                  title="Derivado da fase em que a base do tampão está — cadastre em Estrutura do Poço">
+              <div class="col-span-2">
+                <p class="acc-hint">Edite o diâmetro do furo e o OD/ID do revestimento em cada fase da Estrutura do Poço.</p>
+                <button tuiButton type="button" class="btn btn--ghost btn--sm"
+                  [attr.aria-expanded]="secEstruturaOpen" aria-controls="tampao-well-structure"
+                  (click)="secEstruturaOpen = true">Editar diâmetros por fase</button>
               </div>
               <div class="col-span-2">
                 <label>Tubing / Coluna (API)</label>
@@ -168,7 +170,7 @@
         <button tuiAccordion type="button" [(tuiAccordion)]="secEstruturaOpen" class="acc-sub">
           <tui-icon icon="@tui.layers-2"></tui-icon> 3.2 Estrutura do Poço
         </button>
-        <tui-expand [expanded]="secEstruturaOpen">
+        <tui-expand id="tampao-well-structure" [expanded]="secEstruturaOpen">
           <div class="acc-body">
             <app-poco-selector [geometry]="pocoGeometry" [poco]="poco" (changed)="applyPoco($event)"></app-poco-selector>
             <app-well-structure-form [depthUnit]="depthUnit"
@@ -179,6 +181,9 @@
               (add)="addFase()"
               (remove)="removeFase($event)">
             </app-well-structure-form>
+            <app-operation-phase-selector [phases]="fases.getRawValue()"
+              [selectedPhaseId]="form.get('selectedPhaseId')?.value" [depthUnit]="depthUnit"
+              (selectedPhaseIdChange)="selectOperationPhase($event)"></app-operation-phase-selector>
             <app-well-trajectory-form [depthUnit]="depthUnit" [form]="trajectoryForm"></app-well-trajectory-form>
           </div>
         </tui-expand>
@@ -306,16 +311,13 @@
           </div>
         </tui-expand>
 
-        <!-- 4.3 Gradientes -->
+        <!-- 4.3 Janela operacional: poro e fratura por TVD e classes de margem -->
         <button tuiAccordion type="button" [(tuiAccordion)]="secGradOpen" class="acc-sub">
-          <tui-icon icon="@tui.trending-up"></tui-icon> 4.3 Gradientes
+          <tui-icon icon="@tui.trending-up"></tui-icon> 4.3 Janela operacional
         </button>
         <tui-expand [expanded]="secGradOpen">
           <div class="acc-body">
-            <div class="g2">
-              <div><label>Grad. fratura (ppg)</label><input type="number" step="0.1" formControlName="fracGrad"></div>
-              <div><label>Grad. poro (ppg)</label><input type="number" step="0.1" formControlName="poreGrad"></div>
-            </div>
+            <app-pressure-window-inputs [form]="form" [wellFinalTVD]="form.value.wellFinalTVD"></app-pressure-window-inputs>
           </div>
         </tui-expand>
 
@@ -469,43 +471,38 @@
           </div>
         </tui-expand>
 
-        <!-- 7. Reologia -->
-        <button tuiAccordion type="button" [(tuiAccordion)]="sec6Open">
-          <tui-icon icon="@tui.activity"></tui-icon> 7. Reologia
-        </button>
-        <tui-expand [expanded]="sec6Open">
-          <div class="acc-body">
-            <div class="g3">
-              <div><label>θ300</label><input type="number" step="1" formControlName="theta300"></div>
-              <div><label>θ200</label><input type="number" step="1" formControlName="theta200"></div>
-              <div><label>θ100</label><input type="number" step="1" formControlName="theta100"></div>
-              <div><label>θ60</label><input type="number" step="1" formControlName="theta60"></div>
-              <div><label>θ30</label><input type="number" step="1" formControlName="theta30"></div>
-              <div><label>θ20</label><input type="number" step="1" formControlName="theta20"></div>
-              <div><label>θ10</label><input type="number" step="1" formControlName="theta10"></div>
-              <div><label>θ6</label><input type="number" step="1" formControlName="theta6"></div>
-              <div><label>θ3</label><input type="number" step="1" formControlName="theta3"></div>
-            </div>
-          </div>
-        </tui-expand>
-
-        <!-- 8. Simulador -->
+        <!-- 7. Simulador -->
         <button tuiAccordion type="button" [(tuiAccordion)]="secSimuladorOpen">
-          <tui-icon icon="@tui.sliders-horizontal"></tui-icon> 8. Simulador
+          <tui-icon icon="@tui.sliders-horizontal"></tui-icon> 7. Simulador
         </button>
         <tui-expand [expanded]="secSimuladorOpen">
           <div class="acc-body">
-            <p class="acc-hint">Variáveis do motor de simulação hidráulica. A rugosidade multiplica a fricção em regime turbulento (a correlação Petroguia F-40 assume tubo liso); não afeta o regime laminar.</p>
+            <p class="acc-hint">Mesmo cálculo da primária: atrito de R3 §4-6 por fluido, com os multiplicadores do interior e do anular (sem correção de standoff), e ECD = BHP / (0,052 · TVD). A pasta usa a reologia de referência da primária (R3 §12-7, pasta tail); os fluidos aquosos, a viscosidade informada.</p>
             <div class="g2">
               <div class="col-span-2">
-                <label>Estado do tubo (rugosidade)</label>
-                <select formControlName="roughness">
-                  @for (r of roughnessOptions; track r.value) { <option [value]="r.value">{{ r.label }}</option> }
+                <label>Atrito no interior da coluna</label>
+                <select formControlName="internalFrictionLevel">
+                  <option value="low">Baixo — tubo liso (1,00×)</option>
+                  <option value="medium">Médio — condição típica (1,15×)</option>
+                  <option value="high">Alto — condição severa (1,35×)</option>
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label>Atrito no retorno anular</label>
+                <select formControlName="annularFrictionLevel">
+                  <option value="low">Baixo — parede lisa (1,00×)</option>
+                  <option value="medium">Médio — condição típica (1,15×)</option>
+                  <option value="high">Alto — condição severa (1,35×)</option>
                 </select>
               </div>
               <div><label>Viscosidade fl. aquosos (cP)</label><input type="number" step="0.1" min="0.2" formControlName="viscosidadeAguaCp"></div>
-              <div><label>Free fall máx. (× vazão)</label><input type="number" step="0.5" min="1" formControlName="freeFallMaxFactor"></div>
-              <div class="col-span-2"><label>Centralização / standoff (%)</label><input type="number" step="5" min="0" max="100" formControlName="standoffPct" title="100% = coluna concêntrica; excentricidade reduz a fricção anular (Petroguia F-40)"></div>
+              <div class="col-span-2">
+                <label>Condição da cabeça</label>
+                <select formControlName="headCondition" title="Fechada: o vazio da queda livre fica em vácuo (−14,7 psi); ventilada: à pressão atmosférica">
+                  <option value="closed-head">Fechada</option>
+                  <option value="vented-free-surface">Ventilada (superfície livre)</option>
+                </select>
+              </div>
             </div>
             <p class="acc-hint" style="margin-top:10px">Limites do equipamento de bombeio — geram alertas quando a simulação os excede.</p>
             <div class="g2">
@@ -614,10 +611,51 @@
         }
 
         <section class="card">
-          <div class="card-head"><h3>Cronograma operacional</h3><span>Tempo acumulado × TT 50 Bc</span></div>
-          <app-ops-chart [phases]="opsPhases" [ttRequiredMin]="tt ? tt.t50 * 60 : 0" [tt100Min]="tt ? tt.t100 * 60 : 0"></app-ops-chart>
+          <div class="card-head"><h3>Cronograma operacional</h3><span>Durações do motor, com o equilíbrio do tubo em U depois do bombeio</span></div>
+          <table data-table="cronograma">
+            <thead><tr><th>Passo</th><th>Fluido</th><th>Volume (bbl)</th><th>Vazão (bpm)</th><th>Duração (min)</th><th>Acumulado (min)</th></tr></thead>
+            <tbody>
+              @for (row of cronograma; track $index) {
+                <tr><td>{{ row.label }}</td><td>{{ row.fluid ?? '—' }}</td>
+                  <td>{{ row.volumeBbl === null ? '—' : fmt(row.volumeBbl) }}</td>
+                  <td>{{ row.rateBpm === null ? '—' : fmt(row.rateBpm, 1) }}</td>
+                  <td>{{ fmt(row.durationMin, 1) }}</td><td>{{ fmt(row.accumulatedMin, 1) }}</td></tr>
+              }
+            </tbody>
+          </table>
+          <section class="metrics" style="margin:12px 0 0">
+            <div class="metric"><span>Tempo total</span><strong>{{ fmt(cronogramaTotalMin(cronograma), 1) }} min</strong></div>
+            <div class="metric"><span>TT 50 Bc</span><strong>{{ tt ? fmt(tt.t50 * 60, 0) + ' min' : '-' }}</strong></div>
+            <div class="metric"><span>Margem até o TT 50 Bc</span><strong>{{ tt ? fmt(tt.t50 * 60 - cronogramaTotalMin(cronograma), 0) + ' min' : '-' }}</strong></div>
+          </section>
         </section>
 
+        <!-- Pega e resistência da pasta (estimativas), antes na aba de reologia -->
+        <section class="card">
+          <div class="card-head"><h3>Pega e resistência da pasta</h3><span>Estimativas pela composição; confirmar com o laboratório</span></div>
+          <section class="metrics">
+            <div class="metric"><span>TT 30 Bc</span><strong>{{ tt ? fmtTime(tt.t30) : '-' }}</strong></div>
+            <div class="metric"><span>TT 50 Bc</span><strong>{{ tt ? fmtTime(tt.t50) : '-' }}</strong></div>
+            <div class="metric"><span>TT 100 Bc</span><strong>{{ tt ? fmtTime(tt.t100) : '-' }}</strong></div>
+            <div class="metric"><span>Água livre est.</span><strong>{{ fmt(freeWater, 1) }} mL/250mL</strong></div>
+          </section>
+          <div class="chip-row">
+            @for (d of rheoDiags; track $index) {
+              <span class="chip chip--{{ d.cls }}">{{ d.text }}</span>
+            }
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h3>Marcos de resistência (UCA)</h3><span>Lidos da curva de UCA estimada da pasta</span></div>
+          <table data-table="uca">
+            <thead><tr><th>Marco</th><th>Valor</th></tr></thead>
+            <tbody>
+              @for (row of ucaRows(); track row[0]) {
+                <tr><td>{{ row[0] }}</td><td>{{ row[1] }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </section>
       }
 
       <!-- ══ Receita por Volume ══ -->
@@ -660,79 +698,30 @@
             </table>
           </section>
 
-          @if (manualRecipeOpsPhases.length) {
+          @if (manualCronograma.length) {
             <section class="card">
               <div class="card-head">
                 <h3>Cronograma operacional</h3>
                 <span>Tempo de bombeio com o volume de pasta da Receita por Volume</span>
               </div>
-              <app-ops-chart [phases]="manualRecipeOpsPhases" [ttRequiredMin]="tt ? tt.t50 * 60 : 0" [tt100Min]="tt ? tt.t100 * 60 : 0"></app-ops-chart>
+              <table data-table="cronograma">
+            <thead><tr><th>Passo</th><th>Fluido</th><th>Volume (bbl)</th><th>Vazão (bpm)</th><th>Duração (min)</th><th>Acumulado (min)</th></tr></thead>
+            <tbody>
+              @for (row of manualCronograma; track $index) {
+                <tr><td>{{ row.label }}</td><td>{{ row.fluid ?? '—' }}</td>
+                  <td>{{ row.volumeBbl === null ? '—' : fmt(row.volumeBbl) }}</td>
+                  <td>{{ row.rateBpm === null ? '—' : fmt(row.rateBpm, 1) }}</td>
+                  <td>{{ fmt(row.durationMin, 1) }}</td><td>{{ fmt(row.accumulatedMin, 1) }}</td></tr>
+              }
+            </tbody>
+          </table>
+          <section class="metrics" style="margin:12px 0 0">
+            <div class="metric"><span>Tempo total</span><strong>{{ fmt(cronogramaTotalMin(manualCronograma), 1) }} min</strong></div>
+            <div class="metric"><span>TT 50 Bc</span><strong>{{ tt ? fmt(tt.t50 * 60, 0) + ' min' : '-' }}</strong></div>
+            <div class="metric"><span>Margem até o TT 50 Bc</span><strong>{{ tt ? fmt(tt.t50 * 60 - cronogramaTotalMin(manualCronograma), 0) + ' min' : '-' }}</strong></div>
+          </section>
             </section>
           }
-        }
-      }
-
-      <!-- ══ Reologia ══ -->
-      @if (activeTab === 'rheology') {
-        <section class="metrics">
-          <div class="metric"><span>TT 30 Bc</span><strong>{{ tt ? fmtTime(tt.t30) : '-' }}</strong></div>
-          <div class="metric"><span>TT 50 Bc</span><strong>{{ tt ? fmtTime(tt.t50) : '-' }}</strong></div>
-          <div class="metric"><span>TT 100 Bc</span><strong>{{ tt ? fmtTime(tt.t100) : '-' }}</strong></div>
-          <div class="metric"><span>Água livre est.</span><strong>{{ fmt(freeWater, 1) }} mL/250mL</strong></div>
-        </section>
-        <div class="chip-row">
-          @for (d of rheoDiags; track $index) {
-            <span class="chip chip--{{ d.cls }}">{{ d.text }}</span>
-          }
-        </div>
-        <section class="card">
-          <div class="card-head"><h3>Consistência × tempo</h3></div>
-          <app-thickening-chart [data]="tt"></app-thickening-chart>
-        </section>
-        <section class="card">
-          <div class="card-head"><h3>Resistência UCA × tempo</h3></div>
-          <app-uca-chart [data]="uca"></app-uca-chart>
-        </section>
-
-        @if (rheologyResult) {
-          <!-- Reologia estimada pelos aditivos -->
-          <section class="card rheo-card">
-            <div class="card-head">
-              <h3>Reologia estimada da pasta</h3>
-              <span class="rheo-disclaimer">Estimativa genérica — substituir por dados de laboratório quando disponível</span>
-            </div>
-            <div class="rheo-grid">
-              <div class="rheo-item"><span>PV</span><strong>{{ rheologyResult.rheology.plasticViscosityCp != null ? (rheologyResult.rheology.plasticViscosityCp | number:'1.0-0') + ' cP' : '-' }}</strong></div>
-              <div class="rheo-item"><span>YP</span><strong>{{ rheologyResult.rheology.yieldPointLbf100ft2 != null ? (rheologyResult.rheology.yieldPointLbf100ft2 | number:'1.0-0') + ' lbf/100ft²' : '-' }}</strong></div>
-              <div class="rheo-item"><span>Gel 10s</span><strong>{{ rheologyResult.rheology.gel10sLbf100ft2 != null ? (rheologyResult.rheology.gel10sLbf100ft2 | number:'1.0-0') + ' lbf/100ft²' : '-' }}</strong></div>
-              <div class="rheo-item"><span>Gel 10min</span><strong>{{ rheologyResult.rheology.gel10minLbf100ft2 != null ? (rheologyResult.rheology.gel10minLbf100ft2 | number:'1.0-0') + ' lbf/100ft²' : '-' }}</strong></div>
-              <div class="rheo-item"><span>Gel 30min</span><strong>{{ rheologyResult.rheology.gel30minLbf100ft2 != null ? (rheologyResult.rheology.gel30minLbf100ft2 | number:'1.0-0') + ' lbf/100ft²' : '-' }}</strong></div>
-              <div class="rheo-item"><span>Fator hidráulico</span><strong>{{ rheologyResult.rheologyPressureFactor | number:'1.2-2' }}×</strong></div>
-              <div class="rheo-item"><span>Origem</span><strong>{{ rheologySourceLabel() }}</strong></div>
-              @if (rheologyResult.rheology.fluidLossCc30min != null) {
-                <div class="rheo-item"><span>Filtrado est.</span><strong>{{ rheologyResult.rheology.fluidLossCc30min | number:'1.0-0' }} cc/30min</strong></div>
-              }
-            </div>
-            @if (rheologyResult.warnings.length > 0) {
-              <div class="chip-row" style="margin-top:8px">
-                @for (w of rheologyResult.warnings; track $index) {
-                  <span class="chip chip--warn">{{ w }}</span>
-                }
-              </div>
-            }
-            @if (rheologyResult.synergyApplied.length > 0) {
-              <div class="chip-row" style="margin-top:4px">
-                @for (s of rheologyResult.synergyApplied; track $index) {
-                  <span class="chip chip--info">{{ s }}</span>
-                }
-              </div>
-            }
-            @if (rheologyResult.riscoEspuma) {
-              <div class="chip-row" style="margin-top:4px">
-                <span class="chip chip--danger">Risco de espuma — adicionar antiespumante</span>
-              </div>
-            }
-          </section>
         }
       }
 
@@ -823,12 +812,39 @@
             }
           </div>
 
-          <!-- 3) Gráficos da simulação ao longo do bombeio (tubo em U) -->
-          <app-squeeze-operation-charts [depthUnit]="depthUnit" [data]="hydraulicSim" operation="tampao"></app-squeeze-operation-charts>
         }
 
-        <!-- 4) Perfil de pressão por profundidade (estado final do tampão) -->
-        <app-pressure-chart [depthUnit]="depthUnit" [data]="pressureProfile"></app-pressure-chart>
+        @if (tampaoResult; as result) {
+          <!-- 3) Equilíbrio do tampão e retirada da coluna -->
+          <section class="card" data-card="equilibrio">
+            <div class="card-head"><h3>Equilíbrio e retirada</h3><span>Motor da cimentação primária com a coluna de trabalho</span></div>
+            <section class="metrics" style="margin-bottom:0">
+              <div class="metric"><span>Desbalanço no fim do bombeio</span><strong>{{ fmt(result.summary.imbalanceEndPumpPsi, 1) }} psi</strong></div>
+              <div class="metric"><span>Drenado até o equilíbrio</span><strong>{{ fmt(result.summary.drainedBbl, 2) }} bbl</strong></div>
+              <div class="metric"><span>Tempo até o equilíbrio</span><strong>{{ fmt(result.summary.settleMin, 1) }} min</strong></div>
+              <div class="metric"><span>Desbalanço residual</span><strong>{{ fmt(result.summary.residualImbalancePsi, 1) }} psi</strong></div>
+              <div class="metric"><span>Extremidade após a retirada</span><strong>{{ fmtDepth(result.retirada.openEndDepthM, 1) }} {{ depthUnit }}</strong></div>
+              <div class="metric"><span>Topo da pasta após a retirada</span><strong>{{ fmtDepth(result.summary.cementTopAfterPullMD, 1) }} {{ depthUnit }}</strong></div>
+              <div class="metric"><span>ESD na base antes / depois</span><strong>{{ fmt(result.summary.esdBaseBeforePullPpg, 3) }} / {{ fmt(result.summary.esdBaseAfterPullPpg, 3) }} ppg</strong></div>
+            </section>
+            <p class="op-index-note">Positivo: a coluna mais pesada que o anular na extremidade. Subdeslocar 2–3 bbl deixa a coluna mais pesada, e ela drena até equilibrar (R3 §14-3.1). A retirada reempilha em poço cheio o que ficou abaixo da nova extremidade e completa o poço na superfície.</p>
+          </section>
+          @if (engineDiagnostics.length) {
+            <div class="chip-row" data-list="diagnosticos">
+              @for (d of engineDiagnostics; track $index) {
+                <span class="chip" [class.chip--danger]="d.severity === 'error'" [class.chip--warn]="d.severity === 'warning'">{{ d.message }}</span>
+              }
+            </div>
+          }
+        }
+
+        <!-- 4) Os três gráficos da primária, na base do tampão -->
+        @if (operationCharts) {
+          <app-pressure-window-panel [data]="criticalPoints"></app-pressure-window-panel>
+          <app-operation-charts [data]="operationCharts" [selectedPhaseId]="form.value.selectedPhaseId ?? null"></app-operation-charts>
+        } @else {
+          <p role="status">Sem resultado do motor para desenhar os gráficos: confira a estrutura do poço, a fase da operação e o intervalo do tampão.</p>
+        }
       }
 
       <!-- ══ Esquemático ══ -->
@@ -873,12 +889,20 @@
         </section>
 
         <app-schematic-tampao [depthUnit]="depthUnit" [plug]="schematicPlug" [slurry]="slurry" [recipe]="recipe" [inputs]="tampaoInputsSnapshot"></app-schematic-tampao>
+
+        @if (well2dViews.length) {
+          <section class="card">
+            <div class="card-head"><h3>Perfil direcional e planta</h3><span>Tampão depois da retirada da coluna</span></div>
+            <app-primary-well-2d [views]="well2dViews" [selectedPhaseId]="form.value.selectedPhaseId ?? null"></app-primary-well-2d>
+          </section>
+        }
       }
 
       @if (activeTab === 'wellView') {
         @if (wellGeometry) {
           @defer (on immediate) {
-            <app-well-3d [geometry]="wellGeometry" [overlays]="wellOverlays" [depthUnit]="depthUnit"></app-well-3d>
+            <app-well-3d [geometry]="wellGeometry" [overlays]="wellOverlays" [workString]="wellWorkString"
+              [depthUnit]="depthUnit"></app-well-3d>
           } @placeholder {
             <p role="status">Carregando visualização 3D...</p>
           } @error {
@@ -939,6 +963,7 @@
 <app-relatorio-capa-modal
   [open]="capaModalOpen"
   operacaoLabel="TAMPÃO"
+  [graficoOpcoes]="reportChartOptions"
   [prefill]="relatorioPrefill"
   (closed)="capaModalOpen = false"
   (gerado)="onCapaGerada($event)">
@@ -960,16 +985,5 @@
       [recipe]="recipe"
       [inputs]="tampaoInputsSnapshot">
     </app-schematic-tampao>
-    <app-ops-chart
-      #reportOpsChart
-      [phases]="opsPhases"
-      [ttRequiredMin]="tt ? tt.t50 * 60 : 0"
-      [tt100Min]="tt ? tt.t100 * 60 : 0"
-      [forceCanvas]="true">
-    </app-ops-chart>
-    <app-pressure-chart
-      #reportPressureChart
-      [data]="pressureProfile">
-    </app-pressure-chart>
   </div>
 }

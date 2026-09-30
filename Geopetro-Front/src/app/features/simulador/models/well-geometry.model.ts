@@ -45,10 +45,13 @@ export interface WellPhase {
   shoe?: WellPhaseShoe;
 
   type: WellPhaseType;
+  /** Survey digitado para esta fase; a primária monta a trajetória cumulativa. */
+  survey?: WellTrajectory;
 }
 
 export interface WellGeometry {
   trajectory?: WellTrajectory;
+  caliper?: import('./caliper.model').WellCaliperProfile | null;
   finalMD: number;
   finalTVD: number;
   phases: WellPhase[];
@@ -117,8 +120,16 @@ export interface WellOverlay {
   topMD: number;
   bottomMD: number;
   label: string;
-  /** Onde o overlay vive: dentro da coluna, no anular, ou ocupando o poço todo. */
-  zone?: 'tubing' | 'annulus' | 'full';
+  /**
+   * Onde o overlay vive: dentro da coluna, no anular, ocupando o poço todo, ou
+   * no anular do revestimento-alvo da primária. `casing-annulus` mantém a
+   * semântica de `annulus` e acrescenta limites radiais próprios.
+   */
+  zone?: 'tubing' | 'annulus' | 'full' | 'casing-annulus';
+  /** Parede externa do fluido (furo ou ID anterior), em polegadas. */
+  outerDiameterIn?: number;
+  /** OD do revestimento-alvo: o aço que a bainha envolve. */
+  innerDiameterIn?: number;
   sub?: string;
   color?: string;
 }

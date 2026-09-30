@@ -4,11 +4,12 @@ import { Store } from '@ngxs/store';
 
 import { authGuard } from './features/auth/guards/auth.guard';
 import {
+  ACESSO_ADMINISTRACAO,
+  ACESSO_CONFIGURACAO,
+  ACESSO_MONITORAMENTO,
+  ACESSO_MONITORAMENTO_REAL,
+  ACESSO_SIMULADOR_CIMENTACAO,
   normalizarRoles,
-  ROLES_ADMINISTRACAO,
-  ROLES_CONFIGURACAO,
-  ROLES_MONITORAMENTO,
-  ROLES_SIMULADOR,
   rotaInicialPara,
 } from './features/auth/models/user.model';
 import { AuthState } from './features/auth/state/auth.state';
@@ -67,12 +68,12 @@ export const routes: Routes = [
             (m) => m.DashboardPageComponent,
           ),
         canActivate: [authGuard],
-        data: { roles: ROLES_ADMINISTRACAO },
+        data: { acesso: ACESSO_ADMINISTRACAO },
       },
       {
         path: 'simulador',
         canActivate: [authGuard],
-        data: { roles: ROLES_SIMULADOR },
+        data: { acesso: ACESSO_SIMULADOR_CIMENTACAO },
         children: [
           {
             path: '',
@@ -95,6 +96,13 @@ export const routes: Routes = [
                 (m) => m.SimuladorTampaoComponent,
               ),
           },
+          {
+            path: 'primaria',
+            loadComponent: () =>
+              import('./features/simulador/pages/simulador-primaria/simulador-primaria.component').then(
+                (m) => m.SimuladorPrimariaComponent,
+              ),
+          },
         ],
       },
       {
@@ -106,7 +114,7 @@ export const routes: Routes = [
         path: 'configuracoes',
         loadComponent: () => import('./features/configuracoes/settings-page.component').then(m => m.SettingsPageComponent),
         canActivate: [authGuard],
-        data: { roles: ROLES_CONFIGURACAO },
+        data: { acesso: ACESSO_CONFIGURACAO },
         children: [
           { path: '', redirectTo: 'email', pathMatch: 'full' },
           {
@@ -122,7 +130,7 @@ export const routes: Routes = [
             (m) => m.CadastrosPageComponent,
           ),
         canActivate: [authGuard],
-        data: { roles: ROLES_ADMINISTRACAO },
+        data: { acesso: ACESSO_ADMINISTRACAO },
         children: [
           {
             path: '',
@@ -136,7 +144,7 @@ export const routes: Routes = [
                 (m) => m.UsuariosAdminPageComponent,
               ),
             canActivate: [authGuard],
-            data: { roles: ROLES_ADMINISTRACAO },
+            data: { acesso: ACESSO_ADMINISTRACAO },
           },
           {
             path: 'empresas',
@@ -145,7 +153,7 @@ export const routes: Routes = [
                 (m) => m.EmpresasPageComponent,
               ),
             canActivate: [authGuard],
-            data: { roles: ROLES_ADMINISTRACAO },
+            data: { acesso: ACESSO_ADMINISTRACAO },
           },
           {
             path: 'regionais',
@@ -154,7 +162,7 @@ export const routes: Routes = [
                 (m) => m.RegionaisPageComponent,
               ),
             canActivate: [authGuard],
-            data: { roles: ROLES_ADMINISTRACAO },
+            data: { acesso: ACESSO_ADMINISTRACAO },
           },
           {
             path: 'setores',
@@ -163,7 +171,7 @@ export const routes: Routes = [
                 (m) => m.SetoresPageComponent,
               ),
             canActivate: [authGuard],
-            data: { roles: ROLES_ADMINISTRACAO },
+            data: { acesso: ACESSO_ADMINISTRACAO },
           },
           {
             path: 'unidades-sondas',
@@ -172,7 +180,7 @@ export const routes: Routes = [
                 './features/cadastros/pages/unidades-sondas-page/unidades-sondas-page.component'
               ).then((m) => m.UnidadesSondasPageComponent),
             canActivate: [authGuard],
-            data: { roles: ROLES_ADMINISTRACAO },
+            data: { acesso: ACESSO_ADMINISTRACAO },
           },
         ],
       },
@@ -183,7 +191,7 @@ export const routes: Routes = [
             (m) => m.MonitoramentoSondaPageComponent,
           ),
         canActivate: [authGuard],
-        data: { roles: ROLES_MONITORAMENTO },
+        data: { acesso: ACESSO_MONITORAMENTO },
       },
       {
         path: 'tempo-real',
@@ -192,28 +200,19 @@ export const routes: Routes = [
             (m) => m.TempoRealPageComponent,
           ),
         canActivate: [authGuard],
-        data: { roles: ROLES_MONITORAMENTO },
+        data: { acesso: ACESSO_MONITORAMENTO_REAL },
       },
       {
-        // ROLES_MONITORAMENTO, e nao ROLES_CONFIGURACAO: quem enxerga a sonda ajusta o alarme dela,
-        // inclusive CLIENTE (RN-069). Restringir a ADMIN mataria o "ajustavel na hora".
+        // Acompanha o tempo real, e nao o monitoramento nem as configuracoes: quem acompanha o ao
+        // vivo ajusta o alarme dele, inclusive CLIENTE (RN-069). Restringir a ADMIN mataria o
+        // "ajustavel na hora"; deixar em ACESSO_MONITORAMENTO daria o limite a quem so ve series.
         path: 'limites-alarme',
         loadComponent: () =>
           import('./features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component').then(
             (m) => m.LimitesAlarmePageComponent,
           ),
         canActivate: [authGuard],
-        data: { roles: ROLES_MONITORAMENTO },
-      },
-      {
-        // OQ-049: escopo do monitoramento (RN-047) — cada um ve a prontidao das suas sondas.
-        path: 'prontidao-frota',
-        loadComponent: () =>
-          import('./features/monitoramento/pages/prontidao-frota-page/prontidao-frota-page.component').then(
-            (m) => m.ProntidaoFrotaPageComponent,
-          ),
-        canActivate: [authGuard],
-        data: { roles: ROLES_MONITORAMENTO },
+        data: { acesso: ACESSO_MONITORAMENTO_REAL },
       },
       {
         // RN-069: ver o historico e ajustar o limite sao a mesma autoridade, inclusive CLIENTE.
@@ -223,7 +222,7 @@ export const routes: Routes = [
             (m) => m.HistoricoAlarmesPageComponent,
           ),
         canActivate: [authGuard],
-        data: { roles: ROLES_MONITORAMENTO },
+        data: { acesso: ACESSO_MONITORAMENTO_REAL },
       },
       {
         path: 'meu-usuario',

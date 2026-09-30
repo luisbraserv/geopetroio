@@ -30,7 +30,8 @@ export interface DadosRelatorio {
   zonaIsolarNome?: string;
   tipoReceitaRelatorio?: 'pasta' | 'volume';
   esquematicosSelecionados?: ('bombeio' | 'comTubing' | 'semTubing')[];
-  graficosOperacionaisSelecionados?: ('cronograma' | 'pressao')[];
+  /** Ids do catálogo do relatório; "pressao" e "cronograma" são os grupos antigos. */
+  graficosOperacionaisSelecionados?: string[];
   vazoesBombeio?: {
     fluidoFrenteBpm?: number | string;
     pastaBpm?: number | string;

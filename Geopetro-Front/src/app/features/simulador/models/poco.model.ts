@@ -1,11 +1,13 @@
 import { WellPhaseFormValue } from './well-geometry.form';
 import { TrajectoryFormValue } from './well-trajectory.form';
+import type { WellCaliperProfile } from './caliper.model';
 
 export interface PocoGeometry {
   wellFinalMD: number | null;
   wellFinalTVD: number | null;
   fases: WellPhaseFormValue[];
   trajectory: TrajectoryFormValue;
+  caliper?: WellCaliperProfile | null;
 }
 export interface PocoApi {
   id: number;
@@ -15,7 +17,7 @@ export interface PocoApi {
   atualizadoPor: string;
   atualizadoEm: string;
 }
-export const POCO_GEOMETRY_KEYS = ['wellFinalMD', 'wellFinalTVD', 'fases', 'trajectory'] as const;
+export const POCO_GEOMETRY_KEYS = ['wellFinalMD', 'wellFinalTVD', 'fases', 'trajectory', 'caliper'] as const;
 export function pocoGeometryFromForm(form: Record<string, any>): PocoGeometry {
   return {
     wellFinalMD: form['wellFinalMD'] ?? null, wellFinalTVD: form['wellFinalTVD'] ?? null,
@@ -24,6 +26,12 @@ export function pocoGeometryFromForm(form: Record<string, any>): PocoGeometry {
       topTVD: p.topTVD, bottomTVD: p.bottomTVD, holeDiameterIn: p.holeDiameterIn,
       casingOD: p.casingOD ?? null, casingID: p.casingID ?? null,
       shoeMD: p.shoeMD ?? null, shoeTVD: p.shoeTVD ?? null,
+      ...(p.survey ? { survey: {
+        enabled: p.survey?.enabled === true,
+        stations: (p.survey?.stations ?? []).map(s => ({
+          md: s.md, inclinationDeg: s.inclinationDeg, azimuthDeg: s.azimuthDeg,
+        })),
+      } } : {}),
     })),
     trajectory: {
       enabled: form['trajectory']?.enabled === true,
@@ -31,6 +39,7 @@ export function pocoGeometryFromForm(form: Record<string, any>): PocoGeometry {
         md: s.md, inclinationDeg: s.inclinationDeg, azimuthDeg: s.azimuthDeg,
       })),
     },
+    caliper: form['caliper'] ? structuredClone(form['caliper']) : null,
   };
 }
 export function samePocoGeometry(a: PocoGeometry, b: PocoGeometry): boolean {

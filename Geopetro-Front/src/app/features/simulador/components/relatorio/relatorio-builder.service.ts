@@ -1,5 +1,52 @@
 import { Injectable } from '@angular/core';
-import { RelatorioCapaData, RelatorioBombeioRow, SecaoPersonalizada, GraficoOperacionalImage } from './relatorio-capa-modal.component';
+import { RelatorioCapaData, RelatorioBombeioRow } from './relatorio-capa-modal.component';
+
+/** Um bloco do texto técnico: o paginador põe quantos couberem em cada folha, sem quebrar o bloco. */
+interface FlowBlock { html: string; keepNext?: boolean; toc?: string; figure?: boolean }
+/** Tópico numerado do relatório: uma linha no sumário e os blocos em sequência. */
+export interface RelatorioTopico { id: string; numero: number; titulo: string; blocos: FlowBlock[] }
+
+/**
+ * Paginação no navegador: depois de carregar imagens e fontes, distribui os blocos do texto
+ * técnico em folhas A4, tantos quantos couberem, sem deixar um título sozinho no pé da folha;
+ * o tópico que continua ganha "(continuação)". Depois, põe no sumário a página de cada tópico.
+ * Sem o script, o texto fica corrido numa folha só, e a impressão quebra as páginas.
+ */
+const PAGINATOR_SCRIPT = `(function(){
+  function paginate(){
+    var flow=document.getElementById('tech-flow'); var tpl=document.getElementById('tech-page-template');
+    if(!flow||!tpl||!tpl.content) return;
+    var blocks=Array.prototype.slice.call(flow.children); var body=null;
+    function newPage(){ var page=tpl.content.firstElementChild.cloneNode(true); flow.parentNode.insertBefore(page,flow); body=page.querySelector('.tech-page-body'); }
+    function over(){ return body.scrollHeight>body.clientHeight+1; }
+    newPage();
+    blocks.forEach(function(b){
+      body.appendChild(b);
+      if(!over()||body.children.length<2) return;
+      body.removeChild(b);
+      var moving=[b];
+      while(body.lastElementChild&&body.lastElementChild.getAttribute('data-keep')==='next'&&body.children.length>1){ moving.unshift(body.lastElementChild); body.removeChild(body.lastElementChild); }
+      newPage();
+      var first=moving[0];
+      if(!first.hasAttribute('data-toc')&&first.getAttribute('data-topic')){ var c=document.createElement('div'); c.className='flow-continuation'; c.textContent=first.getAttribute('data-topic')+' (continua\u00e7\u00e3o)'; body.appendChild(c); }
+      moving.forEach(function(m){ body.appendChild(m); });
+    });
+    flow.parentNode.removeChild(flow);
+    var pages=Array.prototype.slice.call(document.querySelectorAll('.page'));
+    Array.prototype.forEach.call(document.querySelectorAll('.tech-page [data-toc]'),function(el){
+      var n=pages.indexOf(el.closest('.page'))+1;
+      var cell=document.querySelector('.indice-page-num[data-toc="'+el.getAttribute('data-toc')+'"]');
+      if(cell&&n>0) cell.textContent=String(n);
+    });
+    document.body.setAttribute('data-paginated','true');
+  }
+  function ready(){
+    var waits=Array.prototype.slice.call(document.images).map(function(img){ return img.complete?null:new Promise(function(r){ img.addEventListener('load',r); img.addEventListener('error',r); }); });
+    if(document.fonts&&document.fonts.ready) waits.push(document.fonts.ready);
+    Promise.all(waits).then(paginate,paginate);
+  }
+  if(document.readyState==='complete') ready(); else window.addEventListener('load',ready);
+})();`;
 
 @Injectable({ providedIn: 'root' })
 export class RelatorioBuilderService {
@@ -12,7 +59,7 @@ export class RelatorioBuilderService {
     win.document.close();
   }
 
-  downloadAsWord(html: string, filename = 'relatorio'): void {
+  downloadAsWord(html: string, filename = 'relatorio', preserveStyles = false): void {
     const wordHtml = `
 <!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -44,6 +91,7 @@ export class RelatorioBuilderService {
     .page:last-child { page-break-after: avoid; }
     img { max-width: 16cm; }
   </style>
+${preserveStyles ? (html.match(/<style[^>]*>[\s\S]*?<\/style>/gi) ?? []).join('\n') : ''}
 </head>
 <body>
 ${this.extractBodyContent(html)}
@@ -74,11 +122,13 @@ ${this.extractBodyContent(html)}
     const op = d.operacao || 'SQUEEZE';
     const base = window.location.origin;
     const logoUrl = `${base}/logo.png`;
-    const indiceRows = this.buildIndiceRows(reportData, op);
-    const technicalPages = this.buildTechnicalPages(reportData, op, logoUrl, dataFmt);
+    const topicos = this.buildTopicos(reportData, op, dataFmt);
+    const indiceRows = this.buildIndiceRows(topicos);
+    const technicalPages = this.buildTechnicalFlow(reportData, topicos);
     const clienteLogo = this.buildClienteLogoImg(reportData);
 
     const fichaRows = [
+      ...(d.faseOperacao ? [{ label: 'Fase da operação', value: this.escape(d.faseOperacao) }] : []),
       { label: 'Cliente',        value: `<span class="v-cliente">${d.cliente || '—'}</span>` },
       { label: 'Preparado para', value: d.preparadoPara || '—' },
       { label: 'Documento',      value: d.documento || '—' },
@@ -469,8 +519,63 @@ td.fv{
   color:#111827;
   font-family:'Arial Condensed Light','Arial Narrow',Arial,sans-serif;
 }
-.tech-page--client-logo .tech-section-title{
-  padding-right:42mm;
+/* Com o logo do cliente no canto, o texto começa abaixo dele. */
+.tech-page--client-logo{
+  padding-top:27mm;
+}
+.tech-page-body{
+  height:100%;
+  overflow:hidden;
+}
+/* Texto técnico antes da paginação (ou sem o script): uma folha corrida. */
+.tech-flow{
+  width:210mm;
+  background:#fff;
+  padding:16mm 18mm;
+  box-shadow:0 4px 40px rgba(0,0,0,.18);
+  margin-bottom:20px;
+  color:#111827;
+  font-family:'Arial Condensed Light','Arial Narrow',Arial,sans-serif;
+}
+.flow-block{
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+/* Um tópico que começa no meio da folha abre um respiro acima do título. */
+.flow-topic{
+  margin-top:8mm;
+}
+.tech-page-body > .flow-topic:first-child,
+.tech-flow > .flow-topic:first-child{
+  margin-top:0;
+}
+.flow-continuation{
+  margin-bottom:5mm;
+  padding-bottom:1.5mm;
+  border-bottom:1px solid #e2e8f0;
+  color:#64748b;
+  font-size:8.5pt;
+  font-weight:600;
+}
+.report-figure{
+  margin:2mm 0 6mm;
+}
+.report-figure img{
+  display:block;
+  margin:0 auto;
+  width:100%;
+  max-width:165mm;
+  max-height:215mm;
+  object-fit:contain;
+  border:1px solid #e2e8f0;
+  border-radius:4px;
+}
+.report-figure figcaption{
+  text-align:center;
+  margin-top:2mm;
+  color:#2d5a8e;
+  font-size:9.5pt;
+  font-weight:650;
 }
 .tech-client-logo{
   position:absolute;
@@ -484,7 +589,9 @@ td.fv{
   display:flex;
   align-items:baseline;
   gap:7mm;
-  margin-bottom:9mm;
+  margin-bottom:6mm;
+  padding-bottom:2mm;
+  border-bottom:2px solid #2d5a8e;
   color:#2d5a8e;
 }
 .tech-section-title .num{
@@ -555,39 +662,19 @@ td.fv{
 }
 .mechanical-img{
   max-width:100%;
-  max-height:100%;
+  max-height:215mm;
   object-fit:contain;
   border:1px solid #111827;
 }
 .mechanical-empty{
   width:100%;
-  min-height:180mm;
+  min-height:60mm;
   display:grid;
   place-items:center;
   border:1px dashed #94a3b8;
   color:#64748b;
   font-size:9pt;
   background:#f8fafc;
-}
-.grafico-operacional-page .tech-section-title h1{
-  font-size:12pt;
-  color:#1e293b;
-}
-.grafico-img-wrap{
-  display:flex;
-  justify-content:center;
-  margin-top:6mm;
-}
-.grafico-img{
-  max-width:170mm;
-  max-height:220mm;
-  object-fit:contain;
-  border:1px solid #e2e8f0;
-  border-radius:4px;
-}
-.secao-personalizada-page .tech-section-title h1{
-  font-size:13pt;
-  color:#1e293b;
 }
 .secao-texto{
   font-size:9pt;
@@ -619,20 +706,9 @@ td.fv{
   font-size:7pt;
   color:#64748b;
 }
-.mechanical-page .tech-subsection{
-  height:100%;
-  margin:0;
-  display:flex;
-  flex-direction:column;
-}
-.mechanical-page .mechanical-wrap{
-  flex:1 1 auto;
-  min-height:0;
-  margin-top:6mm;
-}
 .operation-table{
   border-collapse:collapse;
-  margin:6mm auto 18mm;
+  margin:4mm auto 8mm;
   font-size:8.5pt;
   color:#111827;
 }
@@ -653,50 +729,6 @@ td.fv{
 }
 .operation-table--temp td:first-child{
   min-width:42mm;
-}
-.pump-schematic-page{
-  padding-top:13mm;
-}
-.schematic-title-line{
-  border-top:2px solid #2d5a8e;
-  padding-top:2mm;
-}
-.pump-schematic-page .tech-subsection{
-  height:100%;
-  margin:0;
-  display:flex;
-  flex-direction:column;
-}
-.report-schematic-figure{
-  flex:1 1 auto;
-  min-height:0;
-  width:100%;
-  margin:6mm 0 0;
-  display:flex;
-  flex-direction:column;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.report-schematic-img{
-  flex:1 1 auto;
-  min-height:0;
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  margin:0 auto;
-  border:1px solid #dbe3ef;
-}
-.report-schematic-figure figcaption{
-  flex:0 0 auto;
-  text-align:center;
-  margin-top:2mm;
-  color:#2d5a8e;
-  font-size:10pt;
-  font-weight:650;
-}
-.sequence-page{
-  padding-top:13mm;
 }
 .sequence-list{
   margin:0;
@@ -766,7 +798,7 @@ td.fv{
 /* Print */
 @media print{
   body{background:#fff;padding:0}
-  .page{box-shadow:none;margin:0}
+  .page,.tech-flow{box-shadow:none;margin:0}
   .no-print{display:none!important}
 }
 
@@ -975,7 +1007,7 @@ async function _downloadDocx(){
 
   <div class="indice-title">Sum&aacute;rio</div>
   <div class="indice-subtitle">
-    Se&ccedil;&otilde;es e p&aacute;ginas que comp&otilde;em o programa de cimenta&ccedil;&atilde;o.
+    T&oacute;picos do programa de cimenta&ccedil;&atilde;o e a p&aacute;gina em que cada um come&ccedil;a.
   </div>
 
   <div class="indice-list">
@@ -989,56 +1021,91 @@ async function _downloadDocx(){
 
 ${technicalPages}
 
+<script>${PAGINATOR_SCRIPT}</script>
 </body>
 </html>`;
   }
 
-  private buildTechnicalPages(d: RelatorioCapaData, op: string, logoUrl: string, dataFmt: string): string {
-    const titleOp = op.toUpperCase();
-    const zoneText = this.buildZoneText(d);
-    const objetivosTampao = this.buildObjetivosTampaoRows(d);
+  /**
+   * Tópicos do texto técnico, numerados na ordem em que aparecem. Cada gráfico não é um
+   * tópico: todos entram em "Simulação", uns embaixo dos outros.
+   */
+  buildTopicos(d: RelatorioCapaData, op: string, dataFmt: string): RelatorioTopico[] {
+    const esquematicos = (d.esquematicoImages || []).filter(item => item.imagem);
+    const graficos = (d.graficosOperacionaisImages || []).filter(item => item.imagem);
+    const specs: { id: string; titulo: string; blocos: (n: number) => FlowBlock[] }[] = [
+      { id: 'cimentacao', titulo: `Cimentação ${op.toUpperCase()}`, blocos: n => this.cimentacaoBlocks(d, n) },
+      { id: 'poco', titulo: 'Poço', blocos: n => this.pocoBlocks(d, n, dataFmt) },
+      { id: 'operacao', titulo: 'Operação', blocos: n => this.operationBlocks(d, n) },
+      ...(esquematicos.length ? [{ id: 'esquematico', titulo: 'Esquemático de bombeio',
+        blocos: () => esquematicos.map(item => this.figure(item.imagem, item.label, item.label)) }] : []),
+      ...(graficos.length ? [{ id: 'simulacao', titulo: 'Simulação',
+        blocos: () => graficos.map(item => this.figure(item.imagem, item.label)) }] : []),
+      { id: 'sequencia', titulo: 'Sequência operacional', blocos: () => this.sequenceBlocks(d) },
+      ...(d.secoesPersonalizadas || []).map((sec, i) => ({ id: `secao-${i + 1}`, titulo: sec.titulo || 'Seção personalizada',
+        blocos: () => [
+          ...(sec.texto ? [{ html: `<p class="secao-texto">${this.escape(sec.texto).replace(/\n/g, '<br>')}</p>` }] : []),
+          ...(sec.imagens || []).map(img => this.figure(img.data, img.nome)),
+        ] })),
+    ];
+    return specs.map((spec, i) => {
+      const numero = i + 1;
+      return { id: spec.id, numero, titulo: spec.titulo, blocos: [
+        { toc: spec.id, keepNext: true, html: `
+    <div class="tech-section-title">
+      <span class="num">${numero}.</span>
+      <h1>${this.escape(spec.titulo)}</h1>
+    </div>` },
+        ...spec.blocos(numero),
+      ] };
+    });
+  }
+
+  /** O texto técnico em blocos, e a folha que o paginador copia para cada página. */
+  private buildTechnicalFlow(d: RelatorioCapaData, topicos: RelatorioTopico[]): string {
+    const blocks = topicos.flatMap(topico => topico.blocos.map(block => {
+      const classes = ['flow-block', block.toc ? 'flow-topic' : '', block.figure ? 'flow-figure' : ''].filter(Boolean).join(' ');
+      return `<div class="${classes}" data-topic="${this.escape(`${topico.numero}. ${topico.titulo}`)}"`
+        + `${block.keepNext ? ' data-keep="next"' : ''}${block.toc ? ` data-toc="${block.toc}"` : ''}>${block.html}</div>`;
+    })).join('\n');
+    return `
+<template id="tech-page-template"><div class="${this.techPageClass(d)}">${this.buildTechClienteLogo(d)}<div class="tech-page-body"></div></div></template>
+<div id="tech-flow" class="tech-flow">
+${blocks}
+</div>`;
+  }
+
+  private subtitle(num: string, title: string): FlowBlock {
+    return { keepNext: true, html: `
+    <div class="tech-subtitle">
+      <span class="num">${num}</span>
+      <h2>${title}</h2>
+    </div>` };
+  }
+
+  private figure(src: string, alt: string, caption?: string): FlowBlock {
+    return { figure: true, html: `
+    <figure class="report-figure">
+      <img src="${src}" alt="${this.escape(alt)}" />
+      ${caption ? `<figcaption>${this.escape(caption)}</figcaption>` : ''}
+    </figure>` };
+  }
+
+  private cimentacaoBlocks(d: RelatorioCapaData, n: number): FlowBlock[] {
+    return [this.subtitle(`${n}.1`, 'Objetivos principais'), { html: `
+    <ul class="tech-list">
+      <li>Isolar zonas intervalo: ${this.buildZoneText(d)}</li>
+      ${this.buildObjetivosTampaoRows(d)}
+    </ul>` }];
+  }
+
+  private pocoBlocks(d: RelatorioCapaData, n: number, dataFmt: string): FlowBlock[] {
+    const titleOp = (d.operacao || 'SQUEEZE').toUpperCase();
     const job = this.escape(d.jobNum || (d.baseTampao ? `${titleOp} @ ${this.formatMeters(d.baseTampao)}` : titleOp));
     const esquema = d.esquemaMecanicoImagem
-      ? `<img class="mechanical-img" src="${d.esquemaMecanicoImagem}" alt="Esquema mecanico" />`
-      : `<div class="mechanical-empty">Selecione uma imagem de esquema mecanico no modal do relatorio.</div>`;
-
-    const mechanicalPage = this.buildMechanicalSchematicPage(esquema, d);
-    const operationPage = this.buildOperationPage(d);
-    const schematicPage = this.buildPumpSchematicPage(d);
-    const sequencePage = this.buildOperationalSequencePages(d);
-    const secoesPages = this.buildSecoesPersonalizadas(d);
-    const graficosPages = this.buildGraficosOperacionais(d);
-
-    return `
-<div class="${this.techPageClass(d)}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title">
-      <span class="num">1.</span>
-      <h1>Cimentacao ${this.escape(titleOp)}</h1>
-    </div>
-
-    <div class="tech-subtitle">
-      <span class="num">1.1</span>
-      <h2>Objetivos principais</h2>
-    </div>
-    <ul class="tech-list">
-      <li>Isolar zonas intervalo: ${zoneText}</li>
-      ${objetivosTampao}
-    </ul>
-  </section>
-
-  <section class="tech-subsection">
-    <div class="tech-section-title" style="margin-top:9mm;margin-bottom:7mm">
-      <span class="num">2.</span>
-      <h1>Poco</h1>
-    </div>
-
-    <div class="tech-subtitle">
-      <span class="num">2.1</span>
-      <h2>Geral</h2>
-    </div>
-
+      ? `<img class="mechanical-img" src="${d.esquemaMecanicoImagem}" alt="Esquema mecânico" />`
+      : `<div class="mechanical-empty">Selecione uma imagem de esquema mecânico no modal do relatório.</div>`;
+    return [this.subtitle(`${n}.1`, 'Geral'), { html: `
     <table class="well-table">
       <tbody>
         <tr>
@@ -1065,32 +1132,12 @@ ${technicalPages}
           <td class="label">Casing:</td><td class="value" colspan="3">${this.escape(d.revestimento || '')}</td>
         </tr>
       </tbody>
-    </table>
-  </section>
-</div>
-${mechanicalPage}
-${operationPage}
-${schematicPage}
-${graficosPages}
-${sequencePage}
-${secoesPages}`;
+    </table>` },
+      this.subtitle(`${n}.2`, 'Esquema mecânico'),
+      { figure: true, html: `<div class="mechanical-wrap">${esquema}</div>` }];
   }
 
-  private buildMechanicalSchematicPage(esquema: string, d: RelatorioCapaData): string {
-    return `
-<div class="${this.techPageClass(d, 'mechanical-page')}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title schematic-title-line">
-      <span class="num">2.2</span>
-      <h1>Esquema mecanico</h1>
-    </div>
-    <div class="mechanical-wrap">${esquema}</div>
-  </section>
-</div>`;
-  }
-
-  private buildOperationPage(d: RelatorioCapaData): string {
+  private operationBlocks(d: RelatorioCapaData, n: number): FlowBlock[] {
     const bombeioRows = this.bombeioRowsWithVazoes(d)
       .map(row => `
         <tr>
@@ -1101,21 +1148,9 @@ ${secoesPages}`;
         </tr>
       `)
       .join('');
-    const pastaResumoTable = this.buildPastaResumoTable(d);
-
-    return `
-<div class="${this.techPageClass(d)}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title">
-      <span class="num">3.</span>
-      <h1>Operacao</h1>
-    </div>
-
-    <div class="tech-subtitle">
-      <span class="num">3.1</span>
-      <h2>Temperatura</h2>
-    </div>
+    const resumo = d.pastaResumo;
+    return [
+      this.subtitle(`${n}.1`, 'Temperatura'), { html: `
     <table class="operation-table operation-table--temp">
       <thead>
         <tr><th colspan="2">Temperatura</th></tr>
@@ -1125,12 +1160,8 @@ ${secoesPages}`;
         <tr><td>BHST</td><td>${this.formatNumber(d.bhst, 0)} °F</td></tr>
         <tr><td>SQT</td><td>${this.formatNumber(d.bhct, 0)} °F</td></tr>
       </tbody>
-    </table>
-
-    <div class="tech-subtitle" style="margin-top:16mm">
-      <span class="num">3.2</span>
-      <h2>Bombeio</h2>
-    </div>
+    </table>` },
+      this.subtitle(`${n}.2`, 'Bombeio'), { html: `
     <table class="operation-table">
       <thead>
         <tr>
@@ -1143,21 +1174,8 @@ ${secoesPages}`;
       <tbody>
         ${bombeioRows || '<tr><td colspan="4">Sem dados de bombeio calculados.</td></tr>'}
       </tbody>
-    </table>
-    ${pastaResumoTable}
-  </section>
-</div>`;
-  }
-
-  private buildPastaResumoTable(d: RelatorioCapaData): string {
-    const resumo = d.pastaResumo;
-    if (!resumo) return '';
-
-    return `
-    <div class="tech-subtitle" style="margin-top:12mm">
-      <span class="num">3.3</span>
-      <h2>Receita da pasta</h2>
-    </div>
+    </table>` },
+      ...(resumo ? [this.subtitle(`${n}.3`, 'Receita da pasta'), { html: `
     <table class="operation-table">
       <thead>
         <tr>
@@ -1175,34 +1193,12 @@ ${secoesPages}`;
           <td>${this.formatMetric(resumo.famGpc, 2, 'gpc')}</td>
         </tr>
       </tbody>
-    </table>`;
+    </table>` }] : []),
+    ];
   }
 
-  private buildPumpSchematicPage(d: RelatorioCapaData): string {
-    const images = (d.esquematicoImages || []).filter(item => item.imagem);
-    if (!images.length) return '';
-
-    return images.map((item, i) => {
-      const continuation = i > 0 ? '<span class="section-continuation">continuação</span>' : '';
-      return `
-<div class="${this.techPageClass(d, 'pump-schematic-page')}">
-    ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title schematic-title-line">
-      <span class="num">4.</span>
-      <h1>Esquematico de bombeio</h1>
-      ${continuation}
-    </div>
-    <figure class="report-schematic-figure">
-      <img class="report-schematic-img" src="${item.imagem}" alt="${this.escape(item.label)}" />
-      <figcaption>${this.escape(item.label)}</figcaption>
-    </figure>
-  </section>
-</div>`;
-    }).join('');
-  }
-
-  private buildOperationalSequencePages(d: RelatorioCapaData): string {
+  /** Cada passo da sequência é um bloco, numerado pela posição: a lista continua na folha seguinte. */
+  private sequenceBlocks(d: RelatorioCapaData): FlowBlock[] {
     const seq = d.sequenciaOperacional;
     const bombeio = this.bombeioRowsWithVazoes(d);
     const receitaRows = d.receitaRows || [];
@@ -1246,63 +1242,38 @@ ${secoesPages}`;
     const cementQty = this.extractRecipeQuantity(receitaRows, 'Cimento');
     const bhst = this.formatNumber(d.bhst, 1);
 
-    return `
-<div class="${this.techPageClass(d, 'sequence-page')}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title schematic-title-line">
-      <span class="num">5.</span>
-      <h1>Sequencia Operacional</h1>
-    </div>
-    <ol class="sequence-list">
-      <li>Descer coluna de trabalho de <strong>${coluna}</strong> ate <strong>${colunaDepth}</strong>;</li>
-      <li>Circular poco para homogenizar temperatura e garantir a circulacao plena;</li>
-      <li>Realizar teste de injetividade, se <strong>definido pela ${origem}</strong>, conforme volumes e vazoes definidos na tabela a seguir. Anotar pressoes durante o bombeio;
-        ${injectivityTable}
-      </li>
-      <li>Preparar a agua de mistura da pasta para ${slurryVol || '-'} bbl de pasta de cimento ${density || '-'} ppg, de acordo com quadro abaixo;
-        ${recipeTable}
-      </li>
-      <li>Realizar reuniao de seguranca e programacao da operacao entre todos os participantes da operacao e ao final;</li>
-      <li>Realizar teste de linhas com <strong>${lineTest} psi</strong>;</li>
-      <li>Unidade de Cimentacao bombeia <strong>${frontVol || '-'} bbl</strong> de agua industrial a frente @ <strong>${frontRate || '-'} bpm</strong>;</li>
-      <li>Misturar <strong>${waterQty || '-'}</strong> de agua com <strong>${cementQty || '-'}</strong> de cimento G e aditivos para <strong>${slurryVol || '-'} bbl</strong> pasta de cimento <strong>${density || '-'} ppg</strong>, bombear com Unidade de Cimentacao @ <strong>${slurryRate || '-'} bpm</strong>;</li>
-      <li>Unidade de Cimentacao bombeia <strong>${backVol || '-'} bbl</strong> de agua industrial atras @ <strong>${backRate || '-'} bpm</strong>;</li>
-      <li>Unidade de Cimentacao realiza o deslocamento com <strong>${displacementVol || '-'} bbl</strong> fluido de completacao @ <strong>${displacementRate || '-'} bpm</strong>;</li>
-      <li>Para o bombeio e aguardar balanco do tampao, observar volume nos tanques de deslocamento, tanto por retorno de fluido como por reducao de volume para o balanceio;</li>
-    </ol>
-  </section>
-</div>
-<div class="${this.techPageClass(d, 'sequence-page')}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title schematic-title-line">
-      <span class="num">5.</span>
-      <h1>Sequencia Operacional</h1>
-      <span class="section-continuation">continuacao</span>
-    </div>
-    <ol class="sequence-list" start="12">
-      <li>Parar o bombeio e desconectar linhas. Iniciar retirada <strong>${totalTubes} tubos</strong> da coluna de trabalho ate a profundidade aproximada de <strong>${approxDepth || '-'} m</strong>;
+    const steps = [
+      `Descer coluna de trabalho de <strong>${coluna}</strong> ate <strong>${colunaDepth}</strong>;`,
+      'Circular poco para homogenizar temperatura e garantir a circulacao plena;',
+      `Realizar teste de injetividade, se <strong>definido pela ${origem}</strong>, conforme volumes e vazoes definidos na tabela a seguir. Anotar pressoes durante o bombeio;
+        ${injectivityTable}`,
+      `Preparar a agua de mistura da pasta para ${slurryVol || '-'} bbl de pasta de cimento ${density || '-'} ppg, de acordo com quadro abaixo;
+        ${recipeTable}`,
+      'Realizar reuniao de seguranca e programacao da operacao entre todos os participantes da operacao e ao final;',
+      `Realizar teste de linhas com <strong>${lineTest} psi</strong>;`,
+      `Unidade de Cimentacao bombeia <strong>${frontVol || '-'} bbl</strong> de agua industrial a frente @ <strong>${frontRate || '-'} bpm</strong>;`,
+      `Misturar <strong>${waterQty || '-'}</strong> de agua com <strong>${cementQty || '-'}</strong> de cimento G e aditivos para <strong>${slurryVol || '-'} bbl</strong> pasta de cimento <strong>${density || '-'} ppg</strong>, bombear com Unidade de Cimentacao @ <strong>${slurryRate || '-'} bpm</strong>;`,
+      `Unidade de Cimentacao bombeia <strong>${backVol || '-'} bbl</strong> de agua industrial atras @ <strong>${backRate || '-'} bpm</strong>;`,
+      `Unidade de Cimentacao realiza o deslocamento com <strong>${displacementVol || '-'} bbl</strong> fluido de completacao @ <strong>${displacementRate || '-'} bpm</strong>;`,
+      'Para o bombeio e aguardar balanco do tampao, observar volume nos tanques de deslocamento, tanto por retorno de fluido como por reducao de volume para o balanceio;',
+      `Parar o bombeio e desconectar linhas. Iniciar retirada <strong>${totalTubes} tubos</strong> da coluna de trabalho ate a profundidade aproximada de <strong>${approxDepth || '-'} m</strong>;
         <ul class="sequence-bullets">
           <li>Retirar os primeiros <strong>${tampaoTubes} tubos</strong> com velocidade de <strong>${firstTubeMin} minutos</strong> por tubo ou <strong>${otherTubeMin} minutos</strong> por secao;</li>
           <li>Retirar os demais tubos com velocidade normal.</li>
-        </ul>
-      </li>
-      <li>Realizar circulacao reversa com <strong>${reverseVol} bbl</strong> de fluido de completacao para garantir a limpeza da coluna de trabalho;</li>
-      <li>Realizar o fechamento do BOP/Packer;</li>
-      <li>Iniciar o SQUEEZE de acordo com os dados do teste de injetividade, limitando o volume injetado ate <strong>${maxInjected} bbl</strong> e a pressao ate <strong>${maxPressure} psi</strong>, por ate <strong>${maxTime}</strong>;
+        </ul>`,
+      `Realizar circulacao reversa com <strong>${reverseVol} bbl</strong> de fluido de completacao para garantir a limpeza da coluna de trabalho;`,
+      'Realizar o fechamento do BOP/Packer;',
+      `Iniciar o SQUEEZE de acordo com os dados do teste de injetividade, limitando o volume injetado ate <strong>${maxInjected} bbl</strong> e a pressao ate <strong>${maxPressure} psi</strong>, por ate <strong>${maxTime}</strong>;
         <ul class="sequence-bullets">
           <li>Iniciar bombeio com 0,5 bbl com vazao entre 0,5 bpm e 1,0 bpm. Parar o bombeio e observar se houve queda de pressao;</li>
           <li>Reiniciar bombeio com 0,5 bbl e vazao de ate 1,0 bpm. Parar o bombeio e observar se houve queda de pressao;</li>
           <li>Continuar com o bombeio incrementando a pressao maxima em 250 psi a cada repeticao, limitando o volume injetado ate ${maxInjected} bbl e ate 20 minutos de hesitacao;</li>
           <li>Manter o poco fechado e pressurizado ate completar o tempo de pega da pasta de cimento.</li>
-        </ul>
-      </li>
-      <li>Apos finalizada operacao, seguir procedimento definido pela ${origem}.</li>
-      <li>O tempo de bombeabilidade da pasta de cimento e de <strong>${pumpability}</strong>${bhst ? ` a ${bhst} &deg;F` : ''}. Para atingir ${resistancePsi} psi de resistencia compressiva sao necessarias <strong>${resistanceTime}</strong> apos o inicio da mistura.</li>
-    </ol>
-  </section>
-</div>`;
+        </ul>`,
+      `Apos finalizada operacao, seguir procedimento definido pela ${origem}.`,
+      `O tempo de bombeabilidade da pasta de cimento e de <strong>${pumpability}</strong>${bhst ? ` a ${bhst} &deg;F` : ''}. Para atingir ${resistancePsi} psi de resistencia compressiva sao necessarias <strong>${resistanceTime}</strong> apos o inicio da mistura.`,
+    ];
+    return steps.map((step, i) => ({ html: `<ol class="sequence-list" start="${i + 1}"><li>${step}</li></ol>` }));
   }
 
   private buildInjectivityTable(): string {
@@ -1344,56 +1315,14 @@ ${secoesPages}`;
       </table>`;
   }
 
-  private buildIndiceRows(d: RelatorioCapaData, op: string): string {
-    const graficosImages = d.graficosOperacionaisImages ?? [];
-    const secoesPersonalizadas = d.secoesPersonalizadas ?? [];
-    const esquematicoImages = (d.esquematicoImages ?? []).filter(i => i.imagem);
-    const hasEsquematicos = esquematicoImages.length > 0;
-
-    let pg = 1;
-    const sections: [string, string][] = [];
-
-    // Páginas fixas iniciais
-    sections.push(['Capa', String(pg++)]);                       // 1
-    sections.push(['Ficha do documento', String(pg++)]);         // 2
-    sections.push(['Índice', String(pg++)]);                     // 3
-
-    // Primeira página técnica: Cimentação + Poço (mesma página)
-    sections.push([`Cimentação ${op}`, String(pg)]);
-    sections.push(['Poço', String(pg++)]);                       // 4
-
-    // Esquema mecânico (sempre presente, mesmo como placeholder)
-    sections.push(['Esquema mecânico', String(pg++)]);           // 5
-
-    // Operação (sempre presente)
-    sections.push(['Operação', String(pg++)]);                   // 6
-
-    // Esquemático de bombeio (condicional)
-    if (hasEsquematicos) {
-      sections.push(['Esquemático de bombeio', String(pg)]);
-      pg += esquematicoImages.length;                           // 1 por página
-    }
-
-    // Gráficos operacionais (condicional — um por página)
-    for (const img of graficosImages) {
-      sections.push([img.label, String(pg++)]);
-    }
-
-    // Sequência Operacional (sempre, 2 páginas)
-    sections.push(['Sequência Operacional', String(pg)]);
-    pg += 2;
-
-    // Seções personalizadas (condicional)
-    for (const sec of secoesPersonalizadas) {
-      sections.push([this.escape(sec.titulo || 'Seção personalizada'), String(pg++)]);
-    }
-
-    return sections
-      .map(([label, page], i) => `
+  /** Uma linha por tópico; a página sai da paginação, no navegador. */
+  private buildIndiceRows(topicos: RelatorioTopico[]): string {
+    return topicos
+      .map(topico => `
         <div class="indice-row">
-          <div class="indice-number">${String(i + 1).padStart(2, '0')}</div>
-          <div class="indice-label">${label}</div>
-          <div class="indice-page-num">${page}</div>
+          <div class="indice-number">${String(topico.numero).padStart(2, '0')}</div>
+          <div class="indice-label">${this.escape(topico.titulo)}</div>
+          <div class="indice-page-num" data-toc="${topico.id}">&ndash;</div>
         </div>`)
       .join('');
   }
@@ -1495,46 +1424,5 @@ ${secoesPages}`;
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-  }
-
-  private buildGraficosOperacionais(d: RelatorioCapaData): string {
-    const imgs = d.graficosOperacionaisImages;
-    if (!imgs || imgs.length === 0) return '';
-    return imgs.map((img: GraficoOperacionalImage) => `
-<div class="${this.techPageClass(d, 'grafico-operacional-page')}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title schematic-title-line">
-      <h1>${this.escape(img.label)}</h1>
-    </div>
-    <div class="grafico-img-wrap">
-      <img src="${img.imagem}" alt="${this.escape(img.label)}" class="grafico-img" />
-    </div>
-  </section>
-</div>`).join('');
-  }
-
-  private buildSecoesPersonalizadas(d: RelatorioCapaData): string {
-    const secoes = d.secoesPersonalizadas;
-    if (!secoes || secoes.length === 0) return '';
-    return secoes.map((sec: SecaoPersonalizada) => {
-      const titulo = this.escape(sec.titulo || 'Seção');
-      const texto = this.escape(sec.texto || '').replace(/\n/g, '<br>');
-      const imagens = (sec.imagens || []).map(img => `
-        <figure class="secao-figura">
-          <img src="${img.data}" alt="${this.escape(img.nome)}" class="secao-img" />
-        </figure>`).join('');
-      return `
-<div class="${this.techPageClass(d, 'secao-personalizada-page')}">
-  ${this.buildTechClienteLogo(d)}
-  <section class="tech-subsection">
-    <div class="tech-section-title">
-      <h1>${titulo}</h1>
-    </div>
-    ${texto ? `<p class="secao-texto">${texto}</p>` : ''}
-    ${imagens ? `<div class="secao-figuras">${imagens}</div>` : ''}
-  </section>
-</div>`;
-    }).join('');
   }
 }

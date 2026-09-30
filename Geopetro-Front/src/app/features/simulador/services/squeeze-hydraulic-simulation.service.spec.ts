@@ -154,6 +154,81 @@ describe('SqueezeHydraulicSimulationService', () => {
     expect(injection.bhpPsi).toBeCloseTo(2000 + injection.hydrostaticPsi - injection.frictionPsi, 6);
   });
 
+  // --- cenários migrados da suíte solta de hidráulica (A08) ---------------------
+  //
+  // ⚠️ Estes casos viviam em `tests/hydraulics.spec.js`, contra um módulo
+  // `public/simulador/js/shared/hydraulics.js` que saiu do projeto na migração para o Angular. O
+  // arquivo continuava versionado e o comando `npm run test:hydraulics` falhava no import, sem
+  // executar teste nenhum — verde nenhum, vermelho que ninguém via. Os cenários que ainda dizem algo
+  // foram trazidos para cá, contra o motor de verdade; o comando morto saiu do package.json.
+
+  /**
+   * Hidrostática **segmentada**, e não uma densidade média.
+   *
+   * A coluna com pasta parcialmente deslocada tem de pesar mais que a coluna de fluido de
+   * completação e menos que uma coluna inteira de pasta. Um cálculo que usasse uma densidade só
+   * cairia fora dessa faixa.
+   */
+  it('a coluna com dois fluidos pesa entre as duas colunas puras', () => {
+    const sim = service.simulate(geom, slurry, inputs, geom.perfs);
+    const tvd = sim.summary.referenceTVD;
+    const soCompletacao = 0.1706 * inputs.completionWeight! * tvd;
+    const soPasta = 0.1706 * 15.8 * tvd;
+
+    const mistos = sim.points.filter(p => p.hydrostaticPsi > soCompletacao + 1);
+    expect(mistos.length).toBeGreaterThan(0);
+    for (const ponto of mistos) {
+      expect(ponto.hydrostaticPsi).toBeLessThanOrEqual(soPasta + 1e-6);
+    }
+  });
+
+  /** ⚠️ TVD de referência inválido não pode virar ECD: dividir por zero produziria um número. */
+  it('TVD de referência zero não produz ECD inventada', () => {
+    const sim = service.simulate(
+      geom, slurry, { ...inputs, profundidadeReferenciaSqueezeTVD: 0 }, geom.perfs);
+
+    expect(sim.summary.referenceTVD).toBe(0);
+    expect(sim.points.every(p => p.ecdPpg === null)).toBe(true);
+  });
+
+  /**
+   * Free fall na pausa — o tubo em U.
+   *
+   * Com a bomba parada e a coluna mais pesada que o anular, o fluido continua descendo por conta
+   * própria. Zerar a vazão real na pausa esconderia esse deslocamento do operador.
+   */
+  it('a coluna desce sozinha na pausa quando está mais pesada que o anular', () => {
+    const sim = service.simulate(geom, slurry, { ...inputs, tempoPausaMin: 5 }, geom.perfs);
+    const pausa = sim.points.find(p => p.programmedRateBpm === 0 && p.phase === 'Pasta de cimento')!;
+
+    expect(pausa.drivePsi).toBeGreaterThan(0);
+    expect(pausa.realRateBpm).toBeGreaterThan(0);
+    expect(sim.points.at(-1)!.freeFallAccumBbl).toBeGreaterThan(0);
+  });
+
+  /**
+   * Sem desbalanço não há queda livre: todos os fluidos com a mesma densidade zeram o drive.
+   *
+   * ⚠️ A tolerância não é folga de conveniência. As duas colunas são integradas por pilhas de
+   * camadas diferentes — a da coluna e a do anular —, então a subtração fecha em ~1e-13 psi e não em
+   * zero binário. Um desbalanço de verdade aparece em centenas de psi, muito acima disto.
+   */
+  it('sem desbalanço hidrostático não há free fall', () => {
+    const uniforme = {
+      ...inputs,
+      completionWeight: 9.5,
+      displacementWeight: 9.5,
+      mudWeightFront: 9.5,
+      mudWeightBack: 9.5,
+      densidadePastaPpg: 9.5,
+    };
+    const sim = service.simulate(geom, slurry, uniforme, geom.perfs);
+
+    const maiorDrive = Math.max(...sim.points.map(p => p.drivePsi));
+    expect(maiorDrive).toBeLessThan(1e-6);
+    expect(sim.points.at(-1)!.freeFallAccumBbl).toBeLessThan(1e-6);
+  });
+
   it('renders the same operational chart categories and avoids invalid free fall values', () => {
     const sim = service.simulate(geom, slurry, { ...inputs, pumpRate: 0 }, geom.perfs);
     expect(sim.categories).toEqual([

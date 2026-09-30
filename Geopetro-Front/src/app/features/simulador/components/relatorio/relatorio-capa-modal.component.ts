@@ -1,8 +1,10 @@
 import { Component, EventEmitter, Input, Output, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { expandReportChartSelection, type ReportChartOption } from '../../services/report-chart-selection';
 
 export interface RelatorioCapaData {
+  faseOperacao?: string;
   cliente: string;
   clienteLogoNome?: string;
   clienteLogoImagem?: string;
@@ -76,7 +78,8 @@ export interface RelatorioVazoesBombeioData {
 }
 
 export type RelatorioEsquematicoTipo = 'bombeio' | 'comTubing' | 'semTubing';
-export type GraficoOperacionalTipo = 'cronograma' | 'pressao';
+/** Id de um gráfico do catálogo (`report-chart-selection`); "pressao" e "cronograma" são os grupos antigos. */
+export type GraficoOperacionalTipo = string;
 export interface GraficoOperacionalImage { label: string; imagem: string; }
 
 export interface RelatorioEsquematicoImage {
@@ -164,16 +167,14 @@ export interface RelatorioSequenciaOperacionalData {
                 </div>
               </div>
               <div class="field field--wide">
-                <label>Gráficos operacionais</label>
-                <div class="check-grid">
-                  <label class="check-item">
-                    <input type="checkbox" [checked]="isGraficoSelected('cronograma')" (change)="toggleGrafico('cronograma', $event)" />
-                    <span>Cronograma operacional (visão geral e zoom)</span>
-                  </label>
-                  <label class="check-item">
-                    <input type="checkbox" [checked]="isGraficoSelected('pressao')" (change)="toggleGrafico('pressao', $event)" />
-                    <span>Gráficos de pressão</span>
-                  </label>
+                <label>Gráficos da simulação <small class="check-actions"><button type="button" (click)="selectAllGraficos(true)">todos</button> · <button type="button" (click)="selectAllGraficos(false)">nenhum</button></small></label>
+                <div class="check-grid" data-grafico-opcoes>
+                  @for (opcao of graficoOpcoes; track opcao.id) {
+                    <label class="check-item">
+                      <input type="checkbox" [checked]="isGraficoSelected(opcao.id)" (change)="toggleGrafico(opcao.id, $event)" />
+                      <span>{{ opcao.label }}</span>
+                    </label>
+                  }
                 </div>
               </div>
             </div>
@@ -550,6 +551,8 @@ export interface RelatorioSequenciaOperacionalData {
     .section--sequence .section-title { grid-column: 1 / -1; }
     .field--wide { grid-column: 1 / -1; }
     .check-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .check-actions { margin-left: 8px; font-weight: 400; }
+    .check-actions button { border: 0; background: none; padding: 0; color: #2d5a8e; cursor: pointer; font: inherit; text-decoration: underline; }
     .check-item {
       display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px;
       border: 1px solid #dbe3ef; border-radius: 8px; background: #fff;
@@ -645,6 +648,8 @@ export interface RelatorioSequenciaOperacionalData {
 export class RelatorioCapaModalComponent implements OnChanges {
   @Input() open = false;
   @Input() operacaoLabel = 'SQUEEZE';
+  /** Gráficos que a operação sabe gerar, um checkbox para cada (squeeze e tampão têm listas próprias). */
+  @Input() graficoOpcoes: readonly ReportChartOption[] = [];
   @Input() prefill: Partial<RelatorioCapaData> | Record<string, any> = {};
   @Output() closed = new EventEmitter<void>();
   @Output() gerado = new EventEmitter<RelatorioCapaData>();
@@ -663,7 +668,9 @@ export class RelatorioCapaModalComponent implements OnChanges {
       this.form = {
         ...defaults,
         ...this.prefill,
-        graficosOperacionaisSelecionados: (this.prefill as Partial<RelatorioCapaData>).graficosOperacionaisSelecionados ?? [],
+        // A seleção antiga por grupo ("pressao", "cronograma") abre com todos os gráficos do grupo marcados.
+        graficosOperacionaisSelecionados: expandReportChartSelection(
+          (this.prefill as Partial<RelatorioCapaData>).graficosOperacionaisSelecionados, this.graficoOpcoes),
         secoesPersonalizadas: (this.prefill as Partial<RelatorioCapaData>).secoesPersonalizadas ?? [],
         vazoesBombeio: {
           ...defaults.vazoesBombeio,
@@ -777,7 +784,12 @@ export class RelatorioCapaModalComponent implements OnChanges {
     const checked = (event.target as HTMLInputElement).checked;
     const atual = new Set(this.form.graficosOperacionaisSelecionados || []);
     checked ? atual.add(tipo) : atual.delete(tipo);
-    this.form.graficosOperacionaisSelecionados = Array.from(atual);
+    // Na ordem do catálogo, que é a ordem do relatório.
+    this.form.graficosOperacionaisSelecionados = this.graficoOpcoes.map(opcao => opcao.id).filter(id => atual.has(id));
+  }
+
+  selectAllGraficos(all: boolean): void {
+    this.form.graficosOperacionaisSelecionados = all ? this.graficoOpcoes.map(opcao => opcao.id) : [];
   }
 
   addSecao(): void {

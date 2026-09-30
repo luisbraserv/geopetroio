@@ -85,7 +85,8 @@ function createWithoutTubingSegments(geom: SqueezeGeometry, depthUnit: DepthUnit
   const segments: SqueezeSegment[] = [
     { key: 'completionFluid', name: 'Fluido de Completação do poço', sub: 'Fluido do poço', top: 0, bottom: topDisplacement, color: '#bae6fd' },
     { key: 'displacementFluid', name: 'Deslocamento', sub: `${fmt(displacementVolTotal)} bbl | ${formatDepth(displacementHeightTotal, depthUnit, 0)}`, top: topDisplacement, bottom: topCement, color: '#93c5fd' },
-    { key: 'cement', name: 'Cimento', sub: `${fmt(geom.slurryPhysicalVolumeBbl || geom.slurryTotal)} bbl | ${formatDepth(cementHeight, depthUnit, 1)}`, top: topCement, bottom: base, color: '#fb923c' },
+    // Depois da retirada e antes da compressão, a pasta inteira está no poço.
+    { key: 'cement', name: 'Cimento', sub: `${fmt(geom.slurryTotal || geom.slurryPhysicalVolumeBbl)} bbl | ${formatDepth(cementHeight, depthUnit, 1)}`, top: topCement, bottom: base, color: '#fb923c' },
   ];
   return segments.filter(segment => segment.bottom > segment.top);
 }
@@ -100,12 +101,13 @@ function createWithTubingSegments(geom: SqueezeGeometry, simulation: SqueezeHydr
   const capWithTubing = tubeCap + annCap;
 
   // ── Altura do cimento com a coluna imersa: pasta no anular + interior da coluna ──
-  const cementTubeHeight = Math.max(0, geom.cementHeightWithTubing ?? (geom.slurryPhysicalVolumeBbl || 0) / capWithTubing);
+  // No posicionamento, a pasta inteira bombeada (com a que ainda vai para a formação).
+  const slurryPumped    = geom.slurryTotal || geom.slurryPhysicalVolumeBbl || 0;
+  const cementTubeHeight = Math.max(0, geom.cementHeightWithTubing ?? slurryPumped / capWithTubing);
 
   // Volume proporcional à capacidade de cada coluna
-  const slurryPhysical  = geom.slurryPhysicalVolumeBbl || 0;
-  const cementVolTubing = geom.cementVolumeTubingBbl ?? slurryPhysical * (tubeCap / capWithTubing);
-  const cementVolAnn    = geom.cementVolumeAnnulusBbl ?? slurryPhysical * (annCap / capWithTubing);
+  const cementVolTubing = geom.cementVolumeTubingBbl ?? slurryPumped * (tubeCap / capWithTubing);
+  const cementVolAnn    = geom.cementVolumeAnnulusBbl ?? slurryPumped * (annCap / capWithTubing);
 
   // Coluna: água trás e deslocamento em altura dentro do tubing
   const backHeight         = Math.max(0, geom.backPhysicalHeight || geom.backOperationalHeight || 0);
@@ -622,7 +624,7 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
         title: 'Dados do esquemático',
         rows: [
           { label: 'Zona trabalho', value: this.depth(p.len || (p.base - p.top), 0) },
-          { label: 'Cimento', value: formatBbl(p.slurryPhysicalVolumeBbl || p.workVolumeBbl || p.slurryTotal) },
+          { label: 'Cimento bombeado', value: formatBbl(p.slurryTotal || p.workVolumeBbl || p.slurryPhysicalVolumeBbl) },
           { label: 'Água de Deslocamento', value: joinInfoParts(formatBbl(p.operationalDisplacementVolumeBbl || p.displacementVolume), formatPpg(this.squeezeInputs?.displacementWeight ?? this.squeezeInputs?.completionWeight)) },
           { label: 'Água frente', value: joinInfoParts(this.depth(p.frontPhysicalHeight || p.frontOperationalHeight, 0), formatBbl(p.frontPhysicalVolumeBbl || p.washVolFront)) },
           { label: 'Água trás', value: joinInfoParts(this.depth(p.backPhysicalHeight || p.backOperationalHeight, 0), formatBbl(p.backPhysicalVolumeBbl || p.volBackSpacer)) },

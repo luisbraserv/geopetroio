@@ -57,13 +57,18 @@ describe('Squeeze com múltiplas fases', () => {
   });
 
   it.each([null, 3, 20])('calcula os quatro topos atravessando a sapata (volume=%s)', override => {
-    const volume = override ?? geometricVolume;
+    // Pasta bombeada: a do intervalo + 2 bbl a injetar; o volume informado já é o bombeado.
+    const volume = override ?? geometricVolume + 2;
     const geom = service.calcVolumes(inputs, perfs, override, well);
+    expect(geom.slurryTotal).toBeCloseTo(volume, 9);
+    expect(geom.slurryPhysicalVolumeBbl).toBeCloseTo(volume - 2, 9);
     expect(geom.topCementAfterPullMD).toBeCloseTo(expectedTop(volume), 9);
     expect(geom.topCementImmersedMD).toBeCloseTo(expectedTop(volume, steelCap), 9);
+    // Depois da injeção fica a pasta do intervalo: o injetado sai uma vez só.
     expect(geom.topCementAfterInjectionMD).toBeCloseTo(expectedTop(volume - 2), 9);
     expect(geom.topCementImmersedAfterInjectionMD).toBeCloseTo(expectedTop(volume - 2, steelCap), 9);
-    expect(geom.cementPhysicalTopMD).toBeCloseTo(expectedTop(volume), 9);
+    if (override === null) expect(geom.topCementAfterInjectionMD).toBeCloseTo(1950, 9);
+    expect(geom.cementPhysicalTopMD).toBeCloseTo(expectedTop(volume - 2), 9);
     expect(geom.cementPhysicalBaseMD).toBe(2050);
     expect(geom.cementHeightWithTubing).toBeCloseTo(2050 - expectedTop(volume, steelCap), 9);
     expect(geom.cementVolumeTubingBbl).toBeCloseTo(pipeCap * geom.cementHeightWithTubing, 9);
@@ -100,7 +105,8 @@ describe('Squeeze com múltiplas fases', () => {
     const geom = service.calcVolumes(inputs, perfs, null, well);
     const result = service.calcFractureGradient(geom, inputs, well);
     const deepTVD = 1800 + 40 * 0.5;
-    const cementTVD = expectedTop(geometricVolume, steelCap) * 0.9;
+    // Com a coluna imersa, a pasta inteira bombeada (intervalo + 2 bbl a injetar).
+    const cementTVD = expectedTop(geometricVolume + 2, steelCap) * 0.9;
     const backTVD = cementTVD - 30 * 0.9;
     expect(result.fracPsi).toBeCloseTo(HYDRO_M * 16 * deepTVD, 9);
     expect(result.porePsi).toBeCloseTo(HYDRO_M * 9 * deepTVD, 9);
@@ -113,11 +119,12 @@ describe('Squeeze com múltiplas fases', () => {
     const geom = service.calcVolumes(inputs, perfs, null, well);
     const simulation = { summary: { topPerfMD: 2020, basePerfMD: 2040, referenceMD: 2030 } } as SqueezeHydraulicSimulation;
     const model = createSqueezeSchematicModel('withTubing', geom, simulation);
-    expect(model.tubingSegments.at(-1)?.top).toBeCloseTo(expectedTop(geometricVolume, steelCap), 9);
-    expect(model.annulusSegments.at(-1)?.top).toBeCloseTo(expectedTop(geometricVolume, steelCap), 9);
+    expect(model.tubingSegments.at(-1)?.top).toBeCloseTo(expectedTop(geometricVolume + 2, steelCap), 9);
+    expect(model.annulusSegments.at(-1)?.top).toBeCloseTo(expectedTop(geometricVolume + 2, steelCap), 9);
     expect(model.tubingSegments.at(-1)?.bottom).toBe(2050);
     const without = createSqueezeSchematicModel('withoutTubing', geom, simulation);
-    expect(without.segments.at(-1)?.top).toBe(1950);
+    // Depois da retirada e antes da compressão: a pasta inteira, 2 bbl acima do intervalo.
+    expect(without.segments.at(-1)?.top).toBeCloseTo(expectedTop(geometricVolume + 2), 9);
     expect(without.segments.find(s => s.key === 'displacementFluid')?.top).toBe(geom.topDisplacementAfterPullMD);
   });
 
@@ -126,6 +133,6 @@ describe('Squeeze com múltiplas fases', () => {
     const capacity = BBL_M * inputs.casingID ** 2;
     expect(geom.base).toBe(1500);
     expect(geom.slurryPhysicalVolumeBbl).toBeCloseTo(capacity * 100, 9);
-    expect(geom.topCementImmersedMD).toBeCloseTo(1500 - capacity * 100 / (capacity - steelCap), 9);
+    expect(geom.topCementImmersedMD).toBeCloseTo(1500 - (capacity * 100 + 2) / (capacity - steelCap), 9);
   });
 });
