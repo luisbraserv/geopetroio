@@ -45,3 +45,5 @@ build/
 config/cards-da-unidade.json
 config/configuracao-remota.json
 config/calibracao-cards.json
+config/dashboard-layout.properties
+config/alarmes-locais.json
