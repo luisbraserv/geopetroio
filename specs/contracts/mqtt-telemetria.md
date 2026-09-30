@@ -268,7 +268,7 @@ configurada pela tela de cards do Desktop. Ver
 | # | Regra | Origem |
 |---|---|---|
 | P-01 | 1 mensagem por ciclo de leitura (**1 segundo**) | **[FATO]** comportamento atual |
-| P-02 | Publicar apenas cards **visíveis** na configuração | **[FATO]** [RN-037](../business-rules.md#rn-037---visibilidade-de-card-controla-publicação-não-gravação) |
+| P-02 | Publicar apenas cards **visíveis** na configuração | **[FATO]** [RN-037](../business-rules.md#rn-037) |
 | P-08 | ⚠️ **Sem cards ativos, não publicar — e nem ler o CLP** | **[DECIDIDO 2026-09-08]** [RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada) |
 | P-09 | Grandeza **sem valor** (falta calibração) não entra no array | **[DECIDIDO 2026-09-08]** [§3](#grandeza-sem-valor-não-é-publicada) |
 | P-10 | Card **ativo** é lido; card **visível** é publicado. São coisas diferentes | **[FATO]** RN-037 e RN-091 |
@@ -412,11 +412,7 @@ Telemetria nova com Desktops antigos, ou o contrário, não funciona — não h�
 | Cache em disco da configuração, para o Desktop não depender de rede a cada reinício | ✅ Entregue 2026-09-07 |
 | Calibração preservada por `dispositivoId`, migrada dos slots posicionais | ✅ Entregue 2026-09-07 |
 
-✅ **[FATO 2026-09-09] Passou a existir** o jeito de saber, de fora, **quais unidades da frota já
-foram configuradas**: a tela **Prontidão da Frota**, em `/app/prontidao-frota`. "A virada terminou"
-deixou de ser afirmação sem como conferir — e a tela separa a unidade **nunca visitada** da que foi
-visitada e ficou **sem card ativo**, que é muda do mesmo jeito e se resolve na tela de Cards, sem
-viagem. Ver [OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas).
-
-⚠️ **Ela responde por configuração, não por publicação.** Um CLP desligado aparece como pronto. Saber
-que uma unidade **parou de publicar** continua sem resposta neste sistema.
+**[FATO]** A tela de Prontidão da Frota foi removida em 2026-09-10:
+contagens de cards e limites não provavam que a unidade publicava nem que havia
+cobertura de alarme. Configuração da frota e silêncio de publicação permanecem
+sem visão remota confiável ([OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas)).

@@ -309,14 +309,15 @@ puro).
 
 | Campo | Conteúdo |
 |---|---|
-| **Objetivo** | Calcular operações de cimentação (Squeeze e Tampão) e gerar relatórios técnicos |
+| **Objetivo** | Calcular squeeze, tampão e cimentação primária e gerar relatórios técnicos |
 | **Atores** | `ADMIN` · `CLIENTE`+`SIMULADOR`+`CIMENTACAO` · `INTERNO`+`SIMULADOR`+`CIMENTACAO` — [RN-099](business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo) |
-| **Rotas** | `/app/simulador` · `/app/simulador/squeeze` · `/app/simulador/tampao` |
+| **Rotas** | `/app/simulador` · `/app/simulador/squeeze` · `/app/simulador/tampao` · `/app/simulador/primaria` |
 | **Endpoints** | `/api/simulador/pastas[...]` · `/api/simulador/cenarios[...]` · `/cenarios/sem-pasta?operacao` |
 | **Entidades** | `PastaSimuladorEntity`, `CenarioSimuladorEntity` |
 
-**[FATO]** É a **maior feature do sistema**: ~17.800 linhas em ~45 arquivos. Todo o cálculo é
-client-side — o backend só persiste `formValue` como `LONGTEXT` opaco e `operacao` como VARCHAR livre.
+**[FATO]** O cálculo ocorre no Front; o Backend persiste cenários e pastas.
+Geometria, hidráulica, critérios de aceite e estado da primária estão na
+[SPEC do simulador](../Geopetro-Front/specs/simulador/cimentacao-primaria.md).
 
 **Capacidades de cálculo [FATO]** · tempo de espessamento (estilo API 10B-2) · curvas UCA · reologia
 Bingham e lei de potência a partir de θ300..θ3 · cálculo de pasta (FAC/FAM/rendimento) · hidráulica
@@ -327,13 +328,13 @@ conformidade operacional
 
 **Regras [FATO]**
 - Cenários organizados em pastas por `operacao` — o backend é agnóstico de domínio.
-- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015---cenários-do-simulador-não-têm-dono)) — e desde 2026-09-17 isso inclui `CLIENTE`, que passou a poder receber acesso ao simulador.
+- ⚠️ **Sem checagem de posse**: qualquer perfil autorizado no simulador edita ou exclui cenários de outro usuário ([RN-015](business-rules.md#rn-015)) — e desde 2026-09-17 isso inclui `CLIENTE`, que passou a poder receber acesso ao simulador.
 - Pasta com cenários: cascade `ALL` + `orphanRemoval`.
 
-⚠️ **Validações [FATO]** — **ausência quase total**. Os ~40 campos numéricos críticos de engenharia
-(geometria de poço, gradientes de fratura/poro, pesos de fluido, pressão de operação) **não têm
-nenhum `Validators`**. O único uso na feature inteira é no `FormArray` de aditivos.
-Ver [DT-014](technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
+**[FATO]** Coerência da geometria e relações entre campos já geram bloqueios
+ou avisos. Faixas quantitativas e obrigatoriedade ainda dependem da
+[tabela de validação](../Geopetro-Front/specs/simulador/faixas-validacao.md);
+veja [DT-014](technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
 
 **[FATO]** Com a remoção dos demais módulos, o `simulador` é hoje **o único domínio de negócio
 próprio** que resta no backend, além da identidade e da organização.
@@ -594,6 +595,9 @@ Com mais de uma réplica, é preciso broker externo ou afinidade de sessão.
 
 ## F-21 · Configuração remota da sonda
 
-**[FATO 2026-09-07]** Geopetro-Backend persiste um documento de limites por unidade, com revisão e autoria, e o publica por STOMP após commit. GET/PUT `/api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda. O Desktop recebe o snapshot ao iniciar, ao reconectar e a cada 60 segundos, mesmo sem CLP conectado; rejeita revisões antigas e configurações de outra unidade.
-
-**[FATO]** Esta é a base de transporte e persistência. O motor de alarmes, a interface de limites, o histórico e a distribuição à frota continuam pendentes. Contrato, limitações e testes em [`configuracao-sonda.md`](contracts/configuracao-sonda.md).
+**[FATO]** O Backend persiste limites por unidade, com revisão e autoria.
+`GET`/`PUT /api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda.
+O motor de alarmes usa esse documento no servidor; a tela de limites e o
+histórico estão implementados. O Desktop usa limites locais independentes e
+sincroniza apenas cards por STOMP. Contrato em
+[`configuracao-sonda.md`](contracts/configuracao-sonda.md).

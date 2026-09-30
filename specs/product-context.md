@@ -106,16 +106,17 @@ conectividade irregular e histórico de 5 anos como produto, lacuna no históric
 inconveniente. Abre a questão nova de **mensagens fora de ordem** — ver
 [OQ-031](open-questions.md#oq-031--o-consumidor-tolera-telemetria-fora-de-ordem).
 
-**2. Sem auto-update, nada novo chega à frota.** Ficam bloqueados ao mesmo tempo: o formato-alvo do
-MQTT ([§9 do contrato](contracts/mqtt-telemetria.md#9-migração-a-partir-do-formato-atual)), os limites
-de alarme na borda, o buffer, e a autenticação do broker — que
-[deploy/README.md](../deploy/README.md) exige ativar **depois** de atualizar as instalações, sob pena
-de derrubar a telemetria de quem ficou para trás.
+**2. Sem auto-update, código novo não chega à frota.** A distribuição do
+formato-alvo do MQTT ([§9 do contrato](contracts/mqtt-telemetria.md#9-migração-a-partir-do-formato-atual)),
+do alarme **local**, do buffer e da autenticação do broker depende disso —
+o limite local é configurado na própria estação, não enviado pelo servidor. O
+[deploy](../deploy/README.md) exige ativar a autenticação depois de atualizar
+as instalações, sob pena de derrubar a telemetria de quem ficou para trás.
 
-**3. Operação por uma pessoa favorece automação sobre procedimento.** Backup automatizado vale mais
-que runbook escrito; alarme de infraestrutura vale mais que rotina de conferência. O `ddl-auto=validate`
-com migrations manuais ([DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema))
-é exatamente o inverso disso.
+**3. Operação por uma pessoa favorece automação sobre procedimento.** A
+execução manual de migrations foi substituída por Flyway
+([DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)).
+Backup e observabilidade continuam decisões operacionais próprias.
 
 ---
 
@@ -365,12 +366,9 @@ teste HTTP que detecte a regressão. **Os testes de `SecurityConfig` vêm antes 
 
 ### O custo operacional acumulado hoje
 
-A entrevista decidiu **cinco alterações de schema**, todas manuais, todas obrigatórias antes do próximo
-deploy — porque não há Flyway e produção roda `validate`. Lista em
-[DT-002](technical-debt.md#-fila-de-mudanças-manuais-criada-em-2026-09-05).
-
-Somado às decisões de §11 — sem backup do MySQL, uma pessoa operando —, é o ponto que mais merece
-atenção antes de começar a implementar.
+A entrevista originou cinco alterações de schema. A execução manual prevista
+naquela data foi superada pela adoção do Flyway; o estado de cada migration e
+os cuidados do próximo deploy estão em [DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
 
 ---
 

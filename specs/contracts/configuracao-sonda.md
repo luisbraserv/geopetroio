@@ -1,6 +1,8 @@
-# Contrato de configuração remota da sonda
+# Contratos de limites do servidor e cards da unidade
 
-> **[FATO 2026-09-07]** Etapa 1 de [alarmes](../features/alarmes.md), implementada no Geopetro-Backend e no Geopetro-Desktop. Motor, interfaces de limites/histórico e distribuição automática do Desktop continuam pendentes.
+> **[FATO 2026-09-30]** O documento de limites do servidor é lido e gravado
+> por REST. O Backend o avalia no tempo real. O Desktop usa limites locais
+> independentes; o antigo canal STOMP de limites foi removido.
 
 ## 1. Transporte e acesso
 
@@ -8,12 +10,11 @@
 |---|---|---|
 | HTTP GET | `/api/sondas/{id}/configuracao` | Lê o snapshot vigente |
 | HTTP PUT | `/api/sondas/{id}/configuracao` | Substitui a lista inteira, exigindo a revisão lida |
-| STOMP SUBSCRIBE | `/topic/config/unidades-sondas/{id}` | Recebe alterações após commit |
-| STOMP SUBSCRIBE | `/app/config/unidades-sondas/{id}` | Recebe um snapshot diretamente na assinatura solicitante |
 
-**[FATO]** Reutiliza `/ws`, JWT no `CONNECT` e autorização por unidade. `SEND` para configuração é recusado; gravação ocorre somente por HTTP. O `SUBSCRIBE` confere **duas** coisas desde 2026-09-17: a permissão de módulo (`MONITORAMENTO` para o documento de cards, `MONITORAMENTO_REAL` para as leituras ao vivo, somadas ao tipo de conta — [RN-099](../business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo)) e o escopo por unidade, que usa as concessões existentes. ⚠️ A conta de uma estação precisa de `MONITORAMENTO` para assinar os cards. Conta inativa ou sem acesso não lê nem grava. Cada entrega também verifica conta e concessão atuais, inclusive nas sessões previamente assinantes.
-
-**[FATO]** `WebSocketInboundGuard` envia `ERROR` para recusas de autenticação, assinatura ou destino de envio, encerrando a sessão. A resposta explícita é necessária porque a fila de ordenação captura exceções antes do tratador de protocolo.
+**[FATO]** A API exige conta ativa e acesso à unidade. Quem vê a sonda pode
+ler e alterar seus limites, inclusive `CLIENTE` nas unidades concedidas
+([RN-069](../business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)).
+O canal WebSocket de **cards** é separado e continua descrito no §5.
 
 ## 2. Snapshot, schema 1
 
@@ -79,44 +80,33 @@ grandeza sem vigilância nenhuma.
 certa: não há grandeza para vigiar ([RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).
 A lista vazia continua sendo aceita, e é como se apagam os limites.
 
-⚠️ **A borda não confere o vocabulário, e isso é deliberado.** Os dois documentos chegam ao Desktop
-por canais independentes, com revisões próprias, e o de limites pode chegar **antes** do de cards —
-um id desconhecido ali significa "card que ainda não chegou", não "documento corrompido". Enquanto a
-lista fixa vivia também no Desktop, um limite de `TEMPERATURA_01` fazia a estação **descartar o
-snapshot inteiro** e seguir em silêncio com o anterior. O Desktop continua conferindo a **forma**:
-números finitos, ordenação dos limiares, tempos não negativos e ausência de grandeza repetida.
+**[FATO]** O Desktop não recebe este documento. O sininho da estação valida e
+grava seus próprios limites locais, sem depender da configuração do servidor
+([configuração da estação §3](../features/configuracao-da-estacao.md#3-alarme-próprio-da-estação)).
 
 ## 3. Sincronização do Desktop
 
-**[FATO]** `CanalConfiguracaoLifecycle` inicia o worker no `ApplicationReadyEvent` e ao salvar configurações locais. Não depende de amostra nem de conexão com o CLP. Requer URL, usuário, senha e unidade do backend configurados no Desktop.
-
-1. Autenticar e aguardar `CONNECTED`.
-2. Assinar o tópico de alterações da unidade.
-3. Pedir snapshot no destino `/app/config/...`; aguardar até 10 segundos por configuração válida.
-4. Aplicar somente revisão maior que a atual, da mesma unidade e geração de conexão. Resposta inicial atrasada não substitui atualização mais recente.
-5. Repetir o pedido a cada 60 segundos e ao reconectar. Reutilizar o identificador de snapshot com `UNSUBSCRIBE`/`SUBSCRIBE`.
-
-**[FATO]** O servidor preserva a ordem de recebimento por sessão para registrar o tópico antes de consultar o snapshot. `@SubscribeMapping` responde diretamente ao solicitante. Referências: [ordenação STOMP no Spring](https://docs.spring.io/spring-framework/reference/web/websocket/stomp/ordered-messages.html) e [SubscribeMapping](https://docs.spring.io/spring-framework/reference/web/websocket/stomp/handle-annotations.html).
-
-**[FATO]** Cache imutável em memória, isolado por servidor, usuário, unidade e geração de conexão. Sobrevive à desconexão durante o processo; trocar servidor, usuário ou unidade limpa o cache. O parser aceita fragmentação, múltiplos frames e heartbeats; rejeita schema desconhecido, payload inválido, unidade divergente e buffers acima de 65536 caracteres. Payload inválido mantém o último snapshot válido.
+**[FATO 2026-09-30]** Não há sincronização deste documento com o Desktop.
+A estação sincroniza somente o documento de **cards** (§5), necessário à
+leitura do CLP. Esta seção conserva o título para não quebrar referências
+anteriores.
 
 ## 4. Limites e evidências
 
-**[FATO]** Falha de publicação após commit não desfaz a gravação; consulta periódica e reconexão recuperam o snapshot. Broker em memória: sem entrega imediata entre réplicas, outbox durável ou confirmação de aplicação por dispositivo.
+**[FATO]** O Backend avalia os limites persistidos a cada ciclo de tempo
+real; a alteração feita por REST vale na próxima avaliação. O documento
+continua vinculado à unidade e sujeito a revisão otimista. A ausência de
+limite significa que aquela grandeza não alarma no servidor.
 
-✅ **[FATO 2026-09-07]** Cache persistente entregue — `ConfiguracaoRemotaStore`, gravação atômica em
-`config/configuracao-remota.json`, chaveada por servidor/usuário/unidade. Ver
-[RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
-
-**[PENDENTE]** Avaliação de leituras, alertas e atualização automática da frota. O canal transporta dados tipados; não executa comandos, instala pacotes nem altera parâmetros do CLP.
-
-**[FATO]** Testes: `ConfiguracaoSondaServiceTest` (persistência, autoria, revisão, rollback, falha do broker e validação); `ConfiguracaoSondaWebSocketTest` (TCP/WebSocket real, snapshot, atualização, consulta periódica, reconexão, revogação e isolamento); `ConfiguracaoSondaAccessTest` e `IdentidadeHttpSecurityTest` (acesso); `MigracaoFlywayTest` (MySQL descartável, atualização, unicidade e FK); `ConfiguracaoRemotaTest` (cache, parser e evento de configuração sem CLP).
+**[PENDENTE]** Atualização automática das instalações do Desktop. Ela
+distribui código novo à frota, não este documento.
 
 ---
 
 ## 5. Documento de cards
 
-> **[FATO 2026-09-07] Implementado no backend.** UI e consumo na borda seguem pendentes.
+> **[FATO]** O documento de cards é independente dos limites e continua
+> sincronizado com o Desktop pelo canal STOMP `/cards`.
 > Spec completa em
 > [`../features/cards-configuraveis.md`](../features/cards-configuraveis.md).
 
@@ -143,11 +133,9 @@ e está em [RN-089](../business-rules.md#rn-089--cards-e-limites-são-documentos
 | STOMP SUBSCRIBE | `/topic/config/unidades-sondas/{id}/cards` | Mesma regra da leitura |
 | STOMP SUBSCRIBE | `/app/config/unidades-sondas/{id}/cards` | Snapshot direto ao solicitante |
 
-⚠️ **A guarda de saída é uma segunda classe, não a mesma.** `ConfiguracaoSondaOutbound` casa
-`/config/unidades-sondas/{id}` **terminando no id** — o tópico de cards tem sufixo e passaria sem
-verificação nenhuma. `ConfiguracaoCardsOutbound` guarda o tópico novo, com a regra de acesso de
-cards, e confere **a cada entrega**: uma sessão que já assinava continua sendo verificada depois de
-a conta ser desativada.
+**[FATO]** `ConfiguracaoCardsOutbound` guarda o tópico de cards e confere
+conta ativa, permissão e acesso à unidade a cada entrega. A antiga guarda
+`ConfiguracaoSondaOutbound` saiu junto com o canal STOMP de limites.
 
 ⚠️ **`SUPORTE` entra em `/api/sondas/*/cards` e em nada mais sob `/api/sondas`.** Dar-lhe a rota
 inteira seria monitoramento, não configuração.
@@ -206,5 +194,6 @@ e cada uma admite o seu próprio limite.
 ⚠️ **`SEND` recusado continua valendo, e ganha peso:** a configuração de cards decide o que a borda lê,
 e gravação segue só por HTTP, pelo `WebSocketInboundGuard`.
 
-✅ **O cache em memória deixou de bastar, e o de disco já existe** — entregue em 2026-09-07, antes de
-qualquer card depender dele. [RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada).
+**[FATO]** O Desktop mantém o documento de cards em cache persistente; sem
+configuração não lê grandezas do CLP
+([RN-088](../business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).

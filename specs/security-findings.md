@@ -35,7 +35,7 @@ sobe o contexto Spring completo.
 
 **Correção inicial:** os caminhos sem `/api` passaram a exigir as **mesmas roles** dos caminhos com
 `/api`. As rotas foram **protegidas, não removidas**, porque
-[OQ-024](open-questions.md#perguntas-encerradas-pelas-remoções) seguia sem resposta
+[OQ-024 no levantamento](history/open-questions-2026-09.md#perguntas-encerradas-pelas-remoções) seguia sem resposta
 — fechando a falha sem quebrar consumidores legados.
 
 **Eliminação definitiva:** os quatro controllers com mapeamento duplo eram exatamente

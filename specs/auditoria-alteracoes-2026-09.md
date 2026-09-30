@@ -163,7 +163,7 @@ Cada leitura consulta `estados.get(chave)`, enquanto as alterações do ciclo fi
 
 **Cenário deduzido diretamente do código:** `PRESSAO_01` ativo e sem limite; `PESO_01` desativado e com limite marcado ativo. A resposta tem `cardsAtivos=1` e `limitesAtivos=1`, então a tela indica `PRONTA`, embora nenhuma grandeza lida esteja vigiada. Card invisível também pode ser contado como vigilância remota, apesar da assimetria documentada.
 
-**Código:** [LimitesDeclarados](../Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/LimitesDeclarados.java), linha 54; [ProntidaoService](../Geopetro-Backend/app/src/main/java/com/geopetro/prontidao/ProntidaoService.java); [classificação do Front](../Geopetro-Front/src/app/features/monitoramento/services/prontidao.service.ts), linhas 64–68.
+**Código à época:** [LimitesDeclarados](../Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/LimitesDeclarados.java), linha 54; `ProntidaoService` e `prontidao.service.ts`, removidos com a tela de Prontidão da Frota.
 
 **Correção necessária:** cruzar limites com identidades de grandezas efetivamente habilitadas e distinguir cobertura local/remota. Não basta contar documentos ou flags independentes. **Achado por análise estrutural; não foi reproduzido na interface em execução.**
 
@@ -199,7 +199,7 @@ O seletor permite trocar de unidade durante um salvamento. O callback de sucesso
 
 **Origem:** a árvore importada em 03/09 já continha o teste sem o módulo importado. Não é uma regressão atribuída às alterações de alarmes.
 
-**Código:** [hydraulics.spec.js](../Geopetro-Front/tests/hydraulics.spec.js), linha 12; script no [package.json](../Geopetro-Front/package.json).
+**Código à época:** `tests/hydraulics.spec.js`, removido posteriormente; script no [package.json](../Geopetro-Front/package.json).
 
 **Correção necessária:** migrar os cenários úteis para os motores atuais e integrar a execução à verificação normal; não basta remover o comando ou criar um arquivo vazio para deixá-lo verde.
 

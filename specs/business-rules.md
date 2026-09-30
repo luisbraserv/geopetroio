@@ -105,7 +105,7 @@ Duas famílias de role, e nenhuma das duas basta sozinha:
 | Permissão de módulo | `MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR`, `CIMENTACAO` | **O que** ela alcança |
 
 `ADMIN` atravessa tudo sem permissão de módulo. `SUPORTE` segue o caso à parte de
-[RN-086](#rn-086--suporte-configura-o-sistema-sem-administrar-cadastro).
+[RN-086](#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend).
 
 | Módulo | Combinações que abrem |
 |---|---|
@@ -188,6 +188,8 @@ endpoint lia, editava e excluía observações de qualquer setor.
 
 **Lição que sobrevive:** era uma assimetria acidental (Processos filtrava, Observações não). Se um
 novo domínio com escopo por setor nascer, **o filtro de acesso deve estar na spec antes do código**.
+
+<a id="rn-015"></a>
 
 ### RN-015 · ⚠️ Cenários do simulador não têm dono
 **[FATO]** `simulador` grava `criadoPor` como String simples, sem FK, e **nunca compara** com o
@@ -397,6 +399,8 @@ do CLP) e resetam os históricos de cálculo, evitando delta negativo.
 **[FATO]** "P. Bomba de Lama" e "ESCP" exibem **o mesmo valor físico** (B005). Não são sensores
 distintos. Intencional e documentado.
 
+<a id="rn-037"></a>
+
 ### RN-037 · ⚠️ Visibilidade de card controla publicação, não gravação
 **[FATO]** Desmarcar um card no Geopetro-Desktop suprime a **publicação MQTT** daquela variável (e a
 tabela `FlowRateReading`, no caso da Vazão), mas `SondaReading` continua sendo gravado no H2 para
@@ -404,6 +408,8 @@ todas as variáveis. **O texto da UI afirma o contrário.**
 
 ### RN-038 · Sem publicação sem identificador de sonda
 **[FATO]** Se `sondaId` estiver vazio, o Geopetro-Desktop **não publica nada** (apenas log debug).
+
+<a id="rn-039"></a>
 
 ### RN-039 · ⚠️ Perda de telemetria em falha de publicação
 **[FATO]** Se a publicação MQTT falhar, a leitura daquele ciclo é **perdida** para telemetria remota
@@ -494,7 +500,7 @@ publica no MQTT. O tempo real é canal adicional, não requisito de funcionament
 processar. Já o histórico existe justamente para não ter buracos.
 
 **[FATO]** A fila MQTT cobre ~1 hora de broker fora. Mesmo descartando, o H2 local do Desktop mantém
-o registro completo ([RN-039](#rn-039---perda-de-telemetria-em-falha-de-publicação)).
+o registro completo ([RN-039](#rn-039)).
 
 ### RN-052 · Autorização de tempo real acontece no SUBSCRIBE
 **[FATO]** Não basta autenticar na conexão: o destino carrega o id da unidade, e um usuário
@@ -554,7 +560,7 @@ um limite alterado enquanto a sonda estava fora nunca chegaria, e ela operaria c
 ninguém percebesse.
 
 ### RN-058 · Telemetria remota não pode ter lacuna
-**[DECIDIDO 2026-09-05]** Supera [RN-039](#rn-039---perda-de-telemetria-em-falha-de-publicação): a perda
+**[DECIDIDO 2026-09-05]** Supera [RN-039](#rn-039): a perda
 de ciclo em falha de publicação **deixa de ser aceitável**. O Desktop passa a acumular e reenviar.
 
 ⚠️ **Abre:** telemetria fora de ordem no consumidor ([OQ-031](open-questions.md#oq-031--o-consumidor-tolera-telemetria-fora-de-ordem))
@@ -993,7 +999,7 @@ monitoramento, e cair em "acesso negado" seria absurdo para quem configura o sis
 onde ainda é `ENUM`** — produção não é tocada, e a collation dela fica preservada.
 
 ✅ **[FATO 2026-09-07]** Verificada contra MySQL real nos dois ramos: base nova e base com a coluna já
-`VARCHAR`. Ver [DT-002](technical-debt.md#divergência-confirmada-entre-produção-e-base-nova).
+`VARCHAR`. Ver [DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
 
 **Sem rede não se configura**, por desenho: não há validação local de credencial. O custo aceito é que
 a instalação inicial de uma unidade precisa de rede ao menos uma vez.
@@ -1027,13 +1033,9 @@ mesma escolha de [RN-062](#rn-062--desativar-usuário-corta-o-acesso-na-hora) pa
 **[DECIDIDO 2026-09-07]** Uma unidade sem cards configurados **não produz telemetria**. Não há
 conjunto padrão: o que se lê é exatamente o que foi declarado.
 
-⚠️ **Isto promoveu um [PENDENTE] a requisito.** O contrato registrava o *"cache persistente para
-reiniciar sem rede"* como melhoria futura. Enquanto o cache era só de memória, reiniciar sem rede
-custava os limites de alarme. Com os cards vindo da configuração, custaria **toda a telemetria da
-unidade**.
-
-✅ **[FATO 2026-09-07] Entregue.** `ConfiguracaoRemotaStore` grava o último snapshot válido em
-`config/configuracao-remota.json`, e `ConfiguracaoRemotaState` o restaura ao conectar.
+**[FATO]** O cache persistente de **cards** permite reiniciar sem rede com o
+último documento válido. `CardsStore` grava em `config/cards-da-unidade.json` e
+`CardsState` restaura o snapshot. Sem cards, a unidade não sabe o que ler.
 
 | Garantia | Como |
 |---|---|
@@ -1043,9 +1045,9 @@ unidade**.
 | Não derruba o app | Arquivo ilegível vira log e é descartado; falha ao gravar não impede a memória de funcionar |
 | Não vaza credencial | A chave usa servidor e usuário; **a senha não passa pelo cache** |
 
-⚠️ **Alternar entre duas unidades perde o cache a cada troca:** o arquivo guarda uma configuração só,
-e a da unidade anterior é sobrescrita. É conservador de propósito — servir configuração da unidade
-errada seria pior que não servir nenhuma.
+**[FATO]** A chave do cache isola servidor, usuário e unidade; trocar de unidade
+não pode aplicar o documento da anterior. Limites locais de alarme ficam em
+`config/alarmes-locais.json`, fora deste cache.
 
 ⚠️ **Consequência de migração:** a frota atual precisa **nascer** com os cards equivalentes ao
 mapeamento fixo de hoje, ou a telemetria para no dia do deploy. É migração de dados, não de schema.
@@ -1229,7 +1231,7 @@ temperatura ou um de tanque.
 carrega os seus instantes — completar com zero produziria um gráfico que desce até o chão e volta.
 
 **Grava o que está ativo, não só o visível:** visibilidade controla publicação, não gravação
-([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). O registro local é da
+([RN-037](#rn-037)). O registro local é da
 estação.
 
 ### ⚠️ A retenção passou a existir porque não existia
@@ -1283,7 +1285,7 @@ uma consulta em gatilho.
 | Consequência | Por quê |
 |---|---|
 | Sonda com a conexão de tempo real caída **não alarma no servidor**, ainda que o MQTT siga gravando | O canal é declaradamente com perda. Coerente com [RN-070](#rn-070--ausência-de-dado-não-é-alarme), mas não é o mesmo que dizer que nada se perde |
-| Card **ativo e invisível** nunca é avaliado | O tempo real carrega só cards visíveis ([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). Hoje a visibilidade controla, sem dizer, o que é vigiado — ver [OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) |
+| Card **ativo e invisível** nunca é avaliado | O tempo real carrega só cards visíveis ([RN-037](#rn-037)). Hoje a visibilidade controla, sem dizer, o que é vigiado — ver [OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara) |
 
 **O relógio é o do servidor.** `ocorridoEm` e a contagem dos tempos mínimos usam o instante de
 recepção, não o `timestamp` da mensagem: o histórico tem um relógio só, e uma estação com a hora
@@ -1316,13 +1318,13 @@ diferentes nos dois lados. O custo aceito é que uma excursão ocorrida com a so
 operador local e não entra no histórico** — coerente com o histórico remoto viver do que chega ao
 servidor.
 
-**Funciona sem rede, e é esse o ponto.** Os limites ficam em cache em disco: uma sonda sem internet
+**Funciona sem rede, e é esse o ponto.** Os limites locais ficam em disco: uma sonda sem internet
 continua lendo o CLP, convertendo e alarmando — a situação em que o operador ao lado do equipamento é
 a única pessoa que pode agir.
 
 ⚠️ **A estação vê mais que o servidor.** Ela avalia **todos os cards ativos**, inclusive os
 invisíveis; o servidor avalia pelo tempo real, que só carrega os visíveis
-([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)). Um limite sobre card
+([RN-037](#rn-037)). Um limite sobre card
 invisível dispara **na sonda** e não no servidor. A assimetria é **avisada nas duas telas onde a
 decisão é tomada** — Cards, no Desktop, e Limites, no Front —, e não impedida
 ([OQ-050](open-questions.md#oq-050--limite-sobre-card-invisível-nunca-dispara)): recusar acoplaria
@@ -1420,7 +1422,7 @@ alarme junto** ([RN-091](#rn-091--card-se-desativa-nunca-se-exclui)).
 ### RN-111 · O dashboard da estação mostra todo card ativo, visível ou não
 **[FATO 2026-09-09]** `CardsDoMonitoramento` monta os indicadores a partir dos cards **ativos**, e
 nada filtra por `visivel` — esse campo decide apenas se a grandeza entra na publicação de tempo real
-([RN-037](#rn-037---visibilidade-de-card-controla-publicação-não-gravação)).
+([RN-037](#rn-037)).
 
 ⚠️ **Isto sustenta a única cobertura que resta para card invisível.** O servidor avalia pelo tempo
 real, que só carrega card visível, então grandeza de card invisível **nunca dispara alarme no

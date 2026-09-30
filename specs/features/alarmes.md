@@ -36,9 +36,10 @@ integração externa nova, com custo por mensagem.
 
 ## 3. A pergunta que a avaliação dupla obriga a responder
 
-**[FATO]** Avaliar nos dois lados é o que dá **alarme local sem internet** e **alarme remoto para quem
-não está na sonda**. Mas cria a pergunta: se os dois lados avaliam a mesma excursão, quantos eventos
-isso gera?
+**[FATO]** A estação avalia seus **limites locais** sem internet; o servidor avalia seus
+**limites próprios** a partir do tempo real. As configurações são independentes
+([configuração da estação §3](configuracao-da-estacao.md#3-alarme-próprio-da-estação)).
+Só o servidor produz eventos para o histórico.
 
 **[DECIDIDO 2026-09-09]** Uma única fonte de verdade para o histórico:
 
@@ -115,11 +116,10 @@ configurada individualmente**, e os limites começam vazios.
 **Consequência aceita:** uma sonda recém-cadastrada **não alarma até alguém configurar** — e isso é
 estado normal, não pendência sinalizada.
 
-✅ **[FATO 2026-09-09] O sistema não *avisa*, mas passou a ser possível *perguntar*.** A tela
-**Prontidão da Frota** lista as unidades que leem e publicam e **nada as vigia**
-([OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas)). A
-decisão de não alertar sozinho continua de pé; o que deixou de existir é a impossibilidade de
-conferir.
+**[FATO]** A tela de Prontidão da Frota criada em 2026-09-09 foi removida
+no dia seguinte por classificar cobertura a partir de contagens insuficientes.
+O estado sem limite continua normal; a visibilidade remota da configuração
+segue em [OQ-049](../open-questions.md#oq-049--como-saber-quais-unidades-da-frota-já-foram-configuradas).
 
 **[DECIDIDO 2026-09-05]** O limite ajustado vale **até alguém trocar**. Não expira, não volta a padrão
 nenhum. O valor definido para o trabalho de hoje continua valendo semana que vem, para outro trabalho —
@@ -223,40 +223,21 @@ cresce em complexidade pelo número de tipos, não pelo número de registros.
 **Um evento por excursão, não por leitura.** A 1 leitura/s, uma pressão 10 minutos acima do limite
 geraria 600 registros — e nenhuma tela de histórico sobrevive a isso.
 
-## 5. Como o limite chega à sonda
+## 5. Como o limite é aplicado
 
-**[DECIDIDO 2026-09-05]** Pela **conexão WebSocket/STOMP que já existe**.
+**[FATO 2026-09-09]** A supervisão ajusta os limites do servidor em
+`/app/limites-alarme`. O Front usa `GET`/`PUT /api/sondas/{id}/configuracao`;
+`MotorDeAlarmes` lê o documento persistido e avalia as leituras recebidas pelo
+canal de tempo real. O [contrato de limites](../contracts/configuracao-sonda.md)
+define revisão, validação e autorização.
 
-**[FATO 2026-09-07]** O Desktop publica em `/app/realtime/estado` e agora recebe configurações na mesma conexão autenticada. Snapshot inicial, reconexão, revisão e permissões estão no [contrato de configuração](../contracts/configuracao-sonda.md).
+**[FATO]** O Desktop não assina nem recebe esse documento. Seu sininho grava
+limites próprios em `config/alarmes-locais.json`. O canal STOMP de limites criado
+na primeira entrega foi removido depois que perdeu o único assinante. O canal
+STOMP de **cards** continua ativo e é um contrato separado.
 
-**[FATO 2026-09-09]** ⚠️ *A frase anterior desta seção dizia que "ajuste pela tela e avaliação dos
-limites continuam pendentes" — texto de 07/09 que sobreviveu à entrega.* Os dois **existem**: a tela
-está em `/app/limites-alarme` e a avaliação em `MotorDeAlarmes` (§8, item 2). O fluxo abaixo descreve
-o que está implementado, e não mais um desenho previsto. **O que segue pendente é a distribuição à
-frota**, que depende do auto-update do Desktop.
-
-```
-Supervisão ajusta o limite na tela
-        │
-        ▼
-Geopetro-Backend grava e publica em /topic/config/unidades-sondas/{id}
-        │
-        ▼
-Geopetro-Desktop (já assinante) aplica na hora
-```
-
-**Regra obrigatória:** ao **conectar** e ao **reconectar**, o Desktop pede a configuração vigente. Sem
-isso, um limite alterado enquanto a sonda estava fora nunca chegaria — e a sonda operaria com um valor
-velho sem que ninguém percebesse.
-
-**Por que não um tópico MQTT de comando:** exigiria que o Geopetro-Backend voltasse a falar MQTT, revertendo
-a decisão de 2026-08-26 que deixou **um produtor e um consumidor** no broker
-([`mqtt-telemetria.md §6`](../contracts/mqtt-telemetria.md#6-remoção-do-consumidor-do-geopetro-backend)).
-A retenção do broker entregaria a configuração após um período offline — vantagem real —, mas o pedido
-no reconnect resolve o mesmo problema sem um segundo mecanismo.
-
-⚠️ **Este canal é a base do auto-update** ([product-context §8](../product-context.md#8-capacidades-decididas-que-ainda-não-existem),
-item 6). Vale desenhá-lo como *canal de configuração*, não como *canal de limites*.
+**[PENDENTE]** O auto-update ainda é necessário para distribuir à frota versões
+novas do Desktop; ele não distribui limites de alarme do servidor.
 
 ## 6. Autorização
 
@@ -323,7 +304,7 @@ na sonda segue sem ver aquele alarme, e é esse o público da feature.
 
 ## 8. Ordem de implementação sugerida
 
-1. ✅ **Canal de configuração** (§5) — **implementado em 2026-09-07**, incluindo persistência e transporte dos limites; distribuição à frota pendente
+1. ✅ **Documento de limites do servidor** (§5) — persistência, revisão e API REST implementadas. O antigo transporte STOMP de limites foi removido após a separação do alarme local.
 2. ✅ **Interface de limites + avaliação no servidor + evento** — **entregue em 2026-09-09**:
 
    ✅ **O limite passou a valer sobre a grandeza que a unidade declara** ([RN-101](../business-rules.md#rn-101--o-limite-de-alarme-só-existe-para-uma-grandeza-que-a-unidade-declara)).

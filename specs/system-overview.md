@@ -121,21 +121,14 @@ dependência Maven de `usuario`. **O grafo de dependências está hoje íntegro.
 
 | Aplicação | Banco | Estratégia de schema |
 |---|---|---|
-| Geopetro-Backend | **MySQL 8** (`geopetro_io`, TZ `America/Sao_Paulo`) | `ddl-auto=update` em dev · `validate` em prod |
+| Geopetro-Backend | **MySQL 8** (`geopetro_io`, TZ `America/Sao_Paulo`) | Flyway no startup · `ddl-auto=validate` em todos os perfis |
 | Geopetro-Desktop | **H2** em arquivo (`~/.geopetro-io/data/sonda_geopetro`) | `ddl-auto=update` |
 | Horus/Cimentação | **JSONL** em arquivo (`%LOCALAPPDATA%\GeopetroIO\data\registros_operacao.jsonl`) | — |
 | Telemetria | **InfluxDB** (measurement `telemetria`) | Sem migrations — o esquema é definido pelas tags/fields na escrita |
 
-**[FATO] Não há Flyway nem Liquibase.** Os scripts em
-`app/src/main/resources/db/migration/V*.sql` **imitam** a convenção Flyway sem o mecanismo. O
-cabeçalho de `V2026.06.02__base_regionais_setores.sql:6-10` diz literalmente: *"O projeto NAO usa
-Flyway/Liquibase. Esta migration e um script SQL IDEMPOTENTE... Rode manualmente em producao ANTES de
-subir a aplicacao"*.
-
-✅ **[FATO 2026-09-06] Isso mudou: o projeto adotou Flyway.** As migrations rodam sozinhas no startup
-do backend, `ddl-auto=validate` passou a valer em **todos** os perfis, e os `V2026.06.*` foram
-arquivados em `db/historico/` — seus efeitos estão dentro do baseline `V2026.09.04`. O texto acima
-descreve o estado até 2026-09-05 e fica como registro. Ver
+**[FATO 2026-09-06]** O Backend usa Flyway no startup e `validate` em
+todos os perfis. Scripts antigos foram arquivados em `db/historico/`; o
+baseline é `V2026.09.04`. Histórico da migração em
 [DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
 
 **[FATO]** Existia ainda uma terceira via — `ProcessoSchemaInitializer`, um `ApplicationRunner` que
@@ -330,18 +323,16 @@ o original como ícone de janela seria desperdício em cada inicialização.
 
 ## GeoPetro Vision — integração prevista (11/09/2026)
 
-**[DECIDIDO 2026-09-11]** O GeoPetro Vision monitorará localmente as câmeras de cada unidade e alimentará o Geopetro-Backend com registros de não conformidade SMS e fotos. O Geopetro-Front existente disponibilizará o histórico sincronizado; não haverá nova central nem vídeo ao vivo remoto nesta etapa. ADMIN/SUPORTE poderão consultar todas as unidades; os demais acessos respeitarão o escopo autorizado. Retenção do Vision é indefinida e distinta da telemetria. Requisitos ainda não implementados.
-
-Decisões, permissões, operação offline e contrato pendente: [GeoPetro Vision](features/geopetro-vision.md).
-
-**[DECIDIDO 2026-09-11 — entrevista encerrada]** Frontend somente consulta histórico; avaliações/correções e configuração de turnos/zonas exclusivamente no desktop. Câmeras cadastradas manualmente, quantidade variável. Tempos por zona e turnos definidos localmente. Offline-first mantém consulta/avaliação da sessão já iniciada; ao reconectar com token expirado exige relogin na interface sem parar monitoramento/transporte. Não enviar e-mail ao SMS por falha de câmera/IA. Especificações atualizadas, sem implementação.
+**[DECIDIDO 2026-09-11]** O Vision fará captura e avaliação local por
+unidade; enviará ocorrências e fotos ao Backend para consulta no Front. Não
+haverá central nem vídeo remoto nesta etapa. Requisitos e pendências estão na
+[feature Vision](features/geopetro-vision.md) e no
+[contrato proposto](contracts/geopetro-vision.md). A integração ainda não foi
+implementada.
 
 ## Decisão final de sessão e executor — revisão 11/09/2026
 
-**[DECIDIDO 2026-09-11]** Esta decisão substitui a previsão anterior de retomada automática após reboot offline. Monitoramento somente inicia após login online autorizado no Vision, inclusive depois de reiniciar Windows. Bloquear tela mantém a captura; trocar usuário Windows ou encerrar sessão Windows para a captura. Fechar janela mantém execução na conta atual. Logout Vision bloqueia a instalação inteira até qualquer usuário autorizado fazer novo login online.
-
-**[DECIDIDO 2026-09-11]** Cada pessoa tem sua conta Windows; unidade/câmeras são configuração compartilhada de todos os usuários daquele computador. Sessão humana não é compartilhada. Executor separado da UI na sessão atual, sem serviço Windows permanente de monitoramento; uma captura ativa por instalação.
-
-**[DECIDIDO 2026-09-11]** SUPORTE/ADMIN seleciona unidade consultando GeoPetro IO dentro do próprio app desktop. Não haverá liberação manual em portal ou cadastro externo. Ao salvar vínculo, app obtém automaticamente credencial técnica da instalação; mecanismo remoto ainda precisa de contrato/implementação. Essa credencial permite transporte independente do token humano durante execução, mas não substitui login exigido para iniciar monitoramento ou usar interface.
-
-**[PENDENTE]** Cofre compartilhado entre contas Windows, rotação/revogação da credencial técnica e comportamento do transporte após logoff/logout; não prometer envio local com todos os processos encerrados nem reintroduzir serviço permanente implicitamente. Nenhum endpoint/papel/código alterado nesta entrega documental.
+**[DECIDIDO 2026-09-11]** Após reiniciar Windows, o monitoramento aguarda
+novo login online no Vision. A execução fica na sessão Windows atual, com
+captura única por instalação. Detalhes e pendências de credencial técnica estão
+na [feature](features/geopetro-vision.md#decisão-final-de-sessão-e-executor--revisão-11092026).
