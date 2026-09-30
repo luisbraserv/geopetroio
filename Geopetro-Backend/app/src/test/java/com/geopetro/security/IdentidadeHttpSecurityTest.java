@@ -75,21 +75,39 @@ class IdentidadeHttpSecurityTest {
     }
     @AfterEach void close() { context.close(); }
 
-    @Test void configurationRequiresLoginAndMonitoringRolesIncludingCliente() throws Exception {
+    /**
+     * Limites de alarme seguem o TEMPO REAL (RN-069), nao o monitoramento.
+     *
+     * <p>O caso que importa e o penultimo da lista de recusados: {@code CLIENTE + MONITORAMENTO} ve
+     * a tela de series e <b>nao</b> entra aqui. Com uma lista de roles isso era inexpressavel.
+     */
+    @Test void alarmLimitsRequireLoginAndRealTimePermission() throws Exception {
         String path = "/api/sondas/7/configuracao";
         String payload = "{\"revisao\":0,\"limites\":[]}";
         mvc.perform(get(path)).andExpect(status().isUnauthorized());
         mvc.perform(put(path).contentType("application/json").content(payload)).andExpect(status().isUnauthorized());
-        mvc.perform(get(path).with(user("ana").roles("INTERNO"))).andExpect(status().isForbidden());
-        mvc.perform(put(path).with(user("ana").roles("INTERNO")).contentType("application/json").content(payload)).andExpect(status().isForbidden());
+        String[][] semAcesso = {
+            {"INTERNO"}, {"CLIENTE"},
+            {"CLIENTE", "MONITORAMENTO"},        // monitora, mas nao tem tempo real
+            {"MONITORAMENTO_REAL"},              // permissao sem tipo de conta
+        };
+        for (String[] roles : semAcesso) {
+            mvc.perform(get(path).with(user("ana").roles(roles))).andExpect(status().isForbidden());
+            mvc.perform(put(path).with(user("ana").roles(roles)).contentType("application/json").content(payload)).andExpect(status().isForbidden());
+        }
         var service = context.getBean(ConfiguracaoSondaService.class);
         verifyNoInteractions(service);
-        for (String role : new String[]{"ADMIN", "CLIENTE", "SONDA", "CIMENTACAO", "GERENCIA", "DIRETORIA"}) {
-            mvc.perform(get(path).with(user("ana").roles(role))).andExpect(status().isOk());
-            mvc.perform(put(path).with(user("ana").roles(role)).contentType("application/json").content(payload)).andExpect(status().isOk());
+        String[][] comAcesso = {
+            {"ADMIN"},
+            {"CLIENTE", "MONITORAMENTO_REAL"},
+            {"INTERNO", "MONITORAMENTO_REAL"},
+        };
+        for (String[] roles : comAcesso) {
+            mvc.perform(get(path).with(user("ana").roles(roles))).andExpect(status().isOk());
+            mvc.perform(put(path).with(user("ana").roles(roles)).contentType("application/json").content(payload)).andExpect(status().isOk());
         }
-        verify(service, times(6)).ler("ana", 7);
-        verify(service, times(6)).salvar(eq("ana"), eq(7L), any());
+        verify(service, times(3)).ler("ana", 7);
+        verify(service, times(3)).salvar(eq("ana"), eq(7L), any());
     }
 
     @Test void loginIsPublicAndKeepsTheRequestContract() throws Exception {
@@ -122,7 +140,7 @@ class IdentidadeHttpSecurityTest {
         mvc.perform(get(path)).andExpect(status().isUnauthorized());
         mvc.perform(put(path).contentType("application/json").content(payload)).andExpect(status().isUnauthorized());
         mvc.perform(post(path + "/teste")).andExpect(status().isUnauthorized());
-        for (String role : new String[]{"INTERNO", "CLIENTE", "SONDA", "CIMENTACAO", "GERENCIA", "DIRETORIA"}) {
+        for (String role : new String[]{"INTERNO", "CLIENTE", "MONITORAMENTO", "MONITORAMENTO_REAL", "SIMULADOR", "CIMENTACAO"}) {
             mvc.perform(get(path).with(user("ana").roles(role))).andExpect(status().isForbidden());
             mvc.perform(put(path).with(user("ana").roles(role)).contentType("application/json").content(payload)).andExpect(status().isForbidden());
             mvc.perform(post(path + "/teste").with(user("ana").roles(role))).andExpect(status().isForbidden());
@@ -192,7 +210,7 @@ class IdentidadeHttpSecurityTest {
     }
 
     @Test void everyAuthenticatedRoleCanChangeItsOwnContactAndPassword() throws Exception {
-        for (String role : new String[]{"INTERNO", "CLIENTE", "SONDA", "CIMENTACAO", "GERENCIA", "DIRETORIA", "ADMIN"}) {
+        for (String role : new String[]{"INTERNO", "CLIENTE", "MONITORAMENTO", "MONITORAMENTO_REAL", "SIMULADOR", "CIMENTACAO", "ADMIN"}) {
             mvc.perform(patch(USERS + "/me").with(user("ana").roles(role))
                 .contentType("application/json").content(CONTACT)).andExpect(status().isOk());
             mvc.perform(patch(USERS + "/me/senha").with(user("ana").roles(role))
@@ -204,7 +222,7 @@ class IdentidadeHttpSecurityTest {
     }
 
     @Test void nonAdminsCannotListCreateOrChangeOtherUsers() throws Exception {
-        for (String role : new String[]{"INTERNO", "CLIENTE", "SONDA", "CIMENTACAO", "GERENCIA", "DIRETORIA"}) {
+        for (String role : new String[]{"INTERNO", "CLIENTE", "MONITORAMENTO", "MONITORAMENTO_REAL", "SIMULADOR", "CIMENTACAO"}) {
             mvc.perform(get(USERS).with(user("ana").roles(role))).andExpect(status().isForbidden());
             mvc.perform(get(USERS + "/outro").with(user("ana").roles(role))).andExpect(status().isForbidden());
             for (String suffix : new String[]{"/outro", "/outro/ativar", "/outro/desativar"}) {
@@ -239,6 +257,11 @@ class IdentidadeHttpSecurityTest {
         mvc.perform(delete("/api/regionais/1").with(user("cliente").roles("CLIENTE"))).andExpect(status().isForbidden());
         for (String path : new String[]{"/api/setores", "/api/unidades-sondas"}) {
             mvc.perform(get(path).with(user("cliente").roles("CLIENTE"))).andExpect(status().isForbidden());
+            // CIMENTACAO virou permissao de dominio e passou a ser combinavel com CLIENTE
+            // (Simulador de Cimentacao). Enquanto ela estava nesta lista de roles, esse cliente
+            // lia a lista de setores e a frota inteira — cadastro interno, que a role nao concede.
+            mvc.perform(get(path).with(user("cliente").roles("CLIENTE", "SIMULADOR", "CIMENTACAO")))
+                .andExpect(status().isForbidden());
         }
     }
 
