@@ -30,6 +30,19 @@ class PocoGeometryTest {
         assertThat(new PocoGeometryConverter().convertToEntityAttribute(
                 new PocoGeometryConverter().convertToDatabaseColumn(g))).isEqualTo(g);
     }
+    @Test void preservesPhaseSurveyAndCaliperSamples() {
+        var stations = List.of(new Station(0.0, 0.0, 0.0), new Station(100.0, 10.0, 45.0));
+        var phase = new Phase("p1", "Fase", "PRODUCTION", 0.0, 100.0, 0.0, 100.0,
+                17.5, 13.375, 12.415, 100.0, 100.0, new Trajectory(true, stations));
+        var samples = List.of(new CaliperSample(0.0, 18.0, 17.0, 0.0),
+                new CaliperSample(100.0, 20.0, 19.0, 12.0));
+        var caliper = new Caliper("teste.las", "2026-09-19T00:00:00Z", "DEPT",
+                List.of("EHD1", "EHD2"), 0.0, 100.0, 2, 12.2, 12.0, 1.67, samples);
+        var geometry = new PocoGeometry(100.0, null, List.of(phase), new Trajectory(true, stations), caliper);
+        assertThatCode(() -> PocoGeometryValidator.validate(geometry)).doesNotThrowAnyException();
+        var converter = new PocoGeometryConverter();
+        assertThat(converter.convertToEntityAttribute(converter.convertToDatabaseColumn(geometry))).isEqualTo(geometry);
+    }
     @Test void rejectsInvalidOrIncompleteSurvey() {
         for (var stations : List.of(
                 List.of(new Station(0.0, 0.0, 0.0)),

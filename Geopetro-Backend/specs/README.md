@@ -48,13 +48,20 @@ próprio, e mesmo ele é agnóstico (persiste blobs opacos).
 | `usuario` | usuarios | `PATCH /api/usuarios/me`, `PATCH /api/usuarios/me/senha` | autenticado |
 | `usuario` | usuarios | `/api/usuarios/**` | `ADMIN` |
 | `empresa` | organizacao | `/api/empresas/**` | `ADMIN` |
-| `regional` | organizacao | `GET /api/regionais/**` | `INTERNO`, `CIMENTACAO`, `ADMIN` |
+| `regional` | organizacao | `GET /api/regionais/**` | `INTERNO`, `ADMIN` |
 | `regional` | organizacao | `POST/PUT/DELETE /api/regionais/**` | `ADMIN` |
-| `setor` | organizacao | `/api/setores/**` | `INTERNO`, `CIMENTACAO`, `ADMIN` |
-| `unidade-sonda` | organizacao | `/api/unidades-sondas/**` | `INTERNO`, `CIMENTACAO`, `ADMIN` |
-| `simulador` | simulador | `/api/simulador/**` | `CIMENTACAO`, `GERENCIA`, `DIRETORIA`, `ADMIN` |
-| `app` | monitoramento | `/api/sondas/**` | `SONDA`, `CIMENTACAO`, `GERENCIA`, `DIRETORIA`, `CLIENTE`, `ADMIN` |
+| `setor` | organizacao | `/api/setores/**` | `INTERNO`, `ADMIN` |
+| `unidade-sonda` | organizacao | `/api/unidades-sondas/**` | `INTERNO`, `ADMIN` |
+| `simulador` | simulador | `/api/simulador/**` | `ADMIN` · `(CLIENTE\|INTERNO)`+`SIMULADOR`+`CIMENTACAO` |
+| `app` | monitoramento | `GET /api/sondas/minhas` · `/api/sondas/*/cards` | `ADMIN` · `(CLIENTE\|INTERNO)`+`MONITORAMENTO` **ou** `MONITORAMENTO_REAL` · cards também `SUPORTE` |
+| `app` | monitoramento | `/api/sondas/*/monitoramentos/**` e demais `/api/sondas/**` | `ADMIN` · `(CLIENTE\|INTERNO)`+`MONITORAMENTO` |
+| `app` | monitoramento | `/api/sondas/*/configuracao` · `/api/sondas/*/alarmes**` | `ADMIN` · `(CLIENTE\|INTERNO)`+`MONITORAMENTO_REAL` |
 | `app` | realtime | `/ws` (handshake) + STOMP | público no handshake; autorizado no CONNECT/SUBSCRIBE |
+
+⚠️ **O acesso é por combinação, não por lista** — desde 2026-09-17. `MONITORAMENTO` sozinha não
+concede nada: vale somada ao tipo de conta (`CLIENTE` ou `INTERNO`). As combinações estão declaradas
+em `RegrasDeAcesso`, e o `SecurityConfig` as aplica por `.access(...)` em vez de `hasAnyRole`. Ver
+[RN-099](../../specs/business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
 
 ⚠️ **A ordem das regras no `SecurityConfig` é significativa.** `PATCH /api/usuarios/me` precisa vir **antes** de
 `/api/usuarios/**`, e o `GET` de regionais antes da regra geral de regionais. Alterar a ordem reintroduz

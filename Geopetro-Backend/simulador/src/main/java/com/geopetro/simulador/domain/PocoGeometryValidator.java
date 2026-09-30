@@ -26,6 +26,7 @@ public final class PocoGeometryValidator {
         Phase previous = null;
         double previousTvd = 0;
         Set<String> ids = new HashSet<>();
+        Set<Double> surveyMds = new HashSet<>();
         for (Phase p : phases) {
             check(p.id() != null && !p.id().isBlank() && ids.add(p.id()), "Cada fase deve ter um identificador único.");
             check(p.type() != null && TYPES.contains(p.type()), "Tipo de fase inválido.");
@@ -41,6 +42,7 @@ public final class PocoGeometryValidator {
                 check(Math.abs(top - previousTvd) <= EPS, "Os TVDs devem ser contínuos entre fases.");
             }
             check(positive(p.holeDiameterIn()), "Diâmetro do poço deve ser positivo.");
+            validatePhaseSurvey(p, surveyMds);
             if (p.casingOD() != null || p.casingID() != null) {
                 check(positive(p.casingOD()) && positive(p.casingID()) && p.casingID() < p.casingOD()
                         && p.casingOD() <= p.holeDiameterIn() + EPS, "Diâmetros do revestimento incompatíveis.");
@@ -56,6 +58,45 @@ public final class PocoGeometryValidator {
         }
         if (Math.abs(previous.bottomMD() - g.wellFinalMD()) <= EPS)
             check(Math.abs(previousTvd - finalTvd) <= EPS, "TVD final deve coincidir com a última fase.");
+        validateCaliper(g.caliper());
+    }
+
+    private static void validatePhaseSurvey(Phase phase, Set<Double> globalMds) {
+        Trajectory survey = phase.survey();
+        if (survey == null || !survey.enabled()) return;
+        List<Station> stations = survey.stations();
+        check(stations != null && !stations.isEmpty() && stations.size() <= 50,
+                "Survey manual exige de 1 a 50 estações por fase.");
+        double previousMd = -1;
+        for (Station station : stations) {
+            check(station != null && nonnegative(station.md())
+                    && station.md() >= phase.topMD() - EPS && station.md() <= phase.bottomMD() + EPS,
+                    "Estação do survey fora do intervalo da fase.");
+            check(nonnegative(station.inclinationDeg()) && station.inclinationDeg() <= 180
+                    && nonnegative(station.azimuthDeg()) && station.azimuthDeg() <= 360,
+                    "Inclinação ou azimute inválido no survey.");
+            check(station.md() > previousMd && globalMds.add(station.md()),
+                    "MDs do survey devem ser crescentes e não podem se repetir.");
+            previousMd = station.md();
+        }
+    }
+
+    private static void validateCaliper(Caliper caliper) {
+        if (caliper == null) return;
+        check(caliper.fileName() != null && !caliper.fileName().isBlank(), "Informe o nome do LAS do caliper.");
+        check(caliper.samples() != null && caliper.samples().size() >= 2 && caliper.samples().size() <= 1_000_000,
+                "Caliper exige de 2 a 1000000 amostras.");
+        check(nonnegative(caliper.startMD()) && positive(caliper.stopMD()) && caliper.stopMD() > caliper.startMD(),
+                "Intervalo do caliper inválido.");
+        double previous = -1;
+        for (CaliperSample sample : caliper.samples()) {
+            check(sample != null && nonnegative(sample.md()) && sample.md() > previous
+                    && positive(sample.ehd1In()) && positive(sample.ehd2In()), "Amostra de caliper inválida.");
+            previous = sample.md();
+        }
+        check(Math.abs(caliper.samples().getFirst().md() - caliper.startMD()) <= EPS
+                && Math.abs(caliper.samples().getLast().md() - caliper.stopMD()) <= EPS,
+                "Intervalo do caliper não coincide com as amostras.");
     }
 
     /** Integra o arco de mínima curvatura; não usa o TVD manual quando o survey está ativo. */

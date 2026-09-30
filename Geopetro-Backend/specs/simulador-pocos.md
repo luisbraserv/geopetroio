@@ -66,8 +66,32 @@ O teste de inicialização isolado em H2 foi aprovado após o ajuste descrito ac
   mesmo poço. O legado conserva seu conteúdo sem vínculo.
 - Versão desatualizada bloqueia alteração e criação do vínculo. Exclusão vinculada
   é bloqueada no serviço e pela FK, sem cascata.
-- HTTP exige autenticação e os perfis CIMENTACAO, GERENCIA, DIRETORIA ou ADMIN,
-  seguindo o `SecurityConfig` existente. JSON inválido retorna 400; conflito, 409.
+- HTTP exige autenticação e ADMIN, ou SIMULADOR+CIMENTACAO somadas ao tipo de conta
+  (CLIENTE ou INTERNO), seguindo o `SecurityConfig` existente — desde 2026-09-17 o
+  acesso é por combinação, e uma role sozinha não basta. JSON inválido retorna 400;
+  conflito, 409.
 
 Os limites de 1000 fases e 10000 estações limitam o tamanho do cadastro aceito;
 não representam faixas de plausibilidade de engenharia.
+
+
+## Cenários e pastas — R2 (2026-09-19)
+
+O filtro de cenários usa conjuntamente operação e pasta. Uma pasta de outra
+operação é recusada na consulta e na criação/atualização de cenário. Atualizar um
+cenário ou renomear uma pasta não permite mudar sua operação. Requisições
+incompatíveis são rejeitadas; a transação preserva o conteúdo anterior.
+
+Excluir pasta continua removendo seus cenários por cascata. A interface da
+primária confirma nome e quantidade antes de chamar a exclusão. Navegação entre
+pastas e destino de salvamento são estados distintos.
+
+Nenhum endpoint nem migration foi acrescentado. A seleção de fase permanece no
+`formValue`; metadados/receitas documentais da primária viajam em
+`dadosRelatorio` como JSON versionado. O cadastro do poço continua compartilhado.
+
+Verificação: 12 testes aprovados nas classes `PastaCenarioPersistenceTest`,
+`PocoPersistenceTest`, `PocoGeometryTest` e `PocoSecurityTest`. Controllers e
+persistência foram exercitados com MockMvc/H2 isolado. O fluxo completo em sessão
+autenticada e o aceite com dados reais continuam pendentes; ver
+[registro R2 do frontend](../../Geopetro-Front/specs/simulador/r2-validacao.md).

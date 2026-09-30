@@ -41,6 +41,8 @@ public class PastaSimuladorService {
     @Transactional
     public PastaSimuladorEntity renomear(Long id, PastaRequest request) {
         PastaSimuladorEntity pasta = buscar(id);
+        if (!pasta.getOperacao().equals(request.operacao()))
+            throw new IllegalArgumentException("A operação da pasta não pode ser alterada.");
         pasta.setNome(request.nome());
         return repository.save(pasta);
     }

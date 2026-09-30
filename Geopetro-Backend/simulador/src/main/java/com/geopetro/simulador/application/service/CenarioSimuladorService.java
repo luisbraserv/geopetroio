@@ -29,7 +29,8 @@ public class CenarioSimuladorService {
     @Transactional(readOnly = true)
     public List<CenarioSimuladorEntity> listar(String operacao, Long pastaId) {
         if (pastaId != null) {
-            return repository.findByPastaIdOrderByAtualizadoEmDesc(pastaId);
+            validarPasta(pastaId, operacao);
+            return repository.findByOperacaoAndPastaIdOrderByAtualizadoEmDesc(operacao, pastaId);
         }
         return repository.findByOperacaoOrderByAtualizadoEmDesc(operacao);
     }
@@ -54,8 +55,7 @@ public class CenarioSimuladorService {
         cenario.setDadosRelatorio(request.dadosRelatorio());
         cenario.setCriadoPor(username);
         if (request.pastaId() != null) {
-            PastaSimuladorEntity pasta = pastaRepository.findById(request.pastaId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Pasta não encontrada."));
+            PastaSimuladorEntity pasta = validarPasta(request.pastaId(), request.operacao());
             cenario.setPasta(pasta);
         }
         return repository.save(cenario);
@@ -64,17 +64,26 @@ public class CenarioSimuladorService {
     @Transactional
     public CenarioSimuladorEntity atualizar(Long id, CenarioRequest request) {
         CenarioSimuladorEntity cenario = buscar(id);
+        if (!cenario.getOperacao().equals(request.operacao()))
+            throw new IllegalArgumentException("A operação do cenário não pode ser alterada.");
         cenario.setNome(request.nome());
         aplicarGeometria(cenario, request);
         cenario.setDadosRelatorio(request.dadosRelatorio());
         if (request.pastaId() != null) {
-            PastaSimuladorEntity pasta = pastaRepository.findById(request.pastaId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Pasta não encontrada."));
+            PastaSimuladorEntity pasta = validarPasta(request.pastaId(), request.operacao());
             cenario.setPasta(pasta);
         } else {
             cenario.setPasta(null);
         }
         return repository.save(cenario);
+    }
+
+    private PastaSimuladorEntity validarPasta(Long id, String operacao) {
+        var pasta = pastaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pasta não encontrada."));
+        if (!pasta.getOperacao().equals(operacao))
+            throw new IllegalArgumentException("A pasta pertence a outra operação.");
+        return pasta;
     }
 
     private void aplicarGeometria(CenarioSimuladorEntity cenario, CenarioRequest request) {

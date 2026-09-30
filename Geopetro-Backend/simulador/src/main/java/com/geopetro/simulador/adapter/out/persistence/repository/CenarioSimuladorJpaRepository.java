@@ -8,6 +8,6 @@ import java.util.List;
 public interface CenarioSimuladorJpaRepository extends JpaRepository<CenarioSimuladorEntity, Long> {
     boolean existsByPocoId(Long pocoId);
     List<CenarioSimuladorEntity> findByOperacaoAndPastaIsNullOrderByAtualizadoEmDesc(String operacao);
-    List<CenarioSimuladorEntity> findByPastaIdOrderByAtualizadoEmDesc(Long pastaId);
+    List<CenarioSimuladorEntity> findByOperacaoAndPastaIdOrderByAtualizadoEmDesc(String operacao, Long pastaId);
     List<CenarioSimuladorEntity> findByOperacaoOrderByAtualizadoEmDesc(String operacao);
 }

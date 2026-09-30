@@ -36,26 +36,43 @@ class PocoSecurityTest {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
     @AfterEach void close() { context.close(); }
+    /**
+     * O simulador exige a COMBINACAO: tipo de conta + SIMULADOR (a area) + CIMENTACAO (o dominio).
+     *
+     * <p>Os dois ultimos casos sao o que uma lista de roles nao pegaria: uma permissao de modulo
+     * sozinha, ou o par incompleto, nao abre a porta.
+     */
     @Test void requiresAuthenticationAndSimulatorRoleForReadAndWrite() throws Exception {
         mvc.perform(get("/api/simulador/pocos")).andExpect(status().isUnauthorized());
-        for (String role : new String[]{"CLIENTE", "SONDA", "INTERNO"}) {
-            mvc.perform(get("/api/simulador/pocos").with(user("u").roles(role))).andExpect(status().isForbidden());
-            mvc.perform(delete("/api/simulador/pocos/1").with(user("u").roles(role))).andExpect(status().isForbidden());
+        String[][] semAcesso = {
+            {"CLIENTE"}, {"INTERNO"},
+            {"SIMULADOR", "CIMENTACAO"},            // permissoes sem tipo de conta
+            {"INTERNO", "SIMULADOR"},               // area sem o dominio
+            {"CLIENTE", "CIMENTACAO"},              // dominio sem a area
+        };
+        for (String[] roles : semAcesso) {
+            mvc.perform(get("/api/simulador/pocos").with(user("u").roles(roles))).andExpect(status().isForbidden());
+            mvc.perform(delete("/api/simulador/pocos/1").with(user("u").roles(roles))).andExpect(status().isForbidden());
         }
         verifyNoInteractions(context.getBean(PocoService.class));
     }
     @Test void allowsExistingSimulatorProfiles() throws Exception {
-        for (String role : new String[]{"CIMENTACAO", "GERENCIA", "DIRETORIA", "ADMIN"}) {
-            mvc.perform(get("/api/simulador/pocos").with(user("u").roles(role))).andExpect(status().isOk());
-            mvc.perform(delete("/api/simulador/pocos/1").with(user("u").roles(role))).andExpect(status().isNoContent());
+        String[][] comAcesso = {
+            {"ADMIN"},
+            {"INTERNO", "SIMULADOR", "CIMENTACAO"},
+            {"CLIENTE", "SIMULADOR", "CIMENTACAO"},
+        };
+        for (String[] roles : comAcesso) {
+            mvc.perform(get("/api/simulador/pocos").with(user("u").roles(roles))).andExpect(status().isOk());
+            mvc.perform(delete("/api/simulador/pocos/1").with(user("u").roles(roles))).andExpect(status().isNoContent());
         }
     }
 
     @Test void returnsBadRequestForInvalidJsonAndConflictForStaleVersion() throws Exception {
-        mvc.perform(post("/api/simulador/pocos").with(user("ana").roles("CIMENTACAO"))
+        mvc.perform(post("/api/simulador/pocos").with(user("ana").roles("INTERNO", "SIMULADOR", "CIMENTACAO"))
                 .contentType("application/json").content("{"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/simulador/pocos").with(user("ana").roles("CIMENTACAO"))
+        mvc.perform(post("/api/simulador/pocos").with(user("ana").roles("INTERNO", "SIMULADOR", "CIMENTACAO"))
                 .contentType("application/json").content("{\"nome\":\"\",\"geometria\":null}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(context.getBean(PocoService.class));
@@ -63,7 +80,7 @@ class PocoSecurityTest {
                 .thenThrow(new com.geopetro.core.exception.BusinessException("Recarregue o poço.", org.springframework.http.HttpStatus.CONFLICT));
         String request = new tools.jackson.databind.json.JsonMapper().writeValueAsString(
                 new com.geopetro.simulador.adapter.in.web.request.PocoRequest("Poço", PocoGeometryTest.vertical(1500), 0L));
-        mvc.perform(put("/api/simulador/pocos/1").with(user("ana").roles("CIMENTACAO"))
+        mvc.perform(put("/api/simulador/pocos/1").with(user("ana").roles("INTERNO", "SIMULADOR", "CIMENTACAO"))
                 .contentType("application/json").content(request)).andExpect(status().isConflict());
     }
 }
