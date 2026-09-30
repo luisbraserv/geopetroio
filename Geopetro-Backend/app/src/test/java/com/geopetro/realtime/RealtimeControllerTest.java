@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -24,7 +25,7 @@ import com.geopetro.alarmes.AlarmeAtivo;
 import com.geopetro.alarmes.EventoAlarme.LimiteViolado;
 import com.geopetro.alarmes.EventoAlarme.Severidade;
 import com.geopetro.alarmes.MotorDeAlarmes;
-import com.geopetro.monitoramento.SondaMonitoramentoService;
+import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
 import com.geopetro.realtime.dto.EstadoRealtimeDTO;
 import com.geopetro.realtime.dto.EstadoRealtimeDTO.LeituraRealtimeDTO;
 
@@ -40,17 +41,17 @@ class RealtimeControllerTest {
 	private static final Principal ANA = () -> "ana";
 
 	private SimpMessagingTemplate mensagens;
-	private SondaMonitoramentoService monitoramento;
+	private ConfiguracaoSondaAccess acesso;
 	private MotorDeAlarmes alarmes;
 	private RealtimeController controller;
 
 	@BeforeEach
 	void setup() {
 		mensagens = mock(SimpMessagingTemplate.class);
-		monitoramento = mock(SondaMonitoramentoService.class);
+		acesso = mock(ConfiguracaoSondaAccess.class);
 		alarmes = mock(MotorDeAlarmes.class);
-		controller = new RealtimeController(mensagens, monitoramento, alarmes);
-		when(monitoramento.usuarioPossuiAcessoAUnidade("ana", 7L)).thenReturn(true);
+		controller = new RealtimeController(mensagens, acesso, alarmes);
+		when(acesso.permite("ana", 7L)).thenReturn(true);
 		when(alarmes.avaliar(anyLong(), anyList())).thenReturn(List.of());
 	}
 
@@ -102,7 +103,7 @@ class RealtimeControllerTest {
 
 	@Test
 	void publicacaoParaUnidadeSemAcessoNaoAvaliaNemRetransmite() {
-		when(monitoramento.usuarioPossuiAcessoAUnidade("ana", 7L)).thenReturn(false);
+		when(acesso.permite("ana", 7L)).thenReturn(false);
 
 		assertThatThrownBy(() -> controller.receberEstado(estado(Instant.now()), ANA))
 				.isInstanceOf(WebSocketNaoAutorizadoException.class);
@@ -117,5 +118,48 @@ class RealtimeControllerTest {
 
 		verify(alarmes, never()).avaliar(anyLong(), anyList());
 		verify(mensagens, never()).convertAndSend(eq(TOPICO), any(EstadoRealtimeDTO.class));
+	}
+
+	/**
+	 * ⚠️ Um ciclo e um INSTANTE: duas leituras da mesma grandeza nele nao sao serie temporal.
+	 *
+	 * <p>Aceitar o payload faria dois episodios nascerem para uma excursao so — e ficar com "a
+	 * ultima" esconderia um produtor quebrado atras de um resultado plausivel.
+	 */
+	@Test
+	@DisplayName("ciclo com grandeza repetida e descartado inteiro")
+	void cicloComIdentidadeRepetidaEDescartado() {
+		var uma = new LeituraRealtimeDTO("PRESSAO_01", null, "PRESSAO", "psi", "DBW10", 130.0, null);
+		var outra = new LeituraRealtimeDTO("PRESSAO_01", null, "PRESSAO", "psi", "DBW10", 131.0, null);
+
+		controller.receberEstado(new EstadoRealtimeDTO(7L, Instant.now(), List.of(uma, outra), null), ANA);
+
+		verify(alarmes, never()).avaliar(anyLong(), anyList());
+		verify(mensagens, never()).convertAndSend(eq(TOPICO), any(EstadoRealtimeDTO.class));
+	}
+
+	/** RN-098: as tres series de um contador compartilham o dispositivoId e nao sao repeticao. */
+	@Test
+	void seriesDiferentesDoMesmoDispositivoNaoSaoRepeticao() {
+		var vazao = new LeituraRealtimeDTO("CONTADOR_01", "vazao", "VAZAO", "bpm", "DBW20", 9.0, null);
+		var volume = new LeituraRealtimeDTO("CONTADOR_01", "volumeAcumulado", "VOLUME", "bbl", "DBW20",
+				300.0, null);
+
+		controller.receberEstado(
+				new EstadoRealtimeDTO(7L, Instant.now(), List.of(vazao, volume), null), ANA);
+
+		verify(mensagens).convertAndSend(eq(TOPICO), any(EstadoRealtimeDTO.class));
+	}
+
+	/** Serie vazia e serie ausente sao a mesma grandeza — o mesmo criterio do motor. */
+	@Test
+	void serieVaziaEAusenteContamComoAMesmaGrandeza() {
+		var semSerie = new LeituraRealtimeDTO("PRESSAO_01", null, "PRESSAO", "psi", "DBW10", 130.0, null);
+		var serieVazia = new LeituraRealtimeDTO("PRESSAO_01", "  ", "PRESSAO", "psi", "DBW10", 131.0, null);
+
+		controller.receberEstado(
+				new EstadoRealtimeDTO(7L, Instant.now(), List.of(semSerie, serieVazia), null), ANA);
+
+		verify(alarmes, never()).avaliar(anyLong(), anyList());
 	}
 }

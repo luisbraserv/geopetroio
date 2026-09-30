@@ -35,11 +35,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 	private final WebSocketInboundGuard authInterceptor;
 	private final List<String> allowedOrigins;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.geopetro.configuracaosonda.ConfiguracaoSondaOutbound configOutbound;
-    /** Topico de cards tem sufixo proprio e nao casa com a guarda acima — ver a classe. */
+    /** Documento de cards: confere o acesso a cada entrega, e nao so no SUBSCRIBE — ver a classe. */
     @org.springframework.beans.factory.annotation.Autowired
     private com.geopetro.cards.ConfiguracaoCardsOutbound cardsOutbound;
+    /** Tempo real: revalida conta ativa e escopo a cada entrega, e nao so no SUBSCRIBE (RN-062). */
+    @org.springframework.beans.factory.annotation.Autowired
+    private RealtimeOutbound realtimeOutbound;
 
 	public WebSocketConfig(WebSocketInboundGuard authInterceptor,
 			@Value("${security.cors.allowed-origin-patterns:http://localhost:*}") List<String> allowedOrigins) {
@@ -61,9 +62,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 		registry.setApplicationDestinationPrefixes("/app");
 	}
 
+    /**
+     * Guardas de saída: cada tópico revalida o acesso a <b>cada entrega</b>, e não só no SUBSCRIBE.
+     *
+     * <p>Uma tela aberta assina no login e fica horas conectada; sem isto, desativar a conta ou
+     * revogar o acesso à Unidade/Sonda cortaria o HTTP e deixaria a entrega de pé (RN-062).
+     *
+     * <p>⚠️ Eram três. A do documento de <b>limites</b> saiu em 2026-09-09 junto com o tópico que ela
+     * protegia — ele ficou sem assinante quando o alarme da estação passou a ser configurado na
+     * estação ({@code specs/features/configuracao-da-estacao.md §3.3}).
+     */
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {
-        registration.interceptors(configOutbound, cardsOutbound);
+        registration.interceptors(cardsOutbound, realtimeOutbound);
     }
 
 	@Override

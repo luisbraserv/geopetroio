@@ -15,8 +15,12 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
-import com.geopetro.monitoramento.SondaMonitoramentoService;
+import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
+import com.geopetro.security.application.ContaAtivaVerificador;
 import com.geopetro.security.application.port.out.TokenPort;
+import com.geopetro.security.authorization.PermissoesDoUsuario;
+import com.geopetro.security.authorization.RegraDeAcesso;
+import com.geopetro.security.authorization.RegrasDeAcesso;
 
 /**
  * Autenticacao e autorizacao do canal WebSocket.
@@ -24,17 +28,32 @@ import com.geopetro.security.application.port.out.TokenPort;
  * <p>O {@code SecurityConfig} protege apenas HTTP. Sem este interceptor, o WebSocket seria uma porta
  * paralela sem controle nenhum — qualquer um poderia assinar a telemetria de qualquer sonda.
  *
- * <h2>Dois momentos de verificacao</h2>
+ * <h2>Tres momentos de verificacao</h2>
  * <ol>
- *   <li><b>CONNECT</b> — valida o JWT enviado no header {@code Authorization} e fixa o usuario na
- *       sessao. Reutiliza o mesmo {@link TokenPort} do login REST.</li>
- *   <li><b>SUBSCRIBE</b> — confere se aquele usuario pode ver aquela Unidade/Sonda, aplicando a
- *       mesma regra do historico ({@link SondaMonitoramentoService}).</li>
+ *   <li><b>CONNECT</b> — valida o JWT enviado no header {@code Authorization}, confere que a conta
+ *       continua ativa e fixa o usuario na sessao. Reutiliza o mesmo {@link TokenPort} do login
+ *       REST.</li>
+ *   <li><b>SUBSCRIBE</b> — confere <b>duas</b> coisas: se o perfil alcanca aquele modulo
+ *       ({@link RegrasDeAcesso}) e se aquele usuario pode ver aquela Unidade/Sonda
+ *       ({@link ConfiguracaoSondaAccess}). Uma nao substitui a outra: a primeira responde "pode ver
+ *       tempo real?", a segunda "pode ver <i>esta</i> sonda?".</li>
+ *   <li><b>SEND</b> — confere que quem publica ainda tem conta ativa; a autorizacao por unidade
+ *       acontece no controller, onde o corpo ja foi desserializado.</li>
  * </ol>
  *
  * <p><b>Por que verificar no SUBSCRIBE e nao so no CONNECT:</b> o destino carrega o id da unidade.
  * Um usuario autenticado poderia trocar o id na mao e tentar assinar a sonda de outro cliente. A
  * autorizacao precisa acontecer onde o alvo e conhecido.
+ *
+ * <h2>⚠️ Conta ativa tambem aqui — RN-062</h2>
+ * O HTTP corta o acesso de conta desativada por {@code ContaAtivaVerificador}; este canal precisa da
+ * <b>mesma</b> regra, senao desativar um usuario nao interromperia a leitura nem a publicacao de
+ * tempo real ate o token expirar. Por isso {@link ConfiguracaoSondaAccess#permite}, que ja soma
+ * conta ativa a regra de escopo, no lugar da consulta de acesso pura.
+ *
+ * <p>⚠️ <b>Estes tres momentos nao bastam.</b> Uma assinatura ja aberta nao volta a passar por aqui:
+ * quem e desativado depois do SUBSCRIBE continuaria recebendo. Quem revalida cada entrega e
+ * {@link RealtimeOutbound}.
  */
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
@@ -46,26 +65,49 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 	 * Destinos que este canal reconhece. Tudo o que não casar é <b>recusado</b> — ver
 	 * {@link #autorizarAssinatura}.
 	 *
-	 * <p>⚠️ O sufixo {@code /cards} é opcional e precisa estar aqui explicitamente. Sem ele, o
-	 * documento de cards de uma unidade nunca chega ao Desktop, e o sintoma aparece longe da causa:
-	 * "a unidade não lê nada" (RN-088), sem nada acusando que a assinatura foi recusada.
+	 * <p>São dois, e cada um tem forma própria:
+	 * <ul>
+	 *   <li>{@code /topic/realtime/unidades-sondas/{id}} — as leituras ao vivo, <b>sem</b> sufixo.</li>
+	 *   <li>{@code /topic/config/unidades-sondas/{id}/cards} e {@code /app/config/...} — o documento
+	 *       de cards, com o sufixo <b>obrigatório</b>.</li>
+	 * </ul>
 	 *
-	 * <p>Os dois documentos têm a <b>mesma</b> regra de acesso na assinatura — quem enxerga a
-	 * Unidade/Sonda pode assinar as duas. A diferença de autoridade está na <b>gravação</b>, que
-	 * passa pelo REST e por {@code ConfiguracaoCardsAccess} (RN-086, RN-089).
+	 * <p>⚠️ <b>O sufixo {@code /cards} deixou de ser opcional em 2026-09-09.</b> Ele era opcional
+	 * porque o mesmo prefixo servia ao documento de <b>limites</b>, que o Desktop assinava. Com o
+	 * alarme da estação passando a ser configurado na estação
+	 * ({@code specs/features/configuracao-da-estacao.md §3.3}), aquele tópico ficou sem assinante e
+	 * saiu — e mantê-lo aceito aqui deixaria um destino autorizado que ninguém publica nem consome.
+	 *
+	 * <p>⚠️ Errar esta expressão custa nos dois sentidos: frouxa demais abre um destino sem dono;
+	 * estrita demais recusa a assinatura de cards, e o sintoma aparece longe da causa — "a unidade
+	 * não lê nada" (RN-088), sem nada acusando a recusa.
+	 *
+	 * <p>⚠️ <b>A permissão de módulo difere entre os dois destinos</b> — desde 2026-09-17. As leituras
+	 * ao vivo exigem {@code MONITORAMENTO_REAL}; o documento de cards aceita qualquer uma das duas
+	 * permissões ({@code AREA_SONDA}), porque todas as telas da área se montam a partir dele — quem
+	 * só tem séries precisa saber o que a unidade mede, e quem só tem tempo real também. O escopo
+	 * por unidade é o mesmo para os dois.
+	 * A diferença de autoridade na <b>gravação</b> continua no REST, por
+	 * {@code ConfiguracaoCardsAccess} (RN-086, RN-089).
 	 */
 	private static final Pattern TOPICO_REALTIME = Pattern.compile(
-			"^/(?:topic/realtime|topic/config|app/config)/unidades-sondas/([1-9][0-9]{0,18})(?:/cards)?$");
+			"^(?:/topic/realtime/unidades-sondas/([1-9][0-9]{0,18})"
+					+ "|/(?:topic|app)/config/unidades-sondas/([1-9][0-9]{0,18})/cards)$");
 
 	/** Destino que o Geopetro-Desktop usa para publicar o estado. */
 	private static final String DESTINO_PUBLICACAO = "/app/realtime/estado";
 
 	private final TokenPort tokenPort;
-	private final SondaMonitoramentoService monitoramentoService;
+	private final ConfiguracaoSondaAccess acesso;
+	private final ContaAtivaVerificador contas;
+	private final PermissoesDoUsuario permissoes;
 
-	public WebSocketAuthInterceptor(TokenPort tokenPort, SondaMonitoramentoService monitoramentoService) {
+	public WebSocketAuthInterceptor(TokenPort tokenPort, ConfiguracaoSondaAccess acesso,
+			ContaAtivaVerificador contas, PermissoesDoUsuario permissoes) {
 		this.tokenPort = tokenPort;
-		this.monitoramentoService = monitoramentoService;
+		this.acesso = acesso;
+		this.contas = contas;
+		this.permissoes = permissoes;
 	}
 
 	@Override
@@ -94,6 +136,14 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 		}
 
 		String username = tokenPort.extrairUsername(token);
+
+		// Token valido nao e o mesmo que conta valida: o JWT vale uma hora e nao sabe que o usuario
+		// foi desativado no minuto seguinte ao login (RN-062).
+		if (!contas.ativa(username)) {
+			log.warn("CONNECT recusado: conta inativa ou inexistente (usuario={}).", username);
+			throw new WebSocketNaoAutorizadoException("Conta inativa.");
+		}
+
 		accessor.setUser(new UsuarioWebSocket(username));
 		log.debug("WebSocket conectado: usuario={}", username);
 		return message;
@@ -115,10 +165,27 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 			throw new WebSocketNaoAutorizadoException("Destino nao permitido: " + destino);
 		}
 
+		// Dois grupos porque sao duas formas de destino: a de tempo real e a de cards. Exatamente um
+		// casa por vez, e o outro vem nulo — e e isso que diz qual permissao de modulo exigir.
+		boolean tempoReal = matcher.group(1) != null;
+		String id = tempoReal ? matcher.group(1) : matcher.group(2);
 		Long unidadeSondaId;
-        try { unidadeSondaId = Long.valueOf(matcher.group(1)); }
+        try { unidadeSondaId = Long.valueOf(id); }
         catch (NumberFormatException e) { throw new WebSocketNaoAutorizadoException("Unidade invalida."); }
-		if (!monitoramentoService.usuarioPossuiAcessoAUnidade(username, unidadeSondaId)) {
+
+		// Permissao de MODULO. Sem esta verificacao, esconder o Tempo Real no menu seria o unico
+		// controle: quem tivesse apenas MONITORAMENTO assinaria as leituras ao vivo por este canal,
+		// que e onde elas realmente trafegam.
+		RegraDeAcesso regra = tempoReal ? RegrasDeAcesso.MONITORAMENTO_REAL : RegrasDeAcesso.AREA_SONDA;
+		if (!permissoes.satisfaz(username, regra)) {
+			log.warn("Assinatura NEGADA por perfil: usuario={} destino={} exige {}", username, destino, regra);
+			throw new WebSocketNaoAutorizadoException("Perfil sem acesso a este recurso.");
+		}
+
+		// Escopo por UNIDADE. `permite` soma conta ativa ao escopo por perfil: as duas condicoes
+		// negam a assinatura, e a mensagem nao distingue qual delas — quem nao tem acesso nao
+		// precisa saber o motivo.
+		if (!acesso.permite(username, unidadeSondaId)) {
 			log.warn("Assinatura NEGADA: usuario={} tentou acessar unidade={}", username, unidadeSondaId);
 			throw new WebSocketNaoAutorizadoException("Sem acesso a esta Unidade/Sonda.");
 		}
@@ -136,6 +203,13 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 		}
 		if (username == null) {
 			throw new WebSocketNaoAutorizadoException("Envio sem usuario autenticado.");
+		}
+
+		// A estacao publica com a sessao aberta por horas: sem esta verificacao, desativar a conta
+		// de uma unidade nao a impediria de continuar alimentando a tela e o motor de alarmes.
+		if (!contas.ativa(username)) {
+			log.warn("Publicacao NEGADA: conta inativa (usuario={}).", username);
+			throw new WebSocketNaoAutorizadoException("Conta inativa.");
 		}
 
 		// A autorizacao por unidade acontece no controller, onde o corpo ja foi desserializado
