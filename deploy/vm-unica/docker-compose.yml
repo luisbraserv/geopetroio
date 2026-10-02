@@ -1,0 +1,210 @@
+# =====================================================================
+# VM UNICA · PRODUCAO
+#
+# Toda a pilha numa maquina so, atras de um dominio:
+#
+#   navegador / Desktop da sonda --HTTPS--> caddy :443 --> front (nginx)
+#                                                           ├─ /            SPA
+#                                                           ├─ /api, /ws    backend
+#                                                           └─ /telemetria  telemetria
+#   Desktop da sonda --MQTT 1883--> mosquitto --> telemetria --> influxdb
+#                                   backend --> mysql
+#
+# Publicadas no host: 80 e 443 (caddy) e 1883 (mosquitto, para as sondas).
+# MySQL, InfluxDB, backend e telemetria ficam so na rede interna do compose.
+#
+# Junta o que deploy/vm1-transacional e deploy/vm2-telemetria separavam em
+# duas VMs. Os motivos daquela separacao (dominio de falha, I/O, exposicao)
+# continuam validos; aqui foram trocados pela simplicidade de uma maquina.
+#
+# Uso:  cp .env.example .env  &&  editar  &&  ver README.md
+# =====================================================================
+
+name: geopetro
+
+services:
+
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina no .env}
+      MYSQL_DATABASE: ${DB_NAME:-geopetro_io}
+      MYSQL_USER: ${DB_USERNAME:?defina no .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?defina no .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=-03:00
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Sem mysql-init: o schema e do Flyway, no startup do backend.
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  influxdb:
+    image: influxdb:2.7
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_ADMIN_USER:?defina no .env}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_ADMIN_PASSWORD:?defina no .env}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_ORG:-braserv}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_BUCKET:-telemetria}
+      # Ver OQ-028: a 5 pontos/s por sonda, 20 sondas geram ~8,6 mi de pontos/dia.
+      DOCKER_INFLUXDB_INIT_RETENTION: ${INFLUX_RETENTION:-90d}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:?defina no .env}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      # Unica porta alem de 80/443 aberta ao mundo: as sondas publicam aqui.
+      # Restrinja no firewall a faixa de IPs das sondas quando ela for conhecida.
+      - "${MQTT_PORT:-1883}:1883"
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:?defina no .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?defina no .env}
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      # Gerado na VM a partir do .env (README, passo 4). Sem ele o broker nao sobe:
+      # allow_anonymous false (SEC-009).
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -t '$$SYS/#' -C 1 -W 3 -u \"$$MQTT_USERNAME\" -P \"$$MQTT_PASSWORD\" >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  telemetria:
+    build:
+      context: ../../Geopetro-Telemetria
+      dockerfile: Dockerfile
+    image: geopetro/telemetria:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    # Sem limite, a JVM calcula o heap sobre a RAM inteira do host — e aqui ha
+    # duas JVMs, MySQL e InfluxDB disputando a mesma maquina.
+    mem_limit: ${TELEMETRIA_MEM:-768m}
+    environment:
+      SERVER_PORT: 8081
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      MQTT_TOPICO: telemetria/+/batch
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORG: ${INFLUX_ORG:-braserv}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-telemetria}
+      TELEMETRIA_ZONA_SONDA: ${TELEMETRIA_ZONA_SONDA:-America/Sao_Paulo}
+      TELEMETRIA_MAX_PONTOS: ${TELEMETRIA_MAX_PONTOS:-2000}
+      # O seed sintetico e do perfil de desenvolvimento; em producao, so dado real.
+      TELEMETRIA_SEED_HABILITADO: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    expose:
+      - "8081"
+
+  backend:
+    build:
+      context: ../../Geopetro-Backend
+      dockerfile: Dockerfile
+    image: geopetro/geopetro-backend:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    mem_limit: ${BACKEND_MEM:-1536m}
+    networks:
+      default:
+        # O nginx do front faz proxy para 'geopetro-backend:8080' (Geopetro-Front/nginx.conf).
+        aliases: [geopetro-backend]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-geopetro_io}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
+      MONITORAMENTO_BASE_URL: http://telemetria:8081
+      # Uma origem so: o dominio. O padrao de origem tambem vale para o handshake do
+      # WebSocket (WebSocketConfig); vazio, o navegador nao conecta ao tempo real.
+      CORS_ALLOWED_ORIGINS: https://${DOMINIO:?defina DOMINIO no .env}
+      CORS_ALLOWED_ORIGIN_PATTERNS: https://${DOMINIO}
+      PASSWORD_RECOVERY_ENABLED: ${PASSWORD_RECOVERY_ENABLED:-false}
+      PASSWORD_RECOVERY_FRONTEND_URL: https://${DOMINIO}
+      PASSWORD_RECOVERY_FROM: ${PASSWORD_RECOVERY_FROM:-}
+      SMTP_SETTINGS_ENCRYPTION_KEY: ${SMTP_SETTINGS_ENCRYPTION_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-true}
+    volumes:
+      # Chave de cifra da senha SMTP: entra no backup junto com o MySQL.
+      - smtp-secrets:/app/secrets
+    expose:
+      - "8080"
+
+  front:
+    build:
+      context: ../../Geopetro-Front
+      dockerfile: Dockerfile
+    image: geopetro/front:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - telemetria
+    # Sem porta no host: so o caddy fala com ele. O build 'k8s' usa caminhos
+    # relativos, entao front, API, WebSocket e telemetria saem do mesmo dominio.
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - front
+    ports:
+      # 80 precisa estar aberta a internet: o Let's Encrypt valida o dominio por ela,
+      # e ela redireciona para 443.
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO}
+      ACME_EMAIL: ${ACME_EMAIL:?defina ACME_EMAIL no .env}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificados emitidos: perdê-los obriga a reemitir (e o Let's Encrypt limita).
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  mysql-data:
+  influxdb-data:
+  influxdb-config:
+  mosquitto-data:
+  smtp-secrets:
+  caddy-data:
+  caddy-config:

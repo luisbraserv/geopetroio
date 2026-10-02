@@ -2,6 +2,11 @@
 
 > Artefatos de implantação em duas VMs · 2026-08-27
 
+**[2026-10-02] Alternativa em uma máquina:** [`vm-unica/`](vm-unica/README.md) põe toda a pilha numa VM
+só, atrás de `https://geopetro.braservpetroleo.com.br` (Caddy com Let's Encrypt), com a instrução para o
+agente que faz a implantação em [`vm-unica/CODEX.md`](vm-unica/CODEX.md). O restante deste documento
+descreve a topologia em duas VMs e continua valendo para ela; a seção do schema do banco vale para as duas.
+
 ## Topologia
 
 **[DECIDIDO 2026-08-27]** Duas VMs, agrupadas por **caminho de dados** — cada uma dona do próprio

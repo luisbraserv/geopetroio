@@ -1,0 +1,7 @@
+# Estes arquivos rodam dentro de Linux (bash, nginx, caddy, mosquitto). Um clone
+# no Windows com core.autocrlf=true os traria com CRLF, e o bash recusa o script.
+*.sh          text eol=lf
+*.yml         text eol=lf
+*.conf        text eol=lf
+Caddyfile     text eol=lf
+.env.example  text eol=lf

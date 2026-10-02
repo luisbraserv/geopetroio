@@ -1,0 +1,22 @@
+# Borda HTTPS do GeopetroIO na VM unica.
+#
+# O Caddy emite e renova o certificado do Let's Encrypt sozinho, desde que o
+# DNS de {$DOMINIO} aponte para esta maquina e a porta 80 chegue aqui da
+# internet. HTTP vira HTTPS automaticamente.
+#
+# Todo o roteamento (SPA, /api, /ws, /telemetria) continua no nginx do front;
+# aqui so termina o TLS. O reverse_proxy do Caddy ja repassa o upgrade do
+# WebSocket e nao derruba conexao ociosa.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy front:80
+
+	# Certificado proprio da empresa, se o Let's Encrypt nao for possivel
+	# (dominio fora da internet, porta 80 bloqueada): monte os arquivos em
+	# /etc/caddy/certs no compose e troque pela linha abaixo.
+	# tls /etc/caddy/certs/fullchain.pem /etc/caddy/certs/privkey.pem
+}
