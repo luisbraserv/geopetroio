@@ -3,6 +3,22 @@
 Você está numa VM de produção. A tarefa é colocar **toda** a aplicação GeopetroIO no ar **nesta
 máquina**, com Docker, servindo o front em `https://geopetro.braservpetroleo.com.br`.
 
+## Repositório
+
+| | |
+|---|---|
+| URL | `https://github.com/luisbraserv/geopetroio.git` (público, clone sem credencial) |
+| Branch | `feat/simulador-poco-geometria` (use outra só se o usuário indicar) |
+| Destino na VM | `~/geopetroio` (em WSL, dentro do Linux, nunca em `/mnt/c`) |
+
+```bash
+git clone --branch feat/simulador-poco-geometria https://github.com/luisbraserv/geopetroio.git ~/geopetroio
+cd ~/geopetroio/deploy/vm-unica
+```
+
+Se `~/geopetroio` já existir, não apague: entre nele, rode `git status` e, sem alterações locais,
+`git fetch && git checkout feat/simulador-poco-geometria && git pull`. Com alterações locais, pergunte.
+
 Os arquivos de implantação já existem e foram testados: `deploy/vm-unica/`. O roteiro passo a passo é
 [`deploy/vm-unica/README.md`](README.md). Leia-o inteiro antes de começar e siga a ordem dele. Esta
 instrução diz o que é seu trabalho, o que não pode ser tocado e quando parar para perguntar.
@@ -56,7 +72,7 @@ instrução diz o que é seu trabalho, o que não pode ser tocado e quando parar
 
 - Siga os passos 1 a 10 do README na ordem. Rode as verificações de cada passo e confira o resultado
   esperado antes de seguir.
-- No passo 1, use a branch que o usuário indicar. Se ele não indicou, pergunte.
+- O passo 1 do README é o clone da seção "Repositório" acima.
 - A primeira subida (`docker compose up -d --build`) compila Maven e Angular dentro da VM e leva vários
   minutos. Acompanhe com `docker compose logs -f backend`.
 - Se um container reiniciar em laço, leia `docker compose logs <serviço>` antes de mexer em qualquer

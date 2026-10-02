@@ -53,12 +53,15 @@ telemetria saem do mesmo domínio, sem CORS.
 
 ## Passo 1 · Código
 
+Repositório público: <https://github.com/luisbraserv/geopetroio> (não precisa de credencial para clonar).
+
 ```bash
-git clone <url-do-repositorio> ~/geopetroio
-cd ~/geopetroio
-git checkout <branch-de-producao>
-cd deploy/vm-unica
+git clone --branch feat/simulador-poco-geometria https://github.com/luisbraserv/geopetroio.git ~/geopetroio
+cd ~/geopetroio/deploy/vm-unica
+git log --oneline -1          # anote o commit implantado
 ```
+
+Quando a branch for mesclada, troque `feat/simulador-poco-geometria` por `main`.
 
 Em WSL, clone dentro do Linux (`~`), não em `/mnt/c`: o build fica ordens de grandeza mais lento.
 
