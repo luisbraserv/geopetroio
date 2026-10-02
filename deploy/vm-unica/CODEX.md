@@ -5,19 +5,26 @@ máquina**, com Docker, servindo o front em `https://geopetro.braservpetroleo.co
 
 ## Repositório
 
+O repositório **já está clonado na VM em `~/projeto/geopetroio`**. Trabalhe nessa pasta; não clone de
+novo em outro lugar.
+
 | | |
 |---|---|
-| URL | `https://github.com/luisbraserv/geopetroio.git` (público, clone sem credencial) |
+| Pasta na VM | `~/projeto/geopetroio` |
+| URL | `https://github.com/luisbraserv/geopetroio.git` (público, sem credencial) |
 | Branch | `feat/simulador-poco-geometria` (use outra só se o usuário indicar) |
-| Destino na VM | `~/geopetroio` (em WSL, dentro do Linux, nunca em `/mnt/c`) |
+
+Primeiro, garanta a branch certa. Um clone sem `--branch` fica na `main`, que ainda não tem esta pasta:
 
 ```bash
-git clone --branch feat/simulador-poco-geometria https://github.com/luisbraserv/geopetroio.git ~/geopetroio
-cd ~/geopetroio/deploy/vm-unica
+cd ~/projeto/geopetroio
+git status                      # com alterações locais, pare e pergunte
+git fetch origin
+git checkout feat/simulador-poco-geometria
+git pull --ff-only
+git log --oneline -1            # anote o commit implantado
+cd deploy/vm-unica
 ```
-
-Se `~/geopetroio` já existir, não apague: entre nele, rode `git status` e, sem alterações locais,
-`git fetch && git checkout feat/simulador-poco-geometria && git pull`. Com alterações locais, pergunte.
 
 Os arquivos de implantação já existem e foram testados: `deploy/vm-unica/`. O roteiro passo a passo é
 [`deploy/vm-unica/README.md`](README.md). Leia-o inteiro antes de começar e siga a ordem dele. Esta

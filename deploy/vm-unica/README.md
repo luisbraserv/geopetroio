@@ -55,15 +55,19 @@ telemetria saem do mesmo domínio, sem CORS.
 
 Repositório público: <https://github.com/luisbraserv/geopetroio> (não precisa de credencial para clonar).
 
+Nesta VM o clone fica em `~/projeto/geopetroio`:
+
 ```bash
-git clone --branch feat/simulador-poco-geometria https://github.com/luisbraserv/geopetroio.git ~/geopetroio
-cd ~/geopetroio/deploy/vm-unica
+git clone --branch feat/simulador-poco-geometria https://github.com/luisbraserv/geopetroio.git ~/projeto/geopetroio
+cd ~/projeto/geopetroio/deploy/vm-unica
 git log --oneline -1          # anote o commit implantado
 ```
 
+Se já clonou sem `--branch` (fica na `main`), troque: `git fetch origin && git checkout feat/simulador-poco-geometria`.
+
 Quando a branch for mesclada, troque `feat/simulador-poco-geometria` por `main`.
 
-Em WSL, clone dentro do Linux (`~`), não em `/mnt/c`: o build fica ordens de grandeza mais lento.
+Em WSL, mantenha o clone dentro do Linux, nunca em `/mnt/c`: lá o build fica ordens de grandeza mais lento.
 
 ## Passo 2 · `.env`
 
@@ -227,7 +231,7 @@ exige o firewall da nuvem/rede ou a cadeia `DOCKER-USER`.
 ## Atualizar
 
 ```bash
-cd ~/geopetroio && git pull
+cd ~/projeto/geopetroio && git pull
 cd deploy/vm-unica && ./backup.sh && docker compose up -d --build
 ```
 
