@@ -73,7 +73,7 @@ class MigracaoFlywayTest {
 	void baseVaziaMigraDoZero() throws SQLException {
 		flyway().migrate();
 
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1", "2026.10.02.1");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
         assertThat(existeTabela("recuperacao_senha")).isTrue();
         assertThat(existeTabela("configuracao_smtp")).isTrue();
@@ -85,6 +85,7 @@ class MigracaoFlywayTest {
         // O pico do episodio mora fora do log de fatos: ele muda enquanto a excursao dura, e a
         // leitura que o estabelece normalmente nao gera transicao nenhuma.
         assertThat(existeTabela("episodio_alarme_extremo")).isTrue();
+		assertThat(existeTabela("usuario_cliente_unidades")).isTrue();
 		assertThat(existeColuna("unidades_sondas", "tipo")).isTrue();
 		assertThat(colunaAceitaNulo("unidades_sondas", "tipo")).isFalse();
 		assertThat(existeColuna("simulador_cenarios", "poco_id")).isTrue();
@@ -175,7 +176,7 @@ class MigracaoFlywayTest {
 
 		// Se o baseline tivesse sido executado, os CREATE TABLE teriam colidido e a migracao
 		// falharia. Ele entra so como registro.
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1", "2026.10.02.1");
 		assertThat(tipoDoRegistro("2026.09.04")).isEqualTo("BASELINE");
 		assertThat(tipoDoRegistro("2026.09.05")).isEqualTo("SQL");
 
@@ -211,6 +212,56 @@ class MigracaoFlywayTest {
         assertThat(existeTabela("configuracao_smtp")).isTrue();
         assertThat(existeTabela("configuracao_sonda")).isTrue();
 		assertThat(existeColuna("simulador_cenarios", "poco_id")).isTrue();
+	}
+
+	@Test
+	@DisplayName("recuperacao de senha respeita a collation da base legada")
+	void recuperacaoSenhaAceitaCollationLegada() throws SQLException {
+		executarNoSchema("""
+			CREATE TABLE usuarios (
+			  username VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+			  PRIMARY KEY (username)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+			""");
+
+		Flyway.configure()
+				.dataSource(URL_SCHEMA, USUARIO, SENHA)
+				.locations("classpath:db/migration")
+				.baselineOnMigrate(true)
+				.baselineVersion("2026.09.06.2")
+				.target("2026.09.06.3")
+				.load()
+				.migrate();
+
+		assertThat(collationDaColuna("recuperacao_senha", "username"))
+				.isEqualTo("utf8mb4_unicode_ci");
+		assertThat(contar("SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS"
+				+ " WHERE CONSTRAINT_SCHEMA = '" + SCHEMA + "'"
+				+ " AND TABLE_NAME = 'recuperacao_senha'"
+				+ " AND CONSTRAINT_NAME = 'fk_recuperacao_usuario'"))
+				.isEqualTo(1L);
+	}
+
+	@Test
+	@DisplayName("base legada sem concessoes de cliente recupera a tabela obrigatoria")
+	void restauraTabelaUsuarioClienteUnidadesAusente() throws SQLException {
+		Flyway.configure()
+				.dataSource(URL_SCHEMA, USUARIO, SENHA)
+				.locations("classpath:db/migration")
+				.target("2026.09.17.1")
+				.load()
+				.migrate();
+		executarNoSchema("DROP TABLE usuario_cliente_unidades");
+
+		flyway().migrate();
+
+		assertThat(existeTabela("usuario_cliente_unidades")).isTrue();
+		assertThat(collationDaColuna("usuario_cliente_unidades", "usuario_username"))
+				.isEqualTo(collationDaColuna("usuarios", "username"));
+		assertThat(contar("SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS"
+				+ " WHERE CONSTRAINT_SCHEMA = '" + SCHEMA + "'"
+				+ " AND TABLE_NAME = 'usuario_cliente_unidades'"))
+				.isEqualTo(2L);
 	}
 
 	@Test
