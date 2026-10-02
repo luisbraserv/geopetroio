@@ -1,4 +1,4 @@
-import type { WellCaliperProfile } from '../models/caliper.model';
+import type { CaliperSample, WellCaliperProfile } from '../models/caliper.model';
 import type { PrimaryConfiguration, PrimaryFluid, PrimaryPumpStep } from '../models/primary-cementing.model';
 import type { PrimaryOperationFormValue } from '../models/primary-operation.form';
 import { createPrimaryReportData, type PrimaryReportData } from '../models/primary-report-data.model';
@@ -160,6 +160,62 @@ export function mina02Caliper(variant: Mina02Variant = MINA02_PROGRAM,
     calculatedHoleVolumeM3: volumeM3, reportedHoleVolumeM3: null, volumeDifferencePct: null, samples };
 }
 
+/** Ruído determinístico em [-1, 1]: o mesmo caliper em toda execução. */
+function hashNoise(i: number, seed: number): number {
+  const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+  return 2 * (x - Math.floor(x)) - 1;
+}
+
+/**
+ * Caliper de apresentação: as mesmas zonas e o mesmo volume por zona de
+ * mina02Caliper, com a parede irregular do esquemático do iCem — arrombamentos
+ * fortes entre 40 e 110 m, uma caverna perto de 280 m e o fundo quase em calibre —
+ * e ovalização leve entre EHD1 e EHD2. Amostra a cada metro; cada zona é
+ * reescalada para que a área no ponto médio de cada trecho (a regra da geometria
+ * da primária) some o volume da zona em degrau. É ilustrativo: o LAS não está no
+ * documento, e a forma não sai de medição.
+ */
+export function mina02TexturedCaliper(variant: Mina02Variant = MINA02_PROGRAM): WellCaliperProfile {
+  const samples: CaliperSample[] = [];
+  variant.caliperZones.forEach((zone, zoneIndex) => {
+    const deviation = (md: number, i: number) => {
+      const n = hashNoise(i, zoneIndex + 1);
+      if (zoneIndex === 0) {
+        const washout = md >= 40 && md <= 110 ? Math.max(0, hashNoise(i, 7)) ** 2 * 0.28 : 0;
+        return 0.05 * n + washout;
+      }
+      if (zoneIndex === variant.caliperZones.length - 1) return 0.015 * n;
+      const cave = Math.max(0, 1 - Math.abs(md - 280) / 3) * 0.22;
+      return 0.03 * n + cave;
+    };
+    const zoneSamples: CaliperSample[] = [];
+    const start = zoneIndex === 0 ? zone.topMD : zone.topMD + 0.01;
+    const count = Math.max(1, Math.round(zone.bottomMD - zone.topMD));
+    for (let k = 0; k <= count; k++) {
+      const md = k === 0 ? start : k === count ? zone.bottomMD : zone.topMD + (zone.bottomMD - zone.topMD) * k / count;
+      const diameter = zone.diameterIn * (1 + deviation(md, k));
+      const ovality = 1 + 0.025 * Math.abs(hashNoise(k, zoneIndex + 11));
+      zoneSamples.push({ md, ehd1In: diameter * ovality, ehd2In: diameter / ovality });
+    }
+    let areaLength = 0;
+    for (let k = 1; k < zoneSamples.length; k++) {
+      const a = zoneSamples[k - 1]; const b = zoneSamples[k];
+      areaLength += (a.ehd1In + b.ehd1In) / 2 * (b.ehd2In + a.ehd2In) / 2 * (b.md - a.md);
+    }
+    const scale = Math.sqrt(zone.diameterIn ** 2 * (zone.bottomMD - start) / areaLength);
+    for (const s of zoneSamples) samples.push({ md: s.md, ehd1In: s.ehd1In * scale, ehd2In: s.ehd2In * scale });
+  });
+  let volumeM3 = 0;
+  for (let k = 1; k < samples.length; k++) {
+    const a = samples[k - 1]; const b = samples[k];
+    volumeM3 += Math.PI / 4 * ((a.ehd1In + b.ehd1In) / 2 * 0.0254) * ((a.ehd2In + b.ehd2In) / 2 * 0.0254) * (b.md - a.md);
+  }
+  return { fileName: 'MINA-02 — caliper ilustrativo (irregular, volume por zona igual ao reconstituído do programa)',
+    importedAt: '2026-10-02T00:00:00.000Z', depthMnemonic: 'DEPT', diameterMnemonics: ['EHD1', 'EHD2'],
+    startMD: samples[0].md, stopMD: samples.at(-1)!.md, sampleCount: samples.length,
+    calculatedHoleVolumeM3: volumeM3, reportedHoleVolumeM3: null, volumeDifferencePct: null, samples };
+}
+
 export function mina02Phases(variant: Mina02Variant = MINA02_PROGRAM): WellPhaseFormValue[] {
   const previous = variant.previousShoeMD;
   return [
@@ -227,10 +283,10 @@ export const mina02ScenarioName = (variant: Mina02Variant) => variant.id === 'pr
 
 /** Cenário completo, no formato que a tela monta ao salvar, com o caliper por zonas. */
 export function mina02Scenario(primary: PrimaryConfiguration, trajectory: WellTrajectory,
-  variant: Mina02Variant = MINA02_PROGRAM): PrimaryScenario {
+  variant: Mina02Variant = MINA02_PROGRAM, caliper: WellCaliperProfile = mina02Caliper(variant)): PrimaryScenario {
   const draft = createPrimaryDraft();
   return { ...draft, wellFinalMD: variant.wellTD, wellFinalTVD: variant.wellTDTVD, fases: mina02Phases(variant),
-    trajectory: { enabled: true, stations: trajectory.stations.map(s => ({ ...s })) }, caliper: mina02Caliper(variant),
+    trajectory: { enabled: true, stations: trajectory.stations.map(s => ({ ...s })) }, caliper,
     selectedPhaseId: 'surface', primary,
     presentation: { ...draft.presentation, references: [] } };
 }

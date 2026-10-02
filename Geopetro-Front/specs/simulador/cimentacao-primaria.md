@@ -1318,6 +1318,17 @@ regressão em
 [`primary-field-mina02.spec.ts`](../../src/app/features/simulador/pages/primary-field-mina02.spec.ts),
 que também confere a volta dos dois cenários pelo formato do banco.
 
+**Cenários para abrir na tela.** Os dois cenários estão em
+[`specs/simulador/cenarios/`](cenarios/), no formato do botão "Importar" da
+cimentação primária, e são regerados pelo último teste do spec com
+`PRIMARY_DUMP_MINA02` apontando um arquivo. Eles levam `mina02TexturedCaliper`, um
+caliper **ilustrativo**: as mesmas três zonas e o mesmo volume por zona, com a
+parede irregular do esquemático do iCem (arrombamentos de 40 a 110 m, caverna
+perto de 280 m, fundo quase em calibre, ovalização leve; nenhum ponto abaixo da
+broca). Com ele as curvas ficam onde estavam: hidrostática a 2,7 psi, ECD a
+0,034 ppg, cabeça a 1,4 psi e envelope a 0,039 ppg do iCem; no v3, 341,9 psi de
+pressão final e 316,1 psi de diferencial. A forma não vem de medição.
+
 **Apresentação alinhada ao iCem.** Na comparação apareceram diferenças de
 apresentação, não de cálculo, que faziam os gráficos parecerem divergentes. O
 gráfico de hidrostática e ECD passou a mostrar a pressão hidrostática em psi à
