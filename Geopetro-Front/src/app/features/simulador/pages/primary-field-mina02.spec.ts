@@ -10,8 +10,10 @@ import { PrimaryProgramService } from '../services/primary-program.service';
 import { primaryScenarioFromApi, primaryScenarioPayload } from '../services/primary-scenario-codec';
 import { resolvePrimaryProgramVolumes } from '../services/primary-volumes';
 import { WellGeometryService } from '../services/well-geometry.service';
+import type { WellCaliperProfile } from '../models/caliper.model';
+import { exportPrimaryScenario, importPrimaryScenario } from '../services/primary-scenario-portable';
 import { MINA02_ICEM_CHARTS, MINA02_PROGRAM, type Mina02Variant, mina02Caliper, mina02CollarMD, mina02Form,
-  mina02Phases, mina02ReportData, mina02Scenario, mina02ScenarioName } from './primary-field-mina02.fixture';
+  mina02Phases, mina02ReportData, mina02Scenario, mina02ScenarioName, mina02TexturedCaliper } from './primary-field-mina02.fixture';
 
 /**
  * Curvas do iCem digitalizadas dos gráficos do programa (versão de 489 m):
@@ -33,12 +35,12 @@ const ICEM_MAX_ECD: readonly [number, number][] = [
 ];
 
 /** Mesmo caminho da tela: fases → trajetória com caliper → fase da operação → configuração → motor. */
-function runMina02(variant: Mina02Variant) {
+function runMina02(variant: Mina02Variant, caliper: WellCaliperProfile = mina02Caliper(variant)) {
   const wells = TestBed.inject(WellGeometryService);
   const rows = mina02Phases(variant);
   const fullWell = wells.deriveTrajectoryTvd({
     ...buildWellGeometry(variant.wellTD, variant.wellTDTVD, rows),
-    trajectory: buildPrimaryTrajectory(rows), caliper: mina02Caliper(variant),
+    trajectory: buildPrimaryTrajectory(rows), caliper,
   });
   const context = TestBed.inject(OperationContextService).resolve(fullWell, 'surface', 'primaria');
   // O lead do programa é 142 bbl; o que passa do dimensionado pelo intervalo vai como reserva.
@@ -150,8 +152,11 @@ describe('caso de campo MINA-02 (programa Halliburton v3 e gráficos do iCem)', 
     expect(byLength.volumeBbl).toBeCloseTo(250 * tail.annularBbl / 100, 9);
   }, 30_000);
 
-  it('reproduz as curvas do iCem com os dados da versão em que os gráficos foram gerados', () => {
-    const { wells, fullWell, resolution } = runMina02(MINA02_ICEM_CHARTS);
+  it.each([
+    ['por zonas', mina02Caliper(MINA02_ICEM_CHARTS)],
+    ['irregular do cenário de apresentação', mina02TexturedCaliper(MINA02_ICEM_CHARTS)],
+  ])('reproduz as curvas do iCem com os dados da versão em que os gráficos foram gerados (caliper %s)', (_label, caliper) => {
+    const { wells, fullWell, resolution } = runMina02(MINA02_ICEM_CHARTS, caliper);
     const hydraulics = resolution.hydraulics!;
     expect(resolution.transport!.status).toBe('complete');
     expect(hydraulics.status).toBe('complete');
@@ -182,12 +187,14 @@ describe('caso de campo MINA-02 (programa Halliburton v3 e gráficos do iCem)', 
     const target = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.['PRIMARY_DUMP_MINA02'];
     const dumps: Record<string, unknown> = {};
     for (const variant of [MINA02_PROGRAM, MINA02_ICEM_CHARTS]) {
-      const run = runMina02(variant);
-      const scenario = mina02Scenario(run.primary, buildPrimaryTrajectory(run.rows)!, variant);
+      // O cenário gravado leva o caliper irregular, que desenha o poço como o esquemático do iCem.
+      const caliper = mina02TexturedCaliper(variant);
+      const run = runMina02(variant, caliper);
+      const scenario = mina02Scenario(run.primary, buildPrimaryTrajectory(run.rows)!, variant, caliper);
       const payload = primaryScenarioPayload(scenario);
       const reopened = primaryScenarioFromApi({ operacao: payload.operacao, formValue: payload.formValue });
       expect(validatePhaseSurveys(reopened.fases)).toEqual([]);
-      expect(reopened.caliper?.samples).toEqual(mina02Caliper(variant).samples);
+      expect(reopened.caliper?.samples).toEqual(caliper.samples);
       const wells = TestBed.inject(WellGeometryService);
       const last = reopened.fases.at(-1)!;
       const well = wells.deriveTrajectoryTvd({ ...buildWellGeometry(last.bottomMD, last.bottomTVD, reopened.fases),
@@ -199,8 +206,16 @@ describe('caso de campo MINA-02 (programa Halliburton v3 e gráficos do iCem)', 
       const peak = (points: { bhpPsi: number | null }[]) => Math.max(...points.map(p => p.bhpPsi ?? -Infinity));
       expect(peak(again.hydraulics!.points)).toBeCloseTo(peak(run.resolution.hydraulics!.points), 9);
       expect(again.transport!.placements).toEqual(run.resolution.transport!.placements);
-      dumps[variant.id] = { nome: mina02ScenarioName(variant), operacao: payload.operacao,
+      dumps[`${variant.id}-db`] = { nome: mina02ScenarioName(variant), operacao: payload.operacao,
         formValue: payload.formValue, dadosRelatorio: JSON.stringify(mina02ReportData(variant)) };
+      // Arquivo do botão "Importar" da tela: abre como rascunho com o mesmo cenário.
+      const file = exportPrimaryScenario(scenario, { scenarioName: mina02ScenarioName(variant) },
+        new Date().toISOString(), mina02ReportData(variant));
+      const imported = importPrimaryScenario(file);
+      expect(imported.summary.name).toBe(mina02ScenarioName(variant));
+      expect(imported.scenario.caliper?.samples).toEqual(caliper.samples);
+      expect(imported.scenario.primary).toEqual(reopened.primary);
+      dumps[`${variant.id}-portatil`] = JSON.parse(file);
     }
     if (!target) return;
     // Sem tipos do Node no projeto: o especificador em variável passa pela checagem.
