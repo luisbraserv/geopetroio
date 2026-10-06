@@ -14,6 +14,7 @@ public interface UnidadeConsultaPort {
 
 	List<UnidadeResumo> buscarPorIds(Set<Long> ids);
 
-	record UnidadeResumo(Long id, String nome, String apelido) {
+	/** @param ativa falso para unidade inativa, que nao recebe concessao nova (RN-116) */
+	record UnidadeResumo(Long id, String nome, String apelido, boolean ativa) {
 	}
 }

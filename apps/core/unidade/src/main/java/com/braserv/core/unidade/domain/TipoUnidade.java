@@ -3,8 +3,7 @@ package com.braserv.core.unidade.domain;
 /**
  * Tipo de equipamento cadastrado como Unidade — RN-065.
  *
- * <p>O nome do modulo sempre foi {@code unidade-sonda} porque a entidade nunca descreveu apenas
- * sondas. O tipo torna isso explicito.
+ * <p>Sonda e um dos tipos, nao o cadastro: por isso a entidade se chama Unidade (RN-119).
  *
  * <p><b>Classificacao apenas</b> — RN-074. A telemetria segue exclusiva de sonda de perfuracao,
  * com as mesmas cinco grandezas: todo o caminho de captura (enderecos no DB1 do CLP, conversoes,

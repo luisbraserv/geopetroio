@@ -21,6 +21,7 @@
 		<dependency><groupId>com.braserv</groupId><artifactId>empresa</artifactId><version>${project.version}</version></dependency>
 		<dependency><groupId>com.braserv</groupId><artifactId>usuario</artifactId><version>${project.version}</version></dependency>
 		<dependency><groupId>com.braserv</groupId><artifactId>identidade</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>interno</artifactId><version>${project.version}</version></dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -82,20 +82,41 @@ class MigracaoFlywayTest {
 		assertThat(existeColuna("usuario_cliente_unidades", "unidade_id")).isTrue();
 		assertThat(existeColuna("usuario_cliente_unidades", "unidade_sonda_id")).isFalse();
 		assertThat(existeColuna("usuarios", "regional_id")).isFalse();
+		assertThat(existeColuna("unidades", "status")).isTrue();
+		assertThat(existeTabela("servicos_clientes")).isTrue();
 	}
 
 	@Test
-	@DisplayName("base que recebeu as tabelas movidas: a versao inicial so e marcada, nao executada")
-	void baseMovidaSoMarcaAVersaoInicial() throws SQLException {
-		// Simula o resultado do script de movimentacao: tabelas ja existem, sem historico do Flyway.
-		executarNoSchema("CREATE TABLE regionais (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(255) NOT NULL, centro_custo VARCHAR(255))");
-		executarNoSchema("INSERT INTO regionais (nome) VALUES ('Bahia')");
+	@DisplayName("base movida: a estrutura inicial so e marcada, e as migrations seguintes rodam sobre os dados")
+	void baseMovidaRecebeAsMigrationsSeguintes() throws Exception {
+		// O script de movimentacao deixa o schema igual a estrutura inicial, com dados e sem historico do Flyway.
+		executarScript("db/migration/V2026.10.06.1__estrutura_inicial.sql");
+		executarNoSchema("INSERT INTO regionais (id, nome) VALUES (1, 'Bahia')");
+		executarNoSchema("INSERT INTO setores (id, regional_id, nome) VALUES (1, 1, 'Reconcavo')");
+		executarNoSchema("INSERT INTO unidades (id, setor_id, nome, tipo) VALUES (7, 1, 'SPT-144', 'SONDA')");
 
 		flyway().migrate();
 
 		assertThat(contar("SELECT COUNT(*) FROM flyway_schema_history WHERE type = 'BASELINE' AND version = '2026.10.06.1'"))
 				.isEqualTo(1);
-		assertThat(contar("SELECT COUNT(*) FROM regionais")).as("o dado movido continua la").isEqualTo(1);
+		assertThat(contar("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '2026.10.06.2' AND success = 1"))
+				.isEqualTo(1);
+		assertThat(contar("SELECT COUNT(*) FROM unidades WHERE id = 7 AND status = 'ATIVA'"))
+				.as("a unidade movida continua la, e nasce ativa").isEqualTo(1);
+		assertThat(existeTabela("servicos_clientes")).isTrue();
+	}
+
+	@Test
+	@DisplayName("status da unidade so aceita ATIVA ou INATIVA")
+	void statusDaUnidade() throws SQLException {
+		flyway().migrate();
+		executarNoSchema("INSERT INTO regionais (id, nome) VALUES (1, 'Bahia')");
+		executarNoSchema("INSERT INTO setores (id, regional_id, nome) VALUES (1, 1, 'Reconcavo')");
+		executarNoSchema("INSERT INTO unidades (id, setor_id, nome, tipo, status) VALUES (7, 1, 'SPT-144', 'SONDA', 'INATIVA')");
+
+		assertThatThrownBy(() -> executarNoSchema(
+				"INSERT INTO unidades (id, setor_id, nome, tipo, status) VALUES (8, 1, 'SPT-145', 'SONDA', 'EXCLUIDA')"))
+				.isInstanceOf(SQLException.class);
 	}
 
 	@Test
@@ -146,6 +167,20 @@ class MigracaoFlywayTest {
 		try (Connection conexao = DriverManager.getConnection(URL_SCHEMA, USUARIO, SENHA);
 				Statement comando = conexao.createStatement()) {
 			comando.execute(sql);
+		}
+	}
+
+	/** Executa um script de migration direto, sem Flyway, como faria o script de movimentacao. */
+	private void executarScript(String recurso) throws Exception {
+		String sql;
+		try (var entrada = getClass().getClassLoader().getResourceAsStream(recurso)) {
+			sql = new String(entrada.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+		}
+		String semComentarios = sql.replaceAll("(?m)^\\s*--.*$", "");
+		for (String comando : semComentarios.split(";")) {
+			if (!comando.isBlank()) {
+				executarNoSchema(comando);
+			}
 		}
 	}
 

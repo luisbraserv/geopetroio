@@ -16,6 +16,7 @@ import com.braserv.core.setor.adapter.out.persistence.entity.SetorEntity;
 import com.braserv.core.setor.adapter.out.persistence.repository.SetorJpaRepository;
 import com.braserv.core.unidade.adapter.in.web.request.UnidadeRequest;
 import com.braserv.core.unidade.adapter.out.persistence.entity.UnidadeEntity;
+import com.braserv.core.unidade.domain.StatusUnidade;
 import com.braserv.core.unidade.repository.UnidadeJpaRepository;
 
 @Service
@@ -34,25 +35,30 @@ public class UnidadeService {
 
 	@Transactional(readOnly = true)
 	public List<UnidadeEntity> listar(Long setorId, List<Long> setorIds, Long regionalId) {
+		return listar(setorId, setorIds, regionalId, null);
+	}
+
+	/** @param status filtro opcional; nulo lista ativas e inativas (RN-116) */
+	@Transactional(readOnly = true)
+	public List<UnidadeEntity> listar(Long setorId, List<Long> setorIds, Long regionalId, StatusUnidade status) {
+		List<UnidadeEntity> unidades;
 		if (setorIds != null && !setorIds.isEmpty()) {
-			return repository.findBySetorIdInOrderByNomeAsc(setorIds);
+			unidades = repository.findBySetorIdInOrderByNomeAsc(setorIds);
+		} else if (setorId != null) {
+			unidades = repository.findBySetorIdOrderByNomeAsc(setorId);
+		} else if (regionalId != null) {
+			unidades = repository.findBySetor_RegionalIdOrderByNomeAsc(regionalId);
+		} else {
+			unidades = repository.findAll();
 		}
-		if (setorId != null) {
-			return repository.findBySetorIdOrderByNomeAsc(setorId);
-		}
-		if (regionalId != null) {
-			return repository.findBySetor_RegionalIdOrderByNomeAsc(regionalId);
-		}
-		return repository.findAll();
+		// A frota tem dezenas de unidades: filtrar em memoria evita duplicar cada consulta por status.
+		return status == null ? unidades : unidades.stream().filter(u -> u.getStatus() == status).toList();
 	}
 
 	@Transactional(readOnly = true)
-	public Page<UnidadeEntity> listar(String busca, Pageable pageable) {
-		if (busca == null || busca.isBlank()) {
-			return repository.findAll(pageable);
-		}
-		String termo = busca.trim();
-		return repository.findByNomeContainingIgnoreCaseOrApelidoContainingIgnoreCase(termo, termo, pageable);
+	public Page<UnidadeEntity> listarPagina(String busca, StatusUnidade status, Pageable pageable) {
+		String termo = busca == null || busca.isBlank() ? null : busca.trim();
+		return repository.buscar(termo, status, pageable);
 	}
 
 	@Transactional(readOnly = true)
@@ -77,10 +83,28 @@ public class UnidadeService {
 		return repository.save(aplicar(buscar(id), request));
 	}
 
+	/** Tira a unidade de uso sem apagar nada — RN-116. Idempotente. */
+	@Transactional
+	public void inativar(Long id) {
+		buscar(id).setStatus(StatusUnidade.INATIVA);
+	}
+
+	/** Devolve a unidade ao uso; concessoes que ela ja tinha voltam a valer. Idempotente. */
+	@Transactional
+	public void ativar(Long id) {
+		buscar(id).setStatus(StatusUnidade.ATIVA);
+	}
+
+	/**
+	 * Exclusao fisica so de unidade que nunca foi usada — RN-116.
+	 *
+	 * <p>A guarda consulta as concessoes a clientes, aqui no core, e o Geopetro-Backend, que responde
+	 * por limites, cards, alarmes e telemetria. Sem a confirmacao do backend, a exclusao e recusada.
+	 */
 	@Transactional
 	public void excluir(Long id) {
 		UnidadeEntity unidade = buscar(id);
-		guarda.garantirSemVinculo(Cadastro.UNIDADE, id, "a unidade");
+		guarda.garantirSemVinculo(Cadastro.UNIDADE, id, "a unidade " + unidade.getNome(), "Use inativar.");
 		repository.delete(unidade);
 	}
 

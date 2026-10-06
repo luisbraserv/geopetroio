@@ -6,12 +6,24 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.braserv.core.unidade.domain.StatusUnidade;
 
 import com.braserv.core.unidade.adapter.out.persistence.entity.UnidadeEntity;
 
 public interface UnidadeJpaRepository extends JpaRepository<UnidadeEntity, Long> {
 
-	Page<UnidadeEntity> findByNomeContainingIgnoreCaseOrApelidoContainingIgnoreCase(String nome, String apelido,
+	/** Busca por nome ou apelido, com filtro opcional de status. Parametro nulo nao filtra. */
+	@Query("""
+			select u from UnidadeEntity u
+			where (:status is null or u.status = :status)
+			  and (:termo is null
+			       or lower(u.nome) like lower(concat('%', :termo, '%'))
+			       or lower(u.apelido) like lower(concat('%', :termo, '%')))
+			""")
+	Page<UnidadeEntity> buscar(@Param("termo") String termo, @Param("status") StatusUnidade status,
 			Pageable pageable);
 
 	List<UnidadeEntity> findBySetorIdOrderByNomeAsc(Long setorId);

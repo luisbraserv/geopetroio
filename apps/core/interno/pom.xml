@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent><groupId>com.braserv</groupId><artifactId>braserv-core</artifactId><version>0.0.1-SNAPSHOT</version><relativePath>../pom.xml</relativePath></parent>
+	<!-- Rotas /internal/v1/** e o cliente HTTP do Geopetro-Backend (spec, secoes 4 e 8). -->
+	<artifactId>interno</artifactId>
+	<dependencies>
+		<dependency><groupId>com.braserv</groupId><artifactId>comum</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>usuario</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>unidade</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>identidade</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webmvc</artifactId></dependency>
+		<dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId></dependency>
+		<dependency><groupId>io.swagger.core.v3</groupId><artifactId>swagger-annotations-jakarta</artifactId><version>${swagger-annotations.version}</version></dependency>
+	</dependencies>
+</project>

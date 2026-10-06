@@ -101,6 +101,11 @@ public class CriarUsuarioUseCase implements CriarUsuarioInputPort {
 		if (encontrados.size() != filtrados.size()) {
 			throw new UsuarioInvalidoException("Uma ou mais unidades informadas nao existem.");
 		}
+		// RN-116: unidade inativa nao recebe concessao nova.
+		List<String> inativas = encontrados.stream().filter(u -> !u.ativa()).map(UnidadeResumo::nome).toList();
+		if (!inativas.isEmpty()) {
+			throw new UsuarioInvalidoException("Unidade inativa nao pode ser concedida: " + String.join(", ", inativas) + ".");
+		}
 		return encontrados.stream()
 				.map(u -> new UsuarioCliente.UnidadeRef(u.id(), u.nome(), u.apelido()))
 				.toList();

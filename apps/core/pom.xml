@@ -27,6 +27,7 @@
 		<module>empresa</module>
 		<module>usuario</module>
 		<module>identidade</module>
+		<module>interno</module>
 		<module>app</module>
 	</modules>
 

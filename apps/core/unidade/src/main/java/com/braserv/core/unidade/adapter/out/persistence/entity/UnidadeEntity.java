@@ -1,6 +1,7 @@
 package com.braserv.core.unidade.adapter.out.persistence.entity;
 
 import com.braserv.core.setor.adapter.out.persistence.entity.SetorEntity;
+import com.braserv.core.unidade.domain.StatusUnidade;
 import com.braserv.core.unidade.domain.TipoUnidade;
 
 import jakarta.persistence.Column;
@@ -33,6 +34,11 @@ public class UnidadeEntity {
 	@Column(nullable = false)
 	private TipoUnidade tipo;
 
+	/** RN-116 — inativar substitui excluir para unidade que ja foi usada. */
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 16)
+	private StatusUnidade status = StatusUnidade.ATIVA;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "setor_id", nullable = false)
 	private SetorEntity setor;
@@ -45,6 +51,9 @@ public class UnidadeEntity {
 	public void setApelido(String apelido) { this.apelido = apelido; }
 	public TipoUnidade getTipo() { return tipo; }
 	public void setTipo(TipoUnidade tipo) { this.tipo = tipo; }
+	public StatusUnidade getStatus() { return status; }
+	public void setStatus(StatusUnidade status) { this.status = status; }
+	public boolean ativa() { return status == StatusUnidade.ATIVA; }
 	public SetorEntity getSetor() { return setor; }
 	public void setSetor(SetorEntity setor) { this.setor = setor; }
 }

@@ -2,10 +2,12 @@ package com.braserv.core.identidade.config;
 
 import java.util.List;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -33,13 +35,23 @@ public class SecurityConfig {
 		this.allowedOriginPatterns = allowedOriginPatterns;
 	}
 
+	/**
+	 * Rotas publicas, com token de pessoa. Vem depois da cadeia das rotas internas
+	 * ({@code /internal/**}, token de servico), que tem ordem 1 e casa primeiro.
+	 */
 	@Bean
+	@Order(2)
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		return http
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
+						// O 403 de uma regra abaixo vira um despacho interno para /error, que nao carrega
+						// o token. Sem liberar esse despacho, ele seria barrado como anonimo e quem esta
+						// logado sem permissao receberia 401 ("faca login") em vez de 403. O Front trata
+						// 401 como sessao vencida.
+						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/recuperacao-senha", "/api/auth/recuperacao-senha/confirmar")
 						.permitAll()
 						// Chaves publicas que conferem os tokens (RN-117). Nao servem para emitir
@@ -57,8 +69,14 @@ public class SecurityConfig {
 						// 2026-09-17: ela virou permissao de dominio e passou a ser combinavel com
 						// CLIENTE (Simulador de Cimentacao), o que daria a um cliente a lista de
 						// setores e da frota inteira — dado interno, e nao o que a role concede.
-						.requestMatchers("/api/setores/**", "/api/unidades/**")
+						.requestMatchers("/api/setores/**")
 						.hasAnyRole("INTERNO", "ADMIN")
+						// Unidades: qualquer interno consulta; criar, editar, inativar e excluir exigem
+						// ADMIN ou INTERNO + UNIDADE (RN-118).
+						.requestMatchers(HttpMethod.GET, "/api/unidades/**")
+						.hasAnyRole("INTERNO", "ADMIN")
+						.requestMatchers("/api/unidades/**")
+						.access(RegrasDeAcesso.GESTAO_UNIDADES)
 						// Regionais: leitura liberada aos perfis internos (as telas de setor e
 						// unidade precisam listar regionais); escrita so ADMIN.
 						.requestMatchers(HttpMethod.GET, "/api/regionais/**")
@@ -74,7 +92,7 @@ public class SecurityConfig {
 						.access(RegrasDeAcesso.CONFIGURACAO)
 						// Cadastros seguem exclusivos de ADMIN: SUPORTE configura o sistema,
 						// nao administra usuario nem empresa.
-						.requestMatchers("/api/empresas/**", "/api/usuarios/**")
+						.requestMatchers("/api/empresas/**", "/api/usuarios/**", "/api/servicos-clientes/**")
 						.access(RegrasDeAcesso.ADMINISTRACAO)
 						.anyRequest()
 						.authenticated())

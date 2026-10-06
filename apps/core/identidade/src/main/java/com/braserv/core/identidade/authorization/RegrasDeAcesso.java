@@ -17,6 +17,15 @@ import com.braserv.core.usuario.domain.model.Role;
  */
 public final class RegrasDeAcesso {
 
+	/**
+	 * Gestao de unidades — RN-118: criar, editar, inativar, reativar e excluir.
+	 *
+	 * <p>Consultar o cadastro continua aberto a qualquer {@code INTERNO}; so a escrita exige a
+	 * permissao. {@code UNIDADE} sozinha nao concede nada, como as demais permissoes de modulo.
+	 */
+	public static final RegraDeAcesso GESTAO_UNIDADES = RegraDeAcesso.exigindo(Role.ADMIN)
+			.ou(Role.INTERNO, Role.UNIDADE);
+
 	/** Cadastros administrativos — usuarios, empresas, escrita de regionais. */
 	public static final RegraDeAcesso ADMINISTRACAO = RegraDeAcesso.exigindo(Role.ADMIN);
 

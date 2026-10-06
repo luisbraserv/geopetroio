@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,6 +22,7 @@ import com.braserv.core.unidade.adapter.in.web.request.UnidadeRequest;
 import com.braserv.core.unidade.adapter.in.web.response.UnidadeResponse;
 import com.braserv.core.unidade.adapter.out.persistence.entity.UnidadeEntity;
 import com.braserv.core.unidade.application.service.UnidadeService;
+import com.braserv.core.unidade.domain.StatusUnidade;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -44,15 +46,17 @@ public class UnidadeController {
 	public List<UnidadeResponse> listar(
 			@RequestParam(required = false) Long setorId,
 			@RequestParam(required = false) List<Long> setorIds,
-			@RequestParam(required = false) Long regionalId) {
-		return service.listar(setorId, setorIds, regionalId).stream().map(UnidadeResponse::de).toList();
+			@RequestParam(required = false) Long regionalId,
+			@RequestParam(required = false) StatusUnidade status) {
+		return service.listar(setorId, setorIds, regionalId, status).stream().map(UnidadeResponse::de).toList();
 	}
 
 	@GetMapping("/paginado")
 	@Operation(summary = "Listar unidades com paginacao e busca")
 	public PaginaResponse<UnidadeResponse> listarPaginado(@RequestParam(defaultValue = "0") int pagina,
-			@RequestParam(defaultValue = "10") int tamanho, @RequestParam(required = false) String busca) {
-		Page<UnidadeEntity> page = service.listar(busca,
+			@RequestParam(defaultValue = "10") int tamanho, @RequestParam(required = false) String busca,
+			@RequestParam(required = false) StatusUnidade status) {
+		Page<UnidadeEntity> page = service.listarPagina(busca, status,
 				PageRequest.of(pagina, tamanho, Sort.by("nome").ascending()));
 		return PaginaResponse.de(page.getContent().stream().map(UnidadeResponse::de).toList(), page.getNumber(),
 				page.getSize(), page.getTotalElements(), page.getTotalPages(), page.isFirst(), page.isLast());
@@ -76,8 +80,22 @@ public class UnidadeController {
 		return UnidadeResponse.de(service.atualizar(id, request));
 	}
 
+	@PatchMapping("/{id}/inativar")
+	@Operation(summary = "Inativar unidade", description = "Tira a unidade de uso sem apagar limites, cards, alarmes nem telemetria (RN-116).")
+	public ResponseEntity<Void> inativar(@PathVariable Long id) {
+		service.inativar(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	@PatchMapping("/{id}/ativar")
+	@Operation(summary = "Reativar unidade")
+	public ResponseEntity<Void> ativar(@PathVariable Long id) {
+		service.ativar(id);
+		return ResponseEntity.noContent().build();
+	}
+
 	@DeleteMapping("/{id}")
-	@Operation(summary = "Excluir unidade")
+	@Operation(summary = "Excluir unidade", description = "So apaga unidade que nunca foi usada; do contrario responde 409 (RN-116).")
 	public ResponseEntity<Void> excluir(@PathVariable Long id) {
 		service.excluir(id);
 		return ResponseEntity.noContent().build();

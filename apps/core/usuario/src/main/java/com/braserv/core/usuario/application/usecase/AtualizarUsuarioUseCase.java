@@ -69,12 +69,17 @@ public class AtualizarUsuarioUseCase {
 			// null = campo nao enviado, mantem o vinculo atual.
 			// Lista vazia = revogar o acesso a todas as sondas — operacao legitima.
 			if (command.unidadeIds() != null) {
-				cliente.setUnidades(resolverUnidades(command.unidadeIds()));
+				Set<Long> jaConcedidas = new LinkedHashSet<>(cliente.getUnidadeIds());
+				cliente.setUnidades(resolverUnidades(command.unidadeIds(), jaConcedidas));
 			}
 		}
 	}
 
-	private List<UsuarioCliente.UnidadeRef> resolverUnidades(Set<Long> ids) {
+	/**
+	 * @param jaConcedidas unidades que o cliente ja tinha. Uma delas inativa continua aceita: inativar
+	 *                     nao revoga concessao (RN-116); o que se recusa e conceder uma inativa agora.
+	 */
+	private List<UsuarioCliente.UnidadeRef> resolverUnidades(Set<Long> ids, Set<Long> jaConcedidas) {
 		Set<Long> filtrados = ids.stream().filter(id -> id != null && id > 0)
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (filtrados.isEmpty()) return List.of();
@@ -82,6 +87,13 @@ public class AtualizarUsuarioUseCase {
 		List<UnidadeResumo> encontrados = unidadeConsultaPort.buscarPorIds(filtrados);
 		if (encontrados.size() != filtrados.size()) {
 			throw new UsuarioInvalidoException("Uma ou mais unidades informadas nao existem.");
+		}
+		List<String> inativasNovas = encontrados.stream()
+				.filter(u -> !u.ativa() && !jaConcedidas.contains(u.id()))
+				.map(UnidadeResumo::nome)
+				.toList();
+		if (!inativasNovas.isEmpty()) {
+			throw new UsuarioInvalidoException("Unidade inativa nao pode ser concedida: " + String.join(", ", inativasNovas) + ".");
 		}
 		return encontrados.stream()
 				.map(u -> new UsuarioCliente.UnidadeRef(u.id(), u.nome(), u.apelido()))

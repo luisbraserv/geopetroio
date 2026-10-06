@@ -1,6 +1,7 @@
 package com.braserv.core.unidade.adapter.in.web.response;
 
 import com.braserv.core.unidade.adapter.out.persistence.entity.UnidadeEntity;
+import com.braserv.core.unidade.domain.StatusUnidade;
 import com.braserv.core.unidade.domain.TipoUnidade;
 
 public record UnidadeResponse(
@@ -8,6 +9,7 @@ public record UnidadeResponse(
 		String nome,
 		String apelido,
 		TipoUnidade tipo,
+		StatusUnidade status,
 		Long setorId,
 		String setorNome,
 		Long regionalId,
@@ -19,6 +21,7 @@ public record UnidadeResponse(
 				unidade.getNome(),
 				unidade.getApelido(),
 				unidade.getTipo(),
+				unidade.getStatus(),
 				unidade.getSetor().getId(),
 				unidade.getSetor().getNome(),
 				unidade.getSetor().getRegional().getId(),

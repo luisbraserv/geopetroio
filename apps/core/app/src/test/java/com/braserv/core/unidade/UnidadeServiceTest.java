@@ -3,8 +3,12 @@ package com.braserv.core.unidade;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.braserv.core.comum.port.VinculoCadastroPort;
+import com.braserv.core.unidade.domain.StatusUnidade;
 
 import java.util.List;
 import java.util.Optional;
@@ -193,6 +197,68 @@ class UnidadeServiceTest {
 		service.excluir(1L);
 
 		verify(repository).delete(existente);
+	}
+
+	/** RN-116: a recusa lista tudo o que impede e orienta a inativar. */
+	@Test
+	void exclusaoRecusadaOrientaAInativar() {
+		VinculoCadastroPort concessoes = porta(Optional.of("1 cliente com acesso concedido"));
+		VinculoCadastroPort backend = porta(Optional.of("limites de alarme configurados"));
+		service = new UnidadeService(repository, setorRepository, new GuardaDeExclusao(List.of(concessoes, backend)));
+		UnidadeEntity existente = unidade(1L, "SPT-144");
+		when(repository.findById(1L)).thenReturn(Optional.of(existente));
+
+		assertThatThrownBy(() -> service.excluir(1L))
+				.isInstanceOf(BusinessException.class)
+				.hasMessage("Nao e possivel excluir a unidade SPT-144: 1 cliente com acesso concedido e "
+						+ "limites de alarme configurados. Use inativar.");
+		verify(repository, never()).delete(any());
+	}
+
+	@Test
+	void inativarEReativarSoTrocamOStatus() {
+		UnidadeEntity existente = unidade(1L, "SPT-144");
+		when(repository.findById(1L)).thenReturn(Optional.of(existente));
+
+		service.inativar(1L);
+		assertThat(existente.getStatus()).isEqualTo(StatusUnidade.INATIVA);
+		service.inativar(1L);
+		assertThat(existente.getStatus()).as("idempotente").isEqualTo(StatusUnidade.INATIVA);
+
+		service.ativar(1L);
+		assertThat(existente.getStatus()).isEqualTo(StatusUnidade.ATIVA);
+		verify(repository, never()).delete(any());
+	}
+
+	@Test
+	void unidadeNasceAtiva() {
+		assertThat(new UnidadeEntity().getStatus()).isEqualTo(StatusUnidade.ATIVA);
+	}
+
+	@Test
+	void listarFiltraPorStatus() {
+		UnidadeEntity ativa = unidade(1L, "SPT-144");
+		UnidadeEntity inativa = unidade(2L, "SPT-145");
+		inativa.setStatus(StatusUnidade.INATIVA);
+		when(repository.findAll()).thenReturn(List.of(ativa, inativa));
+
+		assertThat(service.listar(null, null, null, StatusUnidade.ATIVA)).containsExactly(ativa);
+		assertThat(service.listar(null, null, null, StatusUnidade.INATIVA)).containsExactly(inativa);
+		assertThat(service.listar(null, null, null, null)).containsExactly(ativa, inativa);
+	}
+
+	private static VinculoCadastroPort porta(Optional<String> vinculo) {
+		return new VinculoCadastroPort() {
+			@Override
+			public Cadastro cadastro() {
+				return Cadastro.UNIDADE;
+			}
+
+			@Override
+			public Optional<String> descreverVinculo(Long id) {
+				return vinculo;
+			}
+		};
 	}
 
 	private UnidadeEntity unidade(Long id, String nome) {

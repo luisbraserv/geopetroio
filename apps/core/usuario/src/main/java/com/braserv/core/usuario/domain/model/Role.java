@@ -9,7 +9,7 @@ package com.braserv.core.usuario.domain.model;
  *       criacao do usuario, conforme a subclasse. Diz <i>de quem</i> e a conta, nao o que ela
  *       alcanca.</li>
  *   <li><b>Permissao de modulo</b> — {@link #MONITORAMENTO}, {@link #MONITORAMENTO_REAL},
- *       {@link #SIMULADOR}, {@link #CIMENTACAO}. Sozinhas nao abrem nada: valem <b>somadas</b> a um
+ *       {@link #SIMULADOR}, {@link #CIMENTACAO}, {@link #UNIDADE}. Sozinhas nao abrem nada: valem <b>somadas</b> a um
  *       tipo de conta.</li>
  * </ul>
  *
@@ -53,6 +53,12 @@ public enum Role {
 
 	/** Dominio de cimentacao. Com {@link #SIMULADOR}, abre o Simulador de Cimentacao. */
 	CIMENTACAO,
+
+	/**
+	 * Gestao de unidades — RN-118. Com {@link #INTERNO}, cria, edita, inativa, reativa e exclui
+	 * unidades. Sem ela, o interno so consulta o cadastro.
+	 */
+	UNIDADE,
 
 	/**
 	 * Suporte — RN-086. Configura o sistema sem administrar cadastro: alcanca as configuracoes

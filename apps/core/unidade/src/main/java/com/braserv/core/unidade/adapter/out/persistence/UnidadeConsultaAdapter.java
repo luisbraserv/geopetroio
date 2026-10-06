@@ -20,7 +20,7 @@ public class UnidadeConsultaAdapter implements UnidadeConsultaPort {
 	@Override
 	public List<UnidadeResumo> buscarPorIds(Set<Long> ids) {
 		return unidadeJpaRepository.findAllById(ids).stream()
-				.map(u -> new UnidadeResumo(u.getId(), u.getNome(), u.getApelido()))
+				.map(u -> new UnidadeResumo(u.getId(), u.getNome(), u.getApelido(), u.ativa()))
 				.toList();
 	}
 }

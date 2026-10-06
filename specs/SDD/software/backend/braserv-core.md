@@ -139,12 +139,14 @@ Script executado uma vez, com `root`, versionado em `deploy/vm-unica/core/mover-
 1. Conferir: as nove tabelas existem em `geopetro_io` e `braserv_core` está vazio.
 2. Remover as quatro FKs da seção 5.2.
 3. `RENAME TABLE` das nove tabelas, num único comando, já com o nome novo `unidades`.
-4. Ajustar o core para ficar **idêntico à migration inicial do core**: coluna `status`, renomeação de
-   `unidade_sonda_id`, tabela `servicos_clientes`.
+4. Ajustar o core para ficar **idêntico à estrutura inicial do core** (`V2026.10.06.1`): renomear
+   `unidade_sonda_id` para `unidade_id` em `usuario_cliente_unidades`.
 5. Conferir: nenhuma das nove sobrou em `geopetro_io`; contagens de linha iguais às do passo 1.
 
-O Flyway do core sobe depois com `baseline-on-migrate` na versão da migration inicial. Em base
-vazia, essa migration cria tudo. As mudanças do lado do backend (remover FKs e renomear colunas) são
+O Flyway do core sobe depois com `baseline-on-migrate` na versão da estrutura inicial: ela é marcada
+como aplicada, e as migrations seguintes (coluna `status`, tabela `servicos_clientes`) rodam
+normalmente sobre os dados movidos. Em base vazia, a estrutura inicial cria tudo. **[FATO 2026-10-06]**
+Coberto por `MigracaoFlywayTest.baseMovidaRecebeAsMigrationsSeguintes`. As mudanças do lado do backend (remover FKs e renomear colunas) são
 uma **migration Flyway do backend**, idempotente, como as demais
 ([DT-002](../technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)).
 

@@ -12,8 +12,8 @@ import com.braserv.core.comum.port.VinculoCadastroPort.Cadastro;
 /**
  * Aplica RN-063: exclusao recusada quando ha vinculo, com mensagem dizendo <b>o que</b> impede.
  *
- * <p><b>Sem exclusao logica.</b> Nada de {@code ativo=false} como substituto de apagar — a decisao
- * foi bloquear, nao esconder.
+ * <p>Para Regional, Setor e Empresa, nao ha exclusao logica: a decisao foi bloquear, nao esconder.
+ * A Unidade e a excecao (RN-116): tem status, e a recusa orienta a inativar.
  *
  * <p>Consulta <b>todas</b> as fontes antes de recusar, em vez de parar na primeira. Recusar tres
  * vezes seguidas, cada uma revelando um impedimento novo, e pior que recusar uma vez dizendo os
@@ -34,6 +34,11 @@ public class GuardaDeExclusao {
 	 * @throws BusinessException {@code 409} quando existe ao menos um vinculo
 	 */
 	public void garantirSemVinculo(Cadastro cadastro, Long id, String rotulo) {
+		garantirSemVinculo(cadastro, id, rotulo, null);
+	}
+
+	/** @param orientacao frase acrescentada a recusa, dizendo o que fazer no lugar; pode ser nula */
+	public void garantirSemVinculo(Cadastro cadastro, Long id, String rotulo, String orientacao) {
 		List<String> impedimentos = new ArrayList<>();
 		for (VinculoCadastroPort porta : portas) {
 			if (porta.cadastro() == cadastro) {
@@ -43,7 +48,8 @@ public class GuardaDeExclusao {
 
 		if (!impedimentos.isEmpty()) {
 			throw new BusinessException(
-					"Nao e possivel excluir " + rotulo + ": " + juntar(impedimentos) + ".",
+					"Nao e possivel excluir " + rotulo + ": " + juntar(impedimentos) + "."
+							+ (orientacao == null ? "" : " " + orientacao),
 					HttpStatus.CONFLICT);
 		}
 	}

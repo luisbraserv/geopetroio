@@ -315,3 +315,15 @@ ao relatório se não for capturado por uma relação entre campos.
 - Build do front usa `--configuration k8s`, mas **não há manifesto Kubernetes** no workspace — [OQ-012](../negocio/requisitos/open-questions.md#oq-012--onde-vivem-os-manifestos-de-deploy)
 - `Braserv-Horus-Desktop` injeta um `JAVA_HOME` de fallback fixo no `build.gradle` — frágil entre máquinas
 - ✅ **Resolvido 2026-09-06:** o Geopetro-Telemetria roda Spring Boot **3.4.5** enquanto o Geopetro-Backend já está no **4.0.5**. O Boot 3.4.5 traz Mockito 5.14.2 com Byte Buddy 1.15.11, que **não reconhece o bytecode do Java 25** instalado — *toda* mockagem de classe falhava com `Java 25 (69) is not supported`, derrubando **10 dos 24 testes** do serviço. Corrigido fixando `mockito.version` e `byte-buddy.version` no `pom.xml` para as mesmas versões que o Boot 4 já resolve. ⚠️ **A divergência de Boot entre os dois serviços permanece** — este é o primeiro sintoma dela, e não será o último
+
+## DT-017 · Logado sem permissão recebe 401 em vez de 403
+
+**Severidade: Média** · Geopetro-Backend · Aberto
+
+**[FATO 2026-10-06]** Encontrado no Braserv-Core, que copiou a configuração de segurança do backend. No servidor real, o `403` de uma regra de acesso vira um despacho interno para `/error`, que não carrega o token. A segunda passagem pela segurança trata a requisição como anônima e responde `401`. O MockMvc não reproduz o despacho, por isso os testes de segurança passavam.
+
+**Efeito:** o Front trata `401` como sessão vencida. Um usuário logado que abre uma tela sem permissão pode ser mandado de volta ao login, em vez de ver "acesso negado".
+
+**[INFERÊNCIA]** O Geopetro-Backend tem a mesma configuração (`SecurityConfig` sem liberar o despacho de erro) e deve ter o mesmo comportamento; não foi conferido com o backend rodando.
+
+**Correção:** `.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` no início da cadeia. Aplicada no Braserv-Core em 2026-10-06, com o teste `ProibidoNaoViraNaoAutenticadoTest`, que faz a requisição HTTP real. No backend, entra na fase 3 do [Braserv-Core](backend/braserv-core.md), que reescreve a segurança dele.
