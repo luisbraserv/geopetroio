@@ -77,13 +77,13 @@ WebSocket). Ver [`websocket-realtime.md`](../../software/apis/websocket-realtime
 solicitação pública e tela de nova senha. Token de uso único, validade de 30 minutos,
 hash no banco e limites de envio. SMTP desativado por padrão; configuração e teste
 de entrega corporativa pendentes. Contrato em
-[`recuperacao-senha.md`](../../../../Geopetro-Backend/specs/recuperacao-senha.md).
+[`recuperacao-senha.md`](../../../../apps/geopetro-backend/specs/recuperacao-senha.md).
 
 **[FATO 2026-09-07]** ADMIN configura o SMTP em **Configurações → E-mail**, com
 menu horizontal, ativação do envio, credencial protegida e teste de conexão.
 Alterações valem sem reiniciar o backend. O teste não envia mensagens nem comprova
 entrega corporativa. Detalhes em
-[`configuracao-smtp.md`](../../../../Geopetro-Backend/specs/configuracao-smtp.md).
+[`configuracao-smtp.md`](../../../../apps/geopetro-backend/specs/configuracao-smtp.md).
 
 ---
 ## F-02 · Gestão de Usuários
@@ -275,12 +275,12 @@ Endpoints removidos: `/api/projetos/**`, `/api/processos/**`, `/api/anotacoes/**
 
 ⚠️ **[FATO]** A remoção do código **não** apaga as tabelas. Permanecem no MySQL: `projetos`,
 `processos`, `anotacoes`, `observacoes`. Não quebram nada (`ddl-auto=validate` ignora tabelas extras),
-mas contêm dados. Ver `Geopetro-Backend/db/cleanup/`.
+mas contêm dados. Ver `apps/geopetro-backend/db/cleanup/`.
 
 ### Recuperação
 
 **[FATO]** Tudo está no histórico do Git — ver
-[`Geopetro-Backend/specs/README.md`](../../../../Geopetro-Backend/specs/README.md#módulos-removidos).
+[`apps/geopetro-backend/specs/README.md`](../../../../apps/geopetro-backend/specs/README.md#módulos-removidos).
 
 ---
 
@@ -301,7 +301,7 @@ puro).
 
 ⚠️ **Tabelas órfãs:** `quimicos`, `operacoes_sonda`, `movimentacoes_quimico`, `configuracoes_email`,
 `alertas_email_quimico`. Script de limpeza sugerido (não executado) em
-`Geopetro-Backend/db/cleanup/2026-08-26-remove-quimico.sql`.
+`apps/geopetro-backend/db/cleanup/2026-08-26-remove-quimico.sql`.
 
 ---
 
@@ -317,7 +317,7 @@ puro).
 
 **[FATO]** O cálculo ocorre no Front; o Backend persiste cenários e pastas.
 Geometria, hidráulica, critérios de aceite e estado da primária estão na
-[SPEC do simulador](../../../../Geopetro-Front/specs/simulador/cimentacao-primaria.md).
+[SPEC do simulador](../../../../apps/geopetro-frontend/specs/simulador/cimentacao-primaria.md).
 
 **Capacidades de cálculo [FATO]** · tempo de espessamento (estilo API 10B-2) · curvas UCA · reologia
 Bingham e lei de potência a partir de θ300..θ3 · cálculo de pasta (FAC/FAM/rendimento) · hidráulica
@@ -333,7 +333,7 @@ conformidade operacional
 
 **[FATO]** Coerência da geometria e relações entre campos já geram bloqueios
 ou avisos. Faixas quantitativas e obrigatoriedade ainda dependem da
-[tabela de validação](../../../../Geopetro-Front/specs/simulador/faixas-validacao.md);
+[tabela de validação](../../../../apps/geopetro-frontend/specs/simulador/faixas-validacao.md);
 veja [DT-014](../../software/technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
 
 **[FATO]** Com a remoção dos demais módulos, o `simulador` é hoje **o único domínio de negócio
@@ -361,7 +361,7 @@ próprio** que resta no backend, além da identidade e da organização.
 ### ✅ Fonte de dados implementada em 2026-08-27
 
 O serviço em `monitoramento.base-url` (default `:8081`) é o
-[Geopetro-Telemetria](../../../../Geopetro-Telemetria/specs/README.md), **implementado em
+[Geopetro-Telemetria](../../../../apps/geopetro-telemetria/specs/README.md), **implementado em
 2026-08-27**. A cadeia completa — captura no CLP, publicação MQTT, ingestão, InfluxDB, consulta REST,
 tela — existe agora ponta a ponta.
 

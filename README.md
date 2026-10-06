@@ -1,16 +1,26 @@
 # GeopetroIO
 
-O GeopetroIO reúne cadastro e monitoramento de sondas, aquisição de dados em campo, histórico de telemetria e simulação de operações de cimentação. Este repositório contém cinco aplicações. As [SPECs do sistema](specs/SDD/README.md) detalham regras de negócio e contratos; este README serve para entender o conjunto e iniciar o ambiente de desenvolvimento.
+O GeopetroIO reúne cadastro e monitoramento de sondas, aquisição de dados em campo, histórico de telemetria e simulação de operações de cimentação. Este repositório é um monorepo com seis aplicações. As [SPECs do sistema](specs/SDD/README.md) detalham regras de negócio e contratos; este README serve para entender o conjunto e iniciar o ambiente de desenvolvimento.
 
-## Os cinco projetos
+## Estrutura
 
-| Projeto | Papel |
+```text
+apps/        uma pasta por aplicação implantável
+packages/    bibliotecas compartilhadas entre aplicações (vazio por ora)
+deploy/      compose e scripts de implantação
+specs/       SDD: regras de negócio, contratos e decisões
+```
+
+## As seis aplicações
+
+| Aplicação | Papel |
 |---|---|
-| [Geopetro-Backend](Geopetro-Backend/) | API Spring Boot de usuários, empresas, unidades/sondas, permissões, simulador e monitoramento. Usa MySQL e entrega o tempo real ao Front por WebSocket/STOMP. |
-| [Geopetro-Front](Geopetro-Front/) | Aplicação Angular para cadastro, monitoramento, alarmes, simuladores e relatórios. Consome as APIs do Backend. |
-| [Geopetro-Desktop](Geopetro-Desktop/) | Aplicação JavaFX instalada na unidade. Lê o CLP, mostra o painel local e publica telemetria por MQTT (histórico) e WebSocket/STOMP (tempo real). O alarme da estação funciona localmente. |
-| [Geopetro-Telemetria](Geopetro-Telemetria/) | Serviço Spring Boot que consome MQTT, grava séries no InfluxDB e oferece consultas de histórico ao Backend. |
-| [Braserv-Horus-Desktop](Braserv-Horus-Desktop/) | Aplicação JavaFX de cimentação, apresentada como **GeoPetro IO - Cimentação**. Lê seu CLP, acompanha a bomba e gera carta de operação em PDF. É autônoma em relação aos outros quatro projetos. |
+| [Braserv-Core](apps/core/) | Cadastro organizacional e identidade da Braserv: usuários, empresas, regionais, setores, unidades e login. Os outros sistemas consomem o core. Em construção; veja a [spec](specs/SDD/software/backend/braserv-core.md). |
+| [Geopetro-Backend](apps/geopetro-backend/) | API Spring Boot de usuários, empresas, unidades/sondas, permissões, simulador e monitoramento. Usa MySQL e entrega o tempo real ao Front por WebSocket/STOMP. |
+| [Geopetro-Front](apps/geopetro-frontend/) | Aplicação Angular para cadastro, monitoramento, alarmes, simuladores e relatórios. Consome as APIs do Backend. |
+| [Geopetro-Desktop](apps/geopetro-desktop/) | Aplicação JavaFX instalada na unidade. Lê o CLP, mostra o painel local e publica telemetria por MQTT (histórico) e WebSocket/STOMP (tempo real). O alarme da estação funciona localmente. |
+| [Geopetro-Telemetria](apps/geopetro-telemetria/) | Serviço Spring Boot que consome MQTT, grava séries no InfluxDB e oferece consultas de histórico ao Backend. |
+| [Braserv-Horus-Desktop](apps/horus-desktop/) | Aplicação JavaFX de cimentação, apresentada como **GeoPetro IO - Cimentação**. Lê seu CLP, acompanha a bomba e gera carta de operação em PDF. É autônoma em relação às demais aplicações. |
 
 O fluxo principal de dados é:
 
@@ -52,12 +62,12 @@ Espere as verificações de saúde terminarem. A primeira compilação pode leva
 Para iniciar **os dois aplicativos Desktop**, abra outros terminais na raiz do repositório:
 
 ```powershell
-cd Geopetro-Desktop
+cd apps\geopetro-desktop
 .\mvnw.cmd javafx:run
 ```
 
 ```powershell
-cd Braserv-Horus-Desktop
+cd apps\horus-desktop
 .\gradlew.bat run
 ```
 

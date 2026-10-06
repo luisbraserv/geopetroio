@@ -579,7 +579,7 @@ opaco do cenário e passam a pertencer ao poço, que o cenário referencia.
 **[FATO 2026-09-06]** Cadastro e vínculo implementados no working tree. O poço
 guarda geometria tipada em metros, validada pelo backend; o cenário vinculado
 carrega a geometria atual. Cenários legados continuam sem vínculo. Contrato e
-migration em [simulador-pocos.md](../../../../Geopetro-Backend/specs/simulador-pocos.md).
+migration em [simulador-pocos.md](../../../../apps/geopetro-backend/specs/simulador-pocos.md).
 
 ### RN-060 · TVD é derivado da trajetória, não digitado
 **[DECIDIDO 2026-09-05]** Com o survey (estações de MD, inclinação e azimute), o TVD passa a ser
@@ -596,7 +596,7 @@ aproximação por fase.
 ## Regras da rodada 2 — 2026-09-05
 
 > **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-06]** A rodada 2 está **inteiramente implementada** no
-> working tree — RN-061, RN-062, RN-063, RN-064 e RN-065. Contrato e verificação em [identidade-e-cadastro.md](../../../../Geopetro-Backend/specs/identidade-e-cadastro.md).
+> working tree — RN-061, RN-062, RN-063, RN-064 e RN-065. Contrato e verificação em [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
 
 ### RN-061 · Política de senha unificada
 **[DECIDIDO 2026-09-05]** **8 a 20 caracteres**, com minúscula, maiúscula, dígito e caractere especial.
@@ -610,7 +610,7 @@ a validação incide sobre a **definição** de senha, não sobre a verificaçã
 troca compulsória, que não foi decidida.
 
 **[FATO 2026-09-06]** Implementada em `PoliticaSenha`, aplicada nos três caminhos que definem senha.
-14 testes. Espaço em branco não conta como caractere especial. Ver [identidade-e-cadastro.md](../../../../Geopetro-Backend/specs/identidade-e-cadastro.md).
+14 testes. Espaço em branco não conta como caractere especial. Ver [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
 
 ### RN-062 · Desativar usuário corta o acesso na hora
 **[DECIDIDO 2026-09-05]** Supera parte de [RN-045](#rn-045--sessão-expira-em-1-hora-sem-renovação):
@@ -625,7 +625,7 @@ ativo segue válido até expirar.
 **[FATO 2026-09-06]** Implementada em `ContaAtivaVerificador`, consultada pelo `JwtAuthenticationFilter`
 com cache de 10s (`security.cache-status-segundos`) — o cache é a janela do corte. **O login também
 passou a checar o status**, que antes não era verificado em nenhum ponto: sem isso, o corte seria
-contornado por um novo login. Ver [identidade-e-cadastro.md](../../../../Geopetro-Backend/specs/identidade-e-cadastro.md).
+contornado por um novo login. Ver [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
 
 ### RN-063 · Exclusão bloqueada por vínculo, em todos os cadastros
 ⚠️ **Para Unidade, alterada em 2026-10-06 por [RN-116](#rn-116--unidade-é-inativada-e-só-é-excluída-se-nunca-foi-usada)**
@@ -668,7 +668,7 @@ Regional com usuários vinculados e sem setores passa pela validação e quebra 
 **[FATO 2026-09-06]** Removida ponta a ponta: domínio, entidade, request, command, response, front e as
 duas tabelas. `regionalId`/`regionalNome` saíram também do `AutenticacaoResponse` e do `AuthState`.
 **Arrastou código morto junto:** `RegionalBuscaPort` e `SetorConsultaPort` ficaram sem chamador e foram
-removidos com seus adaptadores; `RegionalConsultaPort` permanece. Ver [identidade-e-cadastro.md](../../../../Geopetro-Backend/specs/identidade-e-cadastro.md).
+removidos com seus adaptadores; `RegionalConsultaPort` permanece. Ver [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
 
 ### RN-065 · Unidade/Sonda tem tipo
 **[DECIDIDO 2026-09-05]** `UnidadeSonda` ganha o campo **`tipo`**, de vocabulário fechado:
@@ -699,7 +699,7 @@ frota atual, mas isso deve ser conferido registro a registro antes de tornar o c
 **[FATO 2026-09-06]** Implementado como enum fechado no backend e select no cadastro, com o tipo
 editável para corrigir o backfill. A migration adiciona a coluna nula, faz o backfill e só então a
 torna obrigatória. **Sem perfil de alarme por tipo** — a proposta foi recusada em
-[RN-078](#rn-078--sem-perfil-padrão-de-alarme-o-limite-vale-até-alguém-trocar). Ver [identidade-e-cadastro.md](../../../../Geopetro-Backend/specs/identidade-e-cadastro.md).
+[RN-078](#rn-078--sem-perfil-padrão-de-alarme-o-limite-vale-até-alguém-trocar). Ver [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
 
 ### RN-066 · Mínima curvatura, e profundidade gravada em metros
 **[DECIDIDO 2026-09-05]** A trajetória é calculada por **mínima curvatura** — padrão da indústria, e o
@@ -882,7 +882,7 @@ proteção justamente na mudança que mais precisa de uma.
 e são as únicas exceções. Nove testes HTTP passaram nas rotas antigas antes da
 mudança; onze passaram após a migração. Frontend, Geopetro-Desktop, proxies e Postman
 foram atualizados juntos. Contrato, validação e distribuição em
-[`api-prefix.md`](../../../../Geopetro-Backend/specs/api-prefix.md). Sem deploy.
+[`api-prefix.md`](../../../../apps/geopetro-backend/specs/api-prefix.md). Sem deploy.
 
 ---
 

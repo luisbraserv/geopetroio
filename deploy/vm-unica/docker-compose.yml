@@ -93,7 +93,7 @@ services:
 
   telemetria:
     build:
-      context: ../../Geopetro-Telemetria
+      context: ../../apps/geopetro-telemetria
       dockerfile: Dockerfile
     image: geopetro/telemetria:${TAG:-latest}
     restart: unless-stopped
@@ -125,7 +125,7 @@ services:
 
   backend:
     build:
-      context: ../../Geopetro-Backend
+      context: ../../apps/geopetro-backend
       dockerfile: Dockerfile
     image: geopetro/geopetro-backend:${TAG:-latest}
     restart: unless-stopped
@@ -135,7 +135,7 @@ services:
     mem_limit: ${BACKEND_MEM:-1536m}
     networks:
       default:
-        # O nginx do front faz proxy para 'geopetro-backend:8080' (Geopetro-Front/nginx.conf).
+        # O nginx do front faz proxy para 'geopetro-backend:8080' (apps/geopetro-frontend/nginx.conf).
         aliases: [geopetro-backend]
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -168,7 +168,7 @@ services:
 
   front:
     build:
-      context: ../../Geopetro-Front
+      context: ../../apps/geopetro-frontend
       dockerfile: Dockerfile
     image: geopetro/front:${TAG:-latest}
     restart: unless-stopped

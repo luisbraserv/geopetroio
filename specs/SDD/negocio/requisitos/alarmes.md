@@ -127,7 +127,7 @@ por isso o registro de autoria (§6) é o que permite entender depois por que o 
 
 **Por que no Geopetro-Backend e não no serviço de Telemetria:** o limite é configuração de cadastro,
 editada por gente autenticada, sujeita à mesma autorização por sonda. O serviço de Telemetria
-deliberadamente **não conhece usuários** ([spec do Geopetro-Telemetria](../../../../Geopetro-Telemetria/specs/README.md)).
+deliberadamente **não conhece usuários** ([spec do Geopetro-Telemetria](../../../../apps/geopetro-telemetria/specs/README.md)).
 
 ### Evento
 

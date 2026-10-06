@@ -89,7 +89,7 @@ aberta — inconsistente com o BCrypt usado nas senhas de usuário.
 
 ⚠️ **Ação residual:** a tabela `configuracoes_email` **permanece no banco** com a senha em texto puro.
 Se a conta SMTP ainda for usada em outro lugar, **rotacione a senha**. Ver o script de limpeza em
-`Geopetro-Backend/db/cleanup/2026-08-26-remove-quimico.sql`.
+`apps/geopetro-backend/db/cleanup/2026-08-26-remove-quimico.sql`.
 
 ### SEC-010 · observações sem controle de acesso
 
@@ -293,4 +293,4 @@ Casos mínimos sugeridos, ajustados ao escopo atual:
 controllers e a cadeia de segurança reais. As URLs de identidade agora possuem
 `/api`. Nove testes passaram antes da migração e onze depois, incluindo retirada
 das rotas antigas e proteção das ações de status sob o username `me`.
-Detalhes em [`api-prefix.md`](../../../../Geopetro-Backend/specs/api-prefix.md).
+Detalhes em [`api-prefix.md`](../../../../apps/geopetro-backend/specs/api-prefix.md).

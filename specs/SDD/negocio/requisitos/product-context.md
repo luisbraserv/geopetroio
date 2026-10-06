@@ -320,7 +320,7 @@ que a revisão, quando vier, comece de onde parou.
 |---|---|
 | Estruturar backup do histórico | [OQ-042](open-questions.md#oq-042--backup-do-histórico-de-telemetria) |
 | Mapeamento configurável de card → endereço no CLP | [OQ-043](open-questions.md#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp) |
-| Faixas de validação do simulador | [`faixas-validacao.md`](../../../../Geopetro-Front/specs/simulador/faixas-validacao.md) |
+| Faixas de validação do simulador | [`faixas-validacao.md`](../../../../apps/geopetro-frontend/specs/simulador/faixas-validacao.md) |
 
 **[DECIDIDO 2026-09-05]** O OQ-043 é o mais estratégico dos três: resolve rack/slot por sonda, o modelo
 de CLP variável e o caminho para instrumentar equipamentos que não são sonda — três perguntas com uma

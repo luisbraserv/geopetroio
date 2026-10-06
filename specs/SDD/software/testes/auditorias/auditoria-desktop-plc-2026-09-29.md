@@ -66,5 +66,5 @@ Referências: [conexão LOGO no Snap7](https://snap7.sourceforge.net/logo.html),
 ## Entrega
 
 Instalador: [Geopetro Desktop 0.1.0.4](../../../../../Geopetro-Desktop/target/dist/installer/Geopetro%20Desktop-0.1.0.4.exe).
-Backend compatível com TSAP: [Geopetro-Backend-0.0.1-SNAPSHOT.jar](../../../../../Geopetro-Backend/app/target/Geopetro-Backend-0.0.1-SNAPSHOT.jar).
+Backend compatível com TSAP: [Geopetro-Backend-0.0.1-SNAPSHOT.jar](../../../../../apps/geopetro-backend/app/target/Geopetro-Backend-0.0.1-SNAPSHOT.jar).
 Ambos foram gerados; a instalação do Desktop e a implantação do Backend não foram executadas.

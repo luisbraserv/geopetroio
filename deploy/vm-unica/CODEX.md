@@ -43,8 +43,8 @@ instrução diz o que é seu trabalho, o que não pode ser tocado e quando parar
 ## Restrições — não negocie estas
 
 - **Não altere** `start-dev.cmd`, `stop-dev.cmd`, nada em `deploy/dev/`,
-  `Geopetro-Backend/app/src/main/resources/application-dev.properties`,
-  `Geopetro-Front/src/environments/environment.ts` nem `Geopetro-Front/proxy.conf.json`. São o ambiente de
+  `apps/geopetro-backend/app/src/main/resources/application-dev.properties`,
+  `apps/geopetro-frontend/src/environments/environment.ts` nem `apps/geopetro-frontend/proxy.conf.json`. São o ambiente de
   desenvolvimento e precisam continuar funcionando como estão.
 - **Não altere o código das aplicações** nem as migrations. Se algo só funcionar mudando código, pare e
   descreva o problema; não contorne.

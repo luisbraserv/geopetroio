@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
-const ts = require('../../../Geopetro-Front/node_modules/typescript');
-const file = 'Geopetro-Front/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.ts';
+const ts = require('../../../apps/geopetro-frontend/node_modules/typescript');
+const file = 'apps/geopetro-frontend/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.ts';
 const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
 const component = source.statements.find(ts.isClassDeclaration);
 // Execute the actual component methods with in-memory signals and controlled responses.

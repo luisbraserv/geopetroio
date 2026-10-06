@@ -152,7 +152,7 @@ de entidade — que era a ⚠️ registrada aqui antes.
 
 **`dev` saiu de `update` para `validate`.** Era o `update` que criava estrutura em silêncio no banco
 local: foi assim que `simulador_pocos` nasceu no MySQL de desenvolvimento sem ninguém rodar migration
-([registro](../../../../Geopetro-Backend/specs/simulador-pocos.md#banco)). O preço daquilo é um
+([registro](../../../../apps/geopetro-backend/specs/simulador-pocos.md#banco)). O preço daquilo é um
 ambiente que passa nos testes e uma produção que não sobe.
 
 ### ⚠️ O Flyway ficou três dias no classpath sem rodar
@@ -267,7 +267,7 @@ responsabilidade**.
 
 **[FATO 2026-08-27]** O Geopetro-Telemetria foi implementado: consumidor MQTT, persistência em
 InfluxDB e API REST de consulta. 24 testes passando. Ver
-[`Geopetro-Telemetria/specs/`](../../../../Geopetro-Telemetria/specs/).
+[`apps/geopetro-telemetria/specs/`](../../../../apps/geopetro-telemetria/specs/).
 
 ### Pendências operacionais remanescentes
 
@@ -416,7 +416,7 @@ em `IdentidadeHttpSecurityTest`: nove testes passaram nas URLs antigas antes de
 nas URLs `/api` após a migração. A ordem das regras de autoatendimento/administração,
 as restrições de regionais/cadastros e a ausência de segredo JWT têm regressões.
 Backend: 121 testes aprovados nesta execução, excluindo o teste de migrations MySQL.
-Contrato em [`api-prefix.md`](../../../../Geopetro-Backend/specs/api-prefix.md).
+Contrato em [`api-prefix.md`](../../../../apps/geopetro-backend/specs/api-prefix.md).
 
 **Ainda aberto:** geração, assinatura, expiração e validação criptográfica de JWT
 não são exercitadas pela nova suíte HTTP, que usa `TokenPort` mockado. Também

@@ -334,11 +334,11 @@ mantém o nome; renomeá-la fica para quando o módulo de limites for revisto.
 
 ## 10. Estrutura do projeto
 
-Pasta `Braserv-Core/` na raiz do repositório, ao lado das demais aplicações. Mesma base técnica do
+Pasta `apps/core/`, ao lado das demais aplicações do monorepo. Mesma base técnica do
 backend: Spring Boot 4.0.5, Java 21, Maven, arquitetura hexagonal por módulo.
 
 ```text
-Braserv-Core/
+apps/core/
 ├── pom.xml              (agregador)
 ├── comum/               exceções, PaginaResponse, portas de vínculo e GuardaDeExclusao
 ├── regional/

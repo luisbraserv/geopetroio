@@ -144,7 +144,7 @@ conferida de memória, e esquecer um derrubava a subida da aplicação.
 
 ### Como funciona agora
 
-As migrations vivem em `Geopetro-Backend/app/src/main/resources/db/migration/` e **rodam
+As migrations vivem em `apps/geopetro-backend/app/src/main/resources/db/migration/` e **rodam
 sozinhas no startup do backend**, antes de o Hibernate validar. Nada a executar à mão, em base nova
 ou existente.
 
@@ -180,7 +180,7 @@ na tela de cadastro depois do deploy — o campo é editável para isso.
 
 ⚠️ Uma base existente pode conter tabelas de módulos removidos (`projetos`, `processos`, `anotacoes`,
 `observacoes`, `quimicos`...). Elas **não quebram nada** — `validate` ignora tabelas extras — mas há
-scripts de limpeza em `Geopetro-Backend/db/cleanup/`, comentados e **não executados**.
+scripts de limpeza em `apps/geopetro-backend/db/cleanup/`, comentados e **não executados**.
 
 ### Escrever uma migration nova
 
@@ -198,7 +198,7 @@ houver MySQL alcançável.
 
 ### Scripts históricos
 
-`Geopetro-Backend/db/historico/` guarda os `V2026.06.*`, aplicados à mão antes do Flyway
+`apps/geopetro-backend/db/historico/` guarda os `V2026.06.*`, aplicados à mão antes do Flyway
 existir. **Não rodam mais** — seus efeitos estão dentro do baseline. Ficam como registro.
 
 ---

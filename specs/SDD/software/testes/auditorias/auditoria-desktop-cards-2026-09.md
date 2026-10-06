@@ -50,12 +50,12 @@ stroke, vazão e volume acumulado. A ausência de cadastro não era a causa.
   primeira leitura; descarte de valor após desconexão e troca de documento;
   cache disponível antes de autenticar e isolado por unidade.
 - API real: login da estação e leitura dos cards retornaram HTTP 200.
-- Logs de teste em `Geopetro-Desktop/target/audit-monitoring-tests.log` e
-  `Geopetro-Desktop/target/audit-monitoring-regression.log`.
+- Logs de teste em `apps/geopetro-desktop/target/audit-monitoring-tests.log` e
+  `apps/geopetro-desktop/target/audit-monitoring-regression.log`.
 - Aplicação real reaberta e conferida visualmente: os quatro indicadores da
   revisão 3 aparecem com o CLP desconectado; o canal com o backend conectou.
   Os títulos das três séries do contador foram ajustados para caber por inteiro.
-  Captura direta da janela: `Geopetro-Desktop/target/monitoring-cards-fixed.png`.
+  Captura direta da janela: `apps/geopetro-desktop/target/monitoring-cards-fixed.png`.
 - Após os ajustes finais, os sete testes de regressão passaram, e o teste JavaFX
   foi repetido para conferir o layout. Instância corrigida deixada aberta.
 

@@ -8,7 +8,7 @@ IDs OQ são permanentes. Este arquivo mantém **pendências atuais** e um resumo
 
 ⏳ **ENCAMINHADA 2026-09-05** · **[DECIDIDO 2026-09-05]** As faixas serão **fornecidas pela equipe
 técnica**. A tabela a preencher, campo a campo, está em
-[`Front/specs/simulador/faixas-validacao.md`](../../../../Geopetro-Front/specs/simulador/faixas-validacao.md).
+[`Front/specs/simulador/faixas-validacao.md`](../../../../apps/geopetro-frontend/specs/simulador/faixas-validacao.md).
 
 **Segue bloqueada até os números chegarem** — mas as **regras entre campos** (ID < OD, TVD ≤ MD, base >
 topo, fratura > poro) podem ser implementadas antes, porque não dependem de nenhuma faixa.

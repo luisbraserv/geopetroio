@@ -64,7 +64,7 @@ O fonte `ConsultaExistenciaService.java` ficou acessível fora do sandbox.
 Os outros três arquivos bloqueados foram recuperados dos objetos Git locais,
 com os hashes do índice conferidos. Tamanho e data dos arquivos bloqueados
 coincidiam com o índice. Foram restaurados no projeto, preservando os originais
-em `Geopetro-Backend/target/onedrive-placeholders/`.
+em `apps/geopetro-backend/target/onedrive-placeholders/`.
 
 Um `.class` gerado também estava bloqueado pelo OneDrive; por isso os builds
 completos foram executados em `%TEMP%/geopetro-audit-retry-20260909/`, com cópia
@@ -75,17 +75,17 @@ foi considerado resolvido globalmente.
 Os pacotes testados foram copiados para o projeto com SHA-256 conferido e estão
 em execução a partir destes arquivos:
 
-- `Geopetro-Backend/app/target/Geopetro-Backend-audited-20260909.jar`
-- `Geopetro-Telemetria/target/Geopetro-Telemetria-audited-20260909.jar`
+- `apps/geopetro-backend/app/target/Geopetro-Backend-audited-20260909.jar`
+- `apps/geopetro-telemetria/target/Geopetro-Telemetria-audited-20260909.jar`
 
-Logs atuais: `Geopetro-Backend/.logs/server-audited.out.log` e
-`Geopetro-Telemetria/target/server-audited.out.log`. As limitações sobre pacote
+Logs atuais: `apps/geopetro-backend/.logs/server-audited.out.log` e
+`apps/geopetro-telemetria/target/server-audited.out.log`. As limitações sobre pacote
 antigo e health de telemetria registradas abaixo são históricas e foram superadas.
 
 ## Histórico: primeira atualização — 2026-09-09
 
 Após autorização explícita do usuário, foi criado um novo backup completo em
-`Geopetro-Backend/app/target/pre-migration-20260909-063047.sql`. O Flyway criou
+`apps/geopetro-backend/app/target/pre-migration-20260909-063047.sql`. O Flyway criou
 o histórico, registrou o baseline `2026.09.04` e aplicou as oito migrações até
 `2026.09.07.4`. Todos os registros indicam sucesso; o Hibernate validou o schema
 e o backend iniciou na porta 8080.
@@ -111,7 +111,7 @@ não foi ocultada nem considerada um teste aprovado.
   e validação do schema: falhou porque falta a tabela `configuracao_cards`.
 - O banco local não possui `flyway_schema_history`.
 - Backup completo criado em
-  `Geopetro-Backend/app/target/pre-start-backup-20260908.sql` (não versionar).
+  `apps/geopetro-backend/app/target/pre-start-backup-20260908.sql` (não versionar).
 - A inicialização com as migrações oficiais foi rejeitada pela revisão automática
   de aprovação: `V2026.09.06.2` exclui vínculos antigos de usuários e exige
   autorização explícita. Nenhuma migração foi executada nesta retomada.
@@ -131,10 +131,10 @@ Não foi validado login com credenciais reais.
 Os dois serviços Java não compilam porque o OneDrive retorna “A operação de
 nuvem é inválida” ao ler fontes. Arquivos identificados:
 
-- `Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaVinculoAdapter.java`
-- `Geopetro-Backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaSetorVinculoAdapter.java`
-- `Geopetro-Telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaService.java`
-- `Geopetro-Telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaServiceTest.java`
+- `apps/geopetro-backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaVinculoAdapter.java`
+- `apps/geopetro-backend/unidade-sonda/src/main/java/com/geopetro/unidadesonda/adapter/out/persistence/UnidadeSondaSetorVinculoAdapter.java`
+- `apps/geopetro-telemetria/src/main/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaService.java`
+- `apps/geopetro-telemetria/src/test/java/com/braservpetroleo/telemetria/geopetroio/application/service/ConsultaExistenciaServiceTest.java`
 
 Foi solicitado manter esses arquivos localmente (`attrib +P -U`), mas a leitura
 continuou falhando. Os conteúdos não foram substituídos nem recriados.

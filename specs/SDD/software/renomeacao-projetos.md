@@ -40,7 +40,7 @@ substituição das referências em **47 arquivos**:
 
 | Categoria | Onde |
 |---|---|
-| Build | `app/pom.xml` (`<name>`, `<finalName>`), `Geopetro-Desktop/pom.xml` (`artifactId`), `angular.json`, `package.json` |
+| Build | `app/pom.xml` (`<name>`, `<finalName>`), `apps/geopetro-desktop/pom.xml` (`artifactId`), `angular.json`, `package.json` |
 | Deploy | `vm1-transacional/docker-compose.yml`, `vm2-telemetria/docker-compose.yml`, `mosquitto.conf`, `deploy/README.md`, `Dockerfile` do Front, `wrangler.toml` |
 | Empacotamento | `scripts/package-app-image.ps1`, `scripts/package-installer-exe.ps1` — derivam o nome do jar do `artifactId` |
 | Config | `application.properties` (`spring.application.name`) e o de teste do Desktop |

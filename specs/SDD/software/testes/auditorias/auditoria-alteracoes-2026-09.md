@@ -93,7 +93,7 @@ O HTTP verifica `ContaAtivaVerificador`. O `CONNECT` do WebSocket verifica a val
 
 **Impacto:** desativar a conta corta as requisições HTTP, mas não garante o corte de leitura/publicação por esse canal.
 
-**Código:** [WebSocketAuthInterceptor](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/realtime/WebSocketAuthInterceptor.java), linhas 88–124; [SondaMonitoramentoService](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/monitoramento/SondaMonitoramentoService.java), método `usuarioPossuiAcessoAUnidade`; [WebSocketConfig](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/realtime/WebSocketConfig.java), interceptores de saída.
+**Código:** [WebSocketAuthInterceptor](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/realtime/WebSocketAuthInterceptor.java), linhas 88–124; [SondaMonitoramentoService](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/monitoramento/SondaMonitoramentoService.java), método `usuarioPossuiAcessoAUnidade`; [WebSocketConfig](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/realtime/WebSocketConfig.java), interceptores de saída.
 
 **Correção necessária:** aplicar a mesma regra de conta ativa ao conectar, publicar e entregar tempo real; revalidar o escopo das assinaturas existentes. Testar desativação e revogação de acesso depois da assinatura, além do CONNECT inicial.
 
@@ -109,7 +109,7 @@ O estado em memória acompanha o extremo em cada leitura, mas os eventos persist
 
 **Impacto:** o histórico pode subestimar a excursão, mesmo quando todas as leituras chegaram corretamente ao servidor.
 
-**Código:** [AvaliadorDeAlarme](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/AvaliadorDeAlarme.java), criação do evento na linha 104; [EpisodioAlarme](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/EpisodioAlarme.java), `extremo`; [MotorDeAlarmes](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java), reconstrução na linha 200.
+**Código:** [AvaliadorDeAlarme](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/alarmes/AvaliadorDeAlarme.java), criação do evento na linha 104; [EpisodioAlarme](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/alarmes/EpisodioAlarme.java), `extremo`; [MotorDeAlarmes](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java), reconstrução na linha 200.
 
 **Correção necessária:** definir e persistir a informação necessária para recuperar o extremo sem confundi-lo com o valor que provocou a transição. A solução precisa contemplar episódios ainda abertos e reinícios, não apenas o FECHOU.
 
@@ -123,7 +123,7 @@ O estado em memória acompanha o extremo em cada leitura, mas os eventos persist
 
 **Impacto:** tela e histórico divergem; a recuperação prometida no comentário “a próxima leitura tenta de novo” não vale para falhas na confirmação da transação.
 
-**Código:** [MotorDeAlarmes](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java), linhas 83 e 143–149. Os testes atuais instanciam o motor com `new`, não exercitando a transação do serviço por proxy.
+**Código:** [MotorDeAlarmes](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java), linhas 83 e 143–149. Os testes atuais instanciam o motor com `new`, não exercitando a transação do serviço por proxy.
 
 **Correção necessária:** coordenar publicação da projeção com o commit e proteger a avaliação por unidade contra concorrência. Testar rollback real da transação do serviço, além de falha do método do repositório.
 
@@ -135,7 +135,7 @@ Cada leitura consulta `estados.get(chave)`, enquanto as alterações do ciclo fi
 
 **Reprodução:** duas leituras de `PRESSAO_01`, ambas 130, no mesmo ciclo: **dois ABRIU com IDs distintos e somente um estado ativo**. Um dos episódios fica sem estado correspondente para fechar normalmente.
 
-**Código:** [MotorDeAlarmes](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java), linha 100; [RealtimeController](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/realtime/RealtimeController.java), `receberEstado`.
+**Código:** [MotorDeAlarmes](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/alarmes/MotorDeAlarmes.java), linha 100; [RealtimeController](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/realtime/RealtimeController.java), `receberEstado`.
 
 **Correção necessária:** validar a unicidade de `(dispositivoId, serie)` no ciclo e estabelecer uma política explícita para repetição. A ordenação por sessão STOMP também não equivale a exclusão mútua entre duas sessões da mesma unidade.
 
@@ -163,7 +163,7 @@ Cada leitura consulta `estados.get(chave)`, enquanto as alterações do ciclo fi
 
 **Cenário deduzido diretamente do código:** `PRESSAO_01` ativo e sem limite; `PESO_01` desativado e com limite marcado ativo. A resposta tem `cardsAtivos=1` e `limitesAtivos=1`, então a tela indica `PRONTA`, embora nenhuma grandeza lida esteja vigiada. Card invisível também pode ser contado como vigilância remota, apesar da assimetria documentada.
 
-**Código à época:** [LimitesDeclarados](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/configuracaosonda/LimitesDeclarados.java), linha 54; `ProntidaoService` e `prontidao.service.ts`, removidos com a tela de Prontidão da Frota.
+**Código à época:** [LimitesDeclarados](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/configuracaosonda/LimitesDeclarados.java), linha 54; `ProntidaoService` e `prontidao.service.ts`, removidos com a tela de Prontidão da Frota.
 
 **Correção necessária:** cruzar limites com identidades de grandezas efetivamente habilitadas e distinguir cobertura local/remota. Não basta contar documentos ou flags independentes. **Achado por análise estrutural; não foi reproduzido na interface em execução.**
 
@@ -173,7 +173,7 @@ O seletor permite trocar de unidade durante um salvamento. O callback de sucesso
 
 **Reprodução:** salvar unidade 1, selecionar e carregar unidade 2, receber 409 do salvamento da unidade 1. O componente solicita novamente a unidade 1 e liga `carregando`. Ao receber essa resposta, a guarda percebe que a seleção atual é 2 e retorna sem desligar o carregamento. A unidade 2 fica escondida pelo indicador de espera.
 
-**Código:** [LimitesAlarmePageComponent](../../../../../Geopetro-Front/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.ts), linhas 206–229 e 142–146.
+**Código:** [LimitesAlarmePageComponent](../../../../../apps/geopetro-frontend/src/app/features/monitoramento/pages/limites-alarme-page/limites-alarme-page.component.ts), linhas 206–229 e 142–146.
 
 **Correção necessária:** vincular respostas ao ciclo da seleção/requisição; ignorar sucesso e erro de operações antigas antes de alterar os sinais da tela. Cobrir também a sequência de seleção A → B → A.
 
@@ -187,7 +187,7 @@ O seletor permite trocar de unidade durante um salvamento. O callback de sucesso
 
 **Impacto:** erros corrigíveis na chamada são apresentados como falha interna; clientes não conseguem distinguir adequadamente entrada inválida de indisponibilidade.
 
-**Código:** [ApiExceptionHandler](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/config/ApiExceptionHandler.java), linha 56; [AlarmesController](../../../../../Geopetro-Backend/app/src/main/java/com/geopetro/alarmes/AlarmesController.java), parâmetros do histórico.
+**Código:** [ApiExceptionHandler](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/config/ApiExceptionHandler.java), linha 56; [AlarmesController](../../../../../apps/geopetro-backend/app/src/main/java/com/geopetro/alarmes/AlarmesController.java), parâmetros do histórico.
 
 **Correção necessária:** tratar as exceções de binding/conversão com 400 e preservar o contrato de erro; incluir esses casos nos testes HTTP.
 
@@ -199,11 +199,11 @@ O seletor permite trocar de unidade durante um salvamento. O callback de sucesso
 
 **Origem:** a árvore importada em 03/09 já continha o teste sem o módulo importado. Não é uma regressão atribuída às alterações de alarmes.
 
-**Código à época:** `tests/hydraulics.spec.js`, removido posteriormente; script no [package.json](../../../../../Geopetro-Front/package.json).
+**Código à época:** `tests/hydraulics.spec.js`, removido posteriormente; script no [package.json](../../../../../apps/geopetro-frontend/package.json).
 
 **Correção necessária:** migrar os cenários úteis para os motores atuais e integrar a execução à verificação normal; não basta remover o comando ou criar um arquivo vazio para deixá-lo verde.
 
-**Evidência:** `Geopetro-Front/audit-month-hydraulics.log`: uma suíte falhou, zero testes executados. Isso não invalida os 413 testes Angular aprovados, mas impede afirmar que todos os comandos de teste do Front funcionam.
+**Evidência:** `apps/geopetro-frontend/audit-month-hydraulics.log`: uma suíte falhou, zero testes executados. Isso não invalida os 413 testes Angular aprovados, mas impede afirmar que todos os comandos de teste do Front funcionam.
 
 ## Confronto das entregas com as specs
 
@@ -225,12 +225,12 @@ O seletor permite trocar de unidade durante um salvamento. O callback de sucesso
 
 | Verificação | Resultado | Evidência |
 |---|---|---|
-| Backend, `mvn -B test` | **262 aprovados**: 236 no `app` e 26 no `usuario`; sem falhas, erros ou skips | `Geopetro-Backend/target/audit-month-tests.log`, término 16:40 de 09/09 |
-| Front, `npm test -- --watch=false` | **413 aprovados em 46 arquivos** | `Geopetro-Front/audit-month-tests.log`, execução 18:40 |
-| Front, `npm run build` | **Aprovado**; bundle inicial 525,02 kB para orçamento de 500 kB e avisos de CSS de squeeze/tampão | `Geopetro-Front/audit-month-build.log` |
-| Front, `npm run test:hydraulics` | **Falhou antes dos testes**, módulo ausente | `Geopetro-Front/audit-month-hydraulics.log` |
-| Telemetria, `mvn -B test` | **28 aprovados**, sem falhas, erros ou skips | `Geopetro-Telemetria/target/audit-month-tests.log`, término 18:41 |
-| Desktop, execução da correção anterior, `-Dfx.disponivel=true` | **215 aprovados**, incluindo JavaFX; regressões/layout verificados novamente após os ajustes finais | `Geopetro-Desktop/target/audit-monitoring-tests.log`, `audit-monitoring-regression.log` e `audit-monitoring-layout.log`; não contado como nova execução desta rodada |
+| Backend, `mvn -B test` | **262 aprovados**: 236 no `app` e 26 no `usuario`; sem falhas, erros ou skips | `apps/geopetro-backend/target/audit-month-tests.log`, término 16:40 de 09/09 |
+| Front, `npm test -- --watch=false` | **413 aprovados em 46 arquivos** | `apps/geopetro-frontend/audit-month-tests.log`, execução 18:40 |
+| Front, `npm run build` | **Aprovado**; bundle inicial 525,02 kB para orçamento de 500 kB e avisos de CSS de squeeze/tampão | `apps/geopetro-frontend/audit-month-build.log` |
+| Front, `npm run test:hydraulics` | **Falhou antes dos testes**, módulo ausente | `apps/geopetro-frontend/audit-month-hydraulics.log` |
+| Telemetria, `mvn -B test` | **28 aprovados**, sem falhas, erros ou skips | `apps/geopetro-telemetria/target/audit-month-tests.log`, término 18:41 |
+| Desktop, execução da correção anterior, `-Dfx.disponivel=true` | **215 aprovados**, incluindo JavaFX; regressões/layout verificados novamente após os ajustes finais | `apps/geopetro-desktop/target/audit-monitoring-tests.log`, `audit-monitoring-regression.log` e `audit-monitoring-layout.log`; não contado como nova execução desta rodada |
 | Reproduções de auditoria | A01, A02, A03, A04, A06 e A07 reproduzidos isoladamente | [fontes e logs](../../../../../deploy/dev/audit-september/) |
 
 Os **918 casos aprovados nas quatro suites principais** incluem a execução anterior do Desktop. Eles não incluem as reproduções que demonstram os defeitos nem tornam a suíte de hidráulica aprovada. Relatórios antigos de Surefire podem continuar em `target`; a contagem do Backend foi obtida dos resumos da execução atual, não da soma indiscriminada dos XML existentes.
@@ -247,7 +247,7 @@ Portanto, **não há validação ao vivo de login, CRUD, histórico ou publicaç
 2. **Auto-update do Desktop:** permanece pendente. A presença do alarme local no código não demonstra distribuição às unidades da frota.
 3. **Retenção de telemetria:** a implantação fornecida inicializa 7 dias em dev e 90 dias como padrão na VM2, enquanto as specs mencionam histórico por cinco anos. É divergência dos arquivos de provisionamento; o bucket efetivamente instalado não foi consultado. Alterar a variável de inicialização, sozinho, não comprova migração de um bucket existente.
 4. **Assimetria dos cards invisíveis:** alarme local pode existir sem alarme remoto, conforme decisão expressa em `alarmes.md`. Foi tratada como comportamento documentado, não como bug novo. A05 trata da classificação equivocada na prontidão.
-5. **Documentação defasada:** ✅ **corrigida em 09/09.** `features/alarmes.md` §5 dizia que tela e avaliação estavam pendentes, embora o cabeçalho registrasse entrega em 09/09; `technical-debt.md` indicava que a migration de eventos não fora escrita; `Geopetro-Front/specs/simulador/geometria-poco.md` descrevia como *working tree* arquivos já commitados. Os três textos passaram a distinguir o registro histórico datado do estado vigente, em vez de serem apagados.
+5. **Documentação defasada:** ✅ **corrigida em 09/09.** `features/alarmes.md` §5 dizia que tela e avaliação estavam pendentes, embora o cabeçalho registrasse entrega em 09/09; `technical-debt.md` indicava que a migration de eventos não fora escrita; `apps/geopetro-frontend/specs/simulador/geometria-poco.md` descrevia como *working tree* arquivos já commitados. Os três textos passaram a distinguir o registro histórico datado do estado vigente, em vez de serem apagados.
 6. **Validação operacional:** faixa analógica do CLP, alarmes com hardware real, entrega presencial/automática e continuidade sob queda de conexão não foram homologados por esses testes de software.
 
 ## Ordem recomendada de correção e encerramento

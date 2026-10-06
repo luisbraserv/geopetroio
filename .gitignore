@@ -16,3 +16,5 @@ desktop.ini
 # Rascunho local: logs de restart, PDFs extraidos dos livros de referencia
 # e libs Python vendorizadas. Nada disso e fonte do projeto.
 tmp/
+.tmp-uv-pdf/
+.code/

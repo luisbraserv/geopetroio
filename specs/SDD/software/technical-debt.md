@@ -147,7 +147,7 @@ em `IdentidadeHttpSecurityTest`: nove testes passaram nas URLs antigas antes de
 nas URLs `/api` após a migração. A ordem das regras de autoatendimento/administração,
 as restrições de regionais/cadastros e a ausência de segredo JWT têm regressões.
 Backend: 121 testes aprovados nesta execução, excluindo o teste de migrations MySQL.
-Contrato em [`api-prefix.md`](../../../Geopetro-Backend/specs/api-prefix.md).
+Contrato em [`api-prefix.md`](../../../apps/geopetro-backend/specs/api-prefix.md).
 
 **Ainda aberto:** geração, assinatura, expiração e validação criptográfica de JWT
 não são exercitadas pela nova suíte HTTP, que usa `TokenPort` mockado. Também
@@ -250,7 +250,7 @@ Gráficos antes de existir leitura real do CLP. Nada na UI distingue dado real d
 **[FATO]** A geometria inconsistente bloqueia o cálculo e relações entre
 campos geram avisos em squeeze e tampão. Permanecem sem definição completa as
 faixas quantitativas e a obrigatoriedade dos campos individuais. Ver
-[faixas de validação](../../../Geopetro-Front/specs/simulador/faixas-validacao.md)
+[faixas de validação](../../../apps/geopetro-frontend/specs/simulador/faixas-validacao.md)
 e [OQ-009](../negocio/requisitos/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador).
 
 **Impacto:** um valor individual fora do domínio físico ainda pode chegar

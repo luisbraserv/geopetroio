@@ -42,7 +42,7 @@ services:
 
   backend:
     build:
-      context: ../../Geopetro-Backend
+      context: ../../apps/geopetro-backend
       dockerfile: Dockerfile
     image: geopetro/geopetro-backend:${TAG:-latest}
     # O nginx do frontend faz proxy para o host 'geopetro-backend' — o nome do
@@ -84,7 +84,7 @@ services:
 
   front:
     build:
-      context: ../../Geopetro-Front
+      context: ../../apps/geopetro-frontend
       dockerfile: Dockerfile
     image: geopetro/front:${TAG:-latest}
     container_name: geopetro-front

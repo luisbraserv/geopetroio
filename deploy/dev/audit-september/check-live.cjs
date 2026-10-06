@@ -2,7 +2,7 @@ const fs = require('fs');
 
 // Read-only local checks. Stored station credentials and tokens never enter the output.
 async function main() {
-  const settings = JSON.parse(fs.readFileSync('Geopetro-Desktop/config/app-settings.json', 'utf8'));
+  const settings = JSON.parse(fs.readFileSync('apps/geopetro-desktop/config/app-settings.json', 'utf8'));
   const base = settings.backendUrl.replace(/\/$/, '');
   if (!['localhost', '127.0.0.1'].includes(new URL(base).hostname)) throw Error('Local host required');
   const results = [];

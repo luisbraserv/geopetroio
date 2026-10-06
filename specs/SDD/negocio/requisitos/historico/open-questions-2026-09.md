@@ -88,7 +88,7 @@ primeira rodada abriu.
 
 | # | Tema | Decisão |
 |---|---|---|
-| OQ-009 | Faixas do simulador | **A equipe fornece** — tabela pronta em [`faixas-validacao.md`](../../../../../Geopetro-Front/specs/simulador/faixas-validacao.md) |
+| OQ-009 | Faixas do simulador | **A equipe fornece** — tabela pronta em [`faixas-validacao.md`](../../../../../apps/geopetro-frontend/specs/simulador/faixas-validacao.md) |
 | OQ-018 | Modelo do CLP | **Varia por sonda** — a documentação que diz "LOGO!" está incompleta |
 | OQ-020 | Credencial `braservone` | **Banco não existe mais** — encerra por perda de objeto |
 | OQ-023 | Autenticação do broker | **Esperar o auto-update** — broker aceita anônimo até a frota migrar |
@@ -243,7 +243,7 @@ entidades com histórico, bloqueio para cadastros-mestre com vínculo.
 
 ⏳ **ENCAMINHADA 2026-09-05** · **[DECIDIDO 2026-09-05]** As faixas serão **fornecidas pela equipe
 técnica**. A tabela a preencher, campo a campo, está em
-[`Front/specs/simulador/faixas-validacao.md`](../../../../../Geopetro-Front/specs/simulador/faixas-validacao.md).
+[`Front/specs/simulador/faixas-validacao.md`](../../../../../apps/geopetro-frontend/specs/simulador/faixas-validacao.md).
 
 **Segue bloqueada até os números chegarem** — mas as **regras entre campos** (ID < OD, TVD ≤ MD, base >
 topo, fratura > poro) podem ser implementadas antes, porque não dependem de nenhuma faixa.
@@ -288,7 +288,7 @@ no workspace.
 
 **[FATO 2026-09-06] Implementado no código local**, com testes HTTP antes/depois
 e atualização dos consumidores web/desktop. Contrato e validação em
-[`api-prefix.md`](../../../../../Geopetro-Backend/specs/api-prefix.md). Distribuição em
+[`api-prefix.md`](../../../../../apps/geopetro-backend/specs/api-prefix.md). Distribuição em
 produção ainda não realizada; o contexto abaixo registra a situação anterior.
 
 ⚠️ **A migração toca `SecurityConfig`, o front e o `nginx.conf` no mesmo deploy** — e a ordem dos
@@ -442,7 +442,7 @@ checkbox "Lembrar acesso" não tem binding — ambos devem sair da tela até o f
 `/redefinir-senha` recebe o token temporário. Backend, persistência, limitação de
 envio e telas implementados. SMTP configurável por ambiente, desativado por padrão.
 Ativação e teste de entrega corporativa pendentes; sem deploy ou envio real.
-Detalhes em [recuperação de senha](../../../../../Geopetro-Backend/specs/recuperacao-senha.md).
+Detalhes em [recuperação de senha](../../../../../apps/geopetro-backend/specs/recuperacao-senha.md).
 
 ---
 
@@ -546,7 +546,7 @@ Ver [DT-004](../../../software/technical-debt.md#dt-004--risco-de-onedrive-sobre
 ### OQ-026 · O que fazer com as tabelas órfãs?
 
 ✅ **RESPONDIDA 2026-09-05** · **[DECIDIDO 2026-09-05] Descartar direto**, sem exportar. Os scripts em
-`Geopetro-Backend/db/cleanup/` já existem, comentados e nunca executados.
+`apps/geopetro-backend/db/cleanup/` já existem, comentados e nunca executados.
 
 ✅ **Resolve junto o resíduo de [SEC-005](../../../software/seguranca/security-findings.md#sec-005--senha-smtp-em-texto-puro):** a
 tabela `configuracoes_email`, que guarda uma senha SMTP em texto puro, some com o descarte. ⚠️ Se
@@ -569,7 +569,7 @@ Não quebram nada — `ddl-auto=validate` ignora tabelas extras. Mas ocupam espa
 inspeciona o schema, e `configuracoes_email` contém uma **senha SMTP em texto puro**.
 
 **O que precisamos:** os dados devem ser exportados, arquivados ou descartados? Script sugerido (não
-executado) em `Geopetro-Backend/db/cleanup/`.
+executado) em `apps/geopetro-backend/db/cleanup/`.
 
 ---
 

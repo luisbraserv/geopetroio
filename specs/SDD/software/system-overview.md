@@ -19,7 +19,7 @@ como produto final.
 
 O nome "GeopetroIO" é a marca de usuário final. **[FATO]** "Horus" é codinome interno de
 desenvolvimento do módulo de Cimentação Desktop — o produto se apresenta como
-`"GeoPetro IO - Cimentação"` (`Braserv-Horus-Desktop/src/main/java/.../JavaFxApp.java:24`).
+`"GeoPetro IO - Cimentação"` (`apps/horus-desktop/src/main/java/.../JavaFxApp.java:24`).
 
 ## 2. Aplicações
 
@@ -185,13 +185,13 @@ tela de Monitoramento sempre retornava `502`.
 **[FATO]** O serviço encaixa em referências que já apontavam para ele:
 - `Front/nginx.conf`: `location /telemetria/ { proxy_pass http://telemetria:8081/; }`
 - `Front/src/environments/environment.prod.ts`: `telemetriaUrl: 'https://telemetria.geopetro-io.braserv.com.br'`
-- `Geopetro-Backend/.../application.properties`: `monitoramento.base-url` default `:8081`
+- `apps/geopetro-backend/.../application.properties`: `monitoramento.base-url` default `:8081`
 
 **[FATO]** O remote `luisbraserv/telemetria-backend-geopetroio` respondia `Repository not found` no
 levantamento. **[PENDENTE]** O repositório precisa ser criado — preferencialmente **fora do OneDrive**
 ([DT-004](technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)).
 
-Detalhes em [`Geopetro-Telemetria/specs/`](../../../Geopetro-Telemetria/specs/).
+Detalhes em [`apps/geopetro-telemetria/specs/`](../../../apps/geopetro-telemetria/specs/).
 
 ## 8. Integrações externas
 
@@ -288,7 +288,7 @@ testes removidos cobriam exatamente os módulos removidos.
 **[FATO]** A fonte normativa é [`specs/SDD/software/frontend/index.html`](frontend/index.html) — tokens, componentes e princípios.
 Os dois desktops JavaFX transcrevem esses tokens em `geopetro-design-system.css`, arquivo idêntico
 em Geopetro-Desktop e Horus. Detalhes e lista de classes em
-[`Braserv-Horus-Desktop/specs/README.md`](../../../Braserv-Horus-Desktop/specs/README.md#design-system-revisão-2026-08-31).
+[`apps/horus-desktop/specs/README.md`](../../../apps/horus-desktop/specs/README.md#design-system-revisão-2026-08-31).
 
 ⚠️ **[DECIDIDO 2026-08-31]** Ação primária é **azul-marinho** `#051833`. Vermelho ficou reservado a
 ação destrutiva e estado de erro; o acento de destaque é o **laranja** `#d4852f`. Antes o vermelho
@@ -315,7 +315,7 @@ marca esticada no cabeçalho. **Não substituir junto.**
 ⚠️ **[FATO]** Os `.ico` são multi-resolução de verdade (256→16 px, seis entradas, assinatura
 `00000100`). O `jpackage` exige ICO real: o `logo.ico` anterior do Geopetro-Desktop era um **PNG
 renomeado**, e o instalador sairia com ícone quebrado. Ao trocar o logo, regenere com
-`Braserv-Horus-Desktop/scripts/create-windows-icon.ps1` ou equivalente — nunca renomeie um PNG.
+`apps/horus-desktop/scripts/create-windows-icon.ps1` ou equivalente — nunca renomeie um PNG.
 
 **[FATO]** O PNG de origem tem 907 KB, tamanho de ilustração. Os derivados ficam em ~58 KB; carregar
 o original como ícone de janela seria desperdício em cada inicialização.
