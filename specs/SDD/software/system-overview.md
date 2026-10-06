@@ -6,8 +6,8 @@
 
 **[INFERÊNCIA]** GeopetroIO é uma plataforma da Braserv Petróleo para operações de **sondas de
 perfuração** e **cimentação de poços**. Cobre a coleta de telemetria em campo (leitura direta de
-CLP na sonda), a engenharia de cimentação (simulador de squeeze e tampão) e a administração de
-identidade e organização (usuários, empresas, regionais, setores, unidades/sondas).
+CLP na unidade), a engenharia de cimentação (simulador de squeeze e tampão) e consome do
+Braserv-Core a identidade e a estrutura organizacional compartilhadas pela empresa.
 
 **[DECIDIDO 2026-08-26]** O escopo foi reduzido: os domínios de Operação (projetos, processos,
 observações) e Suprimentos (químicos, almoxarifado, compras) foram removidos do sistema.
@@ -23,135 +23,95 @@ desenvolvimento do módulo de Cimentação Desktop — o produto se apresenta co
 
 ## 2. Aplicações
 
-**[FATO]** Cinco repositórios Git **independentes**, cada um com remote próprio no GitHub. O
+**[FATO 2026-10-06]** Seis aplicações independentes compõem o ambiente. O
 diretório `GeopetroIO/` que os agrupa **não é** um repositório — é apenas uma pasta do OneDrive.
 
 | Aplicação | Stack | Repositório | Papel |
 |---|---|---|---|
-| **Geopetro-Backend** | Spring Boot 4.0.5 · Java 21 · Maven multi-módulo | `luisbraserv/geopetro-io-back-end` | API REST central, autenticação, todo o domínio administrativo |
+| **Braserv-Core** | Spring Boot · Java 21 · Maven multi-módulo | `apps/core` | Identidade, login, cadastro organizacional e tokens de usuário/serviço |
+| **Geopetro-Backend** | Spring Boot 4.0.5 · Java 21 · Maven multi-módulo | `luisbraserv/geopetro-io-back-end` | Monitoramento, alarmes, tempo real e simulador; valida tokens emitidos pelo Core |
 | **Geopetro-Front** | Angular 21.2.7 · Taiga UI 5.2 · NGXS 21 | `luisbraserv/geopetro-io-front` | SPA web — cadastros, monitoramento, simulador de cimentação |
 | **Geopetro-Desktop** | JavaFX 21 + Spring Boot 4.0.5 · Maven | `luisbraserv/geopetro-io-sonda-desktop` | Agente de borda na sonda: lê CLP, publica telemetria via MQTT |
 | **Braserv-Horus-Desktop** | JavaFX 21 · Gradle 9.3 | `luisbraserv/geopetro-io-cimentacao-desktop` | Desktop de Cimentação: lê CLP da bomba, gera Carta de Operação |
-| **Geopetro-Telemetria** | Spring Boot 3.4.5 · Java 21 · Maven | — | Ingestão MQTT → InfluxDB e API de consulta de séries. ✅ **Implementado em 2026-08-27** |
+| **Geopetro-Telemetria** | Spring Boot 3.4.5 · Java 21 · Maven | — | Ingestão MQTT → InfluxDB e API interna de consulta de séries |
 
 ## 3. Topologia de execução
 
-```
-      SONDA (campo)                          NUVEM / SERVIDOR
- ┌────────────────────┐
- │  CLP Siemens S7    │
- │  (DB1: B001..B005) │
- └─────────┬──────────┘
-           │ S7/Snap7 (TCP 102, rack 0 slot 1)
-           │ leitura a cada 1s
- ┌─────────▼──────────┐  MQTT publish        ┌──────────────────────┐
- │ Geopetro-Desktop      ├─ telemetria/{u}/batch ─►  Broker MQTT :1883  │
- │ (JavaFX + H2 local)│  QoS 1                └──────────┬───────────┘
- │ PRODUTOR           │                                  │ subscribe
- └────────────────────┘                                  │ telemetria/+/batch
-                                              ┌──────────▼───────────┐
- ┌────────────────────┐                       │  Telemetria :8081    │
- │ Horus / Cimentação │  (sem rede — local)   │  CONSUMIDOR          │
- │ (JavaFX + JSONL)   │                       │  (IMPLEMENTADO)      │
- └────────────────────┘                       │  InfluxDB            │
-                                              └──────────┬───────────┘
-                                                         │ REST
- ┌────────────────────┐   HTTPS /api, /auth   ┌──────────▼───────────┐
- │ Front Angular      ├──────────────────────►│  Geopetro-Backend :8080 │
- │ nginx SPA          │   (nunca direto p/    │  MySQL geopetro_io   │
- │                    │    telemetria)        │  autoriza e consulta │
- │                    │◄──WebSocket /ws ─────►│                      │
- └────────────────────┘   tempo real          └──────────▲───────────┘
-                                                         │ WebSocket
-                                              ┌──────────┴───────────┐
-                                              │ Geopetro-Desktop        │
-                                              │ (mesmo produtor)     │
-                                              └──────────────────────┘
+```text
+CAMPO                                      SERVIDOR
+CLP ──S7──> Geopetro-Desktop
+              ├── MQTT telemetria/{idUnidade}/batch ──> Broker ──> Telemetria ──> InfluxDB
+              └── STOMP /app/realtime/unidades/{id} ─────────────────────────────┐
+                                                                                  │
+Browser ──HTTPS──> nginx do Front                                                 │
+                   ├── identidade e cadastros ──> Braserv-Core :8082 ──> braserv_core
+                   ├── monitoramento/simulador ──> Geopetro-Backend :8080 ──> geopetro_io
+                   └── /ws ─────────────────────> Geopetro-Backend <──────────────┘
+                                                     │
+                                                     └── REST interno ──> Telemetria :8081
 ```
 
-**[FATO 2026-08-27]** A telemetria segue por **dois caminhos independentes** a partir do
-Geopetro-Desktop:
+**[FATO 2026-10-06]** O nginx mantém uma origem única para o browser e separa as rotas públicas:
+autenticação, usuários, empresas, regionais, setores, unidades e clientes de serviço seguem para o
+Braserv-Core; monitoramento, simulador e WebSocket seguem para o Geopetro-Backend. Rotas
+`/internal/**` e `/.well-known/**` não são publicadas.
 
-| Caminho | Responsabilidade | Destino |
-|---|---|---|
-| **MQTT** | Histórico, persistido | Broker → Geopetro-Telemetria → InfluxDB |
-| **WebSocket** | Estado atual, efêmero | Geopetro-Backend → Angular |
+A telemetria percorre dois caminhos independentes. MQTT persiste o histórico no InfluxDB; WebSocket
+entrega o estado atual, efêmero, pelo Backend. O Front nunca consulta a Telemetria diretamente: usa
+`/api/monitoramento/unidades/{id}/series`, e o Backend valida o acesso, traduz o id numérico da
+unidade para `Unidade.nome` e consulta a API interna de séries.
 
-Falha em um não bloqueia o outro nem interrompe a leitura do CLP. Ver
-[`contracts/websocket-realtime.md`](apis/websocket-realtime.md).
+O Backend valida os tokens RS256 com o JWKS do Core e usa tokens de serviço para consultar acesso e
+catálogo. O Core, ao excluir uma unidade, consulta no Backend os vínculos de monitoramento.
 
-**[DECIDIDO 2026-08-26]** Papéis MQTT definidos: **um produtor** (Geopetro-Desktop) e **um consumidor**
-(Geopetro-Telemetria). O Geopetro-Backend **não participa do MQTT** — seu consumidor no-op foi removido.
-Ver [`contracts/mqtt-telemetria.md`](mqtt/mqtt-telemetria.md).
+## 4. Serviços Java e módulos Maven
 
-**[FATO]** O frontend **nunca** consulta o serviço de telemetria diretamente. Comentário explícito
-em `Front/src/app/features/monitoramento/services/monitoramento-sonda.service.ts`: *"O front não
-fala direto com o telemetria; sempre passa pelo backend para respeitar o vínculo do usuário às
-sondas"*. O Geopetro-Backend valida acesso antes de fazer proxy.
+**[FATO 2026-10-06]** A separação do cadastro organizacional reduziu o Geopetro-Backend a quatro
+módulos:
 
-## 4. Geopetro-Backend — módulos Maven
-
-**[FATO]** `pom.xml` raiz (packaging `pom`) declara **9 módulos** após as remoções de 2026-08-26
-(eram 13). Grafo de dependências extraído dos `pom.xml`:
-
-```
-core  (kernel: exceções, PaginaResponse, ports de desacoplamento)
-├── empresa        (+core)
-├── regional       (+core)
-├── setor          (+core, regional)
-├── unidade-sonda  (+core, setor)
-├── usuario        (+core, empresa, regional, setor)
-├── simulador      (+core)              ← isolado, genérico
-├── security       (+core, usuario)
-└── app            (+todos) — executável, main(), integrações
+```text
+comum       kernel, contratos e portas compartilhadas
+simulador   poços, pastas e cenários
+security    validação RS256/JWKS e autorização
+app         executável; monitoramento, alarmes, tempo real e integrações HTTP
 ```
 
-**[DECIDIDO 2026-08-26]** Removidos: `projeto`, `processo`, `observacao`, `quimico`.
-
-**[FATO]** `core` funciona como hub de *ports* (`RegionalConsultaPort`, `SetorConsultaPort`,
-`EmpresaConsultaPort`, `RegionalBuscaPort`) para inverter dependências que seriam cíclicas. Exemplo:
-`regional` não depende de `setor`/`unidade-sonda`, mas precisa saber se há vínculo antes de permitir
-exclusão — resolvido injetando `List<RegionalConsultaPort>` com uma implementação por módulo.
-
-**[FATO]** Com a saída de `quimico`, a **única violação conhecida desse desenho deixou de existir** —
-era `EmailQuimicoService`, que executava SQL nativo contra `usuarios`/`usuario_roles` sem declarar
-dependência Maven de `usuario`. **O grafo de dependências está hoje íntegro.**
+O Braserv-Core possui os módulos `comum`, `regional`, `setor`, `unidade`, `empresa`,
+`usuario`, `identidade`, `interno` e `app`. Ele é o único dono das entidades organizacionais
+e o único emissor de tokens. O Backend não mantém cópia desses cadastros: lê acesso e unidades pelas
+rotas internas do Core, com cache limitado conforme a spec de arquitetura.
 
 ## 5. Persistência
 
 | Aplicação | Banco | Estratégia de schema |
 |---|---|---|
-| Geopetro-Backend | **MySQL 8** (`geopetro_io`, TZ `America/Sao_Paulo`) | Flyway no startup · `ddl-auto=validate` em todos os perfis |
-| Geopetro-Desktop | **H2** em arquivo (`~/.geopetro-io/data/sonda_geopetro`) | `ddl-auto=update` |
-| Horus/Cimentação | **JSONL** em arquivo (`%LOCALAPPDATA%\GeopetroIO\data\registros_operacao.jsonl`) | — |
-| Telemetria | **InfluxDB** (measurement `telemetria`) | Sem migrations — o esquema é definido pelas tags/fields na escrita |
+| Braserv-Core | **MySQL 8** (`braserv_core`) | Flyway no startup · `ddl-auto=validate` |
+| Geopetro-Backend | **MySQL 8** (`geopetro_io`) | Flyway no startup · `ddl-auto=validate` |
+| Geopetro-Desktop | **H2** em arquivo | `ddl-auto=update` |
+| Horus/Cimentação | **JSONL** em arquivo | Sem schema versionado |
+| Telemetria | **InfluxDB** (measurement `telemetria`) | Esquema definido pelas tags e fields na escrita |
 
-**[FATO 2026-09-06]** O Backend usa Flyway no startup e `validate` em
-todos os perfis. Scripts antigos foram arquivados em `db/historico/`; o
-baseline é `V2026.09.04`. Histórico da migração em
-[DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
-
-**[FATO]** Existia ainda uma terceira via — `ProcessoSchemaInitializer`, um `ApplicationRunner` que
-executava `ALTER TABLE processos` a cada startup com falhas engolidas em log `debug`. Foi **removido**
-em 2026-08-26 junto com o módulo `processo`.
-
-⚠️ **[FATO]** As migrations existentes referenciam tabelas de módulos removidos (`projetos`,
-`processos`). Continuam válidas historicamente, mas um ambiente novo criaria tabelas sem uso — ver
-[DT-002](technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema).
+Os dois serviços MySQL usam o mesmo servidor, databases e usuários distintos. As tabelas de
+identidade e organização ficam apenas em `braserv_core`; monitoramento, alarmes e simulador ficam
+em `geopetro_io`. As colunas `unidade_id` do Backend são referências lógicas ao Core, sem FK
+entre databases. A guarda de exclusão consulta os vínculos pelo contrato interno antes de apagar uma
+unidade.
 
 ## 6. Autenticação e autorização
 
-**[FATO]** JWT stateless (`io.jsonwebtoken:jjwt 0.12.6`), `SessionCreationPolicy.STATELESS`, CSRF
-desabilitado (correto para API JWT sem cookies).
+**[FATO 2026-10-06]** O Braserv-Core é o único emissor de tokens. Tokens de usuário têm validade de
+uma hora; tokens de serviço, quinze minutos. Ambos usam RS256 e levam `iss=braserv-core`, `kid` e
+o claim `tipo`, que impede um token de pessoa de abrir uma rota interna e um token de serviço de
+abrir uma rota pública.
 
-- `POST /auth/login` aceita **username OU e-mail** (detecção pela presença de `@`).
-- Falha de usuário inexistente e senha errada retornam a **mesma** exceção — não revela qual campo errou. **Boa prática.**
-- Token: HMAC-SHA, `subject=username`, claim `roles`. Expiração padrão **3600s (1h)**.
-- **Sem refresh token, sem logout, sem revogação.** Token vazado vale até expirar.
-- O filtro extrai roles **do próprio token**, sem reconsultar o banco — usuário desativado mantém acesso até o token expirar.
+Os consumidores validam assinatura e expiração pelo JWKS do Core. O Backend consulta
+`/internal/v1/usuarios/{username}/acesso` para conta ativa, roles e unidades concedidas, com cache
+normal de 10 s. Se o Core ficar indisponível, pode usar o último acesso conhecido por até cinco
+minutos, registrando cada uso; depois disso nega. O catálogo de unidades tem cache de 60 s, mas
+escritas de configuração confirmam a unidade sem cache.
 
-Detalhamento das regras de acesso por rota em [`current-features.md`](../negocio/requisitos/current-features.md).
-**Falhas exploráveis** em [`security-findings.md`](seguranca/security-findings.md).
+A autorização combina tipo de conta com permissões de módulo. A gestão de unidades exige `ADMIN`
+ou `INTERNO` + `UNIDADE`.
 
 ## 7. Serviço de Telemetria
 
@@ -166,7 +126,7 @@ tela de Monitoramento sempre retornava `502`.
 | Assina `telemetria/+/batch` no broker | `MqttTelemetriaSubscriber` |
 | Normaliza os **dois formatos** de payload | `TelemetriaPayloadParser` |
 | Persiste no InfluxDB, em lote | `InfluxTelemetriaRepository` |
-| Expõe `GET /api/monitoramentos/sondas/{id}/series` | `MonitoramentoController` |
+| Expõe `GET /api/monitoramentos/unidades/{idUnidade}/series` | `MonitoramentoController` |
 
 **[FATO]** 24 testes passando. JAR de 35 MB gerado. Dockerfile multi-stage expondo `8081`.
 
@@ -204,11 +164,9 @@ Detalhes em [`apps/geopetro-telemetria/specs/`](../../../apps/geopetro-telemetri
 | WebSocket/STOMP `/ws` | Ambas | Spring WebSocket, broker em memória | **[FATO 2026-08-27]** Ativo — Desktop publica, Angular assina |
 | Broker MQTT | Entrada (consumidor) | Eclipse Paho 1.2.5, QoS 1 | **[FATO]** Ativo — Geopetro-Telemetria |
 | InfluxDB | Saída | influxdb-client-java 6.12.0 | **[FATO]** Ativo — Geopetro-Telemetria |
+| Braserv-Core | Backend ↔ Core | HTTP interno, token de serviço, RS256/JWKS | **[FATO 2026-10-06]** Ativo |
+| SMTP | Saída | Spring Mail | **[FATO]** Recuperação de senha e teste de configuração no Braserv-Core |
 | ViaCEP | Saída | `https://viacep.com.br/ws/{cep}/json/` | **[FATO]** Chamado **direto do browser** ⚠️ |
-
-**[FATO]** A integração SMTP **deixou de existir** com a remoção do módulo `quimico` —
-`spring-boot-starter-mail` era dependência exclusiva dele, e o job diário das 08:00 era o único
-`@Scheduled` do sistema.
 
 ## 9. Mensageria — MQTT
 
@@ -241,11 +199,12 @@ publicada passa a ser persistida no InfluxDB e fica disponível para consulta. V
 
 **[FATO]**
 
+- **Braserv-Core**: container Java, expõe `8082`, possui healthcheck próprio e database `braserv_core`.
 - **Geopetro-Backend**: Docker multi-stage (`maven:3.9-eclipse-temurin-21` → `eclipse-temurin:21-jre-jammy`), compila só `-pl app -am`, expõe `8080`.
-- **Front**: Docker (`node:22-alpine` → `nginx:alpine`), build `--configuration k8s`, expõe `80`. nginx faz proxy reverso same-origin para `geopetro-backend:8080` e `telemetria:8081`.
+- **Front**: Docker (`node:22-alpine` → `nginx:alpine`), build `--configuration k8s`, expõe `80`. O nginx separa as rotas públicas entre `braserv-core:8082` e `geopetro-backend:8080`; a Telemetria permanece interna ao Backend.
 - **Front alternativo**: Cloudflare Pages (`wrangler.toml`, `public/_redirects`).
 - **Desktops**: instalador Windows `.exe` via `jpackage` (Horus exige WiX Toolset), instalação per-user, execução em bandeja do sistema.
-- **Domínios de produção**: `api.geopetro-io.braserv.com.br` · `telemetria.geopetro-io.braserv.com.br`.
+- **Deploy de VM única**: Compose, MySQL compartilhado com dois databases, rede interna entre Core, Backend e Telemetria e volumes separados para segredos/chaves.
 
 **[FATO]** O build do frontend usa `--configuration k8s`, mas **não há nenhum manifesto Kubernetes
 no workspace** (busca por `*.yaml`/`*.yml` de deploy/helm/kustomize não retornou nada).

@@ -33,7 +33,7 @@ instrumentação de equipamento que não é sonda ([OQ-041](open-questions.md#oq
 qualquer unidade cadastrada** — sonda, unidade de bombeio, slickline/wireline, cimentação ou UCAQ.
 
 ⚠️ **Isto reverte [RN-074](../regras/business-rules.md#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora).**
-Aquela regra dizia que o `tipo` da Unidade/Sonda era classificação apenas, e que a telemetria seguia
+Aquela regra dizia que o `tipo` da Unidade era classificação apenas, e que a telemetria seguia
 exclusiva de sonda de perfuração com as mesmas cinco grandezas — porque instrumentar outro
 equipamento era um projeto próprio, com outro CLP e outras grandezas. Com o endereçamento
 configurável, **deixa de ser projeto e vira cadastro**. Registrado em
@@ -120,8 +120,8 @@ acumulado *da bomba*, não a soma entre bombas — então a soma **não entra** 
 cardinalidade alta em tag degrada o banco seriamente. Com nome livre por card, cada rebatismo criaria
 uma tag nova, e a retenção é de **5 anos**. Pior: renomear cortaria a série em duas, sem aviso.
 
-⚠️ **É exatamente a armadilha de [RN-018](../regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)**,
-onde o nome editável da Unidade/Sonda virou chave de integração com a telemetria. Aquele risco já está
+⚠️ **É exatamente a armadilha de [RN-018](../regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração)**,
+onde o nome editável da Unidade virou chave de integração com a telemetria. Aquele risco já está
 registrado como o de maior custo da base; repeti-lo no nível do card multiplicaria por seis.
 
 **Numeração:** `NN` é sequencial por tipo **dentro da unidade**, atribuído na criação e nunca
@@ -284,7 +284,7 @@ Desktop (ADMIN/SUPORTE autenticado)
         ▼
 Geopetro-Backend  ── grava, incrementa revisão ──┐
         │                                        │
-        │ STOMP /topic/config/unidades-sondas/{id}
+        │ STOMP /topic/config/unidades/{id}
         ▼                                        ▼
 Desktop aplica                          Geopetro-Front lê e monta os cards
 ```
@@ -302,7 +302,7 @@ sua revisão e seu endpoint.
 | Documento | Quem grava | Onde | Regra |
 |---|---|---|---|
 | **Cards** | `ADMIN` ou `SUPORTE` | Só no Desktop | [RN-086](../regras/business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend) |
-| **Limites** | Quem enxerga a sonda, inclusive `CLIENTE` | Web | [RN-069](../regras/business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela) |
+| **Limites** | Quem enxerga a sonda, inclusive `CLIENTE` | Web | [RN-069](../regras/business-rules.md#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela) |
 
 **Por que separar.** Num documento só, o cliente que ajusta um limite de pressão devolve o documento
 inteiro — cards inclusive. O servidor teria de comparar campo a campo para descobrir se ele mexeu no
@@ -336,7 +336,7 @@ não é decorativa, como [DT-011](../../software/technical-debt.md#dt-011--diver
 exige.
 
 **Falta ligar os cards a ela:** quando o documento de cards ganhar endpoint, `SUPORTE` precisa entrar
-no `requestMatcher` dele. Hoje `/api/sondas/**` não inclui `SUPORTE`, de propósito — dar acesso a
+no `requestMatcher` dele. Hoje `/api/monitoramento/unidades/**` não inclui `SUPORTE`, de propósito — dar acesso a
 monitoramento seria mais do que "configurar".
 
 ### A sessão de configuração do Desktop

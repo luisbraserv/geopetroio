@@ -12,8 +12,8 @@ ser o agente de borda de **qualquer unidade cadastrada** — sonda, unidade de b
 slickline/wireline, cimentação ou UCAQ.
 
 O nome antigo passaria a mentir sobre o escopo. E o mesmo valia para os outros: o Backend nunca foi só
-de sonda — o módulo sempre se chamou `unidade-sonda` justamente porque a entidade sempre foi mais
-ampla ([RN-065](../negocio/regras/business-rules.md#rn-065--unidadesonda-tem-tipo)).
+de sonda — a entidade sempre foi mais ampla e hoje pertence ao módulo `unidade` do Braserv-Core
+([RN-065](../negocio/regras/business-rules.md#rn-065--unidade-tem-tipo)).
 
 ## 2. O mapa
 
@@ -66,8 +66,8 @@ duas linhas (fora as citações intencionais aqui e em [DT-004](technical-debt.m
 |---|---|
 | Pacotes Java (`com.geopetro.*`, `com.braservpetroleo.telemetria.geopetroio.*`) | Refatoração de pacote é mudança em centenas de arquivos, com risco desproporcional ao ganho |
 | `com.example.demo.*` no Desktop | Já era nome de scaffold; trocar agora misturaria duas mudanças |
-| Nomes de tabela, coluna e `dispositivoId` | São contrato de dados. `unidades_sondas` continua `unidades_sondas` |
-| Módulo Maven `unidade-sonda` | idem |
+| Nomes de tabela, coluna e `dispositivoId` | Não foram alterados por esta renomeação de projetos; a extração posterior para o Core teve migration própria |
+| Módulo Maven `unidade` no Braserv-Core | Mantém o nome técnico porque representa o domínio vigente |
 | Nome do banco (`geopetro_io`) | idem |
 | `%USERPROFILE%\.geopetro-io\` no Desktop instalado | Mudá-lo faria cada instalação em campo **perder banco local e configuração**. É estado do usuário, não identidade do projeto |
 

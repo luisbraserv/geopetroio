@@ -1,6 +1,6 @@
 # Contrato — Braserv-Core
 
-> Contrato de integração entre aplicações · 2026-10-06 · **Estado: decidido, não implementado**
+> Contrato de integração entre aplicações · 2026-10-06 · **Estado: implementado**
 >
 > Define o que o Braserv-Core oferece às outras aplicações e o que ele consome do backend.
 > Arquitetura, decisões e plano: [backend/braserv-core.md](../backend/braserv-core.md).
@@ -18,22 +18,21 @@
 
 ## 1. Rotas públicas
 
-Publicadas pelo proxy. **Corpo de requisição, corpo de resposta e códigos de status são os de hoje**,
-exceto onde a tabela indica mudança. A referência de cada payload é o OpenAPI do core
-(`/v3/api-docs`), gerado a partir dos controllers copiados do backend.
+Publicadas pelo proxy. A referência executável de cada payload é o OpenAPI do Core
+(`/v3/api-docs`).
 
-| Rota | Quem acessa | Mudança |
+| Rota | Quem acessa | Observação |
 |---|---|---|
 | `POST /api/auth/login` | público | Token RS256 com claim `tipo: usuario` (seção 2) |
 | `POST /api/auth/recuperacao-senha`, `POST /api/auth/recuperacao-senha/confirmar` | público | — |
-| `/api/usuarios/**` | `ADMIN`; `PATCH /me` e `/me/senha` para qualquer autenticado | `unidadeSondaIds` → `unidadeIds`. Role nova `UNIDADE` |
+| `/api/usuarios/**` | `ADMIN`; `PATCH /me` e `/me/senha` para qualquer autenticado | Usa `unidadeIds`; inclui a role `UNIDADE` |
 | `/api/empresas/**` | `ADMIN` | — |
 | `GET /api/regionais/**` | `INTERNO`, `ADMIN` | — |
 | `POST/PUT/DELETE /api/regionais/**` | `ADMIN` | — |
 | `/api/setores/**` | `INTERNO`, `ADMIN` | — |
-| `/api/unidades/**` | ver 1.1 | Era `/api/unidades-sondas/**` |
+| `/api/unidades/**` | ver 1.1 | Cadastro de unidades |
 | `/api/configuracoes/email/**` | `ADMIN`, `SUPORTE` | — |
-| `/api/servicos-clientes/**` | `ADMIN` | **Nova** (1.2) |
+| `/api/servicos-clientes/**` | `ADMIN` | Credenciais de integração (1.2) |
 
 ### 1.1 Unidade
 
@@ -182,7 +181,7 @@ O core trata `503`, erro de rede ou demora acima de 5 s como **em uso** e recusa
 
 ## 6. Erros
 
-Mesmo formato de erro do backend hoje (`ApiErrorResponse`).
+Mesmo formato de erro compartilhado com o Backend (`ApiErrorResponse`).
 
 | Código | Quando |
 |---|---|

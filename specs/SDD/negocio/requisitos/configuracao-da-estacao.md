@@ -24,7 +24,7 @@ A faixa é identificada por `dispositivoId` e `serie`, com mínimo, máximo e li
 
 ### 3.3 O Desktop para de receber o documento de limites
 
-**[FATO]** O Desktop não assina limites do servidor. O tópico e o snapshot STOMP desse documento foram removidos do Backend; `GET`/`PUT /api/sondas/{id}/configuracao` e a avaliação no servidor permanecem. O canal `/cards` continua ativo e entrega o documento necessário à leitura do CLP.
+**[FATO]** O Desktop não assina limites do servidor. O tópico e o snapshot STOMP desse documento foram removidos do Backend; `GET`/`PUT /api/monitoramento/unidades/{id}/configuracao` e a avaliação no servidor permanecem. O canal `/cards` continua ativo e entrega o documento necessário à leitura do CLP.
 
 ## 4. Conexão do CLP na engrenagem
 

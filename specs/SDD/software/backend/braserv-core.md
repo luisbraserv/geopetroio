@@ -1,16 +1,15 @@
 # Braserv-Core — cadastro organizacional e identidade
 
-> Spec de arquitetura · 2026-10-06 · **Estado: decidida em entrevista, implementação não iniciada**
+> Spec de arquitetura · 2026-10-06 · **Estado: implementada; documentação consolidada na fase 7**
 >
 > Contrato HTTP entre o core e as demais aplicações: [apis/braserv-core.md](../apis/braserv-core.md).
-> Modelo de dados anterior à mudança: [entidade-relacionamento](../../../entidade-relacionamento/index.html).
+> Modelo de dados vigente: [entidade-relacionamento](../../../entidade-relacionamento/index.html).
 
 ## 1. Objetivo
 
-Hoje a estrutura organizacional da Braserv mora dentro do Geopetro-Backend, misturada com
-monitoramento, alarmes e simulador. Ela não pertence a nenhum desses produtos: é a base que todos
-usam. O **Braserv-Core** passa a ser o único dono dessa estrutura e da identidade dos usuários. As
-outras aplicações consomem o core e deixam de ter cópia, tabela ou regra própria sobre esses dados.
+O **Braserv-Core** é o único dono da estrutura organizacional da Braserv e da identidade dos
+usuários. O Geopetro-Backend mantém monitoramento, alarmes e simulador e consome o Core sem copiar
+tabelas ou regras de cadastro.
 
 **Resultado esperado:** um sistema novo da Braserv (almoxarifado, compras, outro simulador) usa o
 mesmo login e a mesma estrutura organizacional sem depender do Geopetro-Backend.
@@ -28,44 +27,40 @@ Todas tomadas em entrevista em 2026-10-06.
 | [RN-116](../../negocio/regras/business-rules.md#rn-116--unidade-é-inativada-e-só-é-excluída-se-nunca-foi-usada) | Unidade é inativada. Exclusão física só se nunca foi usada, confirmada pelo backend |
 | [RN-117](../../negocio/regras/business-rules.md#rn-117--só-o-braserv-core-emite-token) | Só o core emite token, para pessoas e para sistemas. Os demais validam pela chave pública |
 | [RN-118](../../negocio/regras/business-rules.md#rn-118--gestão-de-unidades-exige-interno--unidade-ou-admin) | Gestão de unidades exige `ADMIN` ou `INTERNO` + `UNIDADE` (permissão nova) |
-| [RN-119](../../negocio/regras/business-rules.md#rn-119--o-cadastro-se-chama-unidade-não-unidadesonda) | O cadastro se chama **Unidade**, não Unidade/Sonda, em todo o sistema, inclusive na telemetria |
+| [RN-119](../../negocio/regras/business-rules.md#rn-119--o-cadastro-se-chama-unidade) | O cadastro se chama **Unidade** em todo o sistema, inclusive na telemetria |
 | D-1 | Dados do core no **mesmo servidor MySQL**, database próprio `braserv_core` |
-| D-2 | O módulo Maven `core` do backend é renomeado para `comum` |
+| D-2 | O kernel compartilhado do Backend se chama `comum` |
 | D-3 | Credenciais dos sistemas que chamam o core ficam **no banco do core**, com tela de ADMIN |
 | D-4 | Core indisponível: o backend usa o **último acesso conhecido por até 5 min** e registra no log |
 | D-5 | Dados do ambiente de teste são **movidos por script** para o core, sem recadastro |
 
 ## 3. Fronteira
 
-### 3.1 O que vai para o core
+### 3.1 O que pertence ao Core
 
-| Assunto | Hoje no backend | Tabela hoje → no core |
-|---|---|---|
-| Regional | módulo `regional` | `regionais` → `regionais` |
-| Setor | módulo `setor` | `setores` → `setores` |
-| Unidade | módulo `unidade-sonda` | `unidades_sondas` → **`unidades`** |
-| Empresa | módulo `empresa` | `empresas` → `empresas` |
-| Usuário e roles | módulo `usuario` | `usuarios`, `usuario_roles` → mesmos nomes |
-| Concessão de unidades ao cliente | módulo `usuario` | `usuario_cliente_unidades` → mesmo nome, coluna `unidade_sonda_id` → **`unidade_id`** |
-| Login e emissão de token | módulo `security` | — |
-| Recuperação de senha | `app/recuperacao` | `recuperacao_senha` → mesmo nome |
-| Configuração de e-mail (SMTP) | `app/configuracoes` | `configuracao_smtp` → mesmo nome |
-| Sistemas autorizados a chamar o core | não existe | **`servicos_clientes`** (nova, seção 6.5) |
-| Guarda de exclusão | `core/vinculo/GuardaDeExclusao` | — |
+| Assunto | Módulo/tabela no Core |
+|---|---|
+| Regional | `regional` · `regionais` |
+| Setor | `setor` · `setores` |
+| Unidade | `unidade` · `unidades` |
+| Empresa | `empresa` · `empresas` |
+| Usuário, roles e concessões | `usuario` · `usuarios`, `usuario_roles`, `usuario_cliente_unidades` |
+| Login, recuperação, SMTP e clientes de serviço | `identidade` · `recuperacao_senha`, `configuracao_smtp`, `servicos_clientes` |
+| Contratos internos e guarda de exclusão | `interno` e `comum` |
 
 **[FATO]** O SMTP só é usado pela recuperação de senha (`SmtpRecoveryMail`). Por isso vai junto.
 
-### 3.2 O que fica no backend
+### 3.2 O que pertence ao Backend
 
 Monitoramento, tempo real, alarmes, limites, cards e simulador. As tabelas `configuracao_sonda`,
 `configuracao_cards`, `evento_alarme`, `episodio_alarme_extremo` e `simulador_*` continuam em
-`geopetro_io`. Nas quatro primeiras, a coluna `unidade_sonda_id` vira **`unidade_id`** (RN-119).
+`geopetro_io`. Nas quatro primeiras, `unidade_id` é uma referência lógica ao id mantido no Core.
 
 ### 3.3 Telemetria
 
-A Geopetro-Telemetria não consulta o core. Ela muda só por causa da renomeação (RN-119): tópico MQTT
+A Geopetro-Telemetria não consulta o Core. O contrato vigente usa o tópico MQTT
 `telemetria/{idUnidade}/batch`, campo `idUnidade` no payload e tag `idUnidade` no InfluxDB. O valor
-continua sendo o **nome** da unidade ([RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)).
+continua sendo o **nome** da unidade ([RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração)).
 
 ## 4. Arquitetura
 
@@ -106,10 +101,10 @@ continua sendo o **nome** da unidade ([RN-018](../../negocio/regras/business-rul
 
 ### 5.2 Referências que deixam de ser FK
 
-Quatro FKs do backend apontam para `unidades_sondas` e **caem**. A coluna, renomeada para
-`unidade_id`, fica como referência simples ao id do core.
+As quatro colunas `unidade_id` do Backend são referências simples ao id do Core, sem FK entre
+databases.
 
-| Tabela (backend) | FK que cai |
+| Tabela (Backend) | Referência protegida pela guarda de exclusão |
 |---|---|
 | `configuracao_sonda` | `fk_configuracao_sonda` |
 | `configuracao_cards` | `fk_configuracao_cards_unidade` |
@@ -119,28 +114,27 @@ Quatro FKs do backend apontam para `unidades_sondas` e **caem**. A coluna, renom
 **Por que não fica órfão:** uma unidade só é apagada se o backend confirmou que nenhuma dessas
 tabelas a referencia (seção 8). Do contrário ela é inativada e o id continua existindo.
 
-### 5.3 Mudanças de esquema
+### 5.3 Esquema vigente
 
-| Onde | Mudança |
+| Onde | Estado |
 |---|---|
-| core · `unidades` | Nome novo. Nova coluna `status VARCHAR(16) NOT NULL DEFAULT 'ATIVA'` (`ATIVA`, `INATIVA`) |
-| core · `usuario_cliente_unidades` | `unidade_sonda_id` → `unidade_id` |
-| core · `usuario_roles` | Aceita o valor novo `UNIDADE` (a coluna já é `VARCHAR`) |
-| core · `servicos_clientes` | Nova (seção 6.5) |
-| backend · 4 tabelas da seção 5.2 | `unidade_sonda_id` → `unidade_id`, FK removida |
+| Core · `unidades` | Possui `status VARCHAR(16) NOT NULL DEFAULT 'ATIVA'` (`ATIVA`, `INATIVA`) |
+| Core · `usuario_cliente_unidades` | Usa `unidade_id` com FK interna para `unidades.id` |
+| Core · `usuario_roles` | Aceita a permissão `UNIDADE` |
+| Core · `servicos_clientes` | Guarda credenciais de sistemas (seção 6.5) |
+| Backend · 4 tabelas da seção 5.2 | Usam `unidade_id`, sem FK entre databases |
 
-### 5.4 Movimentação dos dados de teste (D-5)
+### 5.4 Migração dos dados de teste (D-5)
 
-As tabelas são **movidas, não copiadas**, com `RENAME TABLE geopetro_io.x TO braserv_core.y`. No
-MySQL isso é uma operação de metadados: instantânea, atômica e sem duplicar dados.
+As tabelas foram **movidas, não copiadas**, com `RENAME TABLE geopetro_io.x TO braserv_core.y`. No
+MySQL essa é uma operação de metadados, atômica e sem duplicar dados.
 
 Script executado uma vez, com `root`, versionado em `deploy/vm-unica/core/mover-para-core.sql`:
 
 1. Conferir: as nove tabelas existem em `geopetro_io` e `braserv_core` está vazio.
 2. Remover as quatro FKs da seção 5.2.
-3. `RENAME TABLE` das nove tabelas, num único comando, já com o nome novo `unidades`.
-4. Ajustar o core para ficar **idêntico à estrutura inicial do core** (`V2026.10.06.1`): renomear
-   `unidade_sonda_id` para `unidade_id` em `usuario_cliente_unidades`.
+3. `RENAME TABLE` das nove tabelas, num único comando, com os nomes vigentes no Core.
+4. Ajustar o schema para ficar **idêntico à estrutura inicial do Core** (`V2026.10.06.1`).
 5. Conferir: nenhuma das nove sobrou em `geopetro_io`; contagens de linha iguais às do passo 1.
 
 O Flyway do core sobe depois com `baseline-on-migrate` na versão da estrutura inicial: ela é marcada
@@ -150,14 +144,14 @@ Coberto por `MigracaoFlywayTest.baseMovidaRecebeAsMigrationsSeguintes`. As mudan
 uma **migration Flyway do backend**, idempotente, como as demais
 ([DT-002](../technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)).
 
-O histórico de teste já gravado no InfluxDB fica com a tag antiga `idSondaUnidade`. Sem produção,
-isso é aceito: o histórico de teste pode ser descartado.
+O histórico de teste anterior à integração pôde ser descartado porque o sistema ainda não estava em
+produção.
 
 ## 6. Autenticação
 
 O token é um **crachá digital**: diz quem é o portador, o que ele pode fazer e até quando vale, e
-leva uma assinatura que impede alteração. Hoje o backend assina e confere com o mesmo segredo
-(`JWT_SECRET`). Com o core separado, assinar e conferir ficam em lugares diferentes.
+leva uma assinatura que impede alteração. O Core assina com a chave privada e os consumidores
+validam com as chaves públicas do JWKS.
 
 ### 6.1 Chaves
 
@@ -169,8 +163,7 @@ leva uma assinatura que impede alteração. Hoje o backend assina e confere com 
 
 ### 6.2 Token de pessoa
 
-Emitido por `POST /api/auth/login`, com o mesmo corpo de requisição e de resposta de hoje
-(`AutenticacaoResponse`). Validade de 1 hora sem renovação, como hoje
+Emitido por `POST /api/auth/login`, com corpo de resposta `AutenticacaoResponse`. Validade de 1 hora sem renovação
 ([RN-045](../../negocio/regras/business-rules.md#rn-045--sessão-expira-em-1-hora-sem-renovação)).
 
 | Claim | Valor |
@@ -205,7 +198,7 @@ serviço, com `sub` = `braserv-core` e escopo `unidades:vinculos`, sem passar po
 
 - O backend valida assinatura, `iss`, `tipo` e `exp` com as chaves do JWKS.
 - O JWKS fica em memória e é buscado de novo quando chega um `kid` desconhecido.
-- `JWT_SECRET` deixa de existir.
+- `JWT_SECRET` não existe no Backend.
 
 ### 6.5 Clientes de serviço (D-3)
 
@@ -247,29 +240,30 @@ A mesma resposta alimenta as quatro decisões de acesso do backend:
 | Decisão | Regra | Classe atual |
 |---|---|---|
 | Conta ainda ativa, no HTTP e a cada entrega no tempo real | RN-062, RN-107 | `ContaAtivaVerificador` |
-| Quais unidades o usuário enxerga | RN-047, RN-048 | `SondaMonitoramentoService` |
+| Quais unidades o usuário enxerga | RN-047, RN-048 | `UnidadeMonitoramentoService` |
 | Quem configura cards | RN-086 | `ConfiguracaoCardsAccess` |
 | Combinação tipo de conta + módulo | RN-099 | `RegrasDeAcesso`, `PermissoesDoUsuario` |
 
-- Cache de **10 s**, como hoje. É a janela do corte de acesso.
+- Cache de **10 s**. É a janela normal do corte de acesso.
 - **Core sem resposta (D-4):** o backend usa o último valor conhecido por até **5 min** e registra
   no log cada uso desse valor. Passados os 5 min sem resposta, nega. Um usuário desativado durante
   uma queda do core pode entrar por até 5 min; é o custo aceito para que um reinício do core não
   derrube o tempo real das operações em andamento.
 
-## 7. Como o backend passa a ler o cadastro
+## 7. Como o Backend lê o cadastro
 
-| Hoje o backend usa | Passa a usar |
+| Necessidade | Contrato vigente |
 |---|---|
-| `UsuarioJpaRepository`, `UsuarioEntity`, `UsuarioClienteEntity` | `AcessoDoUsuarioPort`, implementada por cliente HTTP do core (6.6) |
-| `UnidadeSondaJpaRepository`, `UnidadeSondaEntity` | `CatalogoDeUnidadesPort`, implementada por cliente HTTP de `GET /internal/v1/unidades` |
-| `TokenPort` e `ContaAtivaVerificador` do módulo `security` | Validação pelo JWKS (6.4) e `AcessoDoUsuarioPort` |
-| `EventoAlarmeVinculo`, `ConfiguracaoCardsVinculo`, `ConfiguracaoSondaVinculo`, `TelemetriaVinculoAdapter` | Continuam, agora atrás do endpoint de vínculos do backend (seção 8) |
+| Conta ativa, roles e concessões | `AcessoDoUsuarioPort`, via `GET /internal/v1/usuarios/{username}/acesso` |
+| Catálogo e detalhe de unidade | `CatalogoDeUnidadesPort`, via `GET /internal/v1/unidades` e `/{id}` |
+| Autenticidade do token | Validação RS256 pelo JWKS do Core |
+| Vínculos que bloqueiam exclusão | Endpoint interno do Backend, consultado pelo Core |
 
 - **Leitura:** o catálogo de unidades fica em cache por 60 s. Uma unidade criada ou inativada aparece
-  no backend em até 60 s.
-- **Escrita:** gravar limites ou cards de uma unidade consulta `GET /internal/v1/unidades/{id}`
-  **sem cache**. Isso impede gravar referência a uma unidade que acabou de ser excluída.
+  no Backend em até 60 s.
+- **Escrita:** gravar limites ou cards consulta `GET /internal/v1/unidades/{id}` **sem cache**.
+- **Acesso:** o último acesso conhecido pode ser usado por até cinco minutos durante indisponibilidade
+  do Core; sem valor válido, o Backend nega.
 
 ## 8. Unidade: inativar e excluir
 
@@ -291,7 +285,7 @@ A mesma resposta alimenta as quatro decisões de acesso do backend:
 1. O core confere os vínculos dele: concessões a clientes.
 2. O core chama `GET /internal/v1/unidades/{id}/vinculos` **no backend**, com o próprio token de
    serviço (6.3). O backend confere limites, cards, eventos e episódios de alarme, e pergunta à
-   Telemetria se há série gravada, como já faz hoje (`TelemetriaVinculoAdapter`).
+   Telemetria se há série gravada (`TelemetriaVinculoAdapter`).
 3. Havendo qualquer vínculo, responde `409` com **todos** os impedimentos numa mensagem só, como em
    [RN-063](../../negocio/regras/business-rules.md#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros).
 4. **Backend ou Telemetria sem resposta em 5 s: a exclusão é recusada.** Assumir "não tem uso" porque
@@ -306,42 +300,26 @@ Quando um sistema novo passar a referenciar unidades, ele também precisa respon
 O desenho previsto é o core consultar uma lista de endpoints de vínculo, um por sistema; até lá, o
 backend é o único.
 
-## 9. Renomeação para Unidade (RN-119)
+## 9. Contrato de Unidade (RN-119)
 
-| O que | Antes | Depois |
-|---|---|---|
-| Classe de domínio | `UnidadeSonda`, `TipoUnidadeSonda` | `Unidade`, `TipoUnidade` |
-| Tabela no core | `unidades_sondas` | `unidades` |
-| Coluna de referência | `unidade_sonda_id` | `unidade_id` |
-| Cadastro (core) | `/api/unidades-sondas/**` | `/api/unidades/**` |
-| Monitoramento (backend) | `/api/sondas/minhas` | `/api/monitoramento/unidades/minhas` |
-| Séries (backend) | `/api/sondas/{idSondaUnidade}/monitoramentos/series` | `/api/monitoramento/unidades/{id}/series`, com o **id numérico** |
-| Cards, limites, alarmes (backend) | `/api/sondas/{id}/cards`, `/configuracao`, `/alarmes`, `/alarmes/historico` | `/api/monitoramento/unidades/{id}/cards`, `/configuracao`, `/alarmes`, `/alarmes/historico` |
-| Tópicos WebSocket | `/topic/realtime/unidades-sondas/{id}`, `/topic/config/unidades-sondas/{id}` e `/{id}/cards` | `/topic/realtime/unidades/{id}`, `/topic/config/unidades/{id}` e `/{id}/cards` |
-| Tópico MQTT | `telemetria/{idSondaUnidade}/batch` | `telemetria/{idUnidade}/batch` |
-| Payload MQTT e tag InfluxDB | `idSondaUnidade` | `idUnidade` |
-| Configuração do Desktop | `unidadeSondaId` | `unidadeId` |
-| Telas | "Unidade/Sonda", "Sondas" | "Unidade", "Unidades" |
+| Superfície | Contrato vigente |
+|---|---|
+| Domínio e banco do Core | `Unidade`, `TipoUnidade`, tabela `unidades` |
+| Referências | `unidade_id` no banco e `unidadeId` nos payloads de configuração |
+| Cadastro | `/api/unidades/**` |
+| Monitoramento | `/api/monitoramento/unidades/**`, sempre com id numérico |
+| WebSocket | `/topic/realtime/unidades/{id}` e `/topic/config/unidades/{id}/cards` |
+| MQTT e InfluxDB | `telemetria/{idUnidade}/batch` e tag `idUnidade`, cujo valor é `Unidade.nome` |
+| Telas | “Unidade” e “Unidades” |
 
-**[DECIDIDO na implementação, 2026-10-06]** Todas as rotas de `/api/monitoramento/unidades/{id}` usam o
-id numérico, inclusive a de séries, que antes recebia o nome. O backend traduz o id no nome pelo catálogo do
-core antes de consultar a Telemetria. Assim o Front usa um identificador só, e não convivem dois nomes quase
-iguais (`idUnidade` para o nome, `unidadeId` para o número). A lista `/minhas` devolve `id`, `nome`,
-`apelido` e `tipo`; o campo `idSondaUnidade` saiu, porque repetia o nome.
+O Backend traduz o id numérico para o nome antes de consultar a Telemetria. A lista
+`/api/monitoramento/unidades/minhas` devolve `id`, `nome`, `apelido` e `tipo`. Assim o Front
+usa um único identificador numérico nas rotas, enquanto o contrato de coleta preserva o nome como
+chave de integração.
 
-O contrato **entre o backend e a Telemetria** (`/api/monitoramentos/sondas/{idSondaUnidade}/...` e os campos
-que ela devolve) só muda na fase 4, junto com a Telemetria: mudar um lado só quebraria a consulta de séries.
-
-O monitoramento ganha o prefixo `/api/monitoramento` para não disputar `/api/unidades` com o core: o
-proxy roteia por prefixo, sem expressão regular.
-
-**Tamanho medido em 2026-10-06:** 82 arquivos no backend, 28 no Desktop, 26 no Front, 15 na
-Telemetria. O Braserv-Horus-Desktop não é afetado.
-
-**Fora da renomeação:** o **tipo** `SONDA` continua sendo um dos tipos de unidade
-([RN-065](../../negocio/regras/business-rules.md#rn-065--unidadesonda-tem-tipo)), ao lado de
-`UNIDADE_BOMBEIO`, `SLICKLINE_WIRELINE`, `CIMENTACAO` e `UCAQ`. A tabela `configuracao_sonda`
-mantém o nome; renomeá-la fica para quando o módulo de limites for revisto.
+O tipo `SONDA` continua sendo um dos tipos de unidade, ao lado de `UNIDADE_BOMBEIO`,
+`SLICKLINE_WIRELINE`, `CIMENTACAO` e `UCAQ`. A tabela `configuracao_sonda` mantém o nome por
+ser um detalhe interno do módulo de limites.
 
 ## 10. Estrutura do projeto
 
@@ -365,7 +343,7 @@ apps/core/
 ```
 
 Pacote raiz `com.braserv.core`: o serviço é da Braserv, não de um produto. Porta interna `8082`. No
-backend, o pacote `com.geopetro.core` passa a ser `com.geopetro.comum` (D-2), para não sugerir que é
+Backend, o pacote compartilhado é `com.geopetro.comum` (D-2), para não sugerir que é
 parte do Braserv-Core.
 
 **Sobre D-2:** depois da separação, o `comum` do backend fica só com `BusinessException`,
@@ -374,20 +352,19 @@ parte do Braserv-Core.
 pasta e um artefato Maven compartilhado exigiria um repositório de pacotes. Extrair uma biblioteca
 comum fica para quando um terceiro serviço precisar dela.
 
-## 11. Plano de entrega
+## 11. Entregas realizadas
 
-Tudo numa branch, integrada de uma vez: sem produção, não há estado intermediário para manter no ar.
-Cada fase termina com os testes da aplicação passando.
+Implementação realizada numa única branch, com validação ao final de cada fase.
 
-| Fase | Entrega | Pronto quando |
+| Fase | Entrega | Estado |
 |---|---|---|
-| 1 | Projeto Braserv-Core com os módulos da seção 3.1, já renomeados para Unidade. Flyway próprio, tokens RS256 e JWKS | Core sobe contra base vazia e passa nos testes portados |
-| 2 | `status` da unidade, `ativar`/`inativar`, exclusão com consulta ao backend, permissão `UNIDADE`, clientes de serviço, rotas `/internal/v1/**` | Contrato de [apis/braserv-core.md](../apis/braserv-core.md) coberto por teste |
-| 3 | Backend: validação pelo JWKS, portas da seção 7, endpoint de vínculos, migration de FKs e colunas, rotas `/api/monitoramento/**` e tópicos novos, remoção dos módulos que foram para o core, `core` → `comum` | Backend passa nos testes com o core simulado (stub HTTP) e não referencia nenhuma tabela que saiu |
-| 4 | Telemetria e Desktop: tópico, payload e tag `idUnidade`; `unidadeId` na configuração; rotas novas | Desktop publica e a Telemetria grava com `idUnidade` |
-| 5 | Front: rotas novas, telas "Unidade", permissão `UNIDADE` no cadastro de usuário, tela de clientes de serviço | Todas as telas funcionam contra core e backend locais |
-| 6 | Deploy: serviço `core` no compose, database e usuário MySQL, par de chaves RS256, rotas no nginx, script da seção 5.4 | Critérios da seção 12 conferidos na VM de teste |
-| 7 | Specs: visão do sistema, mapa de domínios, diagrama ER, contratos de MQTT, WebSocket, monitoramento e configuração | Nenhuma spec vigente cita `unidades_sondas`, `/api/sondas` ou `idSondaUnidade` |
+| 1 | Projeto Braserv-Core, Flyway, tokens RS256 e JWKS | ✅ Concluída |
+| 2 | Estado da unidade, guarda de exclusão, permissão `UNIDADE`, clientes de serviço e rotas internas | ✅ Concluída |
+| 3 | Backend consumidor do Core, referências lógicas e contratos de monitoramento | ✅ Concluída |
+| 4 | Telemetria e Desktop alinhados ao contrato de Unidade | ✅ Concluída |
+| 5 | Front integrado ao Core e ao Backend | ✅ Concluída |
+| 6 | Compose, bancos, chaves e proxy do ambiente de VM única | ✅ Concluída |
+| 7 | Specs de sistema, domínios, dados, MQTT, WebSocket, monitoramento e configuração | ✅ Concluída |
 
 ## 12. Critérios de aceite
 
@@ -411,7 +388,7 @@ Cada fase termina com os testes da aplicação passando.
 ## 13. O que esta spec não faz
 
 - Não cria cadastros novos (cargo, colaborador, centro de custo como entidade).
-- Não muda as regras de acesso existentes (RN-047, RN-048, RN-086, RN-099). Elas só passam a ler o
-  core; a única permissão nova é `UNIDADE` (RN-118).
+- Não muda as regras de acesso existentes (RN-047, RN-048, RN-086, RN-099). Elas leem o Core; a
+  permissão adicional é `UNIDADE` (RN-118).
 - Não resolve a revogação de token individual ([SEC-008](../seguranca/security-findings.md#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário)).
 - Não autentica o MQTT nem as consultas à Telemetria.

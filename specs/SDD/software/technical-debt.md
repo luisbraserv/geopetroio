@@ -153,7 +153,7 @@ Contrato em [`api-prefix.md`](../../../apps/geopetro-backend/specs/api-prefix.md
 não são exercitadas pela nova suíte HTTP, que usa `TokenPort` mockado. Também
 permanecem lacunas nos módulos `empresa` e `monitoramento`.
 
-**[FATO] Causa raiz relacionada:** os testes de `regional`, `setor` e `unidade-sonda` vivem
+**[HISTÓRICO] Causa raiz relacionada:** antes do Braserv-Core, os testes de `regional`, `setor` e unidade viviam
 fisicamente em `app/src/test/`, não nos módulos que testam — porque **esses módulos não declaram
 `spring-boot-starter-test`**. Só `usuario` e `app` declaram.
 
@@ -305,9 +305,9 @@ ao relatório se não for capturado por uma relação entre campos.
 **Severidade: Baixa** · Aberto
 
 **[FATO]**
-- Módulo Maven `unidade-sonda` tem pacote Java `com.geopetro.unidadesonda` — único que diverge do padrão
+- O antigo módulo de unidade tinha pacote Java divergente do padrão; foi removido do Backend com a extração para o Braserv-Core
 - Coleção Postman cobre apenas login e usuários (6 operações). O exemplo de "Criar Usuario Interno" usa `"setor": "Automacao"` (String), que não existe no contrato atual
-- **[FATO]** Endpoints de usuários e auth ficam **fora** do prefixo `/api`, enquanto o resto usa `/api/{recurso}` — [OQ-013](../negocio/requisitos/open-questions.md#oq-013--endpoints-fora-do-padrão-api-são-deliberados)
+- ✅ **Resolvido:** endpoints de usuários e autenticação usam o prefixo `/api` no Braserv-Core
 - `UsuarioPaginadoResponse` no front duplica a forma de `Pagina<T>` em vez de reusar o genérico
 - **[FATO]** Mojibake em `meu-usuario-page.component.html:43` — `"Buscando endereÃ§o pelo CEP..."`
 - **[FATO]** Namespaces JavaFX inconsistentes nos FXML do Horus: `javafx/21`, `21.0.1` e `25`, com dependência real 21.0.6

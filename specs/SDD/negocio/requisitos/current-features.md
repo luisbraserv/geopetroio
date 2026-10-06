@@ -12,13 +12,13 @@
 
 | # | Funcionalidade | Aplicação | Estado |
 |---|---|---|---|
-| [F-01](#f-01--autenticação-login) | Autenticação / Login | Backend + Front | Ativo |
-| [F-02](#f-02--gestão-de-usuários) | Gestão de Usuários | Backend + Front | Ativo |
-| [F-03](#f-03--autoatendimento-de-perfil) | Autoatendimento de Perfil | Backend + Front | Ativo |
-| [F-04](#f-04--cadastro-de-empresas) | Cadastro de Empresas | Backend + Front | Ativo |
-| [F-05](#f-05--cadastro-de-regionais) | Cadastro de Regionais | Backend + Front | Ativo |
-| [F-06](#f-06--cadastro-de-setores) | Cadastro de Setores | Backend + Front | Ativo |
-| [F-07](#f-07--cadastro-de-unidadessondas) | Cadastro de Unidades/Sondas | Backend + Front | Ativo |
+| [F-01](#f-01--autenticação-login) | Autenticação / Login | Braserv-Core + Front | Ativo |
+| [F-02](#f-02--gestão-de-usuários) | Gestão de Usuários | Braserv-Core + Front | Ativo |
+| [F-03](#f-03--autoatendimento-de-perfil) | Autoatendimento de Perfil | Braserv-Core + Front | Ativo |
+| [F-04](#f-04--cadastro-de-empresas) | Cadastro de Empresas | Braserv-Core + Front | Ativo |
+| [F-05](#f-05--cadastro-de-regionais) | Cadastro de Regionais | Braserv-Core + Front | Ativo |
+| [F-06](#f-06--cadastro-de-setores) | Cadastro de Setores | Braserv-Core + Front | Ativo |
+| [F-07](#f-07--cadastro-de-unidades) | Cadastro de Unidades | Braserv-Core + Front | Ativo |
 | ~~F-08~~ | ~~Cadastro de Projetos~~ | — | **Removido 2026-08-26** |
 | ~~F-09~~ | ~~Gestão de Processos~~ | — | **Removido 2026-08-26** |
 | ~~F-10~~ | ~~Anotações de Processo~~ | — | **Removido 2026-08-26** |
@@ -26,13 +26,13 @@
 | ~~F-12~~ | ~~Estoque de Químicos~~ | — | **Removido 2026-08-26** |
 | ~~F-13~~ | ~~Alertas de Químicos por E-mail~~ | — | **Removido 2026-08-26** |
 | [F-14](#f-14--simulador-de-cimentação) | Simulador de Cimentação | Front + Backend | Ativo |
-| [F-15](#f-15--monitoramento-de-sondas) | Monitoramento de Sondas | Front + Backend + Telemetria | Ativo |
+| [F-15](#f-15--monitoramento-de-unidades) | Monitoramento de Unidades | Front + Backend + Core + Telemetria | Ativo |
 | [F-16](#f-16--captura-de-telemetria-na-sonda) | Captura de Telemetria na Sonda | Geopetro-Desktop | Ativo |
 | [F-17](#f-17--carta-de-operação-sonda) | Carta de Operação (Sonda) | Geopetro-Desktop | Ativo |
 | [F-18](#f-18--monitoramento-de-cimentação) | Monitoramento de Cimentação | Horus | Ativo |
 | [F-19](#f-19--carta-de-operação-cimentação) | Carta de Operação (Cimentação) | Horus | Ativo |
-| [F-20](#f-20--tempo-real-de-sondas) | **Tempo Real de Sondas** | Front + Backend + Desktop | **Novo 2026-08-27** |
-| [F-21](#f-21--configuração-remota-da-sonda) | Configuração remota da sonda | Backend + Desktop | Implementado em código 2026-09-07 |
+| [F-20](#f-20--tempo-real-de-unidades) | **Tempo Real de Unidades** | Front + Backend + Core + Desktop | Ativo |
+| [F-21](#f-21--configuração-remota-da-unidade) | Configuração remota da unidade | Backend + Desktop | Ativo |
 
 **[FATO]** O inventário reúne **15 funcionalidades implementadas**, distribuídas em três eixos: administração
 de identidade e organização (F-01 a F-07), engenharia de cimentação (F-14, F-18, F-19) e telemetria de
@@ -51,15 +51,15 @@ WebSocket). Ver [`websocket-realtime.md`](../../software/apis/websocket-realtime
 | **Objetivo** | Autenticar usuário e emitir JWT para acesso à API |
 | **Atores** | Qualquer usuário cadastrado |
 | **Entradas** | `{username, password}` — aceita **username ou e-mail** |
-| **Saídas** | `AuthResponse{token, username, nome, email, endereço, telefone, roles[], regionalId, regionalNome}` |
+| **Saídas** | `AutenticacaoResponse{token, username, nome, email, endereco, telefone, roles[]}` |
 | **Endpoints** | `POST /api/auth/login` — **público** |
-| **Entidades** | `UsuarioEntity` |
+| **Servidor** | Braserv-Core |
 
 **Fluxo principal [FATO]**
 1. Front despacha ação NGXS `Login` → `AuthService.authenticate$()`.
-2. Backend detecta se o identificador é e-mail (contém `@`) e busca por e-mail ou username.
+2. Braserv-Core detecta se o identificador é e-mail (contém `@`) e busca por e-mail ou username.
 3. Compara senha via BCrypt.
-4. Gera JWT HMAC-SHA com `subject=username` e claim `roles`.
+4. Gera JWT RS256 com `iss=braserv-core`, `tipo=usuario`, `subject=username` e claim `roles`.
 5. Front persiste no `AuthState` e redireciona conforme a role.
 
 **Regras de negócio**
@@ -71,7 +71,7 @@ WebSocket). Ver [`websocket-realtime.md`](../../software/apis/websocket-realtime
 
 **Erros** · `401` credenciais inválidas · `401` token expirado/ausente (HTML do servlet, **não** JSON — [DT-012](../../software/technical-debt.md#dt-012--dois-formatos-de-erro-na-api))
 
-**Dependências** · módulo `security` → `usuario` · BCrypt · jjwt 0.12.6
+**Dependências** · módulos `identidade` e `usuario` do Braserv-Core · BCrypt · RS256/JWKS
 
 **[FATO 2026-09-06]** Recuperação por e-mail implementada: link no login,
 solicitação pública e tela de nova senha. Token de uso único, validade de 30 minutos,
@@ -94,17 +94,16 @@ entrega corporativa. Detalhes em
 | **Atores** | `ADMIN` |
 | **Endpoints** | `POST /api/usuarios/clientes` · `POST /api/usuarios/internos` · `GET /api/usuarios?pagina&tamanho&busca` · `GET /api/usuarios/{username}` · `PATCH /api/usuarios/{username}` · `PATCH /api/usuarios/{username}/ativar` · `/desativar` |
 | **Permissões** | `ROLE_ADMIN` |
-| **Entidades** | `UsuarioEntity` → `UsuarioInternoEntity` / `UsuarioClienteEntity`, `EmpresaEntity`, `RegionalEntity`, `SetorEntity` |
+| **Entidades** | `UsuarioEntity` → `UsuarioInternoEntity` / `UsuarioClienteEntity`; dados no `braserv_core` |
 | **Tela** | `/app/cadastros/usuarios` |
 
-**Fluxo [FATO]** Admin escolhe o tipo (CLIENTE/INTERNO, bloqueado na edição) → preenche dados → seleciona roles adicionais → para INTERNO, vincula regionais e setores em cascata → salva.
+**Fluxo [FATO 2026-10-06]** Admin escolhe o tipo (CLIENTE/INTERNO, bloqueado na edição), preenche os
+dados, seleciona permissões de módulo e, para CLIENTE, escolhe as unidades concedidas.
 
 **Regras** — ver [RN-001 a RN-009](../regras/business-rules.md#identidade-e-usuários)
 - Role base (`CLIENTE`/`INTERNO`) **sempre** aplicada além das informadas.
-- Regional principal, se informada, **sempre** entra na lista de regionais.
-- Desmarcar uma regional remove em cascata os setores dela.
-- **[FATO 2026-08-27]** Para `CLIENTE`, o formulário oferece a seleção das **Unidades/Sondas que ele poderá visualizar** no monitoramento — campo `unidadeSondaIds`. Ver [RN-048](../regras/business-rules.md#rn-048--concessão-de-sondas-ao-cliente-é-explícita).
-- **[FATO 2026-08-27]** As roles atribuíveis são apenas as 7 do enum do backend; a lista de 15 opções anterior continha roles inexistentes no servidor.
+- **[FATO 2026-08-27]** Para `CLIENTE`, o formulário oferece a seleção das **Unidades que ele poderá visualizar** no monitoramento — campo `unidadeIds`. Ver [RN-048](../regras/business-rules.md#rn-048--concessão-de-unidades-ao-cliente-é-explícita).
+- **[FATO 2026-10-06]** As roles são mantidas pelo Core e incluem a permissão de módulo `UNIDADE`.
 
 **Validações [FATO]** — domínio rico autovalidado:
 
@@ -118,7 +117,7 @@ entrega corporativa. Detalhes em
 | `matricula` (INTERNO) | > 0 |
 | `empresaId` (CLIENTE) | obrigatório e existente |
 
-**Erros** · `400` validação · `404` empresa/regional/setor inexistente · `409` usuário já existe
+**Erros** · `400` validação · `404` empresa ou unidade inexistente · `409` usuário já existe
 
 ⚠️ **[FATO] Bug conhecido** — `PATCH /api/usuarios/{username}` **não é PATCH parcial**: omitir `telefone` ou `email` causa `400`. Ver [DT-008](../../software/technical-debt.md#dt-008--patch-que-não-é-parcial).
 
@@ -184,13 +183,13 @@ Ver [OQ-004](open-questions.md#oq-004--qual-é-a-política-de-senha).
 em `.anyRequest().authenticated()`. Qualquer autenticado, inclusive `CLIENTE`, podia criar, editar e
 **excluir** regionais.
 
-**Correção:** `GET` liberado aos perfis internos (as telas de Setor e Unidade/Sonda precisam listar
+**Correção:** `GET` liberado aos perfis internos (as telas de Setor e Unidade precisam listar
 regionais nos selects); escrita restrita a `ADMIN`. Ver
 [SEC-002](../../software/seguranca/security-findings.md#sec-002--regionais-com-controle-de-acesso).
 
 **Regras [FATO]**
 - Nome duplicado, **case-insensitive** → `409`.
-- **Exclusão bloqueada** se houver setor ou unidade/sonda vinculada — via `List<RegionalConsultaPort>`. É o cadastro com a guarda de integridade mais completa do sistema ([RN-017](../regras/business-rules.md#rn-017--guarda-de-exclusão--inconsistente)).
+- **Exclusão bloqueada** se houver setor ou unidade vinculada — via guarda do Braserv-Core ([RN-017](../regras/business-rules.md#rn-017--guarda-de-exclusão--inconsistente)).
 
 ---
 
@@ -205,40 +204,33 @@ regionais nos selects); escrita restrita a `ADMIN`. Ver
 | **Tela** | `/app/cadastros/setores` |
 
 ⚠️ **Lacunas [FATO]**
-- **Não valida duplicidade de nome** — ao contrário de Regional, Empresa e UnidadeSonda. A migration `V2026.06.02` foi escrita justamente para **deduplicar** setores repetidos que causavam erro 500 em produção. Os dados foram limpos; **a causa raiz não**.
+- **Não valida duplicidade de nome** — ao contrário de Regional, Empresa e Unidade. A migration `V2026.06.02` foi escrita justamente para **deduplicar** setores repetidos que causavam erro 500 em produção. Os dados foram limpos; **a causa raiz não**.
 - **Exclusão sem guarda de vínculo** — apagar setor em uso gera violação de FK não tratada → `500` genérico.
 
 ---
 
-## F-07 · Cadastro de Unidades/Sondas
+## F-07 · Cadastro de Unidades
 
 | Campo | Conteúdo |
 |---|---|
-| **Objetivo** | Manter os equipamentos (sondas), vinculados a um setor |
-| **Atores** | `INTERNO`, `CIMENTACAO`, `ADMIN` |
-| **Endpoints** | `GET /api/unidades-sondas?setorId&setorIds&regionalId` · `/paginado?busca` · `GET\|POST\|PUT\|DELETE /api/unidades-sondas/{id}` |
-| **Entidades** | `UnidadeSondaEntity` — `nome UNIQUE NOT NULL`, `apelido` opcional, `setor` obrigatório |
-| **Tela** | `/app/cadastros/unidades-sondas` |
+| **Objetivo** | Manter as unidades da Braserv vinculadas a um setor |
+| **Atores** | Leitura: `INTERNO`, `ADMIN` · escrita: `ADMIN` ou `INTERNO`+`UNIDADE` |
+| **Endpoints** | `GET /api/unidades?setorId&setorIds&regionalId&status` · `/paginado?busca` · `GET\|POST\|PUT\|DELETE /api/unidades/{id}` · `PATCH /{id}/ativar` · `/inativar` |
+| **Entidades** | `UnidadeEntity` — `nome UNIQUE NOT NULL`, `apelido` opcional, `tipo`, `status`, `setor` obrigatório |
+| **Servidor** | Braserv-Core |
+| **Tela** | `/app/cadastros/unidades` |
 
 ⚠️ **[FATO] Criticidade especial:** `nome` (ex.: `SPT-144`, `UC-01`) é a **chave de correlação com a
-telemetria** — é o `idSondaUnidade` dos tópicos MQTT e das consultas de série. **Renomear uma unidade
+telemetria** — é o `idUnidade` dos tópicos MQTT e das consultas de série. **Renomear uma unidade
 quebra o histórico de telemetria**, e nada no sistema impede ou avisa. Ver
-[RN-018](../regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração).
+[RN-018](../regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração).
 
-**Regras [FATO]** · nome duplicado → `409` · ⚠️ **exclusão sem guarda de vínculo**
+**Regras [FATO 2026-10-06]** · nome duplicado → `409` · nasce `ATIVA` · inativar é reversível ·
+exclusão física só quando Core, Backend e Telemetria confirmam ausência total de vínculo · falha na
+consulta de vínculo recusa a exclusão. Ver [RN-116](../regras/business-rules.md#rn-116--unidade-é-inativada-e-só-é-excluída-se-nunca-foi-usada).
 
-### Decidido em 2026-09-05 — ainda não implementado
-
-**[DECIDIDO 2026-09-05]** Dois acréscimos ao cadastro:
-
-| Mudança | Detalhe |
-|---|---|
-| **Campo `tipo`** | `SONDA` · `UNIDADE_BOMBEIO` · `SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ` — [RN-065](../regras/business-rules.md#rn-065--unidadesonda-tem-tipo) |
-| **Guarda de exclusão** | Passa a **bloquear** quando houver vínculo, em vez do `500` de FK — [RN-063](../regras/business-rules.md#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros) |
-
-**[FATO 2026-09-06]** O `tipo` entra pela migration `V2026.09.06.1` do Flyway, aplicada no startup.
-Ela adiciona a coluna nula, faz o backfill como `SONDA` e só então a torna obrigatória — a
-classificação precisa ser conferida registro a registro na tela depois do deploy.
+O tipo usa os valores `SONDA`, `UNIDADE_BOMBEIO`, `SLICKLINE_WIRELINE`, `CIMENTACAO` e `UCAQ` —
+[RN-065](../regras/business-rules.md#rn-065--unidade-tem-tipo).
 
 ⚠️ **O `tipo` não muda a telemetria por si.** As telas de Monitoramento e Tempo Real continuam pedindo
 as mesmas cinco variáveis de sonda para qualquer unidade — ver
@@ -341,21 +333,21 @@ próprio** que resta no backend, além da identidade e da organização.
 
 ---
 
-## F-15 · Monitoramento de Sondas
+## F-15 · Monitoramento de Unidades
 
 | Campo | Conteúdo |
 |---|---|
-| **Objetivo** | Visualizar séries temporais de telemetria de uma sonda |
-| **Atores** | `ADMIN` e conta interna com `MONITORAMENTO` (frota inteira) · `CLIENTE`+`MONITORAMENTO` (apenas as sondas concedidas) |
+| **Objetivo** | Visualizar séries temporais de telemetria de uma unidade |
+| **Atores** | `ADMIN` e conta interna com `MONITORAMENTO` (frota inteira) · `CLIENTE`+`MONITORAMENTO` (apenas as unidades concedidas) |
 | **Rota** | `/app/monitoramento-sondas` — carregada sob demanda com `loadComponent` |
-| **Endpoints** | `GET /api/sondas/minhas` · `GET /api/sondas/{idSondaUnidade}/monitoramentos/series?dispositivoId&inicio&fim` |
+| **Endpoints** | `GET /api/monitoramento/unidades/minhas` · `GET /api/monitoramento/unidades/{id}/series?dispositivoId&serie&inicio&fim` |
 
 **Fluxo [FATO]**
-1. Front lista as sondas do usuário (`/api/sondas/minhas`).
-2. Usuário escolhe sonda, período (15m/1h/6h/personalizado) e dispositivos.
+1. Front lista as unidades ativas do usuário (`/api/monitoramento/unidades/minhas`).
+2. Usuário escolhe unidade, período (15m/1h/6h/personalizado) e dispositivos.
 3. Front busca até 5 séries em paralelo (`forkJoin`) — dispositivos fixos: `PESO_COLUNA_01`, `TORQUE_01`, `TORQUE_02`, `PRESSAO_01`, `VAZAO_01`.
-4. Backend **valida o acesso do usuário àquela sonda**: `CLIENTE` precisa de concessão explícita; os demais perfis de monitoramento acessam a frota inteira.
-5. Backend chama `GET {monitoramento.base-url}/api/monitoramentos/sondas/{id}/series` via WebClient.
+4. Backend consulta o acesso atual no Core e **valida o acesso à unidade**: `CLIENTE` precisa de concessão explícita; os demais perfis de monitoramento acessam a frota inteira.
+5. Backend traduz o id numérico para `Unidade.nome` e chama `GET {monitoramento.base-url}/api/monitoramentos/unidades/{idUnidade}/series` via WebClient.
 6. Front renderiza em **SVG desenhado à mão**, com toggle Original/Suavizada.
 
 ### ✅ Fonte de dados implementada em 2026-08-27
@@ -385,18 +377,18 @@ transparente para o frontend, que recebe a mesma forma `{dataHora, valor}`.
 
 **Regras [FATO 2026-08-27]** — escopo definido pelo **perfil**, não mais pela regional:
 
-| Perfil | Sondas visíveis |
+| Perfil | Unidades visíveis |
 |---|---|
 | `ADMIN`, e `INTERNO`+`MONITORAMENTO` (ou `MONITORAMENTO_REAL`) | Frota inteira |
 | `CLIENTE`+`MONITORAMENTO` | Apenas as concedidas no cadastro |
 | Só `INTERNO`, ou permissão de módulo sem tipo de conta | Nenhuma |
 
-Ver [RN-047](../regras/business-rules.md#rn-047--escopo-de-sondas-por-perfil). Erros: `403` sem acesso à sonda ·
+Ver [RN-047](../regras/business-rules.md#rn-047--escopo-de-unidades-por-perfil). Erros: `403` sem acesso à unidade ·
 `502` serviço de telemetria fora.
 
 ⚠️ **[FATO] Defeito corrigido:** a implementação anterior retornava `true` para qualquer usuário
 não-interno — o que dava a **todo `CLIENTE` acesso a todas as sondas**. Hoje coberto por 9 testes em
-`SondaMonitoramentoServiceTest`.
+`UnidadeMonitoramentoServiceTest`.
 
 ---
 
@@ -420,7 +412,7 @@ não-interno — o que dava a **todo `CLIENTE` acesso a todas as sondas**. Hoje 
 
 **Regras notáveis [FATO]**
 - Detecta retrocesso do contador de stroke (reinício do CLP) e reseta os históricos.
-- Se `sondaId` estiver vazio, **não publica nada**.
+- Se `unidadeId` estiver vazio, **não publica nada**.
 - Falha de leitura do CLP **desconecta** o cliente S7, exigindo reconexão manual.
 - ⚠️ Falha de publicação MQTT: a leitura é **perdida** para telemetria (fica só no H2). **Não há buffer de contingência** — a documentação interna descreve um que **não existe no código**.
 
@@ -530,14 +522,14 @@ sucesso só aparece depois de o arquivo existir. Coberto por 5 testes em `PdfSer
 
 ---
 
-## F-20 · Tempo Real de Sondas
+## F-20 · Tempo Real de Unidades
 
 | Campo | Conteúdo |
 |---|---|
-| **Objetivo** | Acompanhar o estado instantâneo de uma Unidade/Sonda, direto do CLP |
-| **Atores** | Mesmos de F-15: frota inteira para os perfis operacionais; `CLIENTE` só as sondas concedidas |
-| **Rota** | `/app/tempo-real` — lazy-loaded, no menu **Sonda/Unidade → Tempo Real** |
-| **Canal** | WebSocket/STOMP · `/topic/realtime/unidades-sondas/{id}` |
+| **Objetivo** | Acompanhar o estado instantâneo de uma Unidade, direto do CLP |
+| **Atores** | Mesmos de F-15: frota inteira para os perfis operacionais; `CLIENTE` só as unidades concedidas |
+| **Rota** | `/app/tempo-real` — lazy-loaded, no menu **Unidade → Tempo Real** |
+| **Canal** | WebSocket/STOMP · `/topic/realtime/unidades/{id}` |
 | **Contrato** | [`websocket-realtime.md`](../../software/apis/websocket-realtime.md) |
 
 **[FATO 2026-08-27]** Implementado. Complementa F-15 sem substituí-la:
@@ -550,8 +542,8 @@ sucesso só aparece depois de o arquivo existir. Coberto por 5 testes em `PdfSer
 | Persistido | Sim | **Não** |
 
 **Fluxo [FATO]**
-1. A tela lista as sondas do usuário (`GET /api/sondas/minhas`) — mesma autorização de F-15.
-2. Usuário escolhe a sonda e clica **Conectar**.
+1. A tela lista as unidades do usuário (`GET /api/monitoramento/unidades/minhas`) — mesma autorização de F-15.
+2. Usuário escolhe a unidade e clica **Conectar**.
 3. Front abre WebSocket, autentica com o JWT no CONNECT e assina o tópico da unidade.
 4. Backend valida o acesso **no SUBSCRIBE** e retransmite o que o Desktop publica.
 5. Cards atualizam a cada leitura (~1s).
@@ -593,10 +585,10 @@ Com mais de uma réplica, é preciso broker externo ou afinidade de sessão.
 
 ---
 
-## F-21 · Configuração remota da sonda
+## F-21 · Configuração remota da unidade
 
 **[FATO]** O Backend persiste limites por unidade, com revisão e autoria.
-`GET`/`PUT /api/sondas/{id}/configuracao` exigem conta ativa e acesso à sonda.
+`GET`/`PUT /api/monitoramento/unidades/{id}/configuracao` exigem conta ativa e acesso à unidade.
 O motor de alarmes usa esse documento no servidor; a tela de limites e o
 histórico estão implementados. O Desktop usa limites locais independentes e
 sincroniza apenas cards por STOMP. Contrato em

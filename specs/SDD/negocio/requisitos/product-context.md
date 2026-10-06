@@ -22,7 +22,7 @@
 
 **Consequência de modelagem:** a `Empresa` **não** se torna um limite de isolamento (*tenancy*). A
 contenção do `CLIENTE` continua sendo a concessão explícita, unidade a unidade, em
-`usuario_cliente_unidades` — [RN-048](../regras/business-rules.md#rn-048--concessão-de-sondas-ao-cliente-é-explícita).
+`usuario_cliente_unidades` — [RN-048](../regras/business-rules.md#rn-048--concessão-de-unidades-ao-cliente-é-explícita).
 
 ⚠️ **O que isso significa na prática:** não há barreira estrutural entre clientes. O isolamento é uma
 lista de vínculos, e um erro de cadastro expõe a sonda de um cliente a outro. É aceitável enquanto a
@@ -140,8 +140,8 @@ outro. Ver [OQ-030](open-questions.md#oq-030--5-anos-em-que-resolução).
 
 ### O risco que a retenção longa agrava
 
-⚠️ **[FATO]** O histórico é indexado pelo `nome` da Unidade/Sonda, que é **editável no cadastro** sem
-trava nem aviso ([RN-018](../regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)).
+⚠️ **[FATO]** O histórico é indexado pelo `nome` da Unidade, que é **editável no cadastro** sem
+trava nem aviso ([RN-018](../regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração)).
 
 Cinco anos de série amarrada a uma chave mutável é o risco de maior custo da base. Ele cresce
 silenciosamente: quanto mais histórico acumula, mais caro fica o dia em que alguém renomear uma sonda
@@ -240,7 +240,7 @@ Registro de escolhas conscientes, para que ninguém as trate como lacuna a corri
 | **Recuperação de senha** | **Autoatendimento por e-mail** | ⚠️ Traz o **SMTP de volta** ao sistema |
 | **Exclusão** | **Bloquear quando houver vínculo**, em todos os cadastros | Acaba o `500` genérico de violação de FK |
 | **Vínculo organizacional do usuário** | **Removido** — regional principal, regionais e setores saem do cadastro | Não influenciava nada desde 2026-08-27 |
-| **Tipo da Unidade/Sonda** | Novo campo: `SONDA`, `UNIDADE_BOMBEIO`, `SLICKLINE_WIRELINE`, `CIMENTACAO`, `UCAQ` | ⚠️ Abre a questão de quais variáveis cada tipo monitora |
+| **Tipo da Unidade** | Novo campo: `SONDA`, `UNIDADE_BOMBEIO`, `SLICKLINE_WIRELINE`, `CIMENTACAO`, `UCAQ` | ⚠️ Abre a questão de quais variáveis cada tipo monitora |
 | **Autenticação entre VMs** | **Firewall basta** | Risco aceito: uma regra errada expõe toda a telemetria |
 | **Usuário de serviço das sondas** | **Um para toda a frota** | ⚠️ A autorização por unidade deixa de separar uma sonda da outra |
 | **Rack/slot do CLP** | Iguais em toda a frota | As constantes ficam no código |
@@ -248,7 +248,7 @@ Registro de escolhas conscientes, para que ninguém as trate como lacuna a corri
 
 ### A entidade nunca foi só "sonda"
 
-**[DECIDIDO 2026-09-05]** O campo `tipo` torna explícito o que o nome do módulo (`unidade-sonda`) já
+**[DECIDIDO 2026-09-05]** O campo `tipo` torna explícito o que o domínio de Unidade já
 sugeria: o cadastro abriga **equipamentos diferentes** — sonda, unidade de bombeio, slickline/wireline,
 cimentação e UCAQ.
 

@@ -65,7 +65,7 @@ Uma entrega de código não transforma automaticamente uma **[INFERÊNCIA]** em 
 
 - A telemetria histórica usa **MQTT → Geopetro-Telemetria → InfluxDB**; o tempo real usa **Desktop → Backend → Front por WebSocket/STOMP**. Veja os contratos de [APIs](software/apis/) e [MQTT](software/mqtt/).
 - Alarmes do **servidor** geram eventos e histórico a partir do tempo real. O alarme da **estação** usa limites locais independentes e apenas sinaliza no Desktop. Veja [alarmes](negocio/requisitos/alarmes.md) e [configuração da estação](negocio/requisitos/configuracao-da-estacao.md).
-- Usuário, Empresa, Regional, Setor, Unidade e o login passam para o **Braserv-Core**, que emite o token para todas as aplicações. O cadastro passa a se chamar Unidade em todo o sistema. Decidido em 2026-10-06, ainda não implementado. Veja [Braserv-Core](software/backend/braserv-core.md).
+- Usuário, Empresa, Regional, Setor, Unidade e login pertencem ao **Braserv-Core**, que emite os tokens para todas as aplicações. Arquitetura implementada em 2026-10-06. Veja [Braserv-Core](software/backend/braserv-core.md).
 - O simulador web e os dois desktops têm specs próprias. O relatório do simulador é entregável ao cliente; validação de entrada e rastreabilidade dos cálculos são requisitos.
 - [GeoPetro Vision](negocio/requisitos/geopetro-vision.md) está especificado para uma integração futura. O [contrato proposto](software/apis/geopetro-vision.md) ainda depende das decisões marcadas como pendentes.
 

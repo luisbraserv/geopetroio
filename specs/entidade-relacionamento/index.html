@@ -212,13 +212,13 @@
   <header class="top">
     <span class="eyebrow">Specs · Modelo de dados</span>
     <h1>Modelo de dados GeopetroIO</h1>
-    <p class="lead">Todas as estruturas persistentes do projeto num só lugar: as tabelas MySQL do Geopetro-Backend, a série de telemetria no InfluxDB e o armazenamento local dos dois desktops. Linha cheia é chave estrangeira declarada no banco. Linha tracejada é vínculo que só existe no código.</p>
+    <p class="lead">Todas as estruturas persistentes do projeto num só lugar: os databases MySQL do Braserv-Core e do Geopetro-Backend, a série de telemetria no InfluxDB e o armazenamento local dos dois desktops. Linha cheia é chave estrangeira declarada no mesmo banco. Linha tracejada é vínculo entre serviços ou mantido apenas pelo código.</p>
     <div class="facts" id="facts"></div>
   </header>
 
   <div class="tools">
     <label class="search" for="busca">
-      <input id="busca" type="search" placeholder="Buscar tabela ou coluna, ex.: unidade_sonda_id" autocomplete="off">
+      <input id="busca" type="search" placeholder="Buscar tabela ou coluna, ex.: unidade_id" autocomplete="off">
       <output id="contagem" for="busca"></output>
     </label>
     <div class="zoom" role="group" aria-label="Zoom do diagrama">
@@ -256,10 +256,11 @@
   <section aria-labelledby="h-logico">
     <div class="sec-h"><h2 id="h-logico">Vínculos sem chave estrangeira</h2></div>
     <ul class="notes">
-      <li><span class="tag">[FATO]</span> <code>unidades_sondas.nome</code> é o <code>idSondaUnidade</code> dos tópicos MQTT e da measurement <code>telemetria</code> (RN-018). Renomear uma unidade separa o histórico dela no InfluxDB.</li>
+      <li><span class="tag">[FATO]</span> <code>unidades.nome</code> é o <code>idUnidade</code> dos tópicos MQTT e da measurement <code>telemetria</code> (RN-018). Renomear uma unidade separa o histórico dela no InfluxDB.</li>
+      <li><span class="tag">[FATO 2026-10-06]</span> As colunas <code>unidade_id</code> do Geopetro-Backend referenciam <code>braserv_core.unidades.id</code>, mas não possuem FK entre databases. A exclusão é protegida pela consulta <code>/internal/v1/unidades/{id}/vinculos</code>.</li>
       <li><span class="tag">[FATO]</span> <code>evento_alarme.episodio_id</code> e <code>episodio_alarme_extremo.episodio_id</code> identificam o mesmo episódio. Não há FK entre as duas tabelas; o extremo é semeado a partir do log em V2026.09.09.2 e depois atualizado pelo serviço.</li>
       <li><span class="tag">[FATO]</span> <code>criado_por</code> e <code>atualizado_por</code> guardam o <code>username</code> de quem gravou, como texto e sem FK para <code>usuarios</code>. Conferido nos serviços de cenários, cards e limites.</li>
-      <li><span class="tag">[FATO]</span> As colunas de <code>leitura_local</code> no Geopetro-Desktop coincidem com as tags e fields do ponto gravado no InfluxDB. As leituras chegam ao servidor pelo tópico <code>telemetria/{idSondaUnidade}/batch</code>.</li>
+      <li><span class="tag">[FATO]</span> As colunas de <code>leitura_local</code> no Geopetro-Desktop coincidem com as tags e fields do ponto gravado no InfluxDB. As leituras chegam ao servidor pelo tópico <code>telemetria/{idUnidade}/batch</code>.</li>
       <li><span class="tag">[FATO]</span> <code>usuarios.empresa</code> (texto) convive com <code>usuarios.empresa_id</code> (FK para <code>empresas</code>). <span class="tag">[INFERÊNCIA]</span> O texto é resquício de antes do cadastro de empresas.</li>
     </ul>
   </section>
@@ -277,7 +278,7 @@
   <section aria-labelledby="h-manter">
     <div class="sec-h">
       <h2 id="h-manter">Como manter</h2>
-      <p class="lead">O diagrama e o dicionário saem das constantes <code>TABELAS</code> e <code>RELACOES</code> no início do script deste arquivo. A cada migration em <code>apps/geopetro-backend/app/src/main/resources/db/migration</code>, ajuste as colunas aqui no mesmo commit. Tabela nova precisa de uma posição <code>x</code>/<code>y</code> livre no diagrama; as linhas são desenhadas a partir da posição de cada coluna.</p>
+      <p class="lead">O diagrama e o dicionário saem das constantes <code>TABELAS</code> e <code>RELACOES</code> no início do script deste arquivo. A cada migration em <code>apps/core/app/src/main/resources/db/migration</code> ou <code>apps/geopetro-backend/app/src/main/resources/db/migration</code>, ajuste as colunas aqui no mesmo commit. Tabela nova precisa de uma posição <code>x</code>/<code>y</code> livre no diagrama; as linhas são desenhadas a partir da posição de cada coluna.</p>
     </div>
   </section>
 </div>
@@ -287,7 +288,7 @@
   'use strict';
 
   const CONFERIDO_EM = '2026-10-06';
-  const ULTIMA_MIGRATION = 'V2026.10.02.1';
+  const ULTIMA_MIGRATION = 'Core V2026.10.06.3 · Backend V2026.10.06.1';
 
   const DOMINIOS = {
     org:    { nome: 'Organização',               cor: '--d-org' },
@@ -299,7 +300,8 @@
   };
 
   const ARMAZENS = {
-    mysql:  { nome: 'MySQL · Geopetro-Backend', sub: 'Flyway · charset utf8mb4', zona: { x: 20, y: 20, w: 1230, h: 1140 } },
+    core:   { nome: 'MySQL · Braserv-Core', sub: 'database braserv_core · Flyway', zona: { x: 20, y: 20, w: 610, h: 1140 } },
+    mysql:  { nome: 'MySQL · Geopetro-Backend', sub: 'database geopetro_io · Flyway', zona: { x: 650, y: 20, w: 600, h: 1140 } },
     influx: { nome: 'InfluxDB · Geopetro-Telemetria', sub: 'Sem migrations: esquema nasce na escrita', zona: { x: 1270, y: 20, w: 340, h: 320 } },
     h2:     { nome: 'H2 local · Geopetro-Desktop', sub: '~/.geopetro-io/data/sonda_geopetro', zona: { x: 1270, y: 370, w: 340, h: 330 } },
     jsonl:  { nome: 'Arquivo local · Horus-Desktop', sub: 'data/registros_operacao.jsonl', zona: { x: 1270, y: 730, w: 340, h: 300 } }
@@ -309,14 +311,14 @@
 
   // c: [nome, tipo no banco, tipo curto no card, chaves, aceita nulo, observação]
   const TABELAS = [
-    { id: 'regionais', armazem: 'mysql', dom: 'org', x: 40, y: 124, origem: 'V2026.09.04 (baseline)',
-      desc: 'Regional da Braserv. Topo da hierarquia Regional → Setor → Unidade/Sonda.',
+    { id: 'regionais', armazem: 'core', dom: 'org', x: 40, y: 100, origem: 'Core V2026.10.06.1',
+      desc: 'Regional da Braserv. Topo da hierarquia Regional → Setor → Unidade.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
         ['nome', 'varchar(255)', 'varchar', ['UK'], false, ''],
         ['centro_custo', 'varchar(255)', 'varchar', [], true, '']
       ] },
-    { id: 'setores', armazem: 'mysql', dom: 'org', x: 350, y: 102, origem: 'V2026.09.04 (baseline)',
+    { id: 'setores', armazem: 'core', dom: 'org', x: 350, y: 100, origem: 'Core V2026.10.06.1',
       desc: 'Setor dentro de uma regional.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -324,22 +326,23 @@
         ['nome', 'varchar(255)', 'varchar', [], false, ''],
         ['centro_custo', 'varchar(255)', 'varchar', [], true, '']
       ] },
-    { id: 'unidades_sondas', armazem: 'mysql', dom: 'org', x: 660, y: 80, origem: 'V2026.09.06.1 (coluna tipo)',
+    { id: 'unidades', armazem: 'core', dom: 'org', x: 350, y: 240, origem: 'Core V2026.10.06.2 (status)',
       desc: 'Unidade ou sonda monitorada. É o centro do modelo: limites, cards, alarmes, concessões de cliente e telemetria apontam para ela.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
         ['setor_id', 'bigint', 'bigint', ['FK'], false, '→ setores.id'],
         ['nome', 'varchar(255)', 'varchar', ['UK'], false, 'Chave de integração com MQTT e InfluxDB (RN-018).'],
         ['apelido', 'varchar(255)', 'varchar', [], true, ''],
-        ['tipo', 'varchar(32)', 'varchar(32)', [], false, 'SONDA, UNIDADE_BOMBEIO, SLICKLINE_WIRELINE, CIMENTACAO, UCAQ (RN-065). Classificação apenas (RN-074).']
+        ['tipo', 'varchar(32)', 'varchar(32)', [], false, 'SONDA, UNIDADE_BOMBEIO, SLICKLINE_WIRELINE, CIMENTACAO, UCAQ (RN-065). Classificação apenas (RN-074).'],
+        ['status', 'varchar(16)', 'varchar(16)', [], false, 'ATIVA ou INATIVA (RN-116).']
       ] },
-    { id: 'usuario_roles', armazem: 'mysql', dom: 'acesso', x: 40, y: 284, origem: 'V2026.09.17.1 (roles por módulo)',
+    { id: 'usuario_roles', armazem: 'core', dom: 'acesso', x: 40, y: 240, origem: 'Core V2026.10.06.1',
       desc: 'Roles de cada usuário. Desde V2026.09.17.1 o acesso é tipo de conta (CLIENTE ou INTERNO) somado a uma permissão de módulo.',
       c: [
         ['username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username'],
-        ['role', 'varchar(255)', 'varchar', ['PK'], false, 'CLIENTE, INTERNO, ADMIN, SUPORTE, MONITORAMENTO, MONITORAMENTO_REAL, SIMULADOR, CIMENTACAO. Era ENUM em bases novas até V2026.09.07.3.']
+        ['role', 'varchar(255)', 'varchar', ['PK'], false, 'CLIENTE, INTERNO, ADMIN, SUPORTE, UNIDADE, MONITORAMENTO, MONITORAMENTO_REAL, SIMULADOR, CIMENTACAO.']
       ] },
-    { id: 'recuperacao_senha', armazem: 'mysql', dom: 'acesso', x: 40, y: 392, origem: 'V2026.09.06.3',
+    { id: 'recuperacao_senha', armazem: 'core', dom: 'acesso', x: 40, y: 370, origem: 'Core V2026.10.06.1',
       desc: 'No máximo uma recuperação de senha por usuário (OQ-021). O token nunca é gravado, só o hash. É a única FK com cascata: some junto com o usuário.',
       c: [
         ['username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username, ON DELETE CASCADE'],
@@ -348,7 +351,7 @@
         ['issued_at', 'datetime(6)', 'datetime', [], false, ''],
         ['expires_at', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'empresas', armazem: 'mysql', dom: 'acesso', x: 40, y: 572, origem: 'V2026.09.04 (baseline)',
+    { id: 'empresas', armazem: 'core', dom: 'acesso', x: 40, y: 550, origem: 'Core V2026.10.06.1',
       desc: 'Empresa cliente, referenciada pelos usuários do tipo CLIENTE.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -358,7 +361,7 @@
         ['telefone', 'varchar(255)', 'varchar', [], true, ''],
         ['endereço (7)', '7 × varchar(255)', '7 × varchar', [], true, 'Colunas ' + ENDERECO + '.']
       ] },
-    { id: 'usuarios', armazem: 'mysql', dom: 'acesso', x: 350, y: 284, origem: 'V2026.09.06.2 (sai regional_id)',
+    { id: 'usuarios', armazem: 'core', dom: 'acesso', x: 350, y: 440, origem: 'Core V2026.10.06.1',
       desc: 'Conta de acesso. Uma tabela para as duas subclasses JPA, separadas por tipo_usuario: CLIENTE usa cliente_id, empresa e empresa_id; INTERNO usa matricula. O vínculo com regional e setor saiu em V2026.09.06.2 (RN-064).',
       c: [
         ['username', 'varchar(255)', 'varchar', ['PK'], false, ''],
@@ -374,7 +377,7 @@
         ['matricula', 'int', 'int', [], true, 'Só INTERNO.'],
         ['endereço (7)', '7 × varchar(255)', '7 × varchar', [], true, 'Colunas ' + ENDERECO + '.']
       ] },
-    { id: 'configuracao_smtp', armazem: 'mysql', dom: 'sist', x: 350, y: 640, origem: 'V2026.09.07.1',
+    { id: 'configuracao_smtp', armazem: 'core', dom: 'sist', x: 350, y: 780, origem: 'Core V2026.10.06.1',
       desc: 'Configuração de envio de e-mail. Linha única, garantida por CHECK (id = 1). A senha fica cifrada.',
       c: [
         ['id', 'bigint', 'bigint', ['PK'], false, 'Sempre 1.'],
@@ -389,17 +392,29 @@
         ['sender_address', 'varchar(255)', 'varchar', [], false, ''],
         ['frontend_url', 'varchar(2048)', 'varchar', [], false, '']
       ] },
-    { id: 'usuario_cliente_unidades', armazem: 'mysql', dom: 'acesso', x: 660, y: 262, origem: 'V2026.10.02.1 (garante a tabela)',
-      desc: 'Concessão explícita: quais unidades cada usuário CLIENTE enxerga (RN-048). Junção N:N entre usuarios e unidades_sondas.',
+    { id: 'usuario_cliente_unidades', armazem: 'core', dom: 'acesso', x: 40, y: 780, origem: 'Core V2026.10.06.1',
+      desc: 'Concessão explícita: quais unidades cada usuário CLIENTE enxerga (RN-048). Junção N:N entre usuarios e unidades.',
       c: [
-        ['unidade_sonda_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades_sondas.id'],
+        ['unidade_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades.id'],
         ['usuario_username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username. Charset e collation copiados de usuarios.username.']
       ] },
-    { id: 'evento_alarme', armazem: 'mysql', dom: 'monit', x: 660, y: 426, origem: 'V2026.09.09.1',
+    { id: 'servicos_clientes', armazem: 'core', dom: 'sist', x: 40, y: 900, origem: 'Core V2026.10.06.3',
+      desc: 'Credenciais dos sistemas autorizados a pedir token de serviço ao Braserv-Core. O segredo é armazenado apenas como hash.',
+      c: [
+        ['id', 'varchar(64)', 'varchar(64)', ['PK'], false, 'Identificador do sistema.'],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['segredo_hash', 'varchar(255)', 'varchar', [], false, 'BCrypt.'],
+        ['escopos', 'varchar(1024)', 'varchar', [], false, 'Lista separada por vírgula.'],
+        ['ativo', 'boolean', 'boolean', [], false, ''],
+        ['criado_em', 'datetime(6)', 'datetime', [], false, ''],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], false, ''],
+        ['ultimo_uso_em', 'datetime(6)', 'datetime', [], true, '']
+      ] },
+    { id: 'evento_alarme', armazem: 'mysql', dom: 'monit', x: 670, y: 330, origem: 'V2026.09.09.1',
       desc: 'Log append-only das transições de alarme do servidor (RN-056, RN-076). Um registro por mudança de estado, não por leitura. Ainda sem política de retenção.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
-        ['unidade_sonda_id', 'bigint', 'bigint', ['FK', 'IX'], false, '→ unidades_sondas.id, ON DELETE RESTRICT. Índice com ocorrido_em.'],
+        ['unidade_id', 'bigint', 'bigint', ['IX'], false, 'Referência lógica a braserv_core.unidades.id. Índice com ocorrido_em.'],
         ['episodio_id', 'char(36)', 'char(36)', ['IX'], false, 'UUID do episódio. Liga ao extremo sem FK.'],
         ['dispositivo_id', 'varchar(64)', 'varchar(64)', [], false, ''],
         ['serie', 'varchar(32)', 'varchar(32)', [], true, 'Nula em card de uma grandeza. Separa as séries de um CONTADOR_STROKE (RN-098).'],
@@ -409,35 +424,35 @@
         ['valor', 'double', 'double', [], false, ''],
         ['limite_violado', 'varchar(8)', 'varchar(8)', [], false, 'MIN ou MAX.']
       ] },
-    { id: 'configuracao_sonda', armazem: 'mysql', dom: 'monit', x: 970, y: 80, origem: 'V2026.09.07.2',
+    { id: 'configuracao_sonda', armazem: 'mysql', dom: 'monit', x: 670, y: 100, origem: 'Backend V2026.10.06.1',
       desc: 'Limites de alarme da unidade, um documento JSON por unidade. Quem enxerga a sonda pode ajustar, inclusive CLIENTE (RN-069).',
       c: [
-        ['unidade_sonda_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades_sondas.id'],
+        ['unidade_id', 'bigint', 'bigint', ['PK'], false, 'Referência lógica a braserv_core.unidades.id.'],
         ['version', 'bigint', 'bigint', [], false, 'Lock otimista e revisão exposta na API.'],
         ['limites_json', 'longtext', 'longtext', [], false, ''],
         ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'configuracao_cards', armazem: 'mysql', dom: 'monit', x: 970, y: 262, origem: 'V2026.09.07.4',
+    { id: 'configuracao_cards', armazem: 'mysql', dom: 'monit', x: 970, y: 100, origem: 'Backend V2026.10.06.1',
       desc: 'Cards e conexão da unidade (RN-080, RN-089). Fica separado dos limites porque só ADMIN ou SUPORTE gravam. Impede excluir a unidade (RN-063).',
       c: [
-        ['unidade_sonda_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades_sondas.id, ON DELETE RESTRICT'],
+        ['unidade_id', 'bigint', 'bigint', ['PK'], false, 'Referência lógica a braserv_core.unidades.id.'],
         ['version', 'bigint', 'bigint', [], false, 'Lock otimista e revisão exposta na API.'],
         ['conexao_json', 'longtext', 'longtext', [], false, ''],
         ['cards_json', 'longtext', 'longtext', [], false, ''],
         ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'episodio_alarme_extremo', armazem: 'mysql', dom: 'monit', x: 970, y: 470, origem: 'V2026.09.09.2',
+    { id: 'episodio_alarme_extremo', armazem: 'mysql', dom: 'monit', x: 970, y: 360, origem: 'Backend V2026.10.06.1',
       desc: 'Pior valor de cada episódio de alarme (RN-076). Uma linha por episódio, atualizada enquanto ele dura e mantida depois do FECHOU.',
       c: [
         ['episodio_id', 'char(36)', 'char(36)', ['PK'], false, 'Mesmo UUID de evento_alarme.episodio_id.'],
-        ['unidade_sonda_id', 'bigint', 'bigint', ['FK', 'IX'], false, '→ unidades_sondas.id, ON DELETE RESTRICT'],
+        ['unidade_id', 'bigint', 'bigint', ['IX'], false, 'Referência lógica a braserv_core.unidades.id.'],
         ['valor', 'double', 'double', [], false, ''],
         ['limite_violado', 'varchar(8)', 'varchar(8)', [], false, 'MIN ou MAX, vindo da abertura do episódio.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'simulador_pastas', armazem: 'mysql', dom: 'simul', x: 660, y: 740, origem: 'V2026.09.04 (baseline)',
+    { id: 'simulador_pastas', armazem: 'mysql', dom: 'simul', x: 670, y: 650, origem: 'V2026.09.04 (baseline)',
       desc: 'Pasta que agrupa cenários de uma mesma operação do simulador.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -447,7 +462,7 @@
         ['criado_em', 'datetime(6)', 'datetime', [], true, ''],
         ['atualizado_em', 'datetime(6)', 'datetime', [], true, '']
       ] },
-    { id: 'simulador_cenarios', armazem: 'mysql', dom: 'simul', x: 970, y: 718, origem: 'V2026.09.05 (poco_id)',
+    { id: 'simulador_cenarios', armazem: 'mysql', dom: 'simul', x: 970, y: 650, origem: 'V2026.09.05 (poco_id)',
       desc: 'Cenário salvo do simulador de cimentação. A pasta precisa ser da mesma operação, o que é validado no serviço. O poço é opcional: cenários antigos seguem sem poço (RN-059, RN-067).',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -461,7 +476,7 @@
         ['criado_em', 'datetime(6)', 'datetime', [], true, ''],
         ['atualizado_em', 'datetime(6)', 'datetime', [], true, '']
       ] },
-    { id: 'simulador_pocos', armazem: 'mysql', dom: 'simul', x: 660, y: 950, origem: 'V2026.09.05',
+    { id: 'simulador_pocos', armazem: 'mysql', dom: 'simul', x: 670, y: 900, origem: 'V2026.09.05',
       desc: 'Poço como entidade própria, com a geometria versionada. Excluir um poço que tem cenários é recusado no banco.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -475,7 +490,7 @@
       desc: 'Série histórica gravada pelo Geopetro-Telemetria a partir do MQTT. Pontos com as mesmas tags no mesmo instante se sobrescrevem, o que torna o reenvio idempotente.',
       c: [
         ['_time', 'timestamp', 'time', [], false, 'Instante da leitura.'],
-        ['idSondaUnidade', 'tag', 'tag', ['TAG'], false, 'Igual a unidades_sondas.nome (RN-018).'],
+        ['idUnidade', 'tag', 'tag', ['TAG'], false, 'Igual a unidades.nome (RN-018).'],
         ['dispositivoId', 'tag', 'tag', ['TAG'], false, ''],
         ['serie', 'tag', 'tag', ['TAG'], true, 'Separa as séries de um mesmo dispositivo.'],
         ['tipo', 'tag', 'tag', ['TAG'], false, ''],
@@ -514,21 +529,21 @@
   // pista: x da perna vertical. desvio: deslocamento vertical na chegada, para separar linhas que chegam na mesma coluna.
   const RELACOES = [
     { de: ['setores', 'regional_id', 'L'], para: ['regionais', 'id', 'R'], card: ['n0', 'um'] },
-    { de: ['unidades_sondas', 'setor_id', 'L'], para: ['setores', 'id', 'R'], card: ['n0', 'um'] },
+    { de: ['unidades', 'setor_id', 'L'], para: ['setores', 'id', 'R'], card: ['n0', 'um'] },
     { de: ['usuario_roles', 'username', 'R'], para: ['usuarios', 'username', 'L'], card: ['n0', 'um'], pista: 310, desvio: -4 },
     { de: ['recuperacao_senha', 'username', 'R'], para: ['usuarios', 'username', 'L'], card: ['z1', 'um'], pista: 320, desvio: 4 },
     { de: ['usuarios', 'empresa_id', 'L'], para: ['empresas', 'id', 'R'], card: ['n0', 'z1'], pista: 335 },
     { de: ['usuario_cliente_unidades', 'usuario_username', 'L'], para: ['usuarios', 'username', 'R'], card: ['n0', 'um'] },
-    { de: ['usuario_cliente_unidades', 'unidade_sonda_id', 'R'], para: ['unidades_sondas', 'id', 'R'], card: ['n0', 'um'], pista: 930, desvio: 10 },
-    { de: ['evento_alarme', 'unidade_sonda_id', 'R'], para: ['unidades_sondas', 'id', 'R'], card: ['n0', 'um'], pista: 935, desvio: 5 },
-    { de: ['episodio_alarme_extremo', 'unidade_sonda_id', 'L'], para: ['unidades_sondas', 'id', 'R'], card: ['n0', 'um'], pista: 950, desvio: 0 },
-    { de: ['configuracao_cards', 'unidade_sonda_id', 'L'], para: ['unidades_sondas', 'id', 'R'], card: ['z1', 'um'], pista: 955, desvio: -5 },
-    { de: ['configuracao_sonda', 'unidade_sonda_id', 'L'], para: ['unidades_sondas', 'id', 'R'], card: ['z1', 'um'], pista: 960, desvio: -10 },
+    { de: ['usuario_cliente_unidades', 'unidade_id', 'R'], para: ['unidades', 'id', 'L'], card: ['n0', 'um'] },
+    { de: ['evento_alarme', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], logico: true },
+    { de: ['episodio_alarme_extremo', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], logico: true },
+    { de: ['configuracao_cards', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['z1', 'um'], logico: true },
+    { de: ['configuracao_sonda', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['z1', 'um'], logico: true },
     { de: ['simulador_cenarios', 'pasta_id', 'L'], para: ['simulador_pastas', 'id', 'R'], card: ['n0', 'z1'] },
     { de: ['simulador_cenarios', 'poco_id', 'L'], para: ['simulador_pocos', 'id', 'R'], card: ['n0', 'z1'], pista: 945 },
     { de: ['evento_alarme', 'episodio_id', 'R'], para: ['episodio_alarme_extremo', 'episodio_id', 'L'], card: ['n1', 'um'], logico: true },
-    { de: ['telemetria', 'idSondaUnidade', 'L'], para: ['unidades_sondas', 'nome', 'L'], card: ['n0', 'um'], logico: true,
-      via: [[1290, null], [1290, 62], [635, 62], [635, 'fim']], rotulo: { x: 960, y: 56, texto: 'nome = idSondaUnidade (RN-018)' } },
+    { de: ['telemetria', 'idUnidade', 'L'], para: ['unidades', 'nome', 'R'], card: ['n0', 'um'], logico: true,
+      via: [[1290, null], [1290, 62], [625, 62], [625, 'fim']], rotulo: { x: 960, y: 56, texto: 'nome = idUnidade (RN-018)' } },
     { de: ['leitura_local', 'dispositivo_id', 'R'], para: ['telemetria', 'dispositivoId', 'R'], card: [null, 'seta'], logico: true,
       pista: 1590, rotulo: { x: 1584, y: 360, texto: 'MQTT', ancora: 'end' } }
   ];

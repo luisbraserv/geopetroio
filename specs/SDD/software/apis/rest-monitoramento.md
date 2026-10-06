@@ -28,16 +28,17 @@ hora local sem offset.
 ```
 Front                    Geopetro-Backend                    Telemetria :8081
   │                            │                                 │
-  │ GET /api/sondas/minhas     │                                 │
+  │ GET /api/monitoramento/    │                                 │
+  │     unidades/minhas        │                                 │
   ├───────────────────────────►│ (consulta o escopo no MySQL)  │
   │◄───────────────────────────┤                                 │
   │                            │                                 │
-  │ GET /api/sondas/{id}/      │                                 │
-  │     monitoramentos/series  │                                 │
+  │ GET /api/monitoramento/    │                                 │
+  │     unidades/{id}/series   │                                 │
   ├───────────────────────────►│                                 │
-  │                            │ 1. valida acesso do usuário     │
-  │                            │    à sonda (role/concessão)    │
-  │                            │ 2. GET /api/monitoramentos/     │
+  │                            │ 1. valida acesso no Core       │
+  │                            │ 2. traduz id no nome da unidade│
+  │                            │ 3. GET /api/monitoramentos/    │
   │                            ├────────────────────────────────►│
   │                            │◄────────────────────────────────┤
   │◄───────────────────────────┤                                 │
@@ -45,21 +46,22 @@ Front                    Geopetro-Backend                    Telemetria :8081
 
 **[FATO]** O frontend **nunca** chama a telemetria diretamente. Comentário no código:
 *"O front não fala direto com o telemetria; sempre passa pelo backend para respeitar o vínculo do
-usuário às sondas"*. A autorização é responsabilidade do Geopetro-Backend.
+usuário às unidades"*. A autorização é responsabilidade do Geopetro-Backend, que consulta o acesso
+atual no Braserv-Core.
 
 ---
 
-## 2. Endpoint a implementar no serviço de Telemetria
+## 2. Endpoint do serviço de Telemetria
 
 ```
-GET /api/monitoramentos/sondas/{idSondaUnidade}/series
+GET /api/monitoramentos/unidades/{idUnidade}/series
 ```
 
 ### Parâmetros
 
 | Parâmetro | Local | Tipo | Obrigatório |
 |---|---|---|---|
-| `idSondaUnidade` | path | string | Sim — é o `UnidadeSonda.nome` (ex.: `SPT-144`) |
+| `idUnidade` | path | string | Sim — é o `Unidade.nome` no Braserv-Core (ex.: `SPT-144`) |
 | `dispositivoId` | query | string | Sim — id do card, `<TIPO>_<NN>`. O conjunto é **por unidade** ([`mqtt-telemetria.md §4`](../mqtt/mqtt-telemetria.md#4-o-conjunto-de-dispositivos-é-por-unidade)) |
 | `serie` | query | string | **Não** — ver abaixo |
 | `inicio` | query | ISO-8601 | Sim |
@@ -86,7 +88,7 @@ que um card de stroke consultado sem `serie` devolve **vazio**, em vez das três
 
 ```json
 {
-  "idSondaUnidade": "SPT-144",
+  "idUnidade": "SPT-144",
   "dispositivoId": "CONTADOR_STROKE_01",
   "serie": "vazao",
   "pontos": [
@@ -130,37 +132,37 @@ telemetria vira `502` na API pública, não `500`.
 **[FATO 2026-09-17]** Já implementados. O acesso é por **combinação** — `ADMIN`, ou
 `MONITORAMENTO` somada ao tipo de conta (`CLIENTE` ou `INTERNO`); ver
 [RN-099](../../negocio/regras/business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo). O
-`CLIENTE` tem escopo restrito às Unidades/Sondas concedidas no cadastro; a conta interna acessa a
+`CLIENTE` tem escopo restrito às unidades ativas concedidas no Core; a conta interna acessa a
 frota inteira.
 
-⚠️ `/api/sondas/{id}/configuracao` e `/api/sondas/{id}/alarmes[...]` exigem
+⚠️ `/api/monitoramento/unidades/{id}/configuracao` e `/api/monitoramento/unidades/{id}/alarmes[...]` exigem
 `MONITORAMENTO_REAL`, **não** `MONITORAMENTO`: limite de alarme e histórico seguem o tempo real
 (RN-069).
 
-### `GET /api/sondas/minhas`
+### `GET /api/monitoramento/unidades/minhas`
 
-Lista as sondas às quais o usuário autenticado tem acesso.
+Lista as unidades ativas às quais o usuário autenticado tem acesso.
 
 ```json
-[ { "idSondaUnidade": "SPT-144", "nome": "SPT-144", "apelido": "Sonda 144" } ]
+[ { "id": 3, "nome": "SPT-144", "apelido": "Sonda 144", "tipo": "SONDA" } ]
 ```
 
-**[FATO]** `SondaMonitoramentoService` aplica uma regra por capacidade: perfis operacionais
-autorizados recebem todas as unidades; `CLIENTE` recebe somente a coleção N:N
-`usuario_cliente_unidades`. Um cliente sem concessão recebe uma lista vazia.
+**[FATO]** `UnidadeMonitoramentoService` cruza o catálogo do Core com o acesso atual: contas internas
+com `MONITORAMENTO` recebem a frota ativa; `CLIENTE` recebe somente as unidades ativas presentes em
+`unidadeIds`. Um cliente sem concessão recebe uma lista vazia.
 
-### `GET /api/sondas/{idSondaUnidade}/monitoramentos/series`
+### `GET /api/monitoramento/unidades/{id}/series`
 
 Mesmos parâmetros de query do §2. Valida o acesso antes de repassar.
 
 | Status | Condição |
 |---|---|
 | `200` | Série retornada |
-| `403` | Usuário sem acesso àquela sonda |
+| `403` | Usuário sem acesso àquela unidade |
 | `502` | Serviço de telemetria indisponível |
 
 **[FATO]** As mensagens exatas já são tratadas pelo frontend: *"Você não tem permissão para acessar
-esta sonda"* e *"Serviço de telemetria indisponível no momento"*.
+esta unidade"* e *"Serviço de telemetria indisponível no momento"*.
 
 ---
 
@@ -171,14 +173,14 @@ esta sonda"* e *"Serviço de telemetria indisponível no momento"*.
 - Séries em paralelo via `forkJoin` — uma requisição por grandeza
 - Renderização em **SVG desenhado à mão**, com toggle Original/Suavizada (média móvel de 8 pontos, calculada no client)
 
-**[FATO 2026-09-08]** A lista de variáveis **deixou de ser fixa**: vem de `GET /api/sondas/{id}/cards`
+**[FATO 2026-09-08]** A lista de variáveis **deixou de ser fixa**: vem de `GET /api/monitoramento/unidades/{id}/cards`
 e é traduzida em grandezas por `services/grandezas-de-card.ts`, que é o único ponto do front que sabe
 que um card de stroke rende três séries. Unidade sem cards não oferece variável nenhuma, e a tela diz
 por quê ([RN-088](../../negocio/regras/business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).
 
-⚠️ **A tela consulta pelo `UnidadeSonda.nome` e lê os cards pelo id numérico.** São chaves diferentes
-no mesmo fluxo: o histórico correlaciona por nome (RN-018) e a configuração é endereçada por id.
-`GET /api/sondas/minhas` devolve os dois.
+**[FATO 2026-10-06]** Todas as rotas públicas usam o `id` numérico. O backend busca a unidade no
+catálogo do Core e traduz o id em `Unidade.nome` somente na chamada interna à Telemetria, onde o nome
+continua sendo a chave de correlação histórica (RN-018).
 
 **[PENDENTE]** O contrato exige **1 requisição por grandeza** — e o número agora **varia por unidade**:
 uma unidade com duas bombas passa de 5 para 10 séries, e cada uma é uma cascata front → backend →
@@ -226,12 +228,12 @@ no InfluxDB, em outro serviço. Precisa **perguntar**.
 **[FATO 2026-09-06]** Implementado exatamente como proposto:
 
 ```
-GET /api/monitoramentos/sondas/{idSondaUnidade}/existe
+GET /api/monitoramentos/unidades/{idUnidade}/existe
 ```
 
 ```json
 {
-  "idSondaUnidade": "SPT-144",
+  "idUnidade": "SPT-144",
   "possuiSerie": true,
   "primeiroPonto": "2026-03-01T00:00:00Z",
   "ultimoPonto": "2026-09-05T12:00:00Z"

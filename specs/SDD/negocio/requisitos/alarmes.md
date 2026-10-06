@@ -83,14 +83,14 @@ fato. Ver [OQ-031](open-questions.md#oq-031--o-consumidor-tolera-telemetria-fora
 
 ### Limite
 
-**[FATO 2026-09-07]** Um documento por **Unidade/Sonda**, com até um limite por grandeza, no MySQL do Geopetro-Backend. A lista é substituída integralmente e a autoria corresponde à última gravação do documento. A proposta original previa um registro por Unidade/Sonda × grandeza.
+**[FATO 2026-09-07]** Um documento por **Unidade**, com até um limite por grandeza, no MySQL do Geopetro-Backend. A lista é substituída integralmente e a autoria corresponde à última gravação do documento. A proposta original previa um registro por Unidade × grandeza.
 
 ⚠️ **[FATO 2026-09-09] O `dispositivoId` sozinho não identifica a grandeza.** O vocabulário deixou de ser fechado e passou a ser o que cada unidade declara no documento de cards, e a chave ganhou `serie` — [RN-101](../regras/business-rules.md#rn-101--o-limite-de-alarme-só-existe-para-uma-grandeza-que-a-unidade-declara).
 
 ```
 LimiteAlarme
-  unidadeSondaId       (FK)
-  dispositivoId        (o que a unidade declara em /api/sondas/{id}/cards — RN-101)
+  unidadeId       (FK)
+  dispositivoId        (o que a unidade declara em /api/monitoramento/unidades/{id}/cards — RN-101)
   serie                (stroke | vazao | volumeAcumulado num contador; nula nos demais — RN-098)
   minimoAtencao        (opcional)
   maximoAtencao        (opcional)
@@ -140,7 +140,7 @@ escala** — a escalada é mais um fato, não um `UPDATE`.
 ```
 EventoAlarme  (append-only)
   episodioId       (agrupa os fatos da mesma excursão)
-  unidadeSondaId · dispositivoId · serie
+  unidadeId · dispositivoId · serie
   tipo             (ABRIU | ESCALOU | REDUZIU | FECHOU)
   severidade       (ATENCAO | CRITICO; no FECHOU, a que o episódio tinha ao terminar)
   ocorridoEm       (instante de recepção no servidor — RN-102)
@@ -156,7 +156,7 @@ Inventar a escalada registraria um fato que não houve.
 
 ```
 AlarmeAtivo  (projeção)
-  unidadeSondaId · dispositivoId · serie
+  unidadeId · dispositivoId · serie
   episodioId · severidadeAtual
   desde · valorExtremo · limiteViolado
 ```
@@ -169,12 +169,12 @@ o motor volta sem os episódios abertos.
 
 ### O episódio — a forma em que o histórico é lido
 
-✅ **[FATO 2026-09-09]** `GET /api/sondas/{id}/alarmes/historico?inicio=&fim=` devolve **excursões**,
+✅ **[FATO 2026-09-09]** `GET /api/monitoramento/unidades/{id}/alarmes/historico?inicio=&fim=` devolve **excursões**,
 montadas a partir dos fatos:
 
 ```
 EpisodioAlarme  (derivado do log, não persistido)
-  episodioId · unidadeSondaId · dispositivoId · serie
+  episodioId · unidadeId · dispositivoId · serie
   severidadeMaxima   (o pior que chegou a ser, não o que era ao fechar)
   limiteViolado      (o lado por onde a excursão começou)
   abertoEm · fechadoEm   (fechadoEm nulo = ainda aberto)
@@ -196,7 +196,7 @@ explica, e com o "desde" errado.
 | Caminho | Quando responde |
 |---|---|
 | Dentro da mensagem de tempo real | Sempre que a sonda publica — e aí o destaque descreve **estes** números |
-| `GET /api/sondas/{id}/alarmes` | Ao abrir a tela, antes da primeira mensagem, e quando a sonda **não está publicando** |
+| `GET /api/monitoramento/unidades/{id}/alarmes` | Ao abrir a tela, antes da primeira mensagem, e quando a sonda **não está publicando** |
 
 ⚠️ **O segundo não é redundância.** Um episódio aberto de uma sonda que caiu continua sendo verdade, e
 sem a rota ele ficaria invisível justamente quando ninguém está olhando o CLP.
@@ -226,7 +226,7 @@ geraria 600 registros — e nenhuma tela de histórico sobrevive a isso.
 ## 5. Como o limite é aplicado
 
 **[FATO 2026-09-09]** A supervisão ajusta os limites do servidor em
-`/app/limites-alarme`. O Front usa `GET`/`PUT /api/sondas/{id}/configuracao`;
+`/app/limites-alarme`. O Front usa `GET`/`PUT /api/monitoramento/unidades/{id}/configuracao`;
 `MotorDeAlarmes` lê o documento persistido e avalia as leituras recebidas pelo
 canal de tempo real. O [contrato de limites](../../software/apis/configuracao-sonda.md)
 define revisão, validação e autorização.
@@ -241,7 +241,7 @@ novas do Desktop; ele não distribui limites de alarme do servidor.
 
 ## 6. Autorização
 
-**[DECIDIDO 2026-09-05]** Sem modelo novo. Vale [RN-047](../regras/business-rules.md#rn-047--escopo-de-sondas-por-perfil):
+**[DECIDIDO 2026-09-05]** Sem modelo novo. Vale [RN-047](../regras/business-rules.md#rn-047--escopo-de-unidades-por-perfil):
 
 | Ação | Quem |
 |---|---|
@@ -249,7 +249,7 @@ novas do Desktop; ele não distribui limites de alarme do servidor.
 | **Ajustar o limite** | **Os mesmos** — inclusive `CLIENTE` |
 
 **[DECIDIDO 2026-09-05]** Não há role própria para alarme: quem vê a sonda vê e ajusta o alarme dela.
-Ver [RN-069](../regras/business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela).
+Ver [RN-069](../regras/business-rules.md#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela).
 
 **Transparência é deliberada.** O cliente enxerga cada excursão da operação que contratou, com histórico
 — não apenas o estado do momento.
@@ -320,7 +320,7 @@ na sonda segue sem ver aquele alarme, e é esse o público da feature.
 
    ✅ **Destaque na tela de tempo real** — o canal decidido em §2. A projeção viaja **dentro da
    mensagem de leituras** ([websocket-realtime §3](../../software/apis/websocket-realtime.md#alarmes-é-a-única-coisa-que-o-servidor-acrescenta--decidido-2026-09-09)),
-   e `GET /api/sondas/{id}/alarmes` cobre o intervalo até a primeira mensagem e a sonda que não está
+   e `GET /api/monitoramento/unidades/{id}/alarmes` cobre o intervalo até a primeira mensagem e a sonda que não está
    publicando. Aviso no topo, com a lista do mais grave para o mais antigo, e o card da grandeza
    marcado — com o nível escrito, porque cor sozinha não informa quem não a distingue.
 3. ✅ **Avaliação na borda** — entregue em 2026-09-09.
@@ -332,7 +332,7 @@ na sonda segue sem ver aquele alarme, e é esse o público da feature.
    frota exige visita a cada unidade enquanto o auto-update não existir
    ([product-context §8](product-context.md#8-capacidades-decididas-que-ainda-não-existem), item 6).
 4. ✅ **Histórico na tela** — entregue em 2026-09-09, em `/app/historico-alarmes`.
-   `GET /api/sondas/{id}/alarmes/historico` devolve **excursões**, não linhas de log: um episódio que
+   `GET /api/monitoramento/unidades/{id}/alarmes/historico` devolve **excursões**, não linhas de log: um episódio que
    abriu em atenção, escalou e fechou são três fatos e uma excursão
    ([RN-056](../regras/business-rules.md#rn-056--um-evento-por-excursão-não-por-leitura)). Devolver os fatos
    soltos faria cada tela reconstruir o agrupamento, e a primeira que errasse contaria três alarmes.

@@ -54,7 +54,7 @@ Leitura liberada aos perfis internos; escrita restrita a `ADMIN`:
 .hasRole("ADMIN")
 ```
 
-**Por que não apenas `ADMIN` em tudo:** as telas de Setor e Unidade/Sonda — acessíveis a `INTERNO` e
+**Por que não apenas `ADMIN` em tudo:** as telas de Setor e Unidade — acessíveis a `INTERNO` e
 `CIMENTACAO` — precisam **listar** regionais para popular seus selects.
 
 ### SEC-003 · autoatendimento liberado
@@ -244,7 +244,7 @@ Consequências concretas:
 
 | # | Efeito |
 |---|---|
-| 1 | Uma instalação mal configurada pode publicar o estado de **outra** sonda, sobrescrevendo a tela dela ([RN-050](../../negocio/regras/business-rules.md#rn-050--uma-instalação-do-desktop-pertence-a-uma-unidadesonda) deixa de proteger contra isso) |
+| 1 | Uma instalação mal configurada pode publicar o estado de **outra** sonda, sobrescrevendo a tela dela ([RN-050](../../negocio/regras/business-rules.md#rn-050--uma-instalação-do-desktop-pertence-a-uma-unidade) deixa de proteger contra isso) |
 | 2 | A credencial vazada de **uma** máquina em campo vale para a frota inteira, e para o canal de tempo real de qualquer cliente |
 | 3 | Rotacionar a senha exige tocar em **todas** as instalações ao mesmo tempo — hoje, presencialmente |
 | 4 | O log não distingue qual máquina fez o quê: todas são o mesmo usuário |
@@ -281,12 +281,12 @@ assim que o auto-update existir, que é exatamente o que torna a alternativa bar
 alteração futura na ordem dos `requestMatchers` reintroduz qualquer uma delas silenciosamente. A ordem
 das regras é significativa e não é óbvia ao ler o código.
 
-Casos mínimos sugeridos, ajustados ao escopo atual:
+Casos mínimos implementados naquela etapa:
 - `CLIENTE` recebe `403` ao fazer `POST`/`DELETE` em `/api/regionais`
 - `INTERNO` recebe `200` ao fazer `GET` em `/api/regionais`
 - `INTERNO` recebe `200` em `PATCH /usuarios/me/senha` e `403` em `PATCH /usuarios/{outro}`
-- `CLIENTE` recebe `403` em `/api/setores` e `/api/unidades-sondas`
-- Contexto **falha ao subir** sem `security.jwt.secret`
+- `CLIENTE` recebe `403` em `/api/setores` e `/api/unidades`
+- Contexto **falhava ao subir** sem o segredo JWT então vigente
 
 **[FATO 2026-09-06]** Os casos mínimos acima foram implementados em
 `app/src/test/java/com/geopetro/security/IdentidadeHttpSecurityTest.java`, usando os
@@ -294,3 +294,7 @@ controllers e a cadeia de segurança reais. As URLs de identidade agora possuem
 `/api`. Nove testes passaram antes da migração e onze depois, incluindo retirada
 das rotas antigas e proteção das ações de status sob o username `me`.
 Detalhes em [`api-prefix.md`](../../../../apps/geopetro-backend/specs/api-prefix.md).
+
+**[FATO 2026-10-06]** Com o Braserv-Core, login e cadastros passaram para a cadeia de segurança do
+Core. O Backend valida RS256/JWKS e seus testes atuais cobrem token de usuário, token de serviço e a
+separação entre rotas públicas e internas.

@@ -157,7 +157,7 @@ removida, com um dia de vida.**
 >
 > A tela existia para acompanhar um **mutirão espalhado no tempo**. A migração vai ser feita de uma
 > vez, então não há pergunta para ela responder — e ela custaria manutenção sem resolver problema.
-> Saíram a tela, `prontidao.service.ts`, `GET /api/sondas/prontidao`, `ProntidaoController`,
+> Saíram a tela, `prontidao.service.ts`, o endpoint de prontidão, `ProntidaoController`,
 > `ProntidaoService`, `ProntidaoDaUnidade`, e os `Resumo`/`resumos()` de `CardsDeclarados` e
 > `LimitesDeclarados`, que só ela usava. Ver
 > [`configuracao-da-estacao.md §7`](configuracao-da-estacao.md).

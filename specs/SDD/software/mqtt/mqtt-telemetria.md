@@ -60,17 +60,17 @@ descritivos** da documentação dentro do array de leituras.
 ## 2. Tópico
 
 ```
-telemetria/{idSondaUnidade}/batch
+telemetria/{idUnidade}/batch
 ```
 
 | Elemento | Regra |
 |---|---|
-| `{idSondaUnidade}` | **[FATO]** É o `UnidadeSonda.nome` do cadastro (ex.: `SPT-144`, `UC-01`). Ver [RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
+| `{idUnidade}` | **[FATO]** É o `Unidade.nome` no Braserv-Core (ex.: `SPT-144`, `UC-01`). Ver [RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração) |
 | Wildcard do subscriber | `telemetria/+/batch` — **[MUDANÇA]** mais restrito que o atual `telemetria/+/+` |
 | QoS | **1** (at least once) |
 | Retained | **Não** |
 
-⚠️ **Regra crítica:** renomear uma Unidade/Sonda no cadastro **quebra a continuidade do histórico de
+⚠️ **Regra crítica:** renomear uma unidade no cadastro **quebra a continuidade do histórico de
 telemetria**. Nada no sistema hoje impede ou avisa sobre isso. Ver [OQ-001](#8-pontos-em-aberto).
 
 ---
@@ -84,7 +84,7 @@ telemetria**. Nada no sistema hoje impede ou avisa sobre isso. Ver [OQ-001](#8-p
 
 ```json
 {
-  "idSondaUnidade": "SPT-144",
+  "idUnidade": "SPT-144",
   "dataHora": "2026-09-08T14:32:05.120",
   "leituras": [
     {
@@ -118,7 +118,7 @@ consumidor que dependesse de tabela fixa precisaria conhecer a configuração de
 gravar uma leitura — e ficaria sem saber o que fazer com o primeiro card de um tipo novo. Ver
 [§4](#4-o-conjunto-de-dispositivos-é-por-unidade).
 
-**Alternativa recusada:** a Telemetria consultar `/api/sondas/{id}/cards` no Backend e manter cache.
+**Alternativa recusada:** a Telemetria consultar `/api/monitoramento/unidades/{id}/cards` no Backend e manter cache.
 Criaria dependência da VM-2 para a VM-1 no caminho de ingestão: com o Backend fora, a Telemetria
 gravaria dado que não sabe interpretar.
 
@@ -126,7 +126,7 @@ gravaria dado que não sabe interpretar.
 
 | Campo | Tipo | Obrigatório | Regra |
 |---|---|---|---|
-| `idSondaUnidade` | string | Sim | Igual ao segmento do tópico. Se vazio, **não publicar** |
+| `idUnidade` | string | Sim | Igual ao segmento do tópico. Se vazio, **não publicar** |
 | `dataHora` | string ISO-8601 | Sim | `yyyy-MM-dd'T'HH:mm:ss.SSS`, hora local da sonda. Ver [§7](#7-fuso-horário) |
 | `leituras` | array | Sim | Mínimo 1 elemento. Só cards **ativos e visíveis**, e só grandezas **com valor** |
 
@@ -177,7 +177,7 @@ converter. Nesse ciclo ele **não entra** no array.
 ## 4. O conjunto de dispositivos é por unidade
 
 **[DECIDIDO 2026-09-08]** ⚠️ **Não existe mais vocabulário de dispositivos do sistema.** Cada
-Unidade/Sonda declara o seu conjunto na [configuração de cards](../../negocio/requisitos/cards-configuraveis.md),
+A unidade declara o seu conjunto na [configuração de cards](../../negocio/requisitos/cards-configuraveis.md),
 e é ele que define o que aquela unidade publica.
 
 | Antes (até 2026-09-07) | Agora |
@@ -272,7 +272,7 @@ configurada pela tela de cards do Desktop. Ver
 | P-08 | ⚠️ **Sem cards ativos, não publicar — e nem ler o CLP** | **[DECIDIDO 2026-09-08]** [RN-088](../../negocio/regras/business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada) |
 | P-09 | Grandeza **sem valor** (falta calibração) não entra no array | **[DECIDIDO 2026-09-08]** [§3](#grandeza-sem-valor-não-é-publicada) |
 | P-10 | Card **ativo** é lido; card **visível** é publicado. São coisas diferentes | **[FATO]** RN-037 e RN-091 |
-| P-03 | Se `idSondaUnidade` vazio, **não publicar** | **[FATO]** [RN-038](../../negocio/regras/business-rules.md#rn-038--sem-publicação-sem-identificador-de-sonda) |
+| P-03 | Se `idUnidade` vazio, **não publicar** | **[FATO]** [RN-038](../../negocio/regras/business-rules.md#rn-038--sem-publicação-sem-identificador-de-sonda) |
 | P-04 | Persistir localmente **independente** do sucesso da publicação | **[FATO]** H2 local é a fonte de verdade da sonda |
 | P-05 | `automaticReconnect = true`, `cleanSession = true`, timeout 3s | **[FATO]** configuração atual |
 | P-06 | Client ID único por instalação | **[FATO]** hoje `geopetro-sonda-desktop-{user.name}` |
@@ -344,7 +344,7 @@ de um fuso, será preciso derivar a zona da unidade. Hoje não há evidência di
 | Buffer de contingência | [OQ-019](../../negocio/requisitos/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
 | Fuso horário | [§7](#7-fuso-horário) |
 | Escala bruta do CLP não confirmada | [OQ-016](../../negocio/requisitos/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
-| Proteção contra rename de Unidade/Sonda | [RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
+| Proteção contra renomear uma unidade | [RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração) |
 | ⚠️ Como saber quais unidades da frota já foram configuradas | [§10](#o-que-reduz-o-risco-e-já-existe) · OQ-049 |
 | Filtro por `serie` no contrato de leitura | [§4](#as-três-séries-do-contador-de-stroke) · [rest-monitoramento.md](../apis/rest-monitoramento.md) |
 

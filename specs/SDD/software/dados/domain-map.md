@@ -9,7 +9,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  IDENTIDADE E ORGANIZAÇÃO          (núcleo — todos dependem)     │
-│  Empresa · Regional · Setor · Unidade/Sonda · Usuário           │
+│  Empresa · Regional · Setor · Unidade · Usuário                 │
 └───────────────┬─────────────────────────────────────────────────┘
                 │
        ┌────────┴────────┐
@@ -30,36 +30,31 @@
 | **Suprimentos** | `quimico` | Removido do backend |
 | **Suprimentos** | `almoxarifado`, `compra` | Descontinuados — nunca versionados |
 
-## 2. Núcleo — Identidade e Organização
+## 2. Núcleo — Identidade e Organização (Braserv-Core)
 
-**[FATO]** Hierarquia organizacional, extraída das entidades JPA e FKs:
+**[FATO 2026-10-06]** O Braserv-Core é o único dono da identidade e da hierarquia organizacional.
+Esses dados vivem no database `braserv_core`; o Geopetro-Backend os consulta pelas rotas internas.
 
 ```
-Regional (regionais)                    nome UNIQUE NOT NULL
+Regional (regionais)                 nome UNIQUE NOT NULL
    │  1:N
    ├── Setor (setores)                  nome NOT NULL — SEM unique ⚠️
    │      │  1:N
-   │      └── UnidadeSonda (unidades_sondas)   nome UNIQUE NOT NULL
+   │      └── Unidade (unidades)      nome UNIQUE NOT NULL · status ATIVA/INATIVA
    │                                            ▲
    │                                            └─ chave de correlação
    │                                               com a telemetria
-   └── 1:N  UsuarioInterno (regional principal)
-
 Empresa (empresas)   cnpj UNIQUE (mas nullable)
    └── 1:N  UsuarioCliente
 ```
 
-**[FATO]** Com a saída de `projeto`, a Regional passou a ter apenas dois tipos de dependente: setores
-e usuários internos.
-
-✅ **[DECIDIDO 2026-09-05]** Com a remoção do vínculo organizacional do usuário
+**[FATO]** Com a remoção do vínculo organizacional do usuário
 ([RN-064](../../negocio/regras/business-rules.md#rn-064--o-usuário-não-tem-mais-vínculo-organizacional)), a Regional passa a
 ter **um único dependente: o Setor**. A hierarquia fica puramente estrutural — Regional → Setor →
-Unidade/Sonda — sem nenhum ramo apontando para pessoas.
+Unidade — sem nenhum ramo apontando para pessoas.
 
-**[DECIDIDO 2026-09-05] `UnidadeSonda` ganha `tipo`:** `SONDA` · `UNIDADE_BOMBEIO` ·
-`SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ`. O cadastro sempre abrigou mais que sondas — é o que o
-próprio nome do módulo indica. Ver [RN-065](../../negocio/regras/business-rules.md#rn-065--unidadesonda-tem-tipo) e, para o
+**[FATO] `Unidade` tem `tipo`:** `SONDA` · `UNIDADE_BOMBEIO` ·
+`SLICKLINE_WIRELINE` · `CIMENTACAO` · `UCAQ`. Ver [RN-065](../../negocio/regras/business-rules.md#rn-065--unidade-tem-tipo) e, para o
 efeito na telemetria, [OQ-041](../../negocio/requisitos/open-questions.md#oq-041--o-tipo-da-unidade-define-quais-variáveis-são-monitoradas).
 
 ### Usuário — modelo de herança
@@ -70,11 +65,11 @@ chave de negócio — não surrogate key).
 | Entidade | Discriminador | Campos próprios |
 |---|---|---|
 | `UsuarioEntity` (abstrata) | — | `username` (PK), `password`, `roles`, `status`, `nome`, `telefone`, `email`, endereço |
-| `UsuarioInternoEntity` | `INTERNO` | `matricula`, `regional` (principal), `regionais` (N:N), `setores` (N:N) |
-| `UsuarioClienteEntity` | `CLIENTE` | `clienteId`, `empresa` (String), `empresaRef` (FK), `unidadesSondas` (N:N) |
+| `UsuarioInternoEntity` | `INTERNO` | `matricula` |
+| `UsuarioClienteEntity` | `CLIENTE` | `clienteId`, `empresa` (String), `empresaRef` (FK), `unidades` (N:N) |
 
-**[FATO 2026-08-27]** `UsuarioClienteEntity.unidadesSondas` é a tabela `usuario_cliente_unidades`
-(`usuario_username` × `unidade_sonda_id`) e define **quais sondas o cliente enxerga** no
+**[FATO]** `UsuarioClienteEntity.unidades` é a tabela `usuario_cliente_unidades`
+(`usuario_username` × `unidade_id`) e define **quais unidades o cliente enxerga** no
 monitoramento. É `EAGER` de propósito: é consultada em toda checagem de acesso, e o volume por
 cliente é pequeno.
 
@@ -100,9 +95,8 @@ Saem a regional principal, as duas listas N:N e as tabelas `usuario_interno_regi
 
 **[FATO]** B005 alimenta **dois cards distintos** na UI com o mesmo valor físico — intencional.
 
-**[FATO]** A chave de correlação entre telemetria e cadastro é `UnidadeSonda.nome` (ex.: `SPT-144`,
-`UC-01`). A migration `V2026.06.15` afirma explicitamente que esses nomes "correspondem aos
-`idSondaUnidade` usados no seed de telemetria (InfluxDB)".
+**[FATO]** A chave de correlação entre telemetria e cadastro é `Unidade.nome` (ex.: `SPT-144`,
+`UC-01`), publicada como `idUnidade` no MQTT e gravada como tag no InfluxDB.
 
 ### Papéis no fluxo de telemetria
 
@@ -128,7 +122,7 @@ papel no histórico é **autorizar e consultar** séries já processadas.
 ```
 Geopetro-Desktop ──WebSocket/STOMP──► Geopetro-Backend ──► Angular
    (AtomicReference)                 retransmite      /topic/realtime/
-   estado atual                      sem persistir    unidades-sondas/{id}
+   estado atual                      sem persistir    unidades/{id}
 ```
 
 **[FATO]** O Geopetro-Backend **agora participa do WebSocket** — mas como retransmissor, não como
@@ -141,7 +135,7 @@ persistidor. Nada deste canal é gravado.
 | Pergunta | "o que aconteceu?" | "o que está acontecendo?" |
 | Estrutura no produtor | `BlockingQueue` | `AtomicReference` |
 | Perda aceitável | Não | **Sim, por desenho** |
-| Endereçamento | `UnidadeSonda.nome` | `UnidadeSonda.id` (imune a rename) |
+| Endereçamento | `Unidade.nome` | `Unidade.id` (imune a rename) |
 
 Contratos: [`mqtt-telemetria.md`](../mqtt/mqtt-telemetria.md) ·
 [`rest-monitoramento.md`](../apis/rest-monitoramento.md) ·
@@ -163,27 +157,26 @@ organiza cenários em pastas.
 **[DECIDIDO 2026-08-26]** Os dois desktops permanecem separados — produtos distintos, duplicação
 aceita conscientemente ([DT-010](../technical-debt.md#dt-010--duplicação-entre-os-dois-desktops)).
 
-**[FATO]** Com as remoções, `simulador` é hoje **o único módulo de domínio de negócio próprio** que
-resta no backend, além de identidade e organização.
+**[FATO 2026-10-06]** No Backend, `simulador` é o domínio persistente além de monitoramento e alarmes;
+identidade e organização pertencem ao Braserv-Core.
 
 ### Poço — entidade decidida em 2026-09-05
 
-**[DECIDIDO 2026-09-05]** `Poço` passa a ser **entidade do sistema**. Ainda **não existe em código**.
+**[FATO]** `Poço` é entidade persistida pelo backend e referenciada pelos cenários do simulador.
 
 A motivação é operacional: o mesmo poço volta em vários cenários (squeeze, tampão, revisões), e
 redigitar a geometria a cada vez produz divergência entre cenários que descrevem a mesma realidade
 física.
 
 ```
-Poço  (novo)
+Poço
  ├── geometria: fases · revestimentos · sapatas
  ├── trajetória: estações de survey (MD · inclinação · azimute)
  └── 1:N  CenarioSimulador  (referencia o poço)
 ```
 
-⚠️ **É a primeira vez que o backend do simulador conhece o domínio.** Hoje ele é **agnóstico** —
-persiste `formValue` como `LONGTEXT` opaco e `operacao` como VARCHAR livre (§4 acima). Tirar a
-geometria de dentro do blob muda essa premissa arquitetural, não apenas o schema.
+**[FATO]** A geometria tipada do Poço é a parte do domínio conhecida pelo Backend. O restante do
+cenário continua em `formValue` como `LONGTEXT` opaco e `operacao` como VARCHAR livre (§4 acima).
 
 **Relação com a telemetria [PENDENTE]:** a telemetria segue indexada por **sonda e tempo**, sem
 segmentação por poço. Com `Poço` existindo, a ponte entre os dois eixos do sistema deixa de ser
@@ -214,15 +207,15 @@ Registro histórico das regras descobertas em
 
 ## 6. Mapa de responsabilidade por aplicação
 
-| Domínio | Geopetro-Backend | Front | Geopetro-Desktop | Horus | Telemetria |
-|---|---|---|---|---|---|
-| Identidade / Autenticação | **Dono** | Consome | — | — | — |
-| Organização (Regional→Sonda) | **Dono** | CRUD | — | — | — |
-| Telemetria — captura | — | — | **Dono** | — | — |
-| Telemetria — persistência | — | — | H2 local | — | **Dono** (InfluxDB) |
-| Telemetria — autorização e consulta | **Dono** | Exibe | — | — | Fornece |
-| Cimentação — cálculo | Persiste cenários | **Dono** | — | — | — |
-| Cimentação — monitoramento | — | — | — | **Dono** | — |
+| Domínio | Braserv-Core | Geopetro-Backend | Front | Geopetro-Desktop | Horus | Telemetria |
+|---|---|---|---|---|---|---|
+| Identidade / Autenticação | **Dono** | Valida JWKS e consulta acesso | Consome | Consome login | — | — |
+| Organização (Regional→Unidade) | **Dono** | Consulta catálogo | CRUD | — | — | — |
+| Telemetria — captura | — | — | — | **Dono** | — | — |
+| Telemetria — persistência | — | — | — | H2 local | — | **Dono** (InfluxDB) |
+| Telemetria — autorização e consulta | Fornece acesso | **Dono** | Exibe | — | — | Fornece séries |
+| Cimentação — cálculo | — | Persiste cenários | **Dono** | — | — | — |
+| Cimentação — monitoramento | — | — | — | — | **Dono** | — |
 
 ✅ **[FATO]** Com o Geopetro-Telemetria implementado em 2026-08-27, a cadeia de telemetria está
 **fechada ponta a ponta**: captura no CLP → publicação MQTT → ingestão → InfluxDB → consulta
@@ -233,7 +226,7 @@ autorizada → tela.
 
 ## 7. Modelo de autorização
 
-**[DECIDIDO 2026-09-17]** São **8 roles**, em duas famílias, e o acesso é a **combinação** delas —
+**[FATO 2026-10-06]** São **9 roles**, em duas famílias, e o acesso é a **combinação** delas —
 ver [RN-099](../../negocio/regras/business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
 Frontend e backend estão alinhados (`RegrasDeAcesso` ↔ `user.model.ts`).
 
@@ -247,6 +240,7 @@ Frontend e backend estão alinhados (`RegrasDeAcesso` ↔ `user.model.ts`).
 | `SIMULADOR` | Permissão de módulo | A área de simuladores; qual simulador depende do domínio |
 | `CIMENTACAO` | Permissão de módulo | O domínio de cimentação. Com `SIMULADOR`, abre o Simulador de Cimentação |
 | `SUPORTE` | — | Configurações do sistema e gravação dos cards (RN-086). Não acompanha operação |
+| `UNIDADE` | Permissão de módulo | Com `INTERNO`, permite criar, editar, ativar, inativar e excluir unidades no Core |
 
 ⚠️ **Nenhuma permissão de módulo concede nada sozinha**: `MONITORAMENTO` sem `CLIENTE` nem `INTERNO`
 não abre tela alguma. Era isso que uma lista de roles não conseguia expressar.

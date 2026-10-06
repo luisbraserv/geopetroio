@@ -32,7 +32,7 @@ CLP. Cada um tem seu worker; a thread de leitura apenas entrega e segue.
 | Papel | Aplicação | Destino |
 |---|---|---|
 | **Produtor** | `Geopetro-Desktop` | envia para `/app/realtime/estado` |
-| **Retransmissor** | `Geopetro-Backend` | publica em `/topic/realtime/unidades-sondas/{id}` |
+| **Retransmissor** | `Geopetro-Backend` | publica em `/topic/realtime/unidades/{id}` |
 | **Consumidor** | `Geopetro-Front` | assina o tópico da unidade escolhida |
 
 **[FATO]** O Geopetro-Backend **não persiste as amostras de estado atual** e **não consome MQTT**. Desde 2026-09-07, a mesma conexão também transporta [configurações persistidas por unidade](configuracao-sonda.md), em destinos próprios.
@@ -46,13 +46,13 @@ CLP. Cada um tem seu worker; a thread de leitura apenas entrega e segue.
 | Handshake | `ws://{host}/ws` (`wss://` em produção) |
 | Protocolo | STOMP 1.2 sobre WebSocket nativo |
 | Publicação (Desktop) | `/app/realtime/estado` |
-| Assinatura (Angular) | `/topic/realtime/unidades-sondas/{unidadeSondaId}` |
+| Assinatura (Angular) | `/topic/realtime/unidades/{unidadeId}` |
 | Broker | Simples, em memória |
 
-### Por que `unidadeSondaId` numérico e não o nome
+### Por que `unidadeId` numérico e não o nome
 
-**[FATO]** O histórico usa `UnidadeSonda.nome` como chave de correlação no InfluxDB
-([RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)) — e por isso
+**[FATO]** O histórico usa `Unidade.nome` como chave de correlação no InfluxDB
+([RN-018](../../negocio/regras/business-rules.md#rn-018--nome-da-unidade-é-chave-de-integração)) — e por isso
 renomear uma unidade quebra o histórico.
 
 O tempo real usa o **id numérico**, que é imune a renomeações. Não corrige RN-018 para o histórico,
@@ -66,7 +66,7 @@ mas evita reproduzir a mesma fragilidade num canal novo.
 
 ```json
 {
-  "unidadeSondaId": 144,
+  "unidadeId": 144,
   "timestamp": "2026-09-08T16:32:05.120Z",
   "leituras": [
     { "dispositivoId": "PESO_01", "tipo": "PESO", "unidade": "lbf",
@@ -76,7 +76,7 @@ mas evita reproduzir a mesma fragilidade num canal novo.
       "enderecoDb": "DBD0", "valor": 1.52, "valorBruto": 148320 }
   ],
   "alarmes": [
-    { "unidadeSondaId": 144, "dispositivoId": "PESO_01", "serie": null,
+    { "unidadeId": 144, "dispositivoId": "PESO_01", "serie": null,
       "episodioId": "6f1c…", "severidadeAtual": "CRITICO",
       "desde": "2026-09-08T16:30:10.400Z", "valorExtremo": 190100.0,
       "limiteViolado": "MAX" }
@@ -84,7 +84,7 @@ mas evita reproduzir a mesma fragilidade num canal novo.
 }
 ```
 
-**[FATO]** `unidadeSondaId` e `timestamp` são **obrigatórios**. Se o timestamp vier ausente, o
+**[FATO]** `unidadeId` e `timestamp` são **obrigatórios**. Se o timestamp vier ausente, o
 backend carimba o instante de recepção — mas isso é rede de segurança, não o caminho esperado.
 
 ### `alarmes` é a única coisa que o servidor acrescenta — **[DECIDIDO 2026-09-09]**
@@ -105,8 +105,8 @@ em vez de nenhuma: o alarme que já estava aceso continua aceso, que é mais pr�
 apagá-lo por causa de uma falha de escrita.
 
 **[FATO]** Antes da primeira mensagem — e enquanto a sonda **não publica** — quem responde é
-`GET /api/sondas/{id}/alarmes`, com a mesma autorização dos limites
-([RN-069](../../negocio/regras/business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)). Sem essa rota, um
+`GET /api/monitoramento/unidades/{id}/alarmes`, com a mesma autorização dos limites
+([RN-069](../../negocio/regras/business-rules.md#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela)). Sem essa rota, um
 episódio aberto de uma sonda que caiu ficaria invisível justamente quando ninguém está olhando o CLP.
 
 ### Mesma forma que o MQTT, de propósito
@@ -120,7 +120,7 @@ destino e a garantia, não o conteúdo:
 |---|---|---|
 | Garantia | QoS 1, cada leitura importa | Sobrescreve: estados intermediários são descartados de propósito |
 | Consumidor | Geopetro-Telemetria → InfluxDB | Angular, direto na tela |
-| Envelope | `idSondaUnidade` (nome) | `unidadeSondaId` (id numérico) — ver [§2](#por-que-unidadesondaid-numérico-e-não-o-nome) |
+| Envelope | `idUnidade` (nome) | `unidadeId` (id numérico) — ver [§2](#por-que-unidadeid-numérico-e-não-o-nome) |
 
 ### Os campos fixos saíram — isto quebrava o Angular
 
@@ -155,7 +155,7 @@ verdade parcial se passando por completa.
 | Momento | Verificação |
 |---|---|
 | **CONNECT** | JWT no header `Authorization`, validado pelo mesmo `TokenPort` do login REST |
-| **SUBSCRIBE** | O usuário tem acesso àquela Unidade/Sonda? ([RN-047](../../negocio/regras/business-rules.md#rn-047--escopo-de-sondas-por-perfil)) |
+| **SUBSCRIBE** | O usuário tem acesso àquela unidade? ([RN-047](../../negocio/regras/business-rules.md#rn-047--escopo-de-unidades-por-perfil)) |
 | **SEND** | Destino permitido + acesso à unidade, verificado no controller |
 
 ### Por que verificar no SUBSCRIBE, não só no CONNECT
@@ -227,7 +227,7 @@ segundos** sem leitura nova.
 
 | Campo | Obrigatório | Observação |
 |---|---|---|
-| `unidadeSondaId` | **Sim** | Id numérico no cadastro. Cada instalação pertence a **uma** Unidade/Sonda |
+| `unidadeId` | **Sim** | Id numérico no cadastro. Cada instalação pertence a **uma** unidade |
 | `backendUrl` | Sim | Ex.: `http://10.0.0.10:8080` |
 | `backendUsuario` / `backendSenha` | Sim | Usuário de serviço desta sonda |
 
@@ -242,7 +242,7 @@ publica no MQTT. O tempo real é um canal adicional, não um requisito de funcio
 |---|---|---|
 | 1 | **Broker STOMP em memória** | Não propaga entre instâncias. Com mais de uma réplica do backend, um assinante na instância A não recebe o que o Desktop publicou na B. Resolver com RabbitMQ/ActiveMQ como broker externo, ou afinidade de sessão |
 | 2 | **Sem histórico de telemetria no canal** | Estado atual chega na próxima amostra. Configurações têm snapshot inicial persistido |
-| 3 | **Um Desktop por unidade** | Duas instalações com o mesmo `unidadeSondaId` sobrescrevem o estado uma da outra |
+| 3 | **Um Desktop por unidade** | Duas instalações com o mesmo `unidadeId` sobrescrevem o estado uma da outra |
 | 4 | **`ws://` sem TLS** | Aceitável em rede privada; use `wss://` se atravessar internet |
 
 ---

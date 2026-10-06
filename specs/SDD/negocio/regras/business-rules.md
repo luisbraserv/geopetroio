@@ -70,13 +70,13 @@ contagem e a regional principal, se informada.
 **[FATO]** `ADMIN` acessa todos os cadastros e todas as sondas, sem filtro.
 
 ### RN-011 · ~~Usuário interno acessa apenas a própria regional~~ — SUPERADA
-**[DECIDIDO 2026-08-27]** Substituída por [RN-047](#rn-047--escopo-de-sondas-por-perfil): o escopo
+**[DECIDIDO 2026-08-27]** Substituída por [RN-047](#rn-047--escopo-de-unidades-por-perfil): o escopo
 passou a ser definido pelo **perfil**, não pelo vínculo regional. Os perfis operacionais veem a frota
 inteira.
 
 ### RN-012 · ~~Usuários não-internos não têm escopo organizacional~~ — SUPERADA
-**[DECIDIDO 2026-08-27]** O `UsuarioCliente` passou a ter escopo próprio — a lista de Unidades/Sondas
-concedidas no cadastro ([RN-048](#rn-048--concessão-de-sondas-ao-cliente-é-explícita)). Antes ele não
+**[DECIDIDO 2026-08-27]** O `UsuarioCliente` passou a ter escopo próprio — a lista de Unidades
+concedidas no cadastro ([RN-048](#rn-048--concessão-de-unidades-ao-cliente-é-explícita)). Antes ele não
 tinha vínculo algum e, por um defeito da implementação anterior, acabava enxergando **todas** as
 sondas.
 
@@ -86,7 +86,7 @@ sondas.
 **O que dizia:** o acesso às sondas usava apenas a regional principal do usuário interno, ignorando a
 lista N:N `usuario_interno_regionais`. Um usuário vinculado a 3 regionais via sondas de apenas 1.
 
-**Como foi superada:** com [RN-047](#rn-047--escopo-de-sondas-por-perfil), os perfis operacionais
+**Como foi superada:** com [RN-047](#rn-047--escopo-de-unidades-por-perfil), os perfis operacionais
 passaram a enxergar a **frota inteira** — a regional saiu completamente do controle de acesso ao
 monitoramento, que era o último lugar onde essa limitação se manifestava.
 
@@ -131,32 +131,32 @@ sem nenhuma regra própria — quem tinha `GERENCIA` podia exatamente o que `SON
 `V2026.09.17.1__roles_por_modulo.sql` converte as linhas existentes **preservando o alcance
 anterior** de cada usuário; quem não deve ter tempo real precisa ser ajustado no cadastro depois.
 
-### RN-047 · Escopo de sondas por perfil
+### RN-047 · Escopo de unidades por perfil
 **[DECIDIDO 2026-08-27]**, atualizada em **2026-09-17**. Regra central do monitoramento.
 
 | Perfil | Escopo |
 |---|---|
 | `ADMIN`, e conta **interna** com permissão de monitoramento | **Frota inteira** |
-| `CLIENTE` | **Apenas** as Unidades/Sondas concedidas no seu cadastro |
-| Qualquer outro (ex.: só `INTERNO`) | Nenhuma sonda |
+| `CLIENTE` | **Apenas** as Unidades concedidas no seu cadastro |
+| Qualquer outro (ex.: só `INTERNO`) | Nenhuma unidade |
 
 **Escopo não é permissão.** Quem *entra* é decidido por [RN-099](#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo);
 esta regra responde *quanto* quem entrou enxerga. A permissão é repetida no escopo de propósito,
 para que um endpoint futuro que reuse o serviço sem declarar regra não entregue a frota a qualquer
 funcionário.
 
-**[FATO]** Implementada em `SondaMonitoramentoService`, com 11 testes cobrindo cada caso.
+**[FATO 2026-10-06]** Implementada em `UnidadeMonitoramentoService`, com testes cobrindo cada caso.
 
 **Precedência:** a role de maior alcance vence. Um usuário `CLIENTE` + `ADMIN` enxerga a frota
 inteira — o vínculo de cliente não o limita.
 
-**Lista vazia é estado válido:** um cliente sem nenhuma sonda concedida acessa a tela de
-monitoramento e não vê sonda alguma. Não é erro; é ausência de concessão.
+**Lista vazia é estado válido:** um cliente sem nenhuma unidade concedida acessa a tela de
+monitoramento e não vê unidade alguma. Não é erro; é ausência de concessão.
 
-### RN-048 · Concessão de sondas ao cliente é explícita
+### RN-048 · Concessão de unidades ao cliente é explícita
 **[FATO]** O vínculo vive na tabela `usuario_cliente_unidades` e é definido **unidade a unidade** no
 cadastro do cliente (`POST /usuarios/clientes` e `PATCH /usuarios/{username}`, campo
-`unidadeSondaIds`).
+`unidadeIds`).
 
 **⚠️ IMPLÍCITA e deliberada:** o acesso do cliente **não é derivado** de empresa, regional ou setor.
 É concessão explícita. A razão: um cliente é externo à organização — herdar acesso de uma estrutura
@@ -164,7 +164,7 @@ interna abriria a porta para expor dados de uma empresa a outra por efeito colat
 
 **Semântica de atualização [FATO]:**
 - Campo **omitido** no PATCH → mantém o vínculo atual
-- Array **vazio** → revoga o acesso a todas as sondas (operação legítima)
+- Array **vazio** → revoga o acesso a todas as unidades (operação legítima)
 - Id inexistente → `400`, indicando formulário dessincronizado
 
 ### RN-049 · Acesso ao Simulador
@@ -214,7 +214,7 @@ de quando.
 |---|---|---|
 | Regional | `nome` UNIQUE, validado no service | **Sim** |
 | Empresa | `cnpj` UNIQUE na tabela, validado só se não vazio | Não aplicável |
-| UnidadeSonda | `nome` UNIQUE, validado no service | Não |
+| Unidade | `nome` UNIQUE, validado no service | Não |
 | **Setor** | ⚠️ **Nenhuma** — nem na tabela, nem no service | — |
 
 **[FATO]** A ausência em Setor é lacuna conhecida: a migration `V2026.06.02` foi escrita
@@ -226,9 +226,9 @@ foram corrigidos; **a causa raiz não**.
 
 | Entidade | Política ao excluir |
 |---|---|
-| **Regional** | **Bloqueia** se houver setor ou unidade/sonda vinculada |
+| **Regional** | **Bloqueia** se houver setor ou unidade vinculada |
 | Setor | ⚠️ Nenhuma — FK violation → `500` genérico |
-| UnidadeSonda | ⚠️ Nenhuma |
+| Unidade | Inativa por padrão; exclusão física só sem qualquer uso, conforme RN-116 |
 | Empresa | ⚠️ Nenhuma |
 | Pasta do simulador | Cascade `ALL` + `orphanRemoval` sobre os cenários |
 
@@ -244,14 +244,14 @@ isoladamente, e só `Regional` tinha guarda completa.
 excluir `OperacaoSonda` era bloqueado se houvesse movimentações, mas excluir `Quimico` apagava todo o
 histórico em cascata, com perda irreversível de auditoria.
 
-### RN-018 · Nome da Unidade/Sonda é chave de integração
-**[FATO]** `UnidadeSonda.nome` (ex.: `SPT-144`, `UC-01`) é o `idSondaUnidade` usado nos tópicos MQTT e
+### RN-018 · Nome da Unidade é chave de integração
+**[FATO]** `Unidade.nome` (ex.: `SPT-144`, `UC-01`) é o `idUnidade` usado nos tópicos MQTT e
 nas consultas de série temporal. Confirmado pela migration `V2026.06.15`.
 **⚠️ IMPLÍCITA e crítica:** renomear uma unidade **quebra o histórico de telemetria**, e nada no
 sistema impede ou avisa sobre isso.
 
 ⚠️ **[DECIDIDO 2026-09-05] Agravada pela retenção de 5 anos.** Quanto mais histórico acumula, mais caro
-fica o dia em que alguém renomear uma sonda para corrigir um erro de digitação. É o risco de maior
+fica o dia em que alguém renomear uma unidade para corrigir um erro de digitação. É o risco de maior
 custo da base, e cresce sozinho. Mitigações possíveis, nenhuma decidida: bloquear o rename quando
 houver histórico, migrar a chave do InfluxDB para o id numérico (como o tempo real já faz), ou manter
 um mapa de nomes anteriores.
@@ -267,8 +267,8 @@ memória de decisão:
 
 | Regra | O que dizia |
 |---|---|
-| RN-019 | Setor derivado da Unidade/Sonda — o `setorId` do request era só validado por consistência, nunca usado |
-| RN-020 | Projeto devia pertencer à **mesma regional** da Unidade/Sonda → senão `400` |
+| RN-019 | Setor derivado da Unidade — o `setorId` do request era só validado por consistência, nunca usado |
+| RN-020 | Projeto devia pertencer à **mesma regional** da Unidade → senão `400` |
 | RN-021 | `projeto_id` nullable na coluna, mas `@NotNull` no request — divergência schema × contrato |
 | RN-022 | ⚠️ **Não existia máquina de estados** — `arquivar()`/`desarquivar()` forçavam o status sem validar o estado atual, e o `PUT` aceitava qualquer valor do enum |
 
@@ -447,7 +447,7 @@ Ver [OQ-009](../requisitos/open-questions.md#oq-009--quais-são-os-limites-físi
 
 ### RN-043 · Paginação padronizada
 **[FATO]** `PaginaResponse<T>` com `conteudo`, `pagina` (0-based), `tamanho`, `totalElementos`,
-`totalPaginas`, `primeira`, `ultima`. Usado por empresa, regional, setor, unidade-sonda e usuários.
+`totalPaginas`, `primeira`, `ultima`. Usado pelos cadastros do Core e pelo simulador no Backend.
 
 ### RN-044 · Formato de erro da API
 **[FATO]** `ApiErrorResponse{timestamp, status, error, message, path, details}` via
@@ -476,14 +476,14 @@ confirmar que não vale em produção.
 
 ## Tempo real
 
-### RN-050 · Uma instalação do Desktop pertence a uma Unidade/Sonda
-**[DECIDIDO 2026-08-27]** O campo `unidadeSondaId` é **obrigatório** na configuração do Desktop para
+### RN-050 · Uma instalação do Desktop pertence a uma Unidade
+**[DECIDIDO 2026-08-27]** O campo `unidadeId` é **obrigatório** na configuração do Desktop para
 o canal de tempo real.
 
 **[FATO]** É esse id que endereça o tópico e que o backend usa para autorizar a publicação — uma
-instalação mal configurada não consegue escrever na tela de outra sonda.
+instalação mal configurada não consegue escrever na tela de outra unidade.
 
-⚠️ **[FATO]** Duas instalações com o mesmo `unidadeSondaId` sobrescrevem o estado uma da outra. Não
+⚠️ **[FATO]** Duas instalações com o mesmo `unidadeId` sobrescrevem o estado uma da outra. Não
 há detecção disso hoje.
 
 **[FATO]** Sem a configuração, o Desktop **segue operando normalmente** — lê o CLP, grava local e
@@ -508,7 +508,7 @@ o registro completo ([RN-039](#rn-039)).
 autenticado poderia **trocá-lo à mão** para assinar a sonda de outro cliente.
 
 A verificação usa a mesma regra do histórico
-([RN-047](#rn-047--escopo-de-sondas-por-perfil)) — não há um segundo modelo de permissão para manter.
+([RN-047](#rn-047--escopo-de-unidades-por-perfil)) — não há um segundo modelo de permissão para manter.
 
 **[FATO]** Destino fora do padrão é **recusado por padrão**, para que um tópico novo não nasça sem
 controle de acesso por esquecimento. Coberto por 9 testes.
@@ -529,7 +529,7 @@ como ~5× o ciclo de 1s; nunca foi validado com a operação.
 > Contexto em [`product-context.md`](../requisitos/product-context.md) · detalhe em [`features/alarmes.md`](../requisitos/alarmes.md).
 
 ### RN-054 · O escopo do alarme é a sonda, e o limite muda na hora
-**[DECIDIDO 2026-09-05]** O limite é definido **por Unidade/Sonda e por grandeza**, ajustável pela
+**[DECIDIDO 2026-09-05]** O limite é definido **por Unidade e por grandeza**, ajustável pela
 supervisão **na própria tela de monitoramento**, sem passar pelo cadastro.
 
 ⚠️ **Consequência aceita:** sem entidade que delimite a operação, o limite ajustado para o trabalho de
@@ -632,7 +632,7 @@ contornado por um novo login. Ver [identidade-e-cadastro.md](../../../../apps/ge
 a partir da entrega do Braserv-Core. O bloqueio por vínculo continua; o "sem exclusão lógica" abaixo
 deixa de valer, porque a Unidade passa a ser inativada. Para Regional, Setor e Empresa, nada muda.
 
-**[DECIDIDO 2026-09-05]** A regra que só a Regional aplica passa a valer para **Setor, Unidade/Sonda e
+**[DECIDIDO 2026-09-05]** A regra que só a Regional aplica passa a valer para **Setor, Unidade e
 Empresa**: havendo vínculo, a exclusão é recusada com mensagem dizendo **o que** impede — em vez do
 `500` genérico de violação de FK de hoje.
 
@@ -657,12 +657,12 @@ e `usuario_interno_setores`.
 **Motivo:** desde 2026-08-27 esses campos não influenciam nenhuma decisão. Campo preenchido que não faz
 nada é dívida silenciosa — alguém assume que restringe acesso.
 
-**O que decide visibilidade continua sendo:** a **role** ([RN-047](#rn-047--escopo-de-sondas-por-perfil))
-e, para o cliente, a **concessão explícita de unidades** ([RN-048](#rn-048--concessão-de-sondas-ao-cliente-é-explícita)).
+**O que decide visibilidade continua sendo:** a **role** ([RN-047](#rn-047--escopo-de-unidades-por-perfil))
+e, para o cliente, a **concessão explícita de unidades** ([RN-048](#rn-048--concessão-de-unidades-ao-cliente-é-explícita)).
 Ambas **inalteradas**.
 
 **[FATO verificado 2026-09-05]** Nenhuma guarda depende desses vínculos — `RegionalConsultaPort` é
-implementado só por `setor` e `unidade-sonda`. A remoção **elimina** um modo de falha: hoje, excluir uma
+implementado só por `setor` e pelo antigo módulo de unidade. A remoção **eliminou** um modo de falha: excluir uma
 Regional com usuários vinculados e sem setores passa pela validação e quebra em FK.
 
 **[FATO 2026-09-06]** Removida ponta a ponta: domínio, entidade, request, command, response, front e as
@@ -670,8 +670,8 @@ duas tabelas. `regionalId`/`regionalNome` saíram também do `AutenticacaoRespon
 **Arrastou código morto junto:** `RegionalBuscaPort` e `SetorConsultaPort` ficaram sem chamador e foram
 removidos com seus adaptadores; `RegionalConsultaPort` permanece. Ver [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
 
-### RN-065 · Unidade/Sonda tem tipo
-**[DECIDIDO 2026-09-05]** `UnidadeSonda` ganha o campo **`tipo`**, de vocabulário fechado:
+### RN-065 · Unidade tem tipo
+**[DECIDIDO 2026-09-05]** `Unidade` ganha o campo **`tipo`**, de vocabulário fechado:
 
 | Valor | Equipamento |
 |---|---|
@@ -681,9 +681,8 @@ removidos com seus adaptadores; `RegionalConsultaPort` permanece. Ver [identidad
 | `CIMENTACAO` | Unidade de cimentação |
 | `UCAQ` | Unidade de cimentação e acidificação |
 
-**Por que importa além do cadastro:** o nome do módulo é `unidade-sonda` justamente porque a entidade
-sempre foi mais ampla que "sonda". O tipo torna isso explícito e passa a permitir que a interface trate
-equipamentos diferentes de forma diferente.
+**Por que importa além do cadastro:** a entidade é mais ampla que uma sonda. O tipo torna isso
+explícito e permite que a interface trate equipamentos diferentes de forma diferente.
 
 ✅ **[DECIDIDO 2026-09-05] O tipo não altera a telemetria** — ver
 [RN-074](#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora). A tela continua consultando os mesmos
@@ -696,7 +695,7 @@ Sem isso, cada unidade nova exige preencher 30 campos de alarme do zero.
 ⚠️ **Migração:** as unidades já cadastradas precisam de um valor. `SONDA` é o padrão coerente com a
 frota atual, mas isso deve ser conferido registro a registro antes de tornar o campo obrigatório.
 
-**[FATO 2026-09-06]** Implementado como enum fechado no backend e select no cadastro, com o tipo
+**[FATO 2026-10-06]** Implementado como enum fechado no Braserv-Core e select no cadastro, com o tipo
 editável para corrigir o backfill. A migration adiciona a coluna nula, faz o backfill e só então a
 torna obrigatória. **Sem perfil de alarme por tipo** — a proposta foi recusada em
 [RN-078](#rn-078--sem-perfil-padrão-de-alarme-o-limite-vale-até-alguém-trocar). Ver [identidade-e-cadastro.md](../../../../apps/geopetro-backend/specs/identidade-e-cadastro.md).
@@ -728,9 +727,9 @@ fecharia dezenas de eventos por minuto.
 ✅ **[DECIDIDO 2026-09-05]** Os tempos são **configuráveis por sonda**, junto do limite e na mesma tela —
 não são constantes do sistema. Ver [RN-071](#rn-071--o-alarme-tem-dois-níveis-atenção-e-crítico).
 
-### RN-069 · Quem vê a sonda vê e ajusta o alarme dela
-**[DECIDIDO 2026-09-05]** Sem role própria para alarme: **todo usuário que enxerga a sonda** vê o estado
-atual, vê o histórico de eventos e **ajusta o limite** — inclusive o `CLIENTE`, nas sondas concedidas.
+### RN-069 · Quem vê a unidade vê e ajusta o alarme dela
+**[DECIDIDO 2026-09-05]** Sem role própria para alarme: **todo usuário que enxerga a unidade** vê o estado
+atual, vê o histórico de eventos e **ajusta o limite** — inclusive o `CLIENTE`, nas unidades concedidas.
 
 ⚠️ **Mitigação obrigatória:** o limite guarda **quem alterou e quando**. Sem esse registro, um limite
 mudado no meio de uma operação é indistinguível de um limite que sempre foi aquele.
@@ -754,7 +753,7 @@ existe para dar tempo de reagir **antes** do limite duro.
 mínimo e máximo crítico, tempo mínimo fora e tempo mínimo dentro — **seis parâmetros**. Com cinco
 grandezas, são **30 campos por sonda**, e mais de 10 sondas na frota.
 
-**[PROPOSTA 2026-09-05] O `tipo` da Unidade/Sonda carrega um perfil de limites padrão**, aplicado no
+**[PROPOSTA 2026-09-05] O `tipo` da Unidade carrega um perfil de limites padrão**, aplicado no
 cadastro da unidade. É a função concreta que o tipo ganha enquanto a telemetria segue exclusiva de sonda
 ([RN-074](#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora)). Sem algo assim, ninguém preenche 30
 campos por equipamento — e alarme mal configurado é pior que alarme nenhum, porque ensina a ignorar.
@@ -765,19 +764,19 @@ campos por equipamento — e alarme mal configurado é pior que alarme nenhum, p
 impede a exclusão física; quem confere é o Geopetro-Backend, a pedido do core. A alternativa à
 exclusão passa a ser inativar.
 
-**[DECIDIDO 2026-09-05]** Uma Unidade/Sonda com série gravada **não pode ser excluída**. O histórico
+**[DECIDIDO 2026-09-05]** Uma Unidade com série gravada **não pode ser excluída**. O histórico
 entra na mesma guarda de [RN-063](#rn-063--exclusão-bloqueada-por-vínculo-em-todos-os-cadastros).
 
-⚠️ **Exige contrato novo:** o vínculo verificado hoje é relacional, e a telemetria vive no InfluxDB, em
-outro serviço. O Geopetro-Backend precisa **perguntar** à Telemetria se existe série para aquela sonda —
-endpoint que não existe. Ver [`contracts/rest-monitoramento.md`](../../software/apis/rest-monitoramento.md#7-verificação-de-existência-de-série).
+O vínculo com a telemetria vive no InfluxDB, em outro serviço. O Geopetro-Backend pergunta à
+Telemetria se existe série para a unidade antes de responder ao Core. Ver
+[`rest-monitoramento.md`](../../software/apis/rest-monitoramento.md#7-verificação-de-existência-de-série).
 
 **Comportamento na indisponibilidade:** se a Telemetria estiver fora, a resposta segura é **recusar a
 exclusão** — apagar um cadastro por não conseguir confirmar que ele tem histórico é o erro irreversível.
 
-**[FATO 2026-09-06]** Endpoint `GET /api/monitoramentos/sondas/{id}/existe` implementado no
-Geopetro-Telemetria; `TelemetriaVinculoAdapter` o consome pelo **nome** da sonda, que é a chave de
-integração ([RN-018](#rn-018--nome-da-unidadesonda-é-chave-de-integração)). A indisponibilidade
+**[FATO 2026-10-06]** Endpoint `GET /api/monitoramentos/unidades/{idUnidade}/existe` implementado na
+Geopetro-Telemetria; `TelemetriaVinculoAdapter` o consome pelo **nome** da unidade, que é a chave de
+integração ([RN-018](#rn-018--nome-da-unidade-é-chave-de-integração)). A indisponibilidade
 bloqueia, com mensagem própria. É o único implementador da guarda que não consulta o banco relacional.
 Contrato em [`rest-monitoramento.md §7`](../../software/apis/rest-monitoramento.md#7-verificação-de-existência-de-série).
 
@@ -795,7 +794,7 @@ um comando explícito de atualizar agora.
 às máquinas que ainda não o têm. Ver [OQ-023](../requisitos/open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção).
 
 ### RN-074 · O tipo não altera o que é monitorado, por ora
-**[DECIDIDO 2026-09-05]** `UnidadeSonda.tipo` ([RN-065](#rn-065--unidadesonda-tem-tipo)) é **classificação
+**[DECIDIDO 2026-09-05]** `Unidade.tipo` ([RN-065](#rn-065--unidade-tem-tipo)) é **classificação
 de cadastro**. A telemetria continua exclusiva de sonda de perfuração, com as mesmas cinco variáveis.
 
 **Consequência aceita:** uma unidade de bombeio, slickline, cimentação ou UCAQ existe no cadastro **sem
@@ -861,7 +860,7 @@ proposta de perfil padrão por `tipo` foi **recusada**.
 
 ⚠️ **O que isso concentra no registro de autoria:** sem perfil padrão e sem expiração, o valor vigente
 de um limite não tem nenhuma referência externa que o explique. `atualizadoPor`/`atualizadoEm`
-([RN-069](#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)) passa a ser a única forma de entender,
+([RN-069](#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela)) passa a ser a única forma de entender,
 meses depois, por que o limite era aquele. Deixa de ser mitigação e vira parte do funcionamento.
 
 ### RN-079 · A API padroniza o prefixo `/api`
@@ -897,7 +896,7 @@ da unidade**: cada card declara tipo, nome, endereço e parâmetros de conversã
 DB e intervalo de leitura saem do código junto.
 
 **Supera [RN-074](#rn-074--o-tipo-não-altera-o-que-é-monitorado-por-ora).** Aquela regra dizia que o
-`tipo` da Unidade/Sonda era classificação apenas e que a telemetria seguia exclusiva de sonda de
+`tipo` da Unidade era classificação apenas e que a telemetria seguia exclusiva de sonda de
 perfuração — porque instrumentar outro equipamento era projeto próprio. Com o endereçamento
 configurável, **vira cadastro**. Encerra [OQ-043](../requisitos/open-questions.md#oq-043--mapeamento-configurável-de-card-para-endereço-no-clp),
 e com ela [OQ-017](../requisitos/open-questions.md#oq-017--rackslot-do-clp-valem-para-toda-a-frota) e
@@ -915,7 +914,7 @@ editável, e não sai da tela.
 **Por quê:** o `dispositivoId` é *tag* no InfluxDB, onde cardinalidade alta degrada o banco, e a
 retenção é de 5 anos. Com id livre, cada rebatismo criaria tag nova e **cortaria a série em duas**.
 
-⚠️ É a armadilha de [RN-018](#rn-018--nome-da-unidadesonda-é-chave-de-integração), onde o nome
+⚠️ É a armadilha de [RN-018](#rn-018--nome-da-unidade-é-chave-de-integração), onde o nome
 editável da unidade virou chave de integração — já registrado como o risco de maior custo da base.
 Repeti-lo por card multiplicaria por seis.
 
@@ -1076,7 +1075,7 @@ e seu endpoint:
 | Documento | Quem grava | Onde |
 |---|---|---|
 | **Cards** | `ADMIN` ou `SUPORTE` | Só no Geopetro-Desktop |
-| **Limites de alarme** | Quem enxerga a sonda, inclusive `CLIENTE` ([RN-069](#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)) | Web |
+| **Limites de alarme** | Quem enxerga a sonda, inclusive `CLIENTE` ([RN-069](#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela)) | Web |
 
 **Por quê:** num documento só, o cliente que ajusta um limite devolve o documento inteiro — cards
 inclusive. O servidor teria de comparar campo a campo para saber se ele mexeu no que não devia, e a
@@ -1084,7 +1083,7 @@ autorização ficaria escondida numa comparação. Separados, **não há como er
 
 Encerra [OQ-044](../requisitos/open-questions.md#oq-044--um-documento-de-configuração-duas-autoridades).
 
-✅ **[FATO 2026-09-07] Implementado.** `/api/sondas/{id}/cards`, tabela `configuracao_cards`
+✅ **[FATO 2026-09-07] Implementado.** `/api/monitoramento/unidades/{id}/cards`, tabela `configuracao_cards`
 (`V2026.09.07.4`), revisão pelo lock otimista e tópico STOMP próprio. Ler é de quem enxerga a sonda
 mais `ADMIN`/`SUPORTE`; gravar é só de `ADMIN`/`SUPORTE`.
 
@@ -1413,7 +1412,7 @@ o operador ao lado do equipamento é a única pessoa que pode agir.
 
 ⚠️ **São dois alarmes, e eles não se falam.** O do servidor
 ([RN-102](#rn-102--o-servidor-avalia-o-alarme-pelo-canal-de-tempo-real)) continua sendo configurado
-no Front por quem enxerga a sonda ([RN-069](#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)).
+no Front por quem enxerga a sonda ([RN-069](#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela)).
 Divergirem é **comportamento correto**: o operador aperta o limite dele para uma manobra sem alterar
 o que a supervisão vigia, e vice-versa. Nenhum precisa conhecer o outro para funcionar.
 
@@ -1492,7 +1491,7 @@ na UI some na primeira refatoração.
 
 ### RN-112 · Cada tela grava só a sua metade do documento da unidade
 **[FATO 2026-09-10]** A engrenagem edita a **conexão** do CLP e a tela de Cards edita os **cards**.
-As duas gravam o mesmo documento, e o `PUT` de `/api/sondas/{id}/cards` carrega o documento inteiro.
+As duas gravam o mesmo documento, e o `PUT` de `/api/monitoramento/unidades/{id}/cards` carrega o documento inteiro.
 
 **Regra:** quem grava **relê o documento imediatamente antes** e devolve intacta a metade que não
 edita — `ConfiguracaoCardsClient.salvarConexao` e `salvarCards`.
@@ -1519,7 +1518,7 @@ o pior momento para não avisar.
 `ConfiguracaoCardsClientTest`, seção "Gravação por metade".
 
 ### RN-113 · A conexão do CLP mora na unidade, não na estação
-**[FATO 2026-09-10]** IP, rack, slot, DB e intervalo ficam no documento da Unidade/Sonda. A
+**[FATO 2026-09-10]** IP, rack, slot, DB e intervalo ficam no documento da Unidade. A
 engrenagem passou a ser a tela que os edita — **mudou a tela, não o lugar do dado**.
 
 **Por que não em `app-settings.json`:** rack, slot, DB e intervalo descrevem o **modelo** de CLP, e é
@@ -1567,14 +1566,14 @@ estação só alcança grandeza de card invisível porque ela aparece no dashboa
 de uma quebrada — o mesmo limite já aceito para o CLP desligado.
 
 ### RN-115 · Cadastro organizacional e identidade pertencem ao Braserv-Core
-**[DECIDIDO 2026-10-06]** Usuário, Empresa, Regional, Setor e Unidade, junto com login, emissão de
-token, recuperação de senha e configuração de e-mail, saem do Geopetro-Backend e passam a ser do
+**[DECIDIDO 2026-10-06 · IMPLEMENTADO]** Usuário, Empresa, Regional, Setor e Unidade, junto com login,
+emissão de token, recuperação de senha e configuração de e-mail, pertencem ao
 **Braserv-Core**, serviço próprio com database próprio (`braserv_core`) no mesmo servidor MySQL.
 
 **Por quê:** essa estrutura é da empresa, não do monitoramento. Outros sistemas da Braserv vão usar o
 mesmo login e a mesma estrutura organizacional sem depender do Geopetro-Backend.
 
-As regras de acesso existentes não mudam (RN-047, RN-048, RN-086, RN-099); o backend passa a ler
+As regras de acesso existentes não mudam (RN-047, RN-048, RN-086, RN-099); o Backend lê
 usuário, roles e concessões no core. Arquitetura, migração e critérios de aceite:
 [braserv-core.md](../../software/backend/braserv-core.md).
 
@@ -1605,7 +1604,7 @@ depende, e só é seguro quando todos confirmam que não há uso.
 estão todos dentro do core.
 
 ### RN-117 · Só o Braserv-Core emite token
-**[DECIDIDO 2026-10-06]** O core assina os tokens com **RS256** e publica a chave pública em
+**[DECIDIDO 2026-10-06 · IMPLEMENTADO]** O Core assina os tokens com **RS256** e publica a chave pública em
 `/.well-known/jwks.json`. As outras aplicações só conferem. Nenhuma delas guarda segredo de
 assinatura, e `JWT_SECRET` deixa de existir no backend.
 
@@ -1619,8 +1618,8 @@ Há dois tipos de token, distinguidos pelo claim `tipo`:
 As credenciais dos sistemas ficam no banco do core e são geridas por ADMIN numa tela: cadastrar,
 gerar segredo novo e desativar sem reiniciar nada.
 
-**Por quê:** com segredo compartilhado (HS256, como hoje), qualquer serviço que confere também
-consegue forjar token. Com chave pública, um sistema novo aceita o login do core sem receber nada
+**Por quê:** com segredo compartilhado (HS256), qualquer serviço que confere também
+consegue forjar token. Com chave pública, um sistema novo aceita o login do Core sem receber nada
 que permita emitir token.
 
 A validade de 1 hora sem renovação ([RN-045](#rn-045--sessão-expira-em-1-hora-sem-renovação)) e o
@@ -1628,31 +1627,24 @@ corte de acesso ([RN-062](#rn-062--desativar-usuário-corta-o-acesso-na-hora)) c
 fora do ar, o backend usa o último estado conhecido do usuário por até 5 min e depois nega.
 
 ### RN-118 · Gestão de unidades exige INTERNO + UNIDADE, ou ADMIN
-**[DECIDIDO 2026-10-06]** Nova permissão de módulo `UNIDADE`.
+**[DECIDIDO 2026-10-06 · IMPLEMENTADO]** Permissão de módulo `UNIDADE`.
 
 | Ação no cadastro de unidades | Quem pode |
 |---|---|
-| Consultar | `INTERNO`, `ADMIN` (como hoje) |
+| Consultar | `INTERNO`, `ADMIN` |
 | Criar, editar, inativar, reativar, excluir | `ADMIN` · `INTERNO`+`UNIDADE` |
 
 Antes, qualquer `INTERNO` criava, editava e excluía. `UNIDADE` sozinha não concede nada, como as
 outras permissões de módulo ([RN-099](#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo)).
 Ninguém recebe `UNIDADE` automaticamente: o ADMIN concede no cadastro do usuário.
 
-### RN-119 · O cadastro se chama Unidade, não Unidade/Sonda
-**[DECIDIDO 2026-10-06]** Sonda é um dos **tipos** de unidade (RN-065), ao lado de unidade de
-cimentação, unidade de bombeio, UCAQ e slickline/wireline. O cadastro, o código, o banco, as rotas,
-as telas e a telemetria passam a dizer **Unidade**.
+### RN-119 · O cadastro se chama Unidade
+**[DECIDIDO 2026-10-06 · IMPLEMENTADO]** Sonda é um dos **tipos** de unidade (RN-065), ao lado de
+unidade de cimentação, unidade de bombeio, UCAQ e slickline/wireline. O cadastro, o código, o banco,
+as rotas, as telas e a telemetria usam **Unidade**.
 
-| Antes | Depois |
-|---|---|
-| `unidades_sondas`, `unidade_sonda_id` | `unidades`, `unidade_id` |
-| `/api/unidades-sondas/**` | `/api/unidades/**` (core) |
-| `/api/sondas/**` | `/api/monitoramento/unidades/**` (backend) |
-| Tópicos WebSocket `.../unidades-sondas/{id}` | `.../unidades/{id}` |
-| Tópico MQTT `telemetria/{idSondaUnidade}/batch`, campo e tag `idSondaUnidade` | `telemetria/{idUnidade}/batch`, `idUnidade` |
-| `unidadeSondaId` na configuração do Desktop | `unidadeId` |
-
-**Por quê agora:** o sistema ainda não está em produção, e o tópico MQTT é o nome mais difícil de
-mudar depois que houver unidades em campo. O tipo `SONDA` continua existindo. Lista completa:
-[braserv-core.md §9](../../software/backend/braserv-core.md#9-renomeação-para-unidade-rn-119).
+O contrato vigente usa `unidades` e `unidade_id` no banco, `unidadeId` para o id numérico em
+payloads de configuração, `/api/unidades/**` no Core, `/api/monitoramento/unidades/**` no Backend,
+`/topic/.../unidades/{id}` no WebSocket e `idUnidade` para o nome no MQTT/InfluxDB. O tipo `SONDA`
+continua existindo. Lista completa:
+[braserv-core.md §9](../../software/backend/braserv-core.md#9-contrato-de-unidade-rn-119).

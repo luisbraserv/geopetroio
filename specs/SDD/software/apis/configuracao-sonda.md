@@ -8,12 +8,12 @@
 
 | Operação | Destino | Comportamento |
 |---|---|---|
-| HTTP GET | `/api/sondas/{id}/configuracao` | Lê o snapshot vigente |
-| HTTP PUT | `/api/sondas/{id}/configuracao` | Substitui a lista inteira, exigindo a revisão lida |
+| HTTP GET | `/api/monitoramento/unidades/{id}/configuracao` | Lê o snapshot vigente |
+| HTTP PUT | `/api/monitoramento/unidades/{id}/configuracao` | Substitui a lista inteira, exigindo a revisão lida |
 
 **[FATO]** A API exige conta ativa e acesso à unidade. Quem vê a sonda pode
 ler e alterar seus limites, inclusive `CLIENTE` nas unidades concedidas
-([RN-069](../../negocio/regras/business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)).
+([RN-069](../../negocio/regras/business-rules.md#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela)).
 O canal WebSocket de **cards** é separado e continua descrito no §5.
 
 ## 2. Snapshot, schema 1
@@ -21,7 +21,7 @@ O canal WebSocket de **cards** é separado e continua descrito no §5.
 ```json
 {
   "schemaVersion": 1,
-  "unidadeSondaId": 7,
+  "unidadeId": 7,
   "revisao": 1,
   "limites": [
     {
@@ -45,7 +45,10 @@ O canal WebSocket de **cards** é separado e continua descrito no §5.
 
 **[FATO]** Sem configuração: revisão `0`, lista vazia, autoria/instante nulos, sem criar registro. A primeira gravação retorna revisão `1`; cada alteração incrementa a revisão. Revisão desatualizada retorna HTTP `409`. A revisão controla concorrência e ordenação, sem histórico de versões. A autoria corresponde à última substituição do documento inteiro.
 
-**[FATO]** Persistência: um documento por unidade em `configuracao_sonda`, lock otimista JPA e FK para `unidades_sondas`. Migration `V2026.09.07.2__configuracao_sonda.sql`. A configuração vinculada impede exclusão da unidade conforme a guarda de cadastro; não há exclusão em cascata.
+**[FATO]** Persistência: um documento por unidade em `configuracao_sonda`, lock otimista JPA e
+`unidade_id` como referência simples ao cadastro do Braserv-Core. Não há FK entre databases. A
+configuração vinculada impede exclusão porque o Core consulta `/internal/v1/unidades/{id}/vinculos`
+no backend; não há exclusão em cascata.
 
 ### A grandeza que o limite vigia — **[FATO 2026-09-09]**
 
@@ -115,8 +118,8 @@ com seu endpoint e sua revisão.
 
 | Documento | Recurso | Quem grava | Onde |
 |---|---|---|---|
-| Limites de alarme | `/api/sondas/{id}/configuracao` — este contrato | Quem enxerga a sonda, inclusive `CLIENTE` ([RN-069](../../negocio/regras/business-rules.md#rn-069--quem-vê-a-sonda-vê-e-ajusta-o-alarme-dela)) | Web |
-| **Cards** | `/api/sondas/{id}/cards` | `ADMIN` ou `SUPORTE` ([RN-086](../../negocio/regras/business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)) | **Só no Desktop** |
+| Limites de alarme | `/api/monitoramento/unidades/{id}/configuracao` — este contrato | Quem enxerga a unidade, inclusive `CLIENTE` ([RN-069](../../negocio/regras/business-rules.md#rn-069--quem-vê-a-unidade-vê-e-ajusta-o-alarme-dela)) | Web |
+| **Cards** | `/api/monitoramento/unidades/{id}/cards` | `ADMIN` ou `SUPORTE` ([RN-086](../../negocio/regras/business-rules.md#rn-086--configurar-exige-admin-ou-suporte-autenticado-no-backend)) | **Só no Desktop** |
 
 **Por que separados.** Num documento só, o cliente que ajusta um limite devolveria o documento
 inteiro — cards inclusive. O servidor teria de comparar campo a campo para descobrir se ele mexeu no
@@ -128,16 +131,16 @@ e está em [RN-089](../../negocio/regras/business-rules.md#rn-089--cards-e-limit
 
 | Operação | Destino | Quem |
 |---|---|---|
-| HTTP GET | `/api/sondas/{id}/cards` | Quem enxerga a sonda, mais `ADMIN` e `SUPORTE` |
-| HTTP PUT | `/api/sondas/{id}/cards` | **Somente** `ADMIN` ou `SUPORTE` |
-| STOMP SUBSCRIBE | `/topic/config/unidades-sondas/{id}/cards` | Mesma regra da leitura |
-| STOMP SUBSCRIBE | `/app/config/unidades-sondas/{id}/cards` | Snapshot direto ao solicitante |
+| HTTP GET | `/api/monitoramento/unidades/{id}/cards` | Quem enxerga a unidade, mais `ADMIN` e `SUPORTE` |
+| HTTP PUT | `/api/monitoramento/unidades/{id}/cards` | **Somente** `ADMIN` ou `SUPORTE` |
+| STOMP SUBSCRIBE | `/topic/config/unidades/{id}/cards` | Mesma regra da leitura |
+| STOMP SUBSCRIBE | `/app/config/unidades/{id}/cards` | Snapshot direto ao solicitante |
 
 **[FATO]** `ConfiguracaoCardsOutbound` guarda o tópico de cards e confere
 conta ativa, permissão e acesso à unidade a cada entrega. A antiga guarda
 `ConfiguracaoSondaOutbound` saiu junto com o canal STOMP de limites.
 
-⚠️ **`SUPORTE` entra em `/api/sondas/*/cards` e em nada mais sob `/api/sondas`.** Dar-lhe a rota
+⚠️ **`SUPORTE` entra em `/api/monitoramento/unidades/*/cards`, não nas demais rotas de monitoramento.** Dar-lhe a rota
 inteira seria monitoramento, não configuração.
 
 ### Forma do documento de cards
@@ -145,7 +148,7 @@ inteira seria monitoramento, não configuração.
 ```json
 {
   "schemaVersion": 1,
-  "unidadeSondaId": 7,
+  "unidadeId": 7,
   "revisao": 4,
   "conexao": { "ip": "10.0.0.5", "rack": 0, "slot": 1, "dbNumero": 1, "intervaloLeituraMs": 1000 },
   "cards": [
