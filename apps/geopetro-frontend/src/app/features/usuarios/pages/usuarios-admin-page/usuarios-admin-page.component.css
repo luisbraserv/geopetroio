@@ -287,7 +287,7 @@ td button {
   }
 }
 
-/* ===== Vinculos: unidades/sondas concedidas ao cliente ===== */
+/* ===== Vinculos: unidades concedidas ao cliente ===== */
 .vinculos-field {
   display: grid;
   gap: 0.6rem;
@@ -298,7 +298,7 @@ td button {
   color: #94a3b8;
 }
 
-/* Seleção de Unidades/Sondas concedidas ao cliente */
+/* Seleção de Unidades concedidas ao cliente */
 .unidades-actions {
   display: flex;
   align-items: center;

@@ -5,10 +5,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../environments/environment';
 import { CardUnidade } from '../../services/grandezas-de-card';
 import { EpisodioAlarme } from '../../services/historico-alarmes.service';
-import { SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { UnidadeDisponivel } from '../../services/monitoramento-unidade.service';
 import { HistoricoAlarmesPageComponent } from './historico-alarmes-page.component';
 
-const SONDA: SondaDisponivel = { id: 7, idSondaUnidade: 'SPT-145', nome: 'SPT-145', apelido: 'Sonda 7' };
+const UNIDADE: UnidadeDisponivel = { id: 7, nome: 'SPT-145', apelido: 'Unidade 7', tipo: 'SONDA' };
 
 function card(parcial: Partial<CardUnidade> = {}): CardUnidade {
   return {
@@ -27,7 +27,7 @@ function card(parcial: Partial<CardUnidade> = {}): CardUnidade {
 function episodio(parcial: Partial<EpisodioAlarme> = {}): EpisodioAlarme {
   return {
     episodioId: 'ep-1',
-    unidadeSondaId: 7,
+    unidadeId: 7,
     dispositivoId: 'PRESSAO_01',
     serie: null,
     severidadeMaxima: 'CRITICO',
@@ -53,9 +53,9 @@ describe('HistoricoAlarmesPageComponent', () => {
   let componente: HistoricoAlarmesPageComponent;
   let http: HttpTestingController;
 
-  const urlSondas = `${environment.apiUrl}/api/sondas/minhas`;
-  const urlCards = `${environment.apiUrl}/api/sondas/7/cards`;
-  const urlHistorico = `${environment.apiUrl}/api/sondas/7/alarmes/historico`;
+  const urlUnidades = `${environment.apiUrl}/api/monitoramento/unidades/minhas`;
+  const urlCards = `${environment.apiUrl}/api/monitoramento/unidades/7/cards`;
+  const urlHistorico = `${environment.apiUrl}/api/monitoramento/unidades/7/alarmes/historico`;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -68,16 +68,16 @@ describe('HistoricoAlarmesPageComponent', () => {
     http = TestBed.inject(HttpTestingController);
 
     fixture.detectChanges();
-    http.expectOne(urlSondas).flush([SONDA]);
+    http.expectOne(urlUnidades).flush([UNIDADE]);
   });
 
   afterEach(() => http.verify());
 
   function selecionar(cards: CardUnidade[] = [card()]) {
-    componente.sondaSelecionadaValue = SONDA;
-    componente.onSondaChange();
+    componente.unidadeSelecionadaValue = UNIDADE;
+    componente.onUnidadeChange();
     http.expectOne(urlCards).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards,
+      schemaVersion: 1, unidadeId: 7, revisao: 3, conexao: null, cards,
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
   }
@@ -111,8 +111,8 @@ describe('HistoricoAlarmesPageComponent', () => {
    * documento não possa ser lido. Esconder a linha seria pior que mostrá-la com o id cru.
    */
   it('sem card que a descreva, a grandeza aparece com o id em vez de sumir', () => {
-    componente.sondaSelecionadaValue = SONDA;
-    componente.onSondaChange();
+    componente.unidadeSelecionadaValue = UNIDADE;
+    componente.onUnidadeChange();
     http.expectOne(urlCards).flush({}, { status: 500, statusText: 'Server Error' });
 
     consultar([episodio()]);
@@ -135,7 +135,7 @@ describe('HistoricoAlarmesPageComponent', () => {
 
     expect(componente.semEpisodios()).toBe(true);
     expect((fixture.nativeElement as HTMLElement).textContent)
-      .toContain('sonda sem limite configurado');
+      .toContain('unidade sem limite configurado');
   });
 
   /** Uma lista incompleta que se apresenta como completa é pior que uma lista curta. */
@@ -168,7 +168,7 @@ describe('HistoricoAlarmesPageComponent', () => {
     expect(componente.expandido('ep-1')).toBe(false);
   });
 
-  it('não consulta sem sonda selecionada', () => {
+  it('não consulta sem unidade selecionada', () => {
     expect(componente.podeConsultar()).toBe(false);
     componente.consultar();
     http.expectNone((r) => r.url === urlHistorico);

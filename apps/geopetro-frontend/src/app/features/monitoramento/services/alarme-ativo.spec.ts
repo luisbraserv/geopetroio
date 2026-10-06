@@ -2,7 +2,7 @@ import { AlarmeAtivo, alarmesPorGrandeza, ordenarPorGravidade } from './alarme-a
 
 function alarme(parcial: Partial<AlarmeAtivo> = {}): AlarmeAtivo {
   return {
-    unidadeSondaId: 7,
+    unidadeId: 7,
     dispositivoId: 'PRESSAO_01',
     serie: null,
     episodioId: 'ep-1',

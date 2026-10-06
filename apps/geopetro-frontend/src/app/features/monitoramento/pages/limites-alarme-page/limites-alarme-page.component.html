@@ -4,8 +4,8 @@
       <p class="eyebrow">Telemetria</p>
       <h1>Limites de Alarme</h1>
       <span>
-        O sistema vigia a operação e registra cada excursão. Cada sonda é configurada
-        individualmente — sonda sem limite não alarma, e isso é estado normal.
+        O sistema vigia a operação e registra cada excursão. Cada unidade é configurada
+        individualmente — unidade sem limite não alarma, e isso é estado normal.
       </span>
     </div>
   </header>
@@ -13,11 +13,11 @@
   <section class="painel">
     <div class="topo">
       <label class="field">
-        <span>Sonda / Unidade</span>
-        <select [(ngModel)]="sondaSelecionadaValue" (ngModelChange)="onSondaChange()">
-          <option [ngValue]="null" disabled selected>Selecione uma sonda</option>
-          @for (sonda of sondas(); track sonda.id) {
-            <option [ngValue]="sonda">{{ sonda.apelido || sonda.nome }}</option>
+        <span>Unidade</span>
+        <select [(ngModel)]="unidadeSelecionadaValue" (ngModelChange)="onUnidadeChange()">
+          <option [ngValue]="null" disabled selected>Selecione uma unidade</option>
+          @for (unidade of unidades(); track unidade.id) {
+            <option [ngValue]="unidade">{{ unidade.apelido || unidade.nome }}</option>
           }
         </select>
       </label>
@@ -29,7 +29,7 @@
           · revisão {{ documento()?.revisao }}
         </p>
       } @else if (documento()) {
-        <p class="autoria">Esta sonda ainda não teve limites gravados.</p>
+        <p class="autoria">Esta unidade ainda não teve limites gravados.</p>
       }
     </div>
 
@@ -58,10 +58,10 @@
       <tui-icon icon="@tui.loader-circle" class="spin estado-vazio__icon"></tui-icon>
       <p>Lendo o que esta unidade mede e os limites gravados...</p>
     </div>
-  } @else if (!sondaSelecionada()) {
+  } @else if (!unidadeSelecionada()) {
     <div class="estado-vazio">
       <tui-icon icon="@tui.bell" class="estado-vazio__icon"></tui-icon>
-      <p>Selecione uma sonda para ajustar os limites dela.</p>
+      <p>Selecione uma unidade para ajustar os limites dela.</p>
     </div>
   } @else if (unidadeSemCards()) {
     <!-- RN-088: sem cards a unidade nao le nada, e nao ha grandeza que um limite possa vigiar. -->

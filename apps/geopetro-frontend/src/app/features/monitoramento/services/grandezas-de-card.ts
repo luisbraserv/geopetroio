@@ -1,5 +1,5 @@
 /**
- * Documento de cards de uma Unidade/Sonda e as grandezas que ele produz.
+ * Documento de cards de uma Unidade e as grandezas que ele produz.
  *
  * Contrato em `specs/SDD/software/apis/configuracao-sonda.md §5`; o que cada tipo significa está em
  * `specs/SDD/negocio/requisitos/cards-configuraveis.md`.
@@ -67,7 +67,7 @@ export interface ConexaoCards {
 
 export interface ConfiguracaoCards {
   schemaVersion: number;
-  unidadeSondaId: number;
+  unidadeId: number;
   /** `0` quando a unidade ainda não foi configurada — e aí ela não lê nada (RN-088). */
   revisao: number;
   conexao?: ConexaoCards | null;

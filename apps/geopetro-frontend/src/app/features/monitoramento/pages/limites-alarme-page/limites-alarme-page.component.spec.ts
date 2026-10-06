@@ -5,12 +5,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../../environments/environment';
 import { CardUnidade } from '../../services/grandezas-de-card';
 import { LimiteAlarme } from '../../services/limites-alarme.service';
-import { SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { UnidadeDisponivel } from '../../services/monitoramento-unidade.service';
 import { LimitesAlarmePageComponent } from './limites-alarme-page.component';
 
-const SONDA: SondaDisponivel = { id: 7, idSondaUnidade: 'SPT-145', nome: 'SPT-145', apelido: 'Sonda 7' };
-/** A segunda sonda existe para o caso de troca no meio de um salvamento — ver A06. */
-const OUTRA: SondaDisponivel = { id: 8, idSondaUnidade: 'SPT-146', nome: 'SPT-146', apelido: 'Sonda 8' };
+const UNIDADE: UnidadeDisponivel = { id: 7, nome: 'SPT-145', apelido: 'Unidade 7', tipo: 'SONDA' };
+/** A segunda unidade existe para o caso de troca no meio de um salvamento — ver A06. */
+const OUTRA: UnidadeDisponivel = { id: 8, nome: 'SPT-146', apelido: 'Unidade 8', tipo: 'SONDA' };
 
 function card(parcial: Partial<CardUnidade>): CardUnidade {
   return {
@@ -43,7 +43,7 @@ function limite(parcial: Partial<LimiteAlarme> = {}): LimiteAlarme {
 
 /**
  * A tela cruza dois documentos com autoridades diferentes: os cards dizem o que existe para vigiar
- * (só o Desktop grava) e os limites dizem como (quem enxerga a sonda grava, RN-069). Errar o
+ * (só o Desktop grava) e os limites dizem como (quem enxerga a unidade grava, RN-069). Errar o
  * cruzamento produz um limite que parece configurado e não vigia nada.
  */
 describe('LimitesAlarmePageComponent', () => {
@@ -51,11 +51,11 @@ describe('LimitesAlarmePageComponent', () => {
   let componente: LimitesAlarmePageComponent;
   let http: HttpTestingController;
 
-  const urlSondas = `${environment.apiUrl}/api/sondas/minhas`;
-  const urlCards = `${environment.apiUrl}/api/sondas/7/cards`;
-  const urlLimites = `${environment.apiUrl}/api/sondas/7/configuracao`;
-  const urlCardsOito = `${environment.apiUrl}/api/sondas/8/cards`;
-  const urlLimitesOito = `${environment.apiUrl}/api/sondas/8/configuracao`;
+  const urlUnidades = `${environment.apiUrl}/api/monitoramento/unidades/minhas`;
+  const urlCards = `${environment.apiUrl}/api/monitoramento/unidades/7/cards`;
+  const urlLimites = `${environment.apiUrl}/api/monitoramento/unidades/7/configuracao`;
+  const urlCardsOito = `${environment.apiUrl}/api/monitoramento/unidades/8/cards`;
+  const urlLimitesOito = `${environment.apiUrl}/api/monitoramento/unidades/8/configuracao`;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -68,22 +68,22 @@ describe('LimitesAlarmePageComponent', () => {
     http = TestBed.inject(HttpTestingController);
 
     fixture.detectChanges();
-    http.expectOne(urlSondas).flush([SONDA]);
+    http.expectOne(urlUnidades).flush([UNIDADE]);
   });
 
   afterEach(() => http.verify());
 
-  /** Seleciona a sonda e responde os dois documentos, na ordem em que a tela os pede. */
+  /** Seleciona a unidade e responde os dois documentos, na ordem em que a tela os pede. */
   function selecionar(cards: CardUnidade[], limites: LimiteAlarme[], revisao = 1) {
-    componente.sondaSelecionadaValue = SONDA;
-    componente.onSondaChange();
+    componente.unidadeSelecionadaValue = UNIDADE;
+    componente.onUnidadeChange();
 
     http.expectOne(urlCards).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards,
+      schemaVersion: 1, unidadeId: 7, revisao: 3, conexao: null, cards,
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
     http.expectOne(urlLimites).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao, limites,
+      schemaVersion: 1, unidadeId: 7, revisao, limites,
       atualizadoPor: revisao > 0 ? 'ana' : null,
       atualizadoEm: revisao > 0 ? '2026-09-09T12:00:00Z' : null,
     });
@@ -151,7 +151,7 @@ describe('LimitesAlarmePageComponent', () => {
     const requisicao = http.expectOne(urlLimites);
     expect(requisicao.request.body.limites).toEqual([]);
     requisicao.flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 2, limites: [],
+      schemaVersion: 1, unidadeId: 7, revisao: 2, limites: [],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-09T13:00:00Z',
     });
     expect(componente.salvo()).toContain('Revisão 2');
@@ -167,7 +167,7 @@ describe('LimitesAlarmePageComponent', () => {
     expect(requisicao.request.body.revisao).toBe(4);
     expect(requisicao.request.body.limites[0].maximoAtencao).toBe(90);
     requisicao.flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 5, limites: [limite({ maximoAtencao: 90 })],
+      schemaVersion: 1, unidadeId: 7, revisao: 5, limites: [limite({ maximoAtencao: 90 })],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-09T13:00:00Z',
     });
   });
@@ -191,11 +191,11 @@ describe('LimitesAlarmePageComponent', () => {
     expect(componente.aviso()).toContain('descartado');
 
     http.expectOne(urlCards).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards: [card({})],
+      schemaVersion: 1, unidadeId: 7, revisao: 3, conexao: null, cards: [card({})],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
     http.expectOne(urlLimites).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 5, limites: [limite({ maximoAtencao: 70 })],
+      schemaVersion: 1, unidadeId: 7, revisao: 5, limites: [limite({ maximoAtencao: 70 })],
       atualizadoPor: 'bruno', atualizadoEm: '2026-09-09T13:05:00Z',
     });
 
@@ -206,25 +206,25 @@ describe('LimitesAlarmePageComponent', () => {
   /**
    * ⚠️ O achado A06: o callback de erro não tinha a guarda que o de sucesso já tinha.
    *
-   * Salvar a sonda 7, trocar para a 8 e só então receber o 409 da 7 mandava recarregar a **7**:
+   * Salvar a unidade 7, trocar para a 8 e só então receber o 409 da 7 mandava recarregar a **7**:
    * `carregar` ligava o indicador de espera, a resposta caía fora do ciclo atual e ninguém o
-   * desligava. A sonda 8, já carregada, ficava escondida atrás de um "carregando" permanente.
+   * desligava. A unidade 8, já carregada, ficava escondida atrás de um "carregando" permanente.
    */
-  it('conflito atrasado da sonda anterior não deixa a tela presa carregando', () => {
+  it('conflito atrasado da unidade anterior não deixa a tela presa carregando', () => {
     selecionar([card({})], [limite()], 4);
 
     componente.atualizar(0, 'maximoAtencao', 90);
     componente.salvar();
     const salvamentoDaSete = http.expectOne(urlLimites);
 
-    componente.sondaSelecionadaValue = OUTRA;
-    componente.onSondaChange();
+    componente.unidadeSelecionadaValue = OUTRA;
+    componente.onUnidadeChange();
     http.expectOne(urlCardsOito).flush({
-      schemaVersion: 1, unidadeSondaId: 8, revisao: 2, conexao: null, cards: [card({})],
+      schemaVersion: 1, unidadeId: 8, revisao: 2, conexao: null, cards: [card({})],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
     http.expectOne(urlLimitesOito).flush({
-      schemaVersion: 1, unidadeSondaId: 8, revisao: 1, limites: [limite({ maximoAtencao: 55 })],
+      schemaVersion: 1, unidadeId: 8, revisao: 1, limites: [limite({ maximoAtencao: 55 })],
       atualizadoPor: 'bruno', atualizadoEm: '2026-09-09T13:00:00Z',
     });
 
@@ -234,27 +234,27 @@ describe('LimitesAlarmePageComponent', () => {
     );
 
     expect(componente.carregando()).toBe(false);
-    expect(componente.documento()?.unidadeSondaId).toBe(8);
+    expect(componente.documento()?.unidadeId).toBe(8);
     expect(componente.linhas()[0].maximoAtencao).toBe(55);
     http.expectNone(urlCards);
   });
 
   /** A sequência A → B → A: o mesmo id volta, e a resposta velha continua sendo velha. */
-  it('voltar para a sonda anterior não ressuscita a resposta antiga dela', () => {
+  it('voltar para a unidade anterior não ressuscita a resposta antiga dela', () => {
     selecionar([card({})], [limite()], 4);
 
     componente.atualizar(0, 'maximoAtencao', 90);
     componente.salvar();
     const salvamentoDaSete = http.expectOne(urlLimites);
 
-    componente.sondaSelecionadaValue = OUTRA;
-    componente.onSondaChange();
+    componente.unidadeSelecionadaValue = OUTRA;
+    componente.onUnidadeChange();
     http.expectOne(urlCardsOito).flush({
-      schemaVersion: 1, unidadeSondaId: 8, revisao: 2, conexao: null, cards: [card({})],
+      schemaVersion: 1, unidadeId: 8, revisao: 2, conexao: null, cards: [card({})],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
     http.expectOne(urlLimitesOito).flush({
-      schemaVersion: 1, unidadeSondaId: 8, revisao: 1, limites: [limite()],
+      schemaVersion: 1, unidadeId: 8, revisao: 1, limites: [limite()],
       atualizadoPor: 'bruno', atualizadoEm: '2026-09-09T13:00:00Z',
     });
 
@@ -266,22 +266,22 @@ describe('LimitesAlarmePageComponent', () => {
     );
 
     expect(componente.carregando()).toBe(false);
-    // A leitura mais recente da sonda 7 prevalece; o 409 do salvamento antigo nao a desfaz.
+    // A leitura mais recente da unidade 7 prevalece; o 409 do salvamento antigo nao a desfaz.
     expect(componente.documento()?.revisao).toBe(9);
     expect(componente.linhas()[0].maximoAtencao).toBe(42);
     expect(componente.aviso()).toBeNull();
   });
 
-  it('resposta atrasada de outra sonda não sobrescreve a selecionada', () => {
-    componente.sondaSelecionadaValue = SONDA;
-    componente.onSondaChange();
+  it('resposta atrasada de outra unidade não sobrescreve a selecionada', () => {
+    componente.unidadeSelecionadaValue = UNIDADE;
+    componente.onUnidadeChange();
     const cardsAtrasado = http.expectOne(urlCards);
 
-    componente.sondaSelecionadaValue = null;
-    componente.onSondaChange();
+    componente.unidadeSelecionadaValue = null;
+    componente.onUnidadeChange();
 
     cardsAtrasado.flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards: [card({})],
+      schemaVersion: 1, unidadeId: 7, revisao: 3, conexao: null, cards: [card({})],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
 

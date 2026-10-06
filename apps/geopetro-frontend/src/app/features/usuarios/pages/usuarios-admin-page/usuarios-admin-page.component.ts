@@ -9,9 +9,9 @@ import { SearchBoxComponent } from '../../../../shared/ui/search-box/search-box.
 import { CepService } from '../../../../shared/services/cep.service';
 import { ToastService } from '../../../../shared/toast/toast.service';
 import { UserRole } from '../../../auth/models/user.model';
-import { Empresa, UnidadeSonda } from '../../../cadastros/models/cadastros.model';
+import { Empresa, Unidade } from '../../../cadastros/models/cadastros.model';
 import { EmpresaService } from '../../../cadastros/services/empresa.service';
-import { UnidadeSondaService } from '../../../cadastros/services/unidade-sonda.service';
+import { UnidadeService } from '../../../cadastros/services/unidade.service';
 import {
   AtualizarUsuarioPayload,
   CriarUsuarioClientePayload,
@@ -31,7 +31,7 @@ type TipoUsuario = 'CLIENTE' | 'INTERNO';
 export class UsuariosAdminPageComponent {
   private readonly usuariosService = inject(UsuariosService);
   private readonly empresaService = inject(EmpresaService);
-  private readonly unidadeSondaService = inject(UnidadeSondaService);
+  private readonly unidadeService = inject(UnidadeService);
   private readonly cepService = inject(CepService);
   private readonly toast = inject(ToastService);
 
@@ -48,8 +48,8 @@ export class UsuariosAdminPageComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly editandoUsername = signal<string | null>(null);
   protected readonly empresas = signal<Empresa[]>([]);
-  protected readonly unidades = signal<UnidadeSonda[]>([]);
-  // Unidades/Sondas concedidas ao CLIENTE
+  protected readonly unidades = signal<Unidade[]>([]);
+  // Unidades concedidas ao CLIENTE
   protected readonly unidadesSelecionadas = signal<number[]>([]);
   protected readonly rolesSel = signal<UserRole[]>([]);
 
@@ -68,6 +68,7 @@ export class UsuariosAdminPageComponent {
     'MONITORAMENTO_REAL',
     'SIMULADOR',
     'CIMENTACAO',
+    'UNIDADE',
     'ADMIN',
   ];
 
@@ -114,6 +115,9 @@ export class UsuariosAdminPageComponent {
   protected selecionarTipo(tipo: TipoUsuario): void {
     if (this.editando()) return;
     this.tipo.set(tipo);
+    if (tipo === 'CLIENTE') {
+      this.rolesSel.update((roles) => roles.filter((role) => role !== 'UNIDADE'));
+    }
   }
 
   protected roleBase(): UserRole {
@@ -143,13 +147,14 @@ export class UsuariosAdminPageComponent {
       MONITORAMENTO_REAL: 'Tempo Real e Alarmes',
       SIMULADOR: 'Simulador',
       CIMENTACAO: 'Cimentação',
+      UNIDADE: 'Gestão de Unidades',
       SUPORTE: 'Suporte',
     };
     return labels[role] ?? role;
   }
 
   // ---------------------------------------------------------------------------
-  // Unidades/Sondas concedidas ao CLIENTE
+  // Unidades concedidas ao CLIENTE
   //
   // Diferente dos perfis internos, o cliente não enxerga a frota inteira: seu
   // acesso ao monitoramento é concedido unidade a unidade, aqui.
@@ -177,7 +182,7 @@ export class UsuariosAdminPageComponent {
     this.unidadesSelecionadas.set([]);
   }
 
-  protected rotuloUnidade(unidade: UnidadeSonda): string {
+  protected rotuloUnidade(unidade: Unidade): string {
     return unidade.apelido ? `${unidade.nome} — ${unidade.apelido}` : unidade.nome;
   }
 
@@ -315,7 +320,7 @@ export class UsuariosAdminPageComponent {
     });
     this.rolesSel.set(usuario.roles.filter((role) => role !== 'CLIENTE' && role !== 'INTERNO'));
 
-    this.unidadesSelecionadas.set((usuario.unidadesSondas ?? []).map((u) => u.id));
+    this.unidadesSelecionadas.set((usuario.unidades ?? []).map((u) => u.id));
     this.modalAberto.set(true);
   }
 
@@ -332,7 +337,7 @@ export class UsuariosAdminPageComponent {
       username: this.form.username,
       password: this.form.password,
       roles: this.rolesSelecionadas(),
-      unidadeSondaIds: this.unidadesSelecionadas(),
+      unidadeIds: this.unidadesSelecionadas(),
     };
   }
 
@@ -355,7 +360,7 @@ export class UsuariosAdminPageComponent {
             id: Number(this.form.id),
             empresaId: Number(this.form.empresaId),
             empresa: this.form.empresa,
-            unidadeSondaIds: this.unidadesSelecionadas(),
+            unidadeIds: this.unidadesSelecionadas(),
           }
         : {
             matricula: Number(this.form.matricula),
@@ -413,7 +418,7 @@ export class UsuariosAdminPageComponent {
       error: (error: Error) => this.notificarErro(error),
     });
     // Necessário para conceder acesso ao monitoramento no cadastro de CLIENTE.
-    this.unidadeSondaService.listar().subscribe({
+    this.unidadeService.listar(undefined, 'ATIVA').subscribe({
       next: (unidades) => this.unidades.set(unidades),
       error: (error: Error) => this.notificarErro(error),
     });

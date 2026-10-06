@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MonitoramentoSerie } from '../../services/monitoramento-sonda.service';
+import { MonitoramentoSerie } from '../../services/monitoramento-unidade.service';
 
 @Component({
   selector: 'app-grafico-monitoramento',
@@ -139,7 +139,7 @@ export class GraficoMonitoramentoComponent {
    * <p>Setter em vez de `input()` apenas para manter a API `[serie]` que a pagina ja usa.
    */
   private readonly serieSig = signal<MonitoramentoSerie>({
-    idSondaUnidade: '',
+    idUnidade: '',
     dispositivoId: '',
     pontos: [],
   });

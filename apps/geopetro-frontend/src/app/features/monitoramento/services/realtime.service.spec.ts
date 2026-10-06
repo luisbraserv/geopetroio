@@ -33,7 +33,7 @@ describe('RealtimeService — leituras e séries', () => {
   }
 
   function estado(leituras: LeituraRealtime[], timestamp = '2026-09-08T16:00:00Z'): EstadoRealtime {
-    return { unidadeSondaId: 7, timestamp, leituras };
+    return { unidadeId: 7, timestamp, leituras };
   }
 
   it('indexa as leituras da última mensagem pela chave da grandeza', () => {
@@ -138,7 +138,7 @@ describe('RealtimeService — alarmes na mensagem', () => {
 
   function comAlarmes(alarmes: EstadoRealtime['alarmes']): EstadoRealtime {
     return {
-      unidadeSondaId: 7,
+      unidadeId: 7,
       timestamp: '2026-09-09T12:00:00Z',
       leituras: [{ dispositivoId: 'PRESSAO_01', tipo: 'PRESSAO', unidade: 'psi', valor: 130 }],
       alarmes,
@@ -147,7 +147,7 @@ describe('RealtimeService — alarmes na mensagem', () => {
 
   it('indexa os alarmes da mensagem pela chave da grandeza', () => {
     service.estado.set(comAlarmes([{
-      unidadeSondaId: 7,
+      unidadeId: 7,
       dispositivoId: 'PRESSAO_01',
       serie: null,
       episodioId: 'ep-1',

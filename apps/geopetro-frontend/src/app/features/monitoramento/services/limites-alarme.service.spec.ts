@@ -34,12 +34,12 @@ describe('LimitesAlarmeService', () => {
 
   afterEach(() => http.verify());
 
-  it('endereça a rota pelo id numérico da unidade, não pelo nome da sonda', () => {
-    // ⚠️ /api/sondas/{id}/configuracao usa o id do cadastro; o histórico usa o nome como chave no
+  it('endereça a rota pelo id numérico da unidade, não pelo nome da unidade', () => {
+    // ⚠️ /api/monitoramento/unidades/{id}/configuracao usa o id do cadastro; o histórico usa o nome como chave no
     // InfluxDB. Trocar os dois devolve 403.
     service.ler(7).subscribe();
-    http.expectOne(`${environment.apiUrl}/api/sondas/7/configuracao`).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 0, limites: [],
+    http.expectOne(`${environment.apiUrl}/api/monitoramento/unidades/7/configuracao`).flush({
+      schemaVersion: 1, unidadeId: 7, revisao: 0, limites: [],
       atualizadoPor: null, atualizadoEm: null,
     });
   });
@@ -47,12 +47,12 @@ describe('LimitesAlarmeService', () => {
   it('envia a revisão lida junto da lista, porque o PUT substitui tudo', () => {
     service.salvar(7, 4, [limite()]).subscribe();
 
-    const requisicao = http.expectOne(`${environment.apiUrl}/api/sondas/7/configuracao`);
+    const requisicao = http.expectOne(`${environment.apiUrl}/api/monitoramento/unidades/7/configuracao`);
     expect(requisicao.request.method).toBe('PUT');
     expect(requisicao.request.body.revisao).toBe(4);
     expect(requisicao.request.body.limites).toHaveLength(1);
     requisicao.flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 5, limites: [limite()],
+      schemaVersion: 1, unidadeId: 7, revisao: 5, limites: [limite()],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-09T12:00:00Z',
     });
   });
@@ -64,11 +64,11 @@ describe('LimitesAlarmeService', () => {
       limite({ dispositivoId: 'CONTADOR_STROKE_01', serie: 'volumeAcumulado', maximoAtencao: 500, maximoCritico: 600 }),
     ]).subscribe();
 
-    const requisicao = http.expectOne(`${environment.apiUrl}/api/sondas/7/configuracao`);
+    const requisicao = http.expectOne(`${environment.apiUrl}/api/monitoramento/unidades/7/configuracao`);
     expect(requisicao.request.body.limites.map((l: LimiteAlarme) => l.serie))
       .toEqual(['vazao', 'volumeAcumulado']);
     requisicao.flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 1, limites: [],
+      schemaVersion: 1, unidadeId: 7, revisao: 1, limites: [],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-09T12:00:00Z',
     });
   });

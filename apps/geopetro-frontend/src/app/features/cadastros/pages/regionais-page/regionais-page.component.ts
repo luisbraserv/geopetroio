@@ -113,7 +113,7 @@ export class RegionaisPageComponent {
   }
 
   protected excluir(regional: Regional): void {
-    if (!confirm(`Excluir regional "${regional.nome}"? Setores e unidades/sondas vinculados bloqueiam a exclusao.`)) return;
+    if (!confirm(`Excluir regional "${regional.nome}"? Setores e unidades vinculados bloqueiam a exclusão.`)) return;
     this.service.excluir(regional.id).subscribe({
       next: () => { this.toast.success('Regional excluida com sucesso.'); this.carregar(); },
       error: (err: Error) => this.notificarErro(err),

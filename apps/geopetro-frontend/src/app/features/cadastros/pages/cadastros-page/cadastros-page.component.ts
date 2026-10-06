@@ -60,7 +60,7 @@ export class CadastrosPageComponent {
       { label: 'Empresas', icon: '@tui.building-2', route: 'empresas', adminOnly: true },
       { label: 'Regionais', icon: '@tui.map-pin', route: 'regionais', adminOnly: true },
       { label: 'Setores', icon: '@tui.network', route: 'setores', adminOnly: true },
-      { label: 'Unidades/Sondas', icon: '@tui.landmark', route: 'unidades-sondas', adminOnly: true },
+      { label: 'Unidades', icon: '@tui.landmark', route: 'unidades', adminOnly: false },
     ];
 
     return tabs.filter((tab) => isAdmin || !tab.adminOnly);

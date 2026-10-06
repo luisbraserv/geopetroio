@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TuiIcon } from '@taiga-ui/core';
+import { Store } from '@ngxs/store';
+
+import { AuthState } from '../auth/state/auth.state';
 
 @Component({
   selector: 'app-settings-page',
@@ -16,6 +19,11 @@ import { TuiIcon } from '@taiga-ui/core';
         <a routerLink="email" routerLinkActive="active" ariaCurrentWhenActive="page">
           <tui-icon icon="@tui.mail" /> E-mail
         </a>
+        @if (isAdmin()) {
+          <a routerLink="servicos-clientes" routerLinkActive="active" ariaCurrentWhenActive="page">
+            <tui-icon icon="@tui.key-round" /> Clientes de serviço
+          </a>
+        }
       </nav>
       <router-outlet />
     </section>
@@ -31,4 +39,11 @@ import { TuiIcon } from '@taiga-ui/core';
     @media (max-width: 760px) { .settings-page { padding: 16px; } }
   `],
 })
-export class SettingsPageComponent {}
+export class SettingsPageComponent {
+  private readonly store = inject(Store);
+  private readonly currentUser = this.store.selectSignal(AuthState.currentUser);
+  protected readonly isAdmin = computed(() => {
+    const usuario = this.currentUser();
+    return usuario?.roles?.includes('ADMIN') || usuario?.role === 'ADMIN';
+  });
+}

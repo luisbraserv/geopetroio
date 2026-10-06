@@ -7,7 +7,7 @@ import { parseApiError } from '../../../../core/http/api-error';
 import { CardsUnidadeService } from '../../services/cards-unidade.service';
 import { GrandezaVigiavel, chaveGrandeza, grandezasVigiaveis } from '../../services/grandezas-de-card';
 import { EpisodioAlarme, HistoricoAlarmesService } from '../../services/historico-alarmes.service';
-import { MonitoramentoSondaService, SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { MonitoramentoUnidadeService, UnidadeDisponivel } from '../../services/monitoramento-unidade.service';
 
 /** Um episódio já com o rótulo e a unidade que a tela mostra. */
 export interface EpisodioExibido {
@@ -43,14 +43,14 @@ const PERIODOS = [
   styleUrl: './historico-alarmes-page.component.css',
 })
 export class HistoricoAlarmesPageComponent implements OnInit {
-  private readonly sondasService = inject(MonitoramentoSondaService);
+  private readonly unidadesService = inject(MonitoramentoUnidadeService);
   private readonly cardsService = inject(CardsUnidadeService);
   private readonly historicoService = inject(HistoricoAlarmesService);
 
   readonly periodos = PERIODOS;
 
-  readonly sondas = signal<SondaDisponivel[]>([]);
-  readonly sondaSelecionada = signal<SondaDisponivel | null>(null);
+  readonly unidades = signal<UnidadeDisponivel[]>([]);
+  readonly unidadeSelecionada = signal<UnidadeDisponivel | null>(null);
   readonly periodo = signal<string>('24h');
   readonly inicioPersonalizado = signal<string>('');
   readonly fimPersonalizado = signal<string>('');
@@ -69,13 +69,13 @@ export class HistoricoAlarmesPageComponent implements OnInit {
   readonly semEpisodios = computed(() => this.consultou() && this.episodios().length === 0);
 
   readonly podeConsultar = computed(() =>
-    !!this.sondaSelecionada()
+    !!this.unidadeSelecionada()
     && !this.carregando()
     && (this.periodo() !== 'custom' || (!!this.inicioPersonalizado() && !!this.fimPersonalizado())),
   );
 
-  get sondaSelecionadaValue() { return this.sondaSelecionada(); }
-  set sondaSelecionadaValue(valor: SondaDisponivel | null) { this.sondaSelecionada.set(valor); }
+  get unidadeSelecionadaValue() { return this.unidadeSelecionada(); }
+  set unidadeSelecionadaValue(valor: UnidadeDisponivel | null) { this.unidadeSelecionada.set(valor); }
 
   get periodoValue() { return this.periodo(); }
   set periodoValue(valor: string) { this.periodo.set(valor); }
@@ -87,13 +87,13 @@ export class HistoricoAlarmesPageComponent implements OnInit {
   set fimValue(valor: string) { this.fimPersonalizado.set(valor); }
 
   ngOnInit(): void {
-    this.sondasService.listarMinhas().subscribe({
-      next: (sondas) => this.sondas.set(sondas),
+    this.unidadesService.listarMinhas().subscribe({
+      next: (unidades) => this.unidades.set(unidades),
       error: (falha) => this.erro.set(parseApiError(falha)),
     });
   }
 
-  onSondaChange(): void {
+  onUnidadeChange(): void {
     this.erro.set(null);
     this.consultou.set(false);
     this.episodios.set([]);
@@ -101,9 +101,9 @@ export class HistoricoAlarmesPageComponent implements OnInit {
     this.grandezas.set([]);
     this.expandidos.set(new Set());
 
-    const sonda = this.sondaSelecionada();
-    if (sonda) {
-      this.carregarCards(sonda);
+    const unidade = this.unidadeSelecionada();
+    if (unidade) {
+      this.carregarCards(unidade);
     }
   }
 
@@ -114,22 +114,22 @@ export class HistoricoAlarmesPageComponent implements OnInit {
    * mesmo que o documento de cards não possa ser lido, e escondê-la seria pior que mostrá-la com o
    * `dispositivoId` cru no lugar do nome.
    */
-  private carregarCards(sonda: SondaDisponivel): void {
-    this.cardsService.ler(sonda.id).subscribe({
+  private carregarCards(unidade: UnidadeDisponivel): void {
+    this.cardsService.ler(unidade.id).subscribe({
       next: (configuracao) => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.grandezas.set(grandezasVigiaveis(configuracao.cards));
       },
       error: () => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.grandezas.set([]);
       },
     });
   }
 
   consultar(): void {
-    const sonda = this.sondaSelecionada();
-    if (!sonda || !this.podeConsultar()) return;
+    const unidade = this.unidadeSelecionada();
+    if (!unidade || !this.podeConsultar()) return;
 
     const janela = this.calcularPeriodo();
     if (!janela) {
@@ -140,10 +140,10 @@ export class HistoricoAlarmesPageComponent implements OnInit {
     this.carregando.set(true);
     this.erro.set(null);
 
-    this.historicoService.consultar(sonda.id, janela.inicio, janela.fim).subscribe({
+    this.historicoService.consultar(unidade.id, janela.inicio, janela.fim).subscribe({
       next: (pagina) => {
         this.carregando.set(false);
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.episodios.set(pagina.episodios.map((episodio) => this.exibir(episodio)));
         this.truncado.set(pagina.truncado);
         this.consultou.set(true);
@@ -151,7 +151,7 @@ export class HistoricoAlarmesPageComponent implements OnInit {
       },
       error: (falha) => {
         this.carregando.set(false);
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.erro.set(parseApiError(falha));
       },
     });

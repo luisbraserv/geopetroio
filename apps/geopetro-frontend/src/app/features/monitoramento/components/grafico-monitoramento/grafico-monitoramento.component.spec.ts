@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { GraficoMonitoramentoComponent } from './grafico-monitoramento.component';
-import { MonitoramentoSerie } from '../../services/monitoramento-sonda.service';
+import { MonitoramentoSerie } from '../../services/monitoramento-unidade.service';
 
 /**
  * O gráfico do histórico foi reescrito para memoizar as coordenadas: antes cada polyline era
@@ -14,7 +14,7 @@ describe('GraficoMonitoramentoComponent', () => {
 
   function serie(valores: number[]): MonitoramentoSerie {
     return {
-      idSondaUnidade: 'SPT-145',
+      idUnidade: 'SPT-145',
       dispositivoId: 'pressao',
       pontos: valores.map((valor, i) => ({
         valor,

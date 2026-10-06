@@ -5,10 +5,12 @@ import { Store } from '@ngxs/store';
 import { authGuard } from './features/auth/guards/auth.guard';
 import {
   ACESSO_ADMINISTRACAO,
+  ACESSO_CADASTROS,
   ACESSO_CONFIGURACAO,
   ACESSO_MONITORAMENTO,
   ACESSO_MONITORAMENTO_REAL,
   ACESSO_SIMULADOR_CIMENTACAO,
+  ACESSO_UNIDADES,
   normalizarRoles,
   rotaInicialPara,
 } from './features/auth/models/user.model';
@@ -121,6 +123,12 @@ export const routes: Routes = [
             path: 'email',
             loadComponent: () => import('./features/configuracoes/email-settings.component').then(m => m.EmailSettingsComponent),
           },
+          {
+            path: 'servicos-clientes',
+            loadComponent: () => import('./features/configuracoes/servicos-clientes/servicos-clientes.component').then(m => m.ServicosClientesComponent),
+            canActivate: [authGuard],
+            data: { acesso: ACESSO_ADMINISTRACAO },
+          },
         ],
       },
       {
@@ -130,11 +138,16 @@ export const routes: Routes = [
             (m) => m.CadastrosPageComponent,
           ),
         canActivate: [authGuard],
-        data: { acesso: ACESSO_ADMINISTRACAO },
+        data: { acesso: ACESSO_CADASTROS },
         children: [
           {
             path: '',
-            redirectTo: 'usuarios',
+            redirectTo: () => {
+              const store = inject(Store);
+              const user = store.selectSnapshot(AuthState.currentUser);
+              const roles = normalizarRoles([...(user?.roles ?? []), user?.role]);
+              return roles.includes('ADMIN') ? 'usuarios' : 'unidades';
+            },
             pathMatch: 'full',
           },
           {
@@ -174,21 +187,21 @@ export const routes: Routes = [
             data: { acesso: ACESSO_ADMINISTRACAO },
           },
           {
-            path: 'unidades-sondas',
+            path: 'unidades',
             loadComponent: () =>
               import(
-                './features/cadastros/pages/unidades-sondas-page/unidades-sondas-page.component'
-              ).then((m) => m.UnidadesSondasPageComponent),
+                './features/cadastros/pages/unidades-page/unidades-page.component'
+              ).then((m) => m.UnidadesPageComponent),
             canActivate: [authGuard],
-            data: { acesso: ACESSO_ADMINISTRACAO },
+            data: { acesso: ACESSO_UNIDADES },
           },
         ],
       },
       {
-        path: 'monitoramento-sondas',
+        path: 'monitoramento-unidades',
         loadComponent: () =>
-          import('./features/monitoramento/pages/monitoramento-sonda-page/monitoramento-sonda-page.component').then(
-            (m) => m.MonitoramentoSondaPageComponent,
+          import('./features/monitoramento/pages/monitoramento-unidade-page/monitoramento-unidade-page.component').then(
+            (m) => m.MonitoramentoUnidadePageComponent,
           ),
         canActivate: [authGuard],
         data: { acesso: ACESSO_MONITORAMENTO },

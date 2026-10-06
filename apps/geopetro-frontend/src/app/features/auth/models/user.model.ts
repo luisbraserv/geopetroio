@@ -7,11 +7,12 @@
  *
  * São duas famílias, e a diferença importa:
  * - **Tipo de conta** — `CLIENTE` ou `INTERNO`, aplicada pelo backend conforme o cadastro.
- * - **Permissão de módulo** — `MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR`, `CIMENTACAO`.
+ * - **Permissão de módulo** — `MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR`, `CIMENTACAO`,
+ *   `UNIDADE`.
  *   Sozinhas não abrem nada: valem **somadas** a um tipo de conta.
  *
- * `SONDA`, `GERENCIA` e `DIRETORIA` saíram em 2026-09-17: existiam só dentro de listas de
- * permissão, sem regra própria.
+ * `GERENCIA` e `DIRETORIA` saíram em 2026-09-17: existiam só dentro de listas de permissão, sem
+ * regra própria. `SONDA` foi substituída por `UNIDADE` na separação do Braserv-Core.
  */
 export type UserRole =
   | 'ADMIN'
@@ -21,6 +22,7 @@ export type UserRole =
   | 'MONITORAMENTO_REAL'
   | 'SIMULADOR'
   | 'CIMENTACAO'
+  | 'UNIDADE'
   | 'SUPORTE';
 
 /**
@@ -32,7 +34,7 @@ export type UserRole =
  */
 export type RegraDeAcesso = readonly (readonly UserRole[])[];
 
-/** Monitoramento da Unidade/Sonda — a tela de séries. */
+/** Monitoramento da Unidade — a tela de séries. */
 export const ACESSO_MONITORAMENTO: RegraDeAcesso = [
   ['ADMIN'],
   ['CLIENTE', 'MONITORAMENTO'],
@@ -66,6 +68,12 @@ export const ACESSO_SIMULADOR_CIMENTACAO: RegraDeAcesso = [
 
 /** Cadastros administrativos — usuários, empresas, regionais, setores. */
 export const ACESSO_ADMINISTRACAO: RegraDeAcesso = [['ADMIN']];
+
+/** Área de cadastros: ADMIN vê tudo; INTERNO entra para consultar unidades. */
+export const ACESSO_CADASTROS: RegraDeAcesso = [['ADMIN'], ['INTERNO']];
+
+/** Consulta de unidades, permitida a todo usuário INTERNO e ao ADMIN. */
+export const ACESSO_UNIDADES: RegraDeAcesso = [['ADMIN'], ['INTERNO']];
 
 /**
  * Configurações do sistema — RN-086.
@@ -115,7 +123,7 @@ export function satisfazAcesso(
 export function rotaInicialPara(rolesDoUsuario: readonly UserRole[]): string {
   if (satisfazAcesso(rolesDoUsuario, ACESSO_ADMINISTRACAO)) return '/app/dashboard';
   if (satisfazAcesso(rolesDoUsuario, ACESSO_SIMULADOR_CIMENTACAO)) return '/app/simulador';
-  if (satisfazAcesso(rolesDoUsuario, ACESSO_MONITORAMENTO)) return '/app/monitoramento-sondas';
+  if (satisfazAcesso(rolesDoUsuario, ACESSO_MONITORAMENTO)) return '/app/monitoramento-unidades';
   if (satisfazAcesso(rolesDoUsuario, ACESSO_MONITORAMENTO_REAL)) return '/app/tempo-real';
   // SUPORTE sozinho não tem dashboard nem monitoramento: cai nas configurações, que é o que ele faz.
   if (satisfazAcesso(rolesDoUsuario, ACESSO_CONFIGURACAO)) return '/app/configuracoes';

@@ -9,7 +9,7 @@ import { AlarmeAtivo, SeveridadeAlarme, alarmesPorGrandeza, ordenarPorGravidade 
 import { AlarmesService } from '../../services/alarmes.service';
 import { CardsUnidadeService } from '../../services/cards-unidade.service';
 import { ConfiguracaoCards, GrandezaDeCard, chaveGrandeza, grandezasDe } from '../../services/grandezas-de-card';
-import { MonitoramentoSondaService, SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { MonitoramentoUnidadeService, UnidadeDisponivel } from '../../services/monitoramento-unidade.service';
 import { RealtimeService } from '../../services/realtime.service';
 
 /** Um alarme aberto, já com o rótulo que a tela usa para a grandeza. */
@@ -30,15 +30,15 @@ const LIMITE_DEFASAGEM_MS = 5000;
   styleUrl: './tempo-real-page.component.css',
 })
 export class TempoRealPageComponent implements OnDestroy {
-  private readonly sondaService = inject(MonitoramentoSondaService);
+  private readonly unidadeService = inject(MonitoramentoUnidadeService);
   private readonly cardsService = inject(CardsUnidadeService);
   private readonly alarmesService = inject(AlarmesService);
   private readonly realtime = inject(RealtimeService);
   private readonly toast = inject(ToastService);
 
-  protected readonly sondas = signal<SondaDisponivel[]>([]);
-  protected readonly sondaSelecionada = signal<SondaDisponivel | null>(null);
-  protected readonly carregandoSondas = signal(false);
+  protected readonly unidades = signal<UnidadeDisponivel[]>([]);
+  protected readonly unidadeSelecionada = signal<UnidadeDisponivel | null>(null);
+  protected readonly carregandoUnidades = signal(false);
 
   protected readonly configuracao = signal<ConfiguracaoCards | null>(null);
   protected readonly carregandoCards = signal(false);
@@ -102,10 +102,10 @@ export class TempoRealPageComponent implements OnDestroy {
   });
 
   /**
-   * Alarmes abertos lidos por REST ao selecionar a sonda.
+   * Alarmes abertos lidos por REST ao selecionar a unidade.
    *
-   * Cobre o intervalo até a primeira mensagem e o caso da sonda que **não está publicando** — um
-   * episódio aberto de uma sonda que caiu continua sendo verdade, e ficaria invisível justamente
+   * Cobre o intervalo até a primeira mensagem e o caso da unidade que **não está publicando** — um
+   * episódio aberto de uma unidade que caiu continua sendo verdade, e ficaria invisível justamente
    * quando ninguém está olhando o CLP.
    */
   private readonly alarmesIniciais = signal<AlarmeAtivo[]>([]);
@@ -142,13 +142,13 @@ export class TempoRealPageComponent implements OnDestroy {
 
   protected readonly conectado = computed(() => this.status() === 'Online');
   protected readonly podeConectar = computed(
-    () => !!this.sondaSelecionada() && this.status() !== 'Conectando',
+    () => !!this.unidadeSelecionada() && this.status() !== 'Conectando',
   );
 
   /**
    * Defasagem do último dado recebido.
    *
-   * Estar "Online" não garante dado fresco: se a sonda parar de publicar, a conexão permanece
+   * Estar "Online" não garante dado fresco: se a unidade parar de publicar, a conexão permanece
    * aberta e os cards congelariam sem aviso. Este indicador torna isso visível.
    */
   protected readonly defasagemMs = computed(() => {
@@ -163,7 +163,7 @@ export class TempoRealPageComponent implements OnDestroy {
   });
 
   constructor() {
-    this.carregarSondas();
+    this.carregarUnidades();
     this.relogio = setInterval(() => this.agora.set(Date.now()), 1000);
   }
 
@@ -173,13 +173,13 @@ export class TempoRealPageComponent implements OnDestroy {
     this.realtime.desconectar();
   }
 
-  protected get sondaSelecionadaValue(): SondaDisponivel | null {
-    return this.sondaSelecionada();
+  protected get unidadeSelecionadaValue(): UnidadeDisponivel | null {
+    return this.unidadeSelecionada();
   }
 
-  protected set sondaSelecionadaValue(sonda: SondaDisponivel | null) {
-    this.sondaSelecionada.set(sonda);
-    this.aoTrocarSonda(sonda);
+  protected set unidadeSelecionadaValue(unidade: UnidadeDisponivel | null) {
+    this.unidadeSelecionada.set(unidade);
+    this.aoTrocarUnidade(unidade);
   }
 
   protected serieDe(grandeza: GrandezaDeCard): (number | null)[] {
@@ -212,13 +212,13 @@ export class TempoRealPageComponent implements OnDestroy {
   }
 
   protected async conectar(): Promise<void> {
-    const sonda = this.sondaSelecionada();
-    if (!sonda) return;
+    const unidade = this.unidadeSelecionada();
+    if (!unidade) return;
 
-    await this.realtime.conectar(sonda.id);
+    await this.realtime.conectar(unidade.id);
 
     if (this.realtime.status() === 'Online') {
-      this.toast.success(`Conectado a ${sonda.nome}.`);
+      this.toast.success(`Conectado a ${unidade.nome}.`);
     } else if (this.realtime.erro()) {
       this.toast.error(this.realtime.erro()!);
     }
@@ -248,70 +248,70 @@ export class TempoRealPageComponent implements OnDestroy {
   }
 
   /**
-   * Trocar de sonda troca o conjunto de grandezas, não só os valores.
+   * Trocar de unidade troca o conjunto de grandezas, não só os valores.
    *
-   * Por isso a configuração anterior é descartada antes de a nova chegar: manter os cards da sonda
+   * Por isso a configuração anterior é descartada antes de a nova chegar: manter os cards da unidade
    * anterior na tela enquanto o documento novo carrega mostraria rótulos de uma unidade com
    * leituras de outra.
    */
-  private aoTrocarSonda(sonda: SondaDisponivel | null): void {
+  private aoTrocarUnidade(unidade: UnidadeDisponivel | null): void {
     this.realtime.desconectar();
     this.configuracao.set(null);
     this.erroCards.set(null);
     this.alarmesIniciais.set([]);
 
-    if (!sonda) return;
-    this.carregarCards(sonda);
-    this.carregarAlarmes(sonda);
+    if (!unidade) return;
+    this.carregarCards(unidade);
+    this.carregarAlarmes(unidade);
   }
 
   /**
-   * Alarme aberto aparece antes de a sonda publicar — inclusive se ela não publicar.
+   * Alarme aberto aparece antes de a unidade publicar — inclusive se ela não publicar.
    *
    * Falha aqui não vira erro na tela: é informação complementar, e a primeira mensagem do canal
    * traz a projeção de qualquer forma. Um alerta vermelho por causa dela esconderia os erros que
    * realmente impedem a tela de funcionar.
    */
-  private carregarAlarmes(sonda: SondaDisponivel): void {
-    this.alarmesService.ativos(sonda.id).subscribe({
+  private carregarAlarmes(unidade: UnidadeDisponivel): void {
+    this.alarmesService.ativos(unidade.id).subscribe({
       next: (alarmes) => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.alarmesIniciais.set(alarmes);
       },
       error: () => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.alarmesIniciais.set([]);
       },
     });
   }
 
-  private carregarCards(sonda: SondaDisponivel): void {
+  private carregarCards(unidade: UnidadeDisponivel): void {
     this.carregandoCards.set(true);
-    this.cardsService.ler(sonda.id).subscribe({
+    this.cardsService.ler(unidade.id).subscribe({
       next: (configuracao) => {
-        // Resposta atrasada de uma sonda que já não é a selecionada não pode sobrescrever a atual.
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        // Resposta atrasada de uma unidade que já não é a selecionada não pode sobrescrever a atual.
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.configuracao.set(configuracao);
         this.carregandoCards.set(false);
       },
       error: () => {
-        if (this.sondaSelecionada()?.id !== sonda.id) return;
+        if (this.unidadeSelecionada()?.id !== unidade.id) return;
         this.erroCards.set('Não foi possível ler a configuração de cards desta unidade.');
         this.carregandoCards.set(false);
       },
     });
   }
 
-  private carregarSondas(): void {
-    this.carregandoSondas.set(true);
-    this.sondaService.listarMinhas().subscribe({
-      next: (sondas) => {
-        this.sondas.set(sondas);
-        this.carregandoSondas.set(false);
+  private carregarUnidades(): void {
+    this.carregandoUnidades.set(true);
+    this.unidadeService.listarMinhas().subscribe({
+      next: (unidades) => {
+        this.unidades.set(unidades);
+        this.carregandoUnidades.set(false);
       },
       error: (e: Error) => {
-        this.toast.error(e.message || 'Não foi possível listar as sondas.');
-        this.carregandoSondas.set(false);
+        this.toast.error(e.message || 'Não foi possível listar as unidades.');
+        this.carregandoUnidades.set(false);
       },
     });
   }

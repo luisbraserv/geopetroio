@@ -3,13 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
-export interface SondaDisponivel {
+export interface UnidadeDisponivel {
   /** Id numérico no cadastro — endereça o tópico de tempo real. Estável a renomeações. */
   id: number;
-  /** Nome cadastrado (ex.: SPT-144) — chave de correlação do histórico no InfluxDB. */
-  idSondaUnidade: string;
   nome: string;
   apelido: string;
+  tipo: string;
 }
 
 export interface MonitoramentoPonto {
@@ -18,7 +17,7 @@ export interface MonitoramentoPonto {
 }
 
 export interface MonitoramentoSerie {
-  idSondaUnidade: string;
+  idUnidade: string;
   dispositivoId: string;
   /**
    * Distingue as três grandezas de um card de stroke — RN-098. Ausente nas demais.
@@ -31,16 +30,16 @@ export interface MonitoramentoSerie {
 }
 
 @Injectable({ providedIn: 'root' })
-export class MonitoramentoSondaService {
+export class MonitoramentoUnidadeService {
   private readonly http = inject(HttpClient);
   // Geopetro-Backend (API principal): valida JWT/permissões do usuário e faz proxy da
   // consulta ao InfluxDB (via aplicação de telemetria). O front não fala direto com o
-  // telemetria; sempre passa pelo backend para respeitar o vínculo do usuário às sondas.
-  private readonly sondasUrl = `${environment.apiUrl}/api/sondas`;
+  // telemetria; sempre passa pelo backend para respeitar o vínculo do usuário às unidades.
+  private readonly unidadesUrl = `${environment.apiUrl}/api/monitoramento/unidades`;
 
-  listarMinhas(): Observable<SondaDisponivel[]> {
-    // Apenas as sondas vinculadas ao setor/empresa do usuário autenticado.
-    return this.http.get<SondaDisponivel[]>(`${this.sondasUrl}/minhas`);
+  listarMinhas(): Observable<UnidadeDisponivel[]> {
+    // Apenas as unidades ativas visíveis para o usuário autenticado.
+    return this.http.get<UnidadeDisponivel[]>(`${this.unidadesUrl}/minhas`);
   }
 
   /**
@@ -52,7 +51,7 @@ export class MonitoramentoSondaService {
    * existe, e enviá-lo vazio filtraria por uma série que ninguém gravou.
    */
   consultarSerie(
-    idSondaUnidade: string,
+    unidadeId: number,
     dispositivoId: string,
     inicio: string,
     fim: string,
@@ -66,7 +65,7 @@ export class MonitoramentoSondaService {
       params = params.set('serie', serie);
     }
     return this.http.get<MonitoramentoSerie>(
-      `${this.sondasUrl}/${encodeURIComponent(idSondaUnidade)}/monitoramentos/series`,
+      `${this.unidadesUrl}/${unidadeId}/series`,
       { params }
     );
   }

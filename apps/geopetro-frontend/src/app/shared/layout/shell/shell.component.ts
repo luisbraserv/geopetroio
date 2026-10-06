@@ -6,6 +6,7 @@ import { Store } from '@ngxs/store';
 
 import {
   ACESSO_ADMINISTRACAO,
+  ACESSO_CADASTROS,
   ACESSO_CONFIGURACAO,
   ACESSO_MONITORAMENTO,
   ACESSO_MONITORAMENTO_REAL,
@@ -48,14 +49,14 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
   },
   {
     kind: 'group',
-    label: 'Sonda/Unidade',
+    label: 'Unidades',
     icon: '@tui.activity',
     children: [
       {
         kind: 'leaf',
         label: 'Monitoramento',
         icon: '@tui.radio-tower',
-        route: '/app/monitoramento-sondas',
+        route: '/app/monitoramento-unidades',
         acesso: ACESSO_MONITORAMENTO,
       },
       {
@@ -109,7 +110,7 @@ const ALL_NAV_ENTRIES: NavEntry[] = [
         label: 'Cadastros',
         icon: '@tui.clipboard-list',
         route: '/app/cadastros',
-        acesso: ACESSO_ADMINISTRACAO,
+        acesso: ACESSO_CADASTROS,
       },
       {
         kind: 'leaf',

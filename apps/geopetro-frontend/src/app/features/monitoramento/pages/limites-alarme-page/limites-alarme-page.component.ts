@@ -12,7 +12,7 @@ import {
   LimitesAlarmeService,
   validarLimite,
 } from '../../services/limites-alarme.service';
-import { MonitoramentoSondaService, SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { MonitoramentoUnidadeService, UnidadeDisponivel } from '../../services/monitoramento-unidade.service';
 
 /** Uma linha do formulário: a grandeza e os seis números que a vigiam. */
 interface LinhaLimite {
@@ -43,7 +43,7 @@ const LINHA_VAZIA = {
 } as const;
 
 /**
- * Ajuste dos limites de alarme de uma Unidade/Sonda — passo 2 de `specs/SDD/negocio/requisitos/alarmes.md`.
+ * Ajuste dos limites de alarme de uma Unidade — passo 2 de `specs/SDD/negocio/requisitos/alarmes.md`.
  *
  * <h2>Por que a tela pergunta os cards antes de tudo</h2>
  * Um limite só existe para uma grandeza que a unidade **declara** ([RN-101]). Não há mais lista
@@ -68,12 +68,12 @@ const LINHA_VAZIA = {
   styleUrl: './limites-alarme-page.component.css',
 })
 export class LimitesAlarmePageComponent implements OnInit {
-  private readonly sondasService = inject(MonitoramentoSondaService);
+  private readonly unidadesService = inject(MonitoramentoUnidadeService);
   private readonly cardsService = inject(CardsUnidadeService);
   private readonly limitesService = inject(LimitesAlarmeService);
 
-  readonly sondas = signal<SondaDisponivel[]>([]);
-  readonly sondaSelecionada = signal<SondaDisponivel | null>(null);
+  readonly unidades = signal<UnidadeDisponivel[]>([]);
+  readonly unidadeSelecionada = signal<UnidadeDisponivel | null>(null);
 
   readonly carregando = signal(false);
   readonly salvando = signal(false);
@@ -90,7 +90,7 @@ export class LimitesAlarmePageComponent implements OnInit {
   /**
    * Qual seleção está valendo agora.
    *
-   * ⚠️ **Comparar o id da sonda não basta.** A sequência A → B → A devolve o mesmo id de uma
+   * ⚠️ **Comparar o id da unidade não basta.** A sequência A → B → A devolve o mesmo id de uma
    * requisição que já não é a atual, e a resposta velha passaria pela guarda como se fosse a nova.
    * O contador cresce a cada troca e a cada recarga, então cada resposta sabe de qual ciclo veio.
    */
@@ -111,23 +111,23 @@ export class LimitesAlarmePageComponent implements OnInit {
   );
 
   readonly podeSalvar = computed(() =>
-    !!this.sondaSelecionada()
+    !!this.unidadeSelecionada()
     && !!this.documento()
     && !this.salvando()
     && this.errosPorLinha().every((erro) => erro === null),
   );
 
-  get sondaSelecionadaValue() { return this.sondaSelecionada(); }
-  set sondaSelecionadaValue(valor: SondaDisponivel | null) { this.sondaSelecionada.set(valor); }
+  get unidadeSelecionadaValue() { return this.unidadeSelecionada(); }
+  set unidadeSelecionadaValue(valor: UnidadeDisponivel | null) { this.unidadeSelecionada.set(valor); }
 
   ngOnInit(): void {
-    this.sondasService.listarMinhas().subscribe({
-      next: (sondas) => this.sondas.set(sondas),
+    this.unidadesService.listarMinhas().subscribe({
+      next: (unidades) => this.unidades.set(unidades),
       error: (falha) => this.erro.set(parseApiError(falha)),
     });
   }
 
-  onSondaChange(): void {
+  onUnidadeChange(): void {
     this.limparMensagens();
     this.documento.set(null);
     this.linhas.set([]);
@@ -137,9 +137,9 @@ export class LimitesAlarmePageComponent implements OnInit {
     this.ciclo += 1;
     this.carregando.set(false);
 
-    const sonda = this.sondaSelecionada();
-    if (sonda) {
-      this.carregar(sonda);
+    const unidade = this.unidadeSelecionada();
+    if (unidade) {
+      this.carregar(unidade);
     }
   }
 
@@ -150,16 +150,16 @@ export class LimitesAlarmePageComponent implements OnInit {
    * preenchem o que aquelas linhas comportam. Em paralelo, uma resposta atrasada de cards
    * reconstruiria as linhas e apagaria os valores já preenchidos pelos limites.
    */
-  private carregar(sonda: SondaDisponivel): void {
+  private carregar(unidade: UnidadeDisponivel): void {
     const meu = (this.ciclo += 1);
     this.carregando.set(true);
-    this.cardsService.ler(sonda.id).subscribe({
+    this.cardsService.ler(unidade.id).subscribe({
       next: (configuracao) => {
         // Resposta atrasada de um ciclo que ja nao e o atual nao pode sobrescrever a tela.
         if (!this.atual(meu)) return;
         const grandezas = grandezasVigiaveis(configuracao.cards);
         this.cardsLidos.set(true);
-        this.carregarLimites(sonda, grandezas, meu);
+        this.carregarLimites(unidade, grandezas, meu);
       },
       error: (falha) => {
         if (!this.atual(meu)) return;
@@ -169,8 +169,8 @@ export class LimitesAlarmePageComponent implements OnInit {
     });
   }
 
-  private carregarLimites(sonda: SondaDisponivel, grandezas: GrandezaVigiavel[], meu: number): void {
-    this.limitesService.ler(sonda.id).subscribe({
+  private carregarLimites(unidade: UnidadeDisponivel, grandezas: GrandezaVigiavel[], meu: number): void {
+    this.limitesService.ler(unidade.id).subscribe({
       next: (documento) => {
         if (!this.atual(meu)) return;
         this.carregando.set(false);
@@ -210,9 +210,9 @@ export class LimitesAlarmePageComponent implements OnInit {
   }
 
   salvar(): void {
-    const sonda = this.sondaSelecionada();
+    const unidade = this.unidadeSelecionada();
     const documento = this.documento();
-    if (!sonda || !documento || !this.podeSalvar()) return;
+    if (!unidade || !documento || !this.podeSalvar()) return;
 
     this.limparMensagens();
     this.salvando.set(true);
@@ -220,12 +220,12 @@ export class LimitesAlarmePageComponent implements OnInit {
     // Linha sem limiar nenhum nao vira limite: e assim que se apaga um.
     const limites = this.linhas().map(paraLimite).filter(temAlgumLimiar);
 
-    // O salvamento pertence ao ciclo em que foi disparado: trocar de sonda no meio o invalida.
+    // O salvamento pertence ao ciclo em que foi disparado: trocar de unidade no meio o invalida.
     const meu = this.ciclo;
 
-    this.limitesService.salvar(sonda.id, documento.revisao, limites).subscribe({
+    this.limitesService.salvar(unidade.id, documento.revisao, limites).subscribe({
       next: (atualizado) => {
-        // `salvando` sai do ar em qualquer caso: e o estado do botao, nao o da sonda.
+        // `salvando` sai do ar em qualquer caso: e o estado do botao, nao o da unidade.
         this.salvando.set(false);
         if (!this.atual(meu)) return;
         this.aplicar(atualizado, this.linhas().map((linha) => linha.grandeza));
@@ -233,13 +233,13 @@ export class LimitesAlarmePageComponent implements OnInit {
       },
       error: (falha) => {
         this.salvando.set(false);
-        // ⚠️ O erro precisa da MESMA guarda do sucesso. Sem ela, um 409 atrasado da sonda anterior
-        // mandava recarregar aquela sonda: `carregar` ligava o indicador de espera, a resposta
-        // caia fora do ciclo atual e ninguem o desligava — a sonda selecionada ficava escondida
+        // ⚠️ O erro precisa da MESMA guarda do sucesso. Sem ela, um 409 atrasado da unidade anterior
+        // mandava recarregar aquela unidade: `carregar` ligava o indicador de espera, a resposta
+        // caia fora do ciclo atual e ninguem o desligava — a unidade selecionada ficava escondida
         // atras de um "carregando" que nao terminava.
         if (!this.atual(meu)) return;
         if (falha?.status === 409) {
-          this.recarregarPorConflito(sonda);
+          this.recarregarPorConflito(unidade);
           return;
         }
         this.erro.set(parseApiError(falha));
@@ -254,12 +254,12 @@ export class LimitesAlarmePageComponent implements OnInit {
    * ver, o ajuste que a outra pessoa acabou de fazer — que é exatamente o que a revisão existe
    * para impedir.
    */
-  private recarregarPorConflito(sonda: SondaDisponivel): void {
+  private recarregarPorConflito(unidade: UnidadeDisponivel): void {
     this.aviso.set(
-      'Outra pessoa alterou os limites desta sonda enquanto você editava. '
+      'Outra pessoa alterou os limites desta unidade enquanto você editava. '
       + 'O que estava na tela foi descartado e os valores atuais foram recarregados.',
     );
-    this.carregar(sonda);
+    this.carregar(unidade);
   }
 
   private limparMensagens(): void {

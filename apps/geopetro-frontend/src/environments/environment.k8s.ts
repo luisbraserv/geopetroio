@@ -4,5 +4,5 @@ export const environment = {
   production: true,
   apiUrl: '',
   telemetriaUrl: '/telemetria',
-  telemetriaDemoSondaId: null as string | null,
+  telemetriaDemoIdUnidade: null as string | null,
 };

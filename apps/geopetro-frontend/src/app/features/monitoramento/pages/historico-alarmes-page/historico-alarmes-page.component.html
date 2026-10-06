@@ -12,11 +12,11 @@
   <section class="painel">
     <div class="filtros">
       <label class="field">
-        <span>Sonda / Unidade</span>
-        <select [(ngModel)]="sondaSelecionadaValue" (ngModelChange)="onSondaChange()">
-          <option [ngValue]="null" disabled selected>Selecione uma sonda</option>
-          @for (sonda of sondas(); track sonda.id) {
-            <option [ngValue]="sonda">{{ sonda.apelido || sonda.nome }}</option>
+        <span>Unidade</span>
+        <select [(ngModel)]="unidadeSelecionadaValue" (ngModelChange)="onUnidadeChange()">
+          <option [ngValue]="null" disabled selected>Selecione uma unidade</option>
+          @for (unidade of unidades(); track unidade.id) {
+            <option [ngValue]="unidade">{{ unidade.apelido || unidade.nome }}</option>
           }
         </select>
       </label>
@@ -84,13 +84,13 @@
       <tui-icon icon="@tui.bell-off" class="estado-vazio__icon"></tui-icon>
       <p>Nenhuma excursão neste período.</p>
       <p class="estado-vazio__nota">
-        Pode ser operação dentro dos limites — ou sonda sem limite configurado, que não alarma.
+        Pode ser operação dentro dos limites — ou unidade sem limite configurado, que não alarma.
       </p>
     </div>
   } @else if (!consultou()) {
     <div class="estado-vazio">
       <tui-icon icon="@tui.history" class="estado-vazio__icon"></tui-icon>
-      <p>Selecione uma sonda e um período para consultar.</p>
+      <p>Selecione uma unidade e um período para consultar.</p>
     </div>
   } @else {
     <section class="lista">

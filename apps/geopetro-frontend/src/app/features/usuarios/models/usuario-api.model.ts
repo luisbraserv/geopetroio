@@ -1,6 +1,6 @@
 import { UserRole } from '../../auth/models/user.model';
 
-export interface UnidadeSondaVinculo {
+export interface UnidadeVinculo {
   id: number;
   nome: string;
   apelido: string | null;
@@ -27,8 +27,8 @@ export interface UsuarioResponse {
   empresaId?: number | null;
   empresaNome?: string | null;
   matricula?: number | null;
-  /** Unidades/Sondas que o CLIENTE pode visualizar no monitoramento. */
-  unidadesSondas?: UnidadeSondaVinculo[] | null;
+  /** Unidades que o CLIENTE pode visualizar no monitoramento. */
+  unidades?: UnidadeVinculo[] | null;
 }
 
 export interface UsuarioPaginadoResponse {
@@ -64,8 +64,8 @@ export interface CriarUsuarioClientePayload extends UsuarioContatoPayload {
   username: string;
   password: string;
   roles: UserRole[];
-  /** Ids das Unidades/Sondas concedidas a este cliente. */
-  unidadeSondaIds: number[];
+  /** Ids das Unidades concedidas a este cliente. */
+  unidadeIds: number[];
 }
 
 export interface CriarUsuarioInternoPayload extends UsuarioContatoPayload {
@@ -81,8 +81,8 @@ export interface AtualizarUsuarioPayload extends UsuarioContatoPayload {
   empresa?: string;
   empresaId?: number;
   matricula?: number;
-  /** Omitido = mantem o vinculo atual. Array vazio = revoga todas as sondas. */
-  unidadeSondaIds?: number[];
+  /** Omitido = mantém o vínculo atual. Array vazio = revoga todas as unidades. */
+  unidadeIds?: number[];
 }
 
 export interface AlterarSenhaPayload {

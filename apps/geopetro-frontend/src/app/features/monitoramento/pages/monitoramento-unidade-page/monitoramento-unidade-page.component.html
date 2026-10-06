@@ -2,8 +2,8 @@
   <header class="page-header">
     <div>
       <p class="eyebrow">Telemetria</p>
-      <h1>Monitoramento de Sondas</h1>
-      <span>Selecione a sonda e o periodo para comparar as variaveis de operacao.</span>
+      <h1>Monitoramento de Unidades</h1>
+      <span>Selecione a unidade e o período para comparar as variáveis de operação.</span>
     </div>
   </header>
 
@@ -17,11 +17,11 @@
 
     <div class="filtros-grid">
       <label class="field">
-        <span>Sonda / Unidade</span>
-        <select [(ngModel)]="sondaSelecionadaValue" (ngModelChange)="onSondaChange()">
-          <option [ngValue]="null" disabled selected>Selecione uma sonda</option>
-          @for (sonda of sondas(); track sonda.idSondaUnidade) {
-            <option [ngValue]="sonda">{{ sonda.apelido || sonda.nome }}</option>
+        <span>Unidade</span>
+        <select [(ngModel)]="unidadeSelecionadaValue" (ngModelChange)="onUnidadeChange()">
+          <option [ngValue]="null" disabled selected>Selecione uma unidade</option>
+          @for (unidade of unidades(); track unidade.id) {
+            <option [ngValue]="unidade">{{ unidade.apelido || unidade.nome }}</option>
           }
         </select>
       </label>
@@ -70,8 +70,8 @@
           Esta unidade ainda nao tem cards configurados, e por isso nao possui historico.
           A configuracao e feita no Geopetro-Desktop instalado na propria unidade.
         </span>
-      } @else if (!sondaSelecionada()) {
-        <span class="variaveis-aviso">Selecione uma sonda para ver as variaveis disponiveis.</span>
+      } @else if (!unidadeSelecionada()) {
+        <span class="variaveis-aviso">Selecione uma unidade para ver as variáveis disponíveis.</span>
       }
 
       @for (grandeza of grandezas(); track grandeza.chave) {
@@ -118,7 +118,7 @@
     } @else {
       <div class="estado-vazio">
         <tui-icon icon="@tui.activity" class="estado-vazio__icon"></tui-icon>
-        <p>Selecione uma sonda e um periodo para visualizar os graficos.</p>
+        <p>Selecione uma unidade e um período para visualizar os gráficos.</p>
       </div>
     }
   </section>

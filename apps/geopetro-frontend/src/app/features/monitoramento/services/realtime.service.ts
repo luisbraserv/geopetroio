@@ -26,11 +26,11 @@ export interface LeituraRealtime {
 }
 
 /**
- * Estado instantâneo de uma Unidade/Sonda, recebido pelo canal de tempo real.
+ * Estado instantâneo de uma Unidade, recebido pelo canal de tempo real.
  *
  * ⚠️ **Reescrito em 2026-09-08.** Os campos fixos — `pesoColuna`, `torqueTubos`, `torqueFlutuante`,
  * `pressaoBomba`, `vazao`, `strokeAtual` — deixaram de existir. Com cards por unidade, o conjunto
- * varia de sonda para sonda: uma unidade com dois torques e uma temperatura não cabia neles, e
+ * varia de unidade para unidade: uma unidade com dois torques e uma temperatura não cabia neles, e
  * campos fixos seriam uma verdade parcial se passando por completa
  * (`specs/SDD/software/apis/websocket-realtime.md §3`).
  *
@@ -38,11 +38,11 @@ export interface LeituraRealtime {
  * a ausência é lacuna honesta, e zero seria um número que passaria por medição real.
  */
 export interface EstadoRealtime {
-  unidadeSondaId: number;
+  unidadeId: number;
   timestamp: string;
   leituras: LeituraRealtime[];
   /**
-   * Episódios abertos depois deste ciclo — acrescentado **pelo servidor**, não pela sonda.
+   * Episódios abertos depois deste ciclo — acrescentado **pelo servidor**, não pela unidade.
    *
    * ⚠️ **Viaja junto das leituras de propósito.** O destaque descreve *estes* números; num canal
    * separado os dois chegariam em ordens diferentes e a tela mostraria um valor com o destaque do
@@ -70,9 +70,9 @@ const JANELA_GRAFICO = 120;
  * Canal de tempo real com o Geopetro-Backend.
  *
  * **Responsabilidade:** apenas o "agora". O histórico vem por REST
- * (`MonitoramentoSondaService`), que consulta o InfluxDB via backend.
+ * (`MonitoramentoUnidadeService`), que consulta o InfluxDB via backend.
  *
- * A autorização é do backend: assinar um tópico de uma Unidade/Sonda sem permissão é recusado no
+ * A autorização é do backend: assinar um tópico de uma Unidade sem permissão é recusado no
  * servidor, mesmo que o id seja trocado à mão aqui.
  */
 @Injectable({ providedIn: 'root' })
@@ -109,7 +109,7 @@ export class RealtimeService {
    * Alarmes abertos na última mensagem, indexados pela chave da grandeza.
    *
    * Vazio enquanto nenhuma mensagem chegou — e aí quem responde é a rota REST, porque um episódio
-   * aberto de sonda que parou de publicar continua sendo verdade.
+   * aberto de unidade que parou de publicar continua sendo verdade.
    */
   readonly alarmes = computed(() => alarmesPorGrandeza(this.estado()?.alarmes));
 
@@ -157,32 +157,32 @@ export class RealtimeService {
   private encerradoPeloUsuario = false;
 
   /**
-   * Conecta e assina a Unidade/Sonda informada.
+   * Conecta e assina a Unidade informada.
    *
    * Trocar de unidade cancela a assinatura anterior — sem isso, a tela receberia dois fluxos
-   * misturados e os cards piscariam entre sondas diferentes.
+   * misturados e os cards piscariam entre unidades diferentes.
    */
-  async conectar(unidadeSondaId: number): Promise<void> {
+  async conectar(unidadeId: number): Promise<void> {
     this.encerradoPeloUsuario = false;
     this.cancelarReconexaoPendente();
 
-    if (this.unidadeAtual === unidadeSondaId && this.status() === 'Online') {
+    if (this.unidadeAtual === unidadeId && this.status() === 'Online') {
       return;
     }
 
-    // Estado da sonda anterior não vale para a nova: limpar evita exibir dado de outra unidade
+    // Estado da unidade anterior não vale para a nova: limpar evita exibir dado de outra unidade
     // durante o intervalo até a primeira mensagem chegar.
     this.estado.set(null);
     this.historico.set([]);
-    this.unidadeAtual = unidadeSondaId;
+    this.unidadeAtual = unidadeId;
     this.erro.set(null);
 
     if (this.client?.estaConectado) {
-      this.trocarAssinatura(unidadeSondaId);
+      this.trocarAssinatura(unidadeId);
       return;
     }
 
-    await this.abrirConexao(unidadeSondaId);
+    await this.abrirConexao(unidadeId);
   }
 
   desconectar(): void {
@@ -197,7 +197,7 @@ export class RealtimeService {
     this.status.set('Offline');
   }
 
-  private async abrirConexao(unidadeSondaId: number): Promise<void> {
+  private async abrirConexao(unidadeId: number): Promise<void> {
     const token = this.store.selectSnapshot(AuthState.token);
     if (!token) {
       this.erro.set('Sessão expirada. Faça login novamente.');
@@ -214,7 +214,7 @@ export class RealtimeService {
       await client.conectar();
       this.client = client;
       this.backoffMs = BACKOFF_INICIAL_MS;
-      this.trocarAssinatura(unidadeSondaId);
+      this.trocarAssinatura(unidadeId);
       this.status.set('Online');
       this.erro.set(null);
     } catch (e) {
@@ -225,7 +225,7 @@ export class RealtimeService {
     }
   }
 
-  private trocarAssinatura(unidadeSondaId: number): void {
+  private trocarAssinatura(unidadeId: number): void {
     if (!this.client) return;
 
     if (this.assinaturaId) {
@@ -234,7 +234,7 @@ export class RealtimeService {
     }
 
     this.assinaturaId = this.client.assinar(
-      `/topic/realtime/unidades-sondas/${unidadeSondaId}`,
+      `/topic/realtime/unidades/${unidadeId}`,
       (corpo) => this.aoReceber(corpo),
     );
   }
@@ -242,15 +242,15 @@ export class RealtimeService {
   private aoReceber(corpo: string): void {
     try {
       const estado = JSON.parse(corpo) as EstadoRealtime;
-      // Descarta mensagem de outra unidade: pode chegar no intervalo entre trocar de sonda e o
+      // Descarta mensagem de outra unidade: pode chegar no intervalo entre trocar de unidade e o
       // servidor processar o UNSUBSCRIBE.
-      if (this.unidadeAtual !== null && estado.unidadeSondaId !== this.unidadeAtual) {
+      if (this.unidadeAtual !== null && estado.unidadeId !== this.unidadeAtual) {
         return;
       }
       // Mensagem sem a lista é de um produtor no formato antigo (campos fixos, até 2026-09-07).
       // Aceitá-la produziria uma tela sem nenhum card e sem explicar por quê.
       if (!Array.isArray(estado.leituras)) {
-        this.erro.set('A sonda está publicando num formato que esta versão não entende.');
+        this.erro.set('A unidade está publicando num formato que esta versão não entende.');
         return;
       }
       this.estado.set(estado);

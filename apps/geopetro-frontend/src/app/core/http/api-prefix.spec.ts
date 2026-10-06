@@ -59,7 +59,7 @@ describe('Identity API routing', () => {
   });
 
   it('routes client and internal user creation without changing payloads', () => {
-    const client = { ...contact, id: 1, empresaId: 2, username: 'cliente', password: 'test-only', roles: [], unidadeSondaIds: [3] };
+    const client = { ...contact, id: 1, empresaId: 2, username: 'cliente', password: 'test-only', roles: [], unidadeIds: [3] };
     const internal = { ...contact, matricula: 1, username: 'ana', password: 'test-only', roles: [] };
     users.criarCliente(client).subscribe();
     users.criarInterno(internal).subscribe();

@@ -26,7 +26,7 @@ export interface FatoAlarme {
  */
 export interface EpisodioAlarme {
   episodioId: string;
-  unidadeSondaId: number;
+  unidadeId: number;
   dispositivoId: string;
   /** Qual das séries de um card de stroke (RN-098); `null` nos demais tipos. */
   serie: string | null;
@@ -51,23 +51,23 @@ export interface PaginaHistorico {
 }
 
 /**
- * O histórico de alarmes de uma Unidade/Sonda — "o que aconteceu?".
+ * O histórico de alarmes de uma Unidade — "o que aconteceu?".
  *
  * É outra pergunta de "o que está alarmando agora?", que se responde por `AlarmesService`.
  *
  * ⚠️ **O período é obrigatório e tem teto no servidor.** O log é *append-only* e não tem política
  * de retenção: uma consulta sem limite funcionaria bem por meses e depois derrubaria a tela de uma
- * sonda movimentada, sem nada anunciando a mudança.
+ * unidade movimentada, sem nada anunciando a mudança.
  */
 @Injectable({ providedIn: 'root' })
 export class HistoricoAlarmesService {
   private readonly http = inject(HttpClient);
-  private readonly sondasUrl = `${environment.apiUrl}/api/sondas`;
+  private readonly unidadesUrl = `${environment.apiUrl}/api/monitoramento/unidades`;
 
-  consultar(unidadeSondaId: number, inicio: string, fim: string): Observable<PaginaHistorico> {
+  consultar(unidadeId: number, inicio: string, fim: string): Observable<PaginaHistorico> {
     const params = new HttpParams().set('inicio', inicio).set('fim', fim);
     return this.http.get<PaginaHistorico>(
-      `${this.sondasUrl}/${unidadeSondaId}/alarmes/historico`,
+      `${this.unidadesUrl}/${unidadeId}/alarmes/historico`,
       { params },
     );
   }

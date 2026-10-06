@@ -98,10 +98,10 @@
         </label>
 
         <div class="vinculos-field wide">
-          <span class="field-title">Unidades/Sondas que este cliente pode visualizar</span>
+          <span class="field-title">Unidades que este cliente pode visualizar</span>
           <p class="field-hint">
-            O cliente só enxerga no monitoramento as sondas marcadas aqui. Sem nenhuma marcada, ele
-            acessa a tela mas não vê sonda alguma.
+            O cliente só enxerga no monitoramento as unidades ativas marcadas aqui. Sem nenhuma marcada,
+            ele acessa a tela mas não vê unidade alguma.
           </p>
 
           <div class="unidades-actions">
@@ -121,7 +121,7 @@
                 {{ rotuloUnidade(unidade) }}
               </button>
             } @empty {
-              <span class="setores-chips__empty">Nenhuma unidade/sonda cadastrada.</span>
+              <span class="setores-chips__empty">Nenhuma unidade ativa cadastrada.</span>
             }
           </div>
         </div>
@@ -132,9 +132,11 @@
         <div class="chips">
           <span class="chip chip--locked">{{ roleLabel(roleBase()) }}</span>
           @for (role of rolesAdicionais; track role) {
-            <button type="button" class="chip" [class.chip--on]="roleSelecionada(role)" (click)="alternarRole(role, !roleSelecionada(role))">
-              {{ roleLabel(role) }}
-            </button>
+            @if (role !== 'UNIDADE' || tipo() === 'INTERNO') {
+              <button type="button" class="chip" [class.chip--on]="roleSelecionada(role)" (click)="alternarRole(role, !roleSelecionada(role))">
+                {{ roleLabel(role) }}
+              </button>
+            }
           }
         </div>
       </div>

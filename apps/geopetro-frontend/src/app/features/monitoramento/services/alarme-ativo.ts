@@ -16,7 +16,7 @@ export type LimiteViolado = 'MIN' | 'MAX';
  * pela severidade.
  */
 export interface AlarmeAtivo {
-  unidadeSondaId: number;
+  unidadeId: number;
   dispositivoId: string;
   /** Qual das séries de um card de stroke (RN-098); `null` nos demais tipos. */
   serie: string | null;

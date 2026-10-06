@@ -7,10 +7,10 @@ import { environment } from '../../../../../environments/environment';
 import { AlarmeAtivo } from '../../services/alarme-ativo';
 import { CardUnidade } from '../../services/grandezas-de-card';
 import { EstadoRealtime, RealtimeService } from '../../services/realtime.service';
-import { SondaDisponivel } from '../../services/monitoramento-sonda.service';
+import { UnidadeDisponivel } from '../../services/monitoramento-unidade.service';
 import { TempoRealPageComponent } from './tempo-real-page.component';
 
-const SONDA: SondaDisponivel = { id: 7, idSondaUnidade: 'SPT-145', nome: 'SPT-145', apelido: 'Sonda 7' };
+const UNIDADE: UnidadeDisponivel = { id: 7, nome: 'SPT-145', apelido: 'Unidade 7', tipo: 'SONDA' };
 
 function card(parcial: Partial<CardUnidade> = {}): CardUnidade {
   return {
@@ -28,7 +28,7 @@ function card(parcial: Partial<CardUnidade> = {}): CardUnidade {
 
 function alarme(parcial: Partial<AlarmeAtivo> = {}): AlarmeAtivo {
   return {
-    unidadeSondaId: 7,
+    unidadeId: 7,
     dispositivoId: 'PRESSAO_01',
     serie: null,
     episodioId: 'ep-1',
@@ -52,9 +52,9 @@ describe('TempoRealPageComponent — alarmes', () => {
   let http: HttpTestingController;
   let realtime: RealtimeService;
 
-  const urlSondas = `${environment.apiUrl}/api/sondas/minhas`;
-  const urlCards = `${environment.apiUrl}/api/sondas/7/cards`;
-  const urlAlarmes = `${environment.apiUrl}/api/sondas/7/alarmes`;
+  const urlUnidades = `${environment.apiUrl}/api/monitoramento/unidades/minhas`;
+  const urlCards = `${environment.apiUrl}/api/monitoramento/unidades/7/cards`;
+  const urlAlarmes = `${environment.apiUrl}/api/monitoramento/unidades/7/alarmes`;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -71,7 +71,7 @@ describe('TempoRealPageComponent — alarmes', () => {
     realtime = TestBed.inject(RealtimeService);
 
     fixture.detectChanges();
-    http.expectOne(urlSondas).flush([SONDA]);
+    http.expectOne(urlUnidades).flush([UNIDADE]);
   });
 
   afterEach(() => {
@@ -79,15 +79,15 @@ describe('TempoRealPageComponent — alarmes', () => {
     http.verify();
   });
 
-  /** Seleciona a sonda e responde os dois GETs que a seleção dispara. */
+  /** Seleciona a unidade e responde os dois GETs que a seleção dispara. */
   function selecionar(alarmes: AlarmeAtivo[], cards: CardUnidade[] = [card()]) {
     const componente = fixture.componentInstance as unknown as {
-      sondaSelecionadaValue: SondaDisponivel | null;
+      unidadeSelecionadaValue: UnidadeDisponivel | null;
     };
-    componente.sondaSelecionadaValue = SONDA;
+    componente.unidadeSelecionadaValue = UNIDADE;
 
     http.expectOne(urlCards).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards,
+      schemaVersion: 1, unidadeId: 7, revisao: 3, conexao: null, cards,
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
     http.expectOne(urlAlarmes).flush(alarmes);
@@ -103,7 +103,7 @@ describe('TempoRealPageComponent — alarmes', () => {
   }
 
   it('mostra o alarme aberto antes de qualquer mensagem chegar', () => {
-    // O caso da sonda que caiu: o episódio continua sendo verdade e ficaria invisível sem o REST.
+    // O caso da unidade que caiu: o episódio continua sendo verdade e ficaria invisível sem o REST.
     selecionar([alarme()]);
 
     expect(texto()).toContain('1 grandeza fora da faixa');
@@ -112,7 +112,7 @@ describe('TempoRealPageComponent — alarmes', () => {
     expect(cardsCriticos()).toBe(1);
   });
 
-  it('sonda dentro dos limites não mostra aviso nenhum', () => {
+  it('unidade dentro dos limites não mostra aviso nenhum', () => {
     selecionar([]);
 
     expect(texto()).not.toContain('fora da faixa');
@@ -125,7 +125,7 @@ describe('TempoRealPageComponent — alarmes', () => {
 
     // O valor voltou à faixa e o episódio fechou: o servidor manda a lista já vazia.
     const estado: EstadoRealtime = {
-      unidadeSondaId: 7,
+      unidadeId: 7,
       timestamp: '2026-09-09T12:01:00Z',
       leituras: [{ dispositivoId: 'PRESSAO_01', tipo: 'PRESSAO', unidade: 'psi', valor: 90 }],
       alarmes: [],
@@ -154,12 +154,12 @@ describe('TempoRealPageComponent — alarmes', () => {
 
   it('falha ao ler os alarmes não vira erro na tela', () => {
     const componente = fixture.componentInstance as unknown as {
-      sondaSelecionadaValue: SondaDisponivel | null;
+      unidadeSelecionadaValue: UnidadeDisponivel | null;
     };
-    componente.sondaSelecionadaValue = SONDA;
+    componente.unidadeSelecionadaValue = UNIDADE;
 
     http.expectOne(urlCards).flush({
-      schemaVersion: 1, unidadeSondaId: 7, revisao: 3, conexao: null, cards: [card()],
+      schemaVersion: 1, unidadeId: 7, revisao: 3, conexao: null, cards: [card()],
       atualizadoPor: 'ana', atualizadoEm: '2026-09-08T10:00:00Z',
     });
     http.expectOne(urlAlarmes).flush({}, { status: 500, statusText: 'Server Error' });

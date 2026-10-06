@@ -28,7 +28,7 @@ export interface LimiteAlarme {
 
 export interface ConfiguracaoLimites {
   schemaVersion: number;
-  unidadeSondaId: number;
+  unidadeId: number;
   /** `0` quando a unidade nunca teve limites gravados. */
   revisao: number;
   limites: LimiteAlarme[];
@@ -37,9 +37,9 @@ export interface ConfiguracaoLimites {
 }
 
 /**
- * Leitura e gravação dos limites de alarme de uma Unidade/Sonda.
+ * Leitura e gravação dos limites de alarme de uma Unidade.
  *
- * **Quem enxerga a sonda ajusta, inclusive `CLIENTE`** ([RN-069]). É o oposto do documento de
+ * **Quem enxerga a unidade ajusta, inclusive `CLIENTE`** ([RN-069]). É o oposto do documento de
  * cards, que só `ADMIN` ou `SUPORTE` gravam e só pelo Desktop — e é por isso que os dois são
  * documentos separados, com revisões próprias (RN-089).
  *
@@ -50,26 +50,26 @@ export interface ConfiguracaoLimites {
 @Injectable({ providedIn: 'root' })
 export class LimitesAlarmeService {
   private readonly http = inject(HttpClient);
-  private readonly sondasUrl = `${environment.apiUrl}/api/sondas`;
+  private readonly unidadesUrl = `${environment.apiUrl}/api/monitoramento/unidades`;
 
   /**
    * Documento vigente.
    *
    * Unidade sem limites responde `200` com revisão `0` e lista vazia — não `404`. É estado normal:
-   * sonda sem limite **não alarma**, e isso não é pendência sinalizada.
+   * unidade sem limite **não alarma**, e isso não é pendência sinalizada.
    */
-  ler(unidadeSondaId: number): Observable<ConfiguracaoLimites> {
-    return this.http.get<ConfiguracaoLimites>(`${this.sondasUrl}/${unidadeSondaId}/configuracao`);
+  ler(unidadeId: number): Observable<ConfiguracaoLimites> {
+    return this.http.get<ConfiguracaoLimites>(`${this.unidadesUrl}/${unidadeId}/configuracao`);
   }
 
   /** @param revisao a revisão lida; o servidor recusa com `409` se já tiver avançado */
   salvar(
-    unidadeSondaId: number,
+    unidadeId: number,
     revisao: number,
     limites: readonly LimiteAlarme[],
   ): Observable<ConfiguracaoLimites> {
     return this.http.put<ConfiguracaoLimites>(
-      `${this.sondasUrl}/${unidadeSondaId}/configuracao`,
+      `${this.unidadesUrl}/${unidadeId}/configuracao`,
       { revisao, limites },
     );
   }

@@ -118,8 +118,8 @@ describe('primeira tela após o login', () => {
     [['ADMIN', 'SUPORTE'], '/app/dashboard'],
     [['INTERNO', 'SIMULADOR', 'CIMENTACAO'], '/app/simulador'],
     [['CLIENTE', 'SIMULADOR', 'CIMENTACAO'], '/app/simulador'],
-    [['CLIENTE', 'MONITORAMENTO'], '/app/monitoramento-sondas'],
-    [['INTERNO', 'MONITORAMENTO'], '/app/monitoramento-sondas'],
+    [['CLIENTE', 'MONITORAMENTO'], '/app/monitoramento-unidades'],
+    [['INTERNO', 'MONITORAMENTO'], '/app/monitoramento-unidades'],
     [['SUPORTE'], '/app/configuracoes'],
     [['INTERNO'], '/app/meu-usuario'],
     [['CLIENTE'], '/app/meu-usuario'],
@@ -129,7 +129,7 @@ describe('primeira tela após o login', () => {
 
   /**
    * ⚠️ Quem recebeu só `MONITORAMENTO_REAL` não tem a tela de séries. Mandá-lo para
-   * `/app/monitoramento-sondas` daria "acesso negado" no próprio login.
+   * `/app/monitoramento-unidades` daria "acesso negado" no próprio login.
    */
   it('quem só tem tempo real cai no tempo real, não na tela de séries', () => {
     expect(rotaInicialPara(['CLIENTE', 'MONITORAMENTO_REAL'])).toBe('/app/tempo-real');
