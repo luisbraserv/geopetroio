@@ -22,7 +22,7 @@ import com.geopetro.core.exception.BusinessException;
  * <p>Com cards por unidade isso deixou de valer: uma unidade com um card de temperatura não
  * conseguia ter limite nenhum para ele, e uma com três cards de torque não cabia no teto. O
  * vocabulário passa a ser <b>o que a unidade declara no documento de cards</b> — ver
- * {@code specs/contracts/configuracao-sonda.md §5}.
+ * {@code specs/SDD/software/apis/configuracao-sonda.md §5}.
  */
 public record ConfiguracaoSonda(int schemaVersion, long unidadeSondaId, long revisao,
         List<Limite> limites, String atualizadoPor, Instant atualizadoEm) {

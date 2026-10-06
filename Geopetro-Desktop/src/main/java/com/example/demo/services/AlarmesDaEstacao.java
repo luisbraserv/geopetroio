@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * O alarme desta estação, configurado nesta estação —
- * {@code specs/features/configuracao-da-estacao.md §3}.
+ * {@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3}.
  *
  * <h2>Por que não vem do servidor</h2>
  * O valor <b>nasce aqui</b>: a estação lê o CLP, converte e sabe o número antes de qualquer outro.

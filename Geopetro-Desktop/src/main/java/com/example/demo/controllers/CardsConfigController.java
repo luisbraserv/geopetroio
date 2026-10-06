@@ -54,7 +54,7 @@ import javafx.stage.Window;
 
 /**
  * A tela que configura os cards de uma Unidade/Sonda — passo 6 de
- * {@code specs/features/cards-configuraveis.md §13}.
+ * {@code specs/SDD/negocio/requisitos/cards-configuraveis.md §13}.
  *
  * <h2>Edita um rascunho, não o documento</h2>
  * A lista da esquerda é um rascunho em memória. Nada sai daqui até <b>Salvar</b>, que manda o

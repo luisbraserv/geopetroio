@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  *
  * <p>⚠️ <b>Se um campo mudar no backend, muda aqui.</b> {@code @JsonIgnoreProperties} evita que um
  * campo novo derrube a leitura, mas não avisa que ele existe — o contrato vive em
- * {@code specs/features/cards-configuraveis.md §5}.
+ * {@code specs/SDD/negocio/requisitos/cards-configuraveis.md §5}.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record CardsDaUnidade(int schemaVersion, long unidadeSondaId, long revisao,

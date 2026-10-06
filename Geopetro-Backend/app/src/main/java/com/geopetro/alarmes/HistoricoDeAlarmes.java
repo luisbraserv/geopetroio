@@ -29,7 +29,7 @@ import com.geopetro.core.exception.BusinessException;
  *
  * <h2>⚠️ A janela é obrigatória, e o resultado tem teto</h2>
  * O log é <i>append-only</i> e não tem política de retenção
- * ([OQ-051](../../../../../../specs/open-questions.md)). Uma consulta sem limite funcionaria bem por
+ * ([OQ-051](../../../../../../specs/SDD/negocio/requisitos/open-questions.md)). Uma consulta sem limite funcionaria bem por
  * meses e depois derrubaria a tela de uma sonda movimentada, sem nada anunciando a mudança. O teto é
  * declarado na resposta, então quem consultou sabe que está vendo uma parte.
  */

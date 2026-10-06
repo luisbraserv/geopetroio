@@ -14,7 +14,7 @@ compressão em blocos (hesitação) pelas técnicas Bradenhead, packer recuperá
 retentor. Tampão sem excesso. Tampão primeiro, depois squeeze. Relação entre as três
 operações conferida no R3 cap. 14, Petroguia F-18–F-20 e Halliburton cap. 7–8. Entregas
 S1–S8 e casos T-01 a T-20 em
-[Squeeze e tampão — gráficos e motor](../../simulador/squeeze-tampao-graficos-motor.md).
+[Squeeze e tampão — gráficos e motor](../squeeze-tampao-graficos-motor.md).
 **S1 concluída:** gráficos e perfil/planta extraídos para um módulo comum, com a primária
 idêntica (12 de 12 SVGs iguais no caso MINA-02). **S2 concluída:** alvo "coluna de
 trabalho" no motor da primária; o tampão do Petroguia sem excesso termina com as
@@ -41,7 +41,7 @@ build exit 0.
 **[IMPLEMENTADO 2026-09-19; ACEITES MANUAIS PENDENTES]** Todos os simuladores devem seguir
 **cadastrar fases → selecionar a fase da operação → calcular para a fase escolhida**.
 Regra comum para squeeze, tampão e primária, incluindo cenário e relatório:
-[Fase de trabalho](../../simulador/fase-operacao.md).
+[Fase de trabalho](../fase-operacao.md).
 
 **[R2 IMPLEMENTADA — 2026-09-19; ACEITES MANUAIS PENDENTES]** A primária deve completar o
 padrão do squeeze: painel retrátil com grupos/subseções, cenários organizados por
@@ -52,24 +52,24 @@ do programa e emissão final bloqueada por pendências ou limites excedidos. Ent
 encerrada: exclusão de pasta com seus cenários mediante confirmação; o usuário fará
 o aceite numérico manual posteriormente, com dados reais.
 Requisitos, persistência, compatibilidade e aceites em
-[Padrão do squeeze, cenários e relatório](../../simulador/cimentacao-primaria-padrao-squeeze.md).
+[Padrão do squeeze, cenários e relatório](../cimentacao-primaria-padrao-squeeze.md).
 Esta revisão substitui as limitações do primeiro redesenho nos pontos indicados.
-Evidências e pendências: [Validação R2](../../simulador/r2-validacao.md).
+Evidências e pendências: [Validação R2](../r2-validacao.md).
 
 **[REDESENHO DA TELA INICIADO 2026-09-18]** A pedido do usuário, a página da
 primária passa a seguir o desenho do squeeze: menu horizontal, entradas numa
 sidebar vertical, dados no conteúdo e cenários/relatório num menu flutuante. Todos
 os gráficos saem e voltam um a um sob demanda, e a receita da pasta ganha aditivos.
-Alvo e sequência T1–T7 em [redesenho da tela](../../simulador/cimentacao-primaria-tela.md).
+Alvo e sequência T1–T7 em [redesenho da tela](../cimentacao-primaria-tela.md).
 O motor não muda.
 
 **[PRIMEIRA VERSÃO IMPLEMENTADA 2026-09-18 — P1 a P12 concluídas; revisão visual pendente]**
-[`simulador/cimentacao-primaria.md`](../../simulador/cimentacao-primaria.md) define a
+[`simulador/cimentacao-primaria.md`](../cimentacao-primaria.md) define a
 cimentação por trás do revestimento: geometria externa, volumes, shoe track,
 deslocamento e hidráulica, incluindo liner e múltiplos estágios. Entrevista
 consolidada: volumes por TOC/intervalos, ordem livre, playback, banco e relatório
 completo; sequência P1–P12. Inclui fórmulas, referências e casos de aceitação.
-[`Gráficos e dados medidos`](../../simulador/cimentacao-primaria-graficos.md) detalha os
+[`Gráficos e dados medidos`](../cimentacao-primaria-graficos.md) detalha os
 cinco anexos adicionais, eixos de volume total/pasta e comparação com medições
 importadas.
 
@@ -92,8 +92,8 @@ Gyrodata do MINA-28BD) e um modelo de referência independente: o atrito passou
 para o método de R3 §4-6 (a tabela F-40 do Petroguia é descontínua em Re = 400),
 a queda livre passou a ser resolvida com vazio em vez de interromper o cálculo, e
 os fluidos de um programa novo partem da reologia do R3 §12-7. Caso de campo,
-números e decisões em [cimentação primária §7.3, §7.5, §11.5 e §13.11](../../simulador/cimentacao-primaria.md).
-Comparado depois com o iCem da Halliburton no MINA-02 ([§11.6 e §13.12](../../simulador/cimentacao-primaria.md)):
+números e decisões em [cimentação primária §7.3, §7.5, §11.5 e §13.11](../cimentacao-primaria.md).
+Comparado depois com o iCem da Halliburton no MINA-02 ([§11.6 e §13.12](../cimentacao-primaria.md)):
 com as mesmas entradas e sem calibração, hidrostática a 7,1 psi (~1%) e ECD a 0,1 ppg
 RMS das curvas do programa (2,9 psi e 0,047 ppg com caliper e reologia calibrados
 contra o próprio iCem); os gráficos de hidrostática/ECD e de envelope seguem o desenho do iCem.
@@ -104,7 +104,7 @@ Validação da etapa: 689 testes em 66 arquivos aprovados; `npm run build` exit 
 **[ALTERADO 2026-09-17]** Squeeze/tampão passam a editar diâmetros somente por fase,
 sem o resumo fixo de caliper, e começam com um exemplo de superfície seguido do
 trecho da operação. Análise e compatibilidade em
-[`simulador/geometria-poco.md`, §17](../../simulador/geometria-poco.md#17-diâmetros-por-fase-e-exemplo-iniciado-na-superfície).
+[`simulador/geometria-poco.md`, §17](../geometria-poco.md#17-diâmetros-por-fase-e-exemplo-iniciado-na-superfície).
 
 ## ⚠️ O comando de teste é `ng test` — nunca `vitest` direto
 
@@ -150,21 +150,21 @@ specs/
 ```
 
 **[DECIDIDO 2026-09-05]** Primeira spec de feature escrita neste repositório:
-[`simulador/geometria-poco.md`](../../simulador/geometria-poco.md) — estrutura do poço, trajetória direcional
+[`simulador/geometria-poco.md`](../geometria-poco.md) — estrutura do poço, trajetória direcional
 e o vínculo com a nova entidade `Poço`. As entregas estão registradas ao final do documento.
 
-**[FATO 2026-09-06]** [`simulador/receitas-pasta.md`](../../simulador/receitas-pasta.md)
+**[FATO 2026-09-06]** [`simulador/receitas-pasta.md`](../receitas-pasta.md)
 registra a correção da composição e escala das receitas, encerrando as quatro
 falhas conhecidas dos testes. Suíte completa do frontend: 280 testes aprovados.
 
 **[FATO 2026-09-06 — entrega seguinte]** As relações entre campos de
-[`simulador/faixas-validacao.md`](../../simulador/faixas-validacao.md) agora geram avisos
+[`simulador/faixas-validacao.md`](../faixas-validacao.md) agora geram avisos
 nas duas operações; as faixas quantitativas ainda precisam ser preenchidas.
 Suíte completa atual: 299 testes aprovados em 32 arquivos.
 
 **Nota [FATO]:** `almoxarifado/` e `compra/` existem em `src/app/features/` como pastas com
 subdiretórios nomeados e **zero arquivos**. Foram **descontinuados**
-([DECIDIDO 2026-08-26](../../../../specs/technical-debt.md#dt-001--código-fonte-perdido-de-almoxarifado-e-compras)).
+([DECIDIDO 2026-08-26](../../../../specs/SDD/software/technical-debt.md#dt-001--código-fonte-perdido-de-almoxarifado-e-compras)).
 Não recebem spec — e as pastas vazias devem ser removidas.
 
 ## Mapa de rotas
@@ -256,11 +256,11 @@ usuário está sendo enviado para fora da infraestrutura da Braserv.
 
 ⚠️ **[FATO]** `environment.telemetriaUrl` está declarado nos três ambientes e **nunca é consumido**.
 O frontend sempre passa pelo Geopetro-Backend — ver
-[`rest-monitoramento.md`](../../../../specs/contracts/rest-monitoramento.md).
+[`rest-monitoramento.md`](../../../../specs/SDD/software/apis/rest-monitoramento.md).
 
 ## Dívida técnica específica
 
-Inventário completo em [DT-015](../../../../specs/technical-debt.md#dt-015--código-morto-inventário).
+Inventário completo em [DT-015](../../../../specs/SDD/software/technical-debt.md#dt-015--código-morto-inventário).
 Itens de maior impacto:
 
 | Item | Ação sugerida |
@@ -271,8 +271,8 @@ Itens de maior impacto:
 | `MOCK_USERS` com senhas em texto puro | Remover |
 | `RichTextEditorComponent` órfão | Remover ou usar |
 | `tests/hydraulics.spec.js` referencia arquivo inexistente | ✅ Resolvido em 2026-09-09; os cenários úteis foram migrados para `squeeze-hydraulic-simulation.service.spec.ts` e o arquivo e o script `test:hydraulics` saíram |
-| Simulador sem `Validators` em ~40 campos críticos | [OQ-009](../../../../specs/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador) |
-| Roles divergentes do backend | ✅ Resolvido em 2026-08-27; ver [DT-011](../../../../specs/technical-debt.md#dt-011--divergência-de-roles-backend--frontend) |
+| Simulador sem `Validators` em ~40 campos críticos | [OQ-009](../../../../specs/SDD/negocio/requisitos/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador) |
+| Roles divergentes do backend | ✅ Resolvido em 2026-08-27; ver [DT-011](../../../../specs/SDD/software/technical-debt.md#dt-011--divergência-de-roles-backend--frontend) |
 | Mojibake em `meu-usuario-page.component.html:43` | Corrigir encoding |
 
 ## Feature removida — Projetos
@@ -300,7 +300,7 @@ Itens de maior impacto:
 
 **[FATO]** Após as remoções de 2026-08-26, **o frontend cobre todos os domínios do backend**. Não há
 mais nenhum módulo de backend sem interface — a lacuna registrada em
-[DT-005](../../../../specs/technical-debt.md#dt-005--módulos-de-backend-sem-interface) foi resolvida pela
+[DT-005](../../../../specs/SDD/software/technical-debt.md#dt-005--módulos-de-backend-sem-interface) foi resolvida pela
 remoção dos módulos órfãos (Processos, Anotações, Observações e Químicos).
 
 | Domínio do backend | Tela no frontend |
@@ -357,7 +357,7 @@ entre a média móvel nova e a anterior (a troca foi por desempenho, não podia 
 teto de tempo que detecta regressão de complexidade.
 ## Identidade visual e Taiga UI (revisão 2026-08-31)
 
-**[DECIDIDO]** O arquivo [`../../specs/index.html`](../../../../specs/index.html) é a fonte normativa dos
+**[DECIDIDO]** O arquivo [`../../specs/SDD/software/frontend/index.html`](../../../../specs/SDD/software/frontend/index.html) é a fonte normativa dos
 tokens visuais Braserv. O Front continua usando **Taiga UI 5.2**; a biblioteca não é substituída.
 Seus tokens CSS são sobrescritos em `src/styles.css`, que o `angular.json` carrega **depois** do
 tema Taiga — é essa ordem que faz os tokens da marca vencerem os padrões da biblioteca.
@@ -498,7 +498,7 @@ de borda que quebrariam a curva em silêncio, ambos cobertos por teste:
 
 **[DECIDIDO 2026-09-11]** O GeoPetro Vision monitorará localmente as câmeras de cada unidade e alimentará o Geopetro-Backend com registros de não conformidade SMS e fotos. O Geopetro-Front existente disponibilizará o histórico sincronizado; não haverá nova central nem vídeo ao vivo remoto nesta etapa. ADMIN/SUPORTE poderão consultar todas as unidades; os demais acessos respeitarão o escopo autorizado. Retenção do Vision é indefinida e distinta da telemetria. Requisitos ainda não implementados.
 
-Decisões, permissões, operação offline e contrato pendente: [GeoPetro Vision](../../../../specs/features/geopetro-vision.md).
+Decisões, permissões, operação offline e contrato pendente: [GeoPetro Vision](../../../../specs/SDD/negocio/requisitos/geopetro-vision.md).
 
 **[DECIDIDO 2026-09-11 — entrevista encerrada]** Frontend somente consulta histórico; avaliações/correções e configuração de turnos/zonas exclusivamente no desktop. Câmeras cadastradas manualmente, quantidade variável. Tempos por zona e turnos definidos localmente. Offline-first mantém consulta/avaliação da sessão já iniciada; ao reconectar com token expirado exige relogin na interface sem parar monitoramento/transporte. Não enviar e-mail ao SMS por falha de câmera/IA. Especificações atualizadas, sem implementação.
 

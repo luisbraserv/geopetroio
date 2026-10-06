@@ -54,7 +54,7 @@ export class MonitoramentoSondaPageComponent implements OnInit {
    *
    * ⚠️ Até 2026-09-07 esta lista era constante no código: cinco dispositivos iguais em toda a
    * frota. Com cards por unidade o conjunto varia, e um card de stroke traz **três** séries
-   * (RN-098). Ver `specs/features/cards-configuraveis.md`.
+   * (RN-098). Ver `specs/SDD/negocio/requisitos/cards-configuraveis.md`.
    */
   readonly grandezas = computed(() => grandezasDe(this.configuracao()?.cards));
 

@@ -8,7 +8,7 @@ public class TelemetriaProperties {
 
 	/**
 	 * Zona usada para interpretar o campo dataHora quando ele vier sem offset — que e o caso do
-	 * produtor atual. Ver specs/contracts/mqtt-telemetria.md secao 7.
+	 * produtor atual. Ver specs/SDD/software/mqtt/mqtt-telemetria.md secao 7.
 	 */
 	private String zonaSonda = "America/Sao_Paulo";
 

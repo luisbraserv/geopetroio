@@ -9,7 +9,7 @@ import com.example.demo.models.CardsDaUnidade;
  *
  * <p>⚠️ É o <b>único</b> documento que o canal traz desde 2026-09-09. O par dos limites de alarme
  * saiu com o alarme da estação passando a ser configurado na estação
- * ({@code specs/features/configuracao-da-estacao.md §3.3}).
+ * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}).
  */
 public class CardsState extends EstadoDeDocumento<CardsDaUnidade> {
 

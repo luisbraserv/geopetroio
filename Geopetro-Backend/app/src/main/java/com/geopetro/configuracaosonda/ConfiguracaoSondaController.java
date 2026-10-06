@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
  * ({@code /topic/config/unidades-sondas/{id}}) e um snapshot por {@code @SubscribeMapping}, ambos
  * criados para o Geopetro-Desktop, que avaliava os limites localmente. Em 2026-09-09 o alarme da
  * estação passou a ser configurado <b>na estação</b>
- * ({@code specs/features/configuracao-da-estacao.md §3.3}) e a assinatura saiu de lá; o Front nunca
+ * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}) e a assinatura saiu de lá; o Front nunca
  * assinou — lê e grava por aqui. Sem assinante, o canal virou código morto e foi removido.
  *
  * <p>O documento <b>continua vivo</b>: {@code MotorDeAlarmes} o lê a cada ciclo de tempo real, e é

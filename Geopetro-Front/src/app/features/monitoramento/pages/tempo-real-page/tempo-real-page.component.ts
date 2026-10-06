@@ -57,7 +57,7 @@ export class TempoRealPageComponent implements OnDestroy {
    *
    * ⚠️ **Vem do documento de cards, não de uma lista fixa.** Até 2026-09-07 eram sempre as mesmas
    * cinco grandezas; hoje cada unidade declara as suas
-   * (`specs/features/cards-configuraveis.md`), e uma unidade recém-cadastrada não declara nenhuma.
+   * (`specs/SDD/negocio/requisitos/cards-configuraveis.md`), e uma unidade recém-cadastrada não declara nenhuma.
    */
   protected readonly grandezas = computed(() => grandezasDe(this.configuracao()?.cards));
 

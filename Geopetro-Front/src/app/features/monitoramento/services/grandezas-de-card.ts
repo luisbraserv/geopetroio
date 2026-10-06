@@ -1,11 +1,11 @@
 /**
  * Documento de cards de uma Unidade/Sonda e as grandezas que ele produz.
  *
- * Contrato em `specs/contracts/configuracao-sonda.md §5`; o que cada tipo significa está em
- * `specs/features/cards-configuraveis.md`.
+ * Contrato em `specs/SDD/software/apis/configuracao-sonda.md §5`; o que cada tipo significa está em
+ * `specs/SDD/negocio/requisitos/cards-configuraveis.md`.
  *
  * **Por que este módulo existe:** desde 2026-09-08 o conjunto de grandezas **varia por unidade**
- * ([RN-080](../../../../../../specs/business-rules.md)). As telas não podem mais partir de uma
+ * ([RN-080](../../../../../../specs/SDD/negocio/regras/business-rules.md)). As telas não podem mais partir de uma
  * lista fixa de cinco dispositivos — precisam perguntar à unidade o que ela mede. Este arquivo é o
  * único lugar do front que sabe traduzir *card* em *série de tela*.
  *

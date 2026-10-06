@@ -3,7 +3,7 @@ package com.braservpetroleo.telemetria.geopetroio.domain;
 /**
  * Uma leitura de telemetria, ja normalizada.
  *
- * <p>Contrato em {@code specs/contracts/mqtt-telemetria.md §3}. ⚠️ <b>Reescrito em 2026-09-08</b>
+ * <p>Contrato em {@code specs/SDD/software/mqtt/mqtt-telemetria.md §3}. ⚠️ <b>Reescrito em 2026-09-08</b>
  * para cards por unidade.
  *
  * <h2>A mensagem se descreve — RN-097</h2>

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.example.demo.services.AlarmesDaEstacao.AlarmeLocal;
 
 /**
- * A configuracao de alarme desta estacao — {@code specs/features/configuracao-da-estacao.md §3}.
+ * A configuracao de alarme desta estacao — {@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3}.
  *
  * <p>O que importa aqui e que ela <b>sobreviva</b>: a sonda pode ficar sem internet por dias, e o
  * alarme local e a unica coisa que chama quem esta ao lado do equipamento.

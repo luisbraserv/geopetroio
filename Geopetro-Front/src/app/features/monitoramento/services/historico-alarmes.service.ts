@@ -22,7 +22,7 @@ export interface FatoAlarme {
  * e **uma** excursão; a resposta já vem agrupada para nenhuma tela ter de reconstruir isso e contar
  * a mesma excursão como três alarmes.
  *
- * @see specs/features/alarmes.md §4
+ * @see specs/SDD/negocio/requisitos/alarmes.md §4
  */
 export interface EpisodioAlarme {
   episodioId: string;

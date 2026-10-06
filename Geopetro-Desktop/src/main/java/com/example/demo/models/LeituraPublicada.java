@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Uma leitura como ela viaja — MQTT e tempo real usam <b>a mesma forma</b>.
  *
  * <p>Contrato em
- * {@code specs/contracts/mqtt-telemetria.md §3} e {@code websocket-realtime.md §3}. O que difere
+ * {@code specs/SDD/software/mqtt/mqtt-telemetria.md §3} e {@code websocket-realtime.md §3}. O que difere
  * entre os dois canais é o destino e a garantia, não o conteúdo: o MQTT entrega cada leitura (QoS 1),
  * o tempo real sobrescreve e descarta os estados intermediários de propósito.
  *

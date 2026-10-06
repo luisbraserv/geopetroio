@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
  *
  * <p>⚠️ <b>Este teste mudou de documento em 2026-09-09.</b> Ele cobria o canal dos <b>limites</b> de
  * alarme, que saiu junto com a assinatura do Desktop
- * ({@code specs/features/configuracao-da-estacao.md §3.3}). O que era especifico daquele documento
+ * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}). O que era especifico daquele documento
  * morreu com ele; o que vale para o <b>transporte</b> e para a <b>guarda de saida</b> foi apontado
  * para o documento de cards, que e o unico que o canal ainda carrega.
  *

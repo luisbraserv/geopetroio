@@ -27,7 +27,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *
  * <p>⚠️ <b>Limite conhecido:</b> broker em memoria nao propaga entre instancias. Com mais de uma
  * replica do backend, um assinante conectado na instancia A nao recebe o que o Desktop publicou na
- * instancia B. Ver specs/contracts/websocket-realtime.md.
+ * instancia B. Ver specs/SDD/software/apis/websocket-realtime.md.
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -70,7 +70,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      *
      * <p>⚠️ Eram três. A do documento de <b>limites</b> saiu em 2026-09-09 junto com o tópico que ela
      * protegia — ele ficou sem assinante quando o alarme da estação passou a ser configurado na
-     * estação ({@code specs/features/configuracao-da-estacao.md §3.3}).
+     * estação ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}).
      */
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {

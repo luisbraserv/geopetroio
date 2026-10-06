@@ -31,7 +31,7 @@ import com.geopetro.configuracaosonda.LimitesDeclarados;
 import com.geopetro.realtime.dto.EstadoRealtimeDTO.LeituraRealtimeDTO;
 
 /**
- * O servidor avaliando o que a sonda publica — passo 2 de {@code specs/features/alarmes.md}.
+ * O servidor avaliando o que a sonda publica — passo 2 de {@code specs/SDD/negocio/requisitos/alarmes.md}.
  *
  * <h2>De onde vem a leitura</h2>
  * Do canal de tempo real, que é o <b>único caminho por onde o Backend recebe leitura sem pedir</b>.

@@ -30,7 +30,7 @@ armazenamento.
 
 | Motivo | Detalhe |
 |---|---|
-| **Domínio de falha** | Perda de telemetria é **permanente** (não há buffer no produtor — [OQ-019](../specs/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável)); indisponibilidade do web é recuperável. Não faz sentido acoplar os uptimes |
+| **Domínio de falha** | Perda de telemetria é **permanente** (não há buffer no produtor — [OQ-019](../specs/SDD/negocio/requisitos/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável)); indisponibilidade do web é recuperável. Não faz sentido acoplar os uptimes |
 | **Perfil de I/O** | Escrita contínua do InfluxDB competiria com o MySQL transacional |
 | **Exposição de rede** | A VM-2 recebe conexões das sondas em campo. Isolar isso da máquina que guarda o banco de usuários é postura correta |
 | **Escala independente** | Mais sondas escalam a ingestão; mais usuários escalam o web |
@@ -66,7 +66,7 @@ Preencha no `.env`: `MQTT_PASSWORD`, `INFLUX_ADMIN_PASSWORD`, `INFLUX_TOKEN`.
 ### 2. Gerar o arquivo de senhas do Mosquitto
 
 ⚠️ **Passo obrigatório.** O broker está configurado com `allow_anonymous false`
-([SEC-009](../specs/security-findings.md#sec-009--broker-mqtt-sem-autenticação)) e **não sobe** sem
+([SEC-009](../specs/SDD/software/seguranca/security-findings.md#sec-009--broker-mqtt-sem-autenticação)) e **não sobe** sem
 este arquivo.
 
 ```bash
@@ -96,7 +96,7 @@ Deve mostrar `mqtt.estado: "conectado"` e `influx.estado: "acessivel"`.
 
 ⚠️ **Firewall:** restrinja a porta `1883` à faixa de IPs das sondas e a `8081` ao IP da VM-1. O broker
 não deve ficar aberto na internet, e a API de telemetria ainda não tem autenticação
-serviço-a-serviço ([OQ-029](../specs/open-questions.md#oq-029--a-api-de-telemetria-precisa-de-autenticação-serviço-a-serviço)).
+serviço-a-serviço ([OQ-029](../specs/SDD/negocio/requisitos/open-questions.md#oq-029--a-api-de-telemetria-precisa-de-autenticação-serviço-a-serviço)).
 
 ---
 
@@ -114,7 +114,7 @@ openssl rand -base64 48
 ```
 
 ⚠️ A aplicação **falha no startup** se `JWT_SECRET` estiver vazio — deliberado
-([SEC-004](../specs/security-findings.md#sec-004--segredo-jwt-sem-valor-padrão)).
+([SEC-004](../specs/SDD/software/seguranca/security-findings.md#sec-004--segredo-jwt-sem-valor-padrão)).
 
 ### 2. Apontar para a VM-2
 
@@ -172,7 +172,7 @@ versão já está lá. A migração começa de fato em `V2026.09.05`.
 
 ⚠️ **A `V2026.09.06.2` descarta dados**: as tabelas `usuario_interno_regionais` /
 `usuario_interno_setores` e a coluna `usuarios.regional_id`. Não há backup do MySQL
-([decisão de 2026-09-05](../specs/product-context.md#11-fechamentos-das-rodadas-3-a-6)). Para guardar
+([decisão de 2026-09-05](../specs/SDD/negocio/requisitos/product-context.md#11-fechamentos-das-rodadas-3-a-6)). Para guardar
 os vínculos antes, os `SELECT` de exportação estão no cabeçalho do script.
 
 ⚠️ **A `V2026.09.06.1` classifica toda a frota existente como `SONDA`.** Confira registro a registro
@@ -217,7 +217,7 @@ existir. **Não rodam mais** — seus efeitos estão dentro do baseline. Ficam c
 
 ⚠️ **Pendência independente deste deploy:** há uma credencial MySQL em texto plano no histórico do Git
 do Braserv-Horus-Desktop, apontando para um banco `braservone`. Deve ser **rotacionada**
-([SEC-006](../specs/security-findings.md#sec-006--credencial-mysql-no-histórico-do-git)).
+([SEC-006](../specs/SDD/software/seguranca/security-findings.md#sec-006--credencial-mysql-no-histórico-do-git)).
 
 ---
 
@@ -233,7 +233,7 @@ Cada instalação do Geopetro-Desktop precisa apontar para o broker da VM-2, na 
 | ID da Sonda/Unidade | **Exatamente** o `nome` cadastrado em Unidades/Sondas (ex.: `SPT-144`) |
 
 ⚠️ **O ID precisa bater com o cadastro.** É a chave de correlação da telemetria
-([RN-018](../specs/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)); renomear
+([RN-018](../specs/SDD/negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)); renomear
 uma unidade depois quebra a continuidade do histórico.
 
 **[FATO 2026-08-27]** O suporte a credenciais MQTT foi **implementado no Geopetro-Desktop** durante esta
@@ -258,7 +258,7 @@ Os `docker-compose.yml` são a via recomendada para duas VMs. Se migrar para Kub
 - MySQL e InfluxDB precisam de `PersistentVolumeClaim` — ou, preferencialmente, serviços gerenciados.
 - O schema inicial vira um `Job` de inicialização, já que não há `docker-entrypoint-initdb.d`.
 
-**[FATO]** Não há manifestos Kubernetes no repositório ([OQ-012](../specs/open-questions.md#oq-012--onde-vivem-os-manifestos-de-deploy)).
+**[FATO]** Não há manifestos Kubernetes no repositório ([OQ-012](../specs/SDD/negocio/requisitos/open-questions.md#oq-012--onde-vivem-os-manifestos-de-deploy)).
 
 ---
 
@@ -268,8 +268,8 @@ Os `docker-compose.yml` são a via recomendada para duas VMs. Se migrar para Kub
 |---|---|---|
 | 1 | **Atualizar a frota antes de exigir autenticação no broker** | O suporte a credenciais já existe no Geopetro-Desktop, mas instalações antigas em campo ainda conectam anonimamente |
 | 2 | **Sem TLS** — MQTT e HTTP em texto claro | Aceitável em rede privada; obrigatório se atravessar internet |
-| 3 | **Sem autenticação serviço-a-serviço** entre VM-1 e VM-2 | Mitigado por firewall ([OQ-029](../specs/open-questions.md#oq-029--a-api-de-telemetria-precisa-de-autenticação-serviço-a-serviço)) |
-| 4 | **Retenção do InfluxDB** default 90d | ~8,6 mi de pontos/dia com 20 sondas ([OQ-028](../specs/open-questions.md#oq-028--qual-é-a-política-de-retenção-do-influxdb)) |
+| 3 | **Sem autenticação serviço-a-serviço** entre VM-1 e VM-2 | Mitigado por firewall ([OQ-029](../specs/SDD/negocio/requisitos/open-questions.md#oq-029--a-api-de-telemetria-precisa-de-autenticação-serviço-a-serviço)) |
+| 4 | **Retenção do InfluxDB** default 90d | ~8,6 mi de pontos/dia com 20 sondas ([OQ-028](../specs/SDD/negocio/requisitos/open-questions.md#oq-028--qual-é-a-política-de-retenção-do-influxdb)) |
 | 5 | **Sem backup automatizado** | MySQL e InfluxDB precisam de rotina de backup |
 | 6 | **Sem HTTPS no frontend** | O compose expõe `:80`. Coloque um proxy reverso com TLS à frente |
-| 7 | **Repositório Git do Geopetro-Telemetria não existe** | Criar — preferencialmente fora do OneDrive ([DT-004](../specs/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)) |
+| 7 | **Repositório Git do Geopetro-Telemetria não existe** | Criar — preferencialmente fora do OneDrive ([DT-004](../specs/SDD/software/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git)) |

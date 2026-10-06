@@ -316,7 +316,7 @@ public class PlcConnectionService {
      * gravação (RN-037). O registro local é da estação.
      */
     /**
-     * O alarme da estacao — passo 3 de {@code specs/features/alarmes.md}.
+     * O alarme da estacao — passo 3 de {@code specs/SDD/negocio/requisitos/alarmes.md}.
      *
      * <p>⚠️ <b>Sinaliza, nao registra.</b> O historico de eventos tem um produtor so, o Backend.
      * Aqui a avaliacao existe para chamar quem esta ao lado do equipamento, e funciona sem rede

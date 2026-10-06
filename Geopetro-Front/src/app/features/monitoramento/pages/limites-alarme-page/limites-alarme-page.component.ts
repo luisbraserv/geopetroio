@@ -43,7 +43,7 @@ const LINHA_VAZIA = {
 } as const;
 
 /**
- * Ajuste dos limites de alarme de uma Unidade/Sonda — passo 2 de `specs/features/alarmes.md`.
+ * Ajuste dos limites de alarme de uma Unidade/Sonda — passo 2 de `specs/SDD/negocio/requisitos/alarmes.md`.
  *
  * <h2>Por que a tela pergunta os cards antes de tudo</h2>
  * Um limite só existe para uma grandeza que a unidade **declara** ([RN-101]). Não há mais lista

@@ -25,7 +25,7 @@ import com.example.demo.models.CardsDaUnidade;
  * O canal de configuracao do Desktop, agora com <b>um</b> documento: os cards.
  *
  * <p>⚠️ <b>Herdeiro de {@code ConfiguracaoRemotaTest}</b>, que cobria os dois documentos e saiu com o
- * de limites em 2026-09-09 ({@code specs/features/configuracao-da-estacao.md §3.3}). O que era
+ * de limites em 2026-09-09 ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}). O que era
  * especifico dos limites morreu com a feature; o que vale para o transporte, para as guardas de
  * cache e para os cards foi trazido para ca — apagar tudo junto teria levado cobertura viva.
  */

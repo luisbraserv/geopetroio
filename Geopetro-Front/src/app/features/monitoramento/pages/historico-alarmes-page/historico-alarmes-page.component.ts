@@ -24,7 +24,7 @@ const PERIODOS = [
 ] as const;
 
 /**
- * Histórico de alarmes — passo 4 de `specs/features/alarmes.md`.
+ * Histórico de alarmes — passo 4 de `specs/SDD/negocio/requisitos/alarmes.md`.
  *
  * <h2>A tela lista excursões, não linhas de log</h2>
  * A pergunta é "o que aconteceu no turno?". Um episódio que abriu em atenção, escalou e fechou é

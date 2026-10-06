@@ -9,7 +9,7 @@ package com.example.demo.models;
  *
  * <p>⚠️ <b>Eram dois.</b> O documento de limites de alarme saiu em 2026-09-09: o alarme da estação
  * passou a ser configurado na estação
- * ({@code specs/features/configuracao-da-estacao.md §3.3}), e buscar no servidor uma faixa para
+ * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}), e buscar no servidor uma faixa para
  * tocar um beep nesta máquina era uma volta pela rede para responder o que já estava respondido
  * aqui.
  *

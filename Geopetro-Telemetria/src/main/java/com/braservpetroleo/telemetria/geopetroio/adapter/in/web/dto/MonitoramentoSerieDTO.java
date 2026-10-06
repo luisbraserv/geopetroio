@@ -6,7 +6,7 @@ import java.util.List;
  * Serie temporal de um dispositivo numa sonda.
  *
  * <p>Espelha {@code com.geopetro.monitoramento.dto.MonitoramentoSerieDTO} no Geopetro-Backend.
- * Ver specs/contracts/rest-monitoramento.md.
+ * Ver specs/SDD/software/apis/rest-monitoramento.md.
  */
 public record MonitoramentoSerieDTO(
 		String idSondaUnidade,

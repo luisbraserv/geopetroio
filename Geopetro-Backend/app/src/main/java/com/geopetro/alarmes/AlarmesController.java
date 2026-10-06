@@ -23,7 +23,7 @@ import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
  *
  * <h2>Quem vê</h2>
  * A mesma regra dos limites — quem enxerga a sonda, inclusive {@code CLIENTE}
- * ([RN-069](../../../../../../specs/business-rules.md)). Reaproveita {@link ConfiguracaoSondaAccess}
+ * ([RN-069](../../../../../../specs/SDD/negocio/regras/business-rules.md)). Reaproveita {@link ConfiguracaoSondaAccess}
  * de propósito: ver o alarme e ajustar o limite dele são a mesma autoridade, e duas verificações
  * separadas divergiriam na primeira mudança.
  */

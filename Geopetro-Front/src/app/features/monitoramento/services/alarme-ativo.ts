@@ -6,7 +6,7 @@ export type SeveridadeAlarme = 'ATENCAO' | 'CRITICO';
 export type LimiteViolado = 'MIN' | 'MAX';
 
 /**
- * Um episódio de alarme aberto — a projeção de `specs/features/alarmes.md §4`.
+ * Um episódio de alarme aberto — a projeção de `specs/SDD/negocio/requisitos/alarmes.md §4`.
  *
  * **É projeção, não histórico.** Responde "o que está alarmando agora?"; "o que aconteceu?" se
  * responde pelo log de eventos, que ainda não tem rota.

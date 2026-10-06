@@ -18,7 +18,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <!--
-   Cards da unidade — passo 6 de specs/features/cards-configuraveis.md.
+   Cards da unidade — passo 6 de specs/SDD/negocio/requisitos/cards-configuraveis.md.
 
    Lista a esquerda, formulario do card selecionado a direita. Os parametros mudam com o tipo: cada
    tipo tem seu painel, e o controller mostra um de cada vez. Peso e torque exibem o range do

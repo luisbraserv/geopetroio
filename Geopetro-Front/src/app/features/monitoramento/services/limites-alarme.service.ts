@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 /**
- * O limite de uma grandeza — `specs/contracts/configuracao-sonda.md §2`.
+ * O limite de uma grandeza — `specs/SDD/software/apis/configuracao-sonda.md §2`.
  *
  * ⚠️ **`serie` faz parte da identidade, não é rótulo.** As três séries de um card de stroke
  * compartilham o `dispositivoId` (RN-098): sem ela, o limite de vazão e o de volume acumulado

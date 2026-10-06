@@ -39,7 +39,7 @@ e `PATCH /usuarios/me/senha`, que antes só conferia se os dois campos batiam.
   distingue conta desativada de senha errada porque o sistema não tem autocadastro: as contas são
   nomeadas e criadas por `ADMIN`.
 - **Continua valendo:** não há revogação de token individual. Token vazado de usuário *ativo* segue
-  válido até expirar. Fecha a parte decidida de [SEC-008](../../specs/security-findings.md#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário).
+  válido até expirar. Fecha a parte decidida de [SEC-008](../../specs/SDD/software/seguranca/security-findings.md#sec-008--token-não-revogável-e-desacoplado-do-estado-do-usuário).
 
 ### RN-063 · Exclusão bloqueada por vínculo, em todos os cadastros
 
@@ -95,7 +95,7 @@ um ponto gravado à meia-noite UTC apareceria como o dia anterior em qualquer fu
 passaria a depender de onde a aplicação roda.
 
 **O adaptador consulta pelo nome da sonda**, que é a chave de integração com a telemetria
-([RN-018](../../specs/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)), e usa o
+([RN-018](../../specs/SDD/negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração)), e usa o
 repositório em vez do `UnidadeSondaService` — o serviço depende da guarda, a guarda depende do
 adaptador, e injetar o serviço fecharia um ciclo que o Spring recusa a subir.
 
@@ -132,7 +132,7 @@ Enum fechado `TipoUnidadeSonda`: `SONDA` · `UNIDADE_BOMBEIO` · `SLICKLINE_WIRE
 
 **[FATO 2026-09-06]** As duas mudanças viraram migrations do **Flyway**, que roda no startup do
 backend. Não há mais script para executar à mão — a fila manual de
-[DT-002](../../specs/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)
+[DT-002](../../specs/SDD/software/technical-debt.md#dt-002--estratégias-conflitantes-de-evolução-de-schema)
 deixou de existir.
 
 | Versão | O que faz |
@@ -145,7 +145,7 @@ atual, mas a classificação precisa ser conferida registro a registro na tela d
 campo é editável para isso.
 
 ⚠️ **A `.2` descarta dados sem volta**, e não há backup do MySQL
-([decisão de 2026-09-05](../../specs/product-context.md#11-fechamentos-das-rodadas-3-a-6)). O cabeçalho
+([decisão de 2026-09-05](../../specs/SDD/negocio/requisitos/product-context.md#11-fechamentos-das-rodadas-3-a-6)). O cabeçalho
 do script traz os `SELECT` de exportação, caso haja intenção de consultar os vínculos depois. A FK de
 `regional_id` é descoberta em tempo de execução: bases criadas em momentos diferentes receberam nomes
 gerados diferentes do Hibernate.
@@ -165,7 +165,7 @@ No Geopetro-Telemetria, `mvnw.cmd test`: **27 aprovados**, contra 24 antes.
 Geopetro-Telemetria estava com **10 dos 24 testes quebrados** por incompatibilidade entre o Byte Buddy
 que o Spring Boot 3.4.5 traz e o Java 25 instalado — falha pré-existente, verificada na árvore sem
 estas alterações. Registrada em
-[DT-016](../../specs/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
+[DT-016](../../specs/SDD/software/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
 
 Testes novos:
 
@@ -196,7 +196,7 @@ arquivos — as mesmas de antes desta entrega, em arquivo não tocado por ela.
 
 | Fora de escopo | Onde está |
 |---|---|
-| Recuperação de senha por autoatendimento (traz SMTP de volta) | [OQ-021](../../specs/open-questions.md#oq-021--recuperação-de-senha-é-planejada) |
+| Recuperação de senha por autoatendimento (traz SMTP de volta) | [OQ-021](../../specs/SDD/negocio/requisitos/open-questions.md#oq-021--recuperação-de-senha-é-planejada) |
 | Padronizar `/auth` e `/usuarios` em `/api` | ✅ Entregue posteriormente: [api-prefix.md](api-prefix.md) |
 | Revogação de token individual | RN-062 registra que continua não existindo |
-| Autenticação entre o Geopetro-Backend e a Telemetria | Firewall é a única proteção — [product-context §10](../../specs/product-context.md#10-identidade-acesso-e-cadastro) |
+| Autenticação entre o Geopetro-Backend e a Telemetria | Firewall é a única proteção — [product-context §10](../../specs/SDD/negocio/requisitos/product-context.md#10-identidade-acesso-e-cadastro) |

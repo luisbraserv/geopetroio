@@ -1,6 +1,6 @@
 # GeopetroIO
 
-O GeopetroIO reúne cadastro e monitoramento de sondas, aquisição de dados em campo, histórico de telemetria e simulação de operações de cimentação. Este repositório contém cinco aplicações. As [SPECs do sistema](specs/README.md) detalham regras de negócio e contratos; este README serve para entender o conjunto e iniciar o ambiente de desenvolvimento.
+O GeopetroIO reúne cadastro e monitoramento de sondas, aquisição de dados em campo, histórico de telemetria e simulação de operações de cimentação. Este repositório contém cinco aplicações. As [SPECs do sistema](specs/SDD/README.md) detalham regras de negócio e contratos; este README serve para entender o conjunto e iniciar o ambiente de desenvolvimento.
 
 ## Os cinco projetos
 

@@ -32,7 +32,7 @@ export interface LeituraRealtime {
  * `pressaoBomba`, `vazao`, `strokeAtual` — deixaram de existir. Com cards por unidade, o conjunto
  * varia de sonda para sonda: uma unidade com dois torques e uma temperatura não cabia neles, e
  * campos fixos seriam uma verdade parcial se passando por completa
- * (`specs/contracts/websocket-realtime.md §3`).
+ * (`specs/SDD/software/apis/websocket-realtime.md §3`).
  *
  * **Só vêm grandezas com valor.** Um card sem calibração não publica nada naquele ciclo (RN-099):
  * a ausência é lacuna honesta, e zero seria um número que passaria por medição real.

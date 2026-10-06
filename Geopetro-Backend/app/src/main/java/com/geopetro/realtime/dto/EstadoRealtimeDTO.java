@@ -10,13 +10,13 @@ import com.geopetro.alarmes.AlarmeAtivo;
  *
  * <p><b>Nao e persistido.</b> Este canal existe apenas para refletir o "agora" na tela; o historico
  * segue pelo caminho MQTT -> Geopetro-Telemetria -> InfluxDB. Ver
- * {@code specs/contracts/websocket-realtime.md}.
+ * {@code specs/SDD/software/apis/websocket-realtime.md}.
  *
  * <h2>⚠️ Os campos fixos sairam — 2026-09-08</h2>
  * Eram {@code pesoColuna}, {@code torqueTubos}, {@code torqueFlutuante}, {@code pressaoBomba},
  * {@code vazao} e {@code strokeAtual}, espelhando os cinco dispositivos que toda sonda tinha.
  *
- * <p>Com <a href="../../../../../../../../../specs/features/cards-configuraveis.md">cards por
+ * <p>Com <a href="../../../../../../../../../specs/SDD/negocio/requisitos/cards-configuraveis.md">cards por
  * unidade</a> o conjunto passou a variar de sonda para sonda: uma unidade com dois cards de torque e
  * um de temperatura nao cabe em campos fixos — eles seriam uma <b>verdade parcial se passando por
  * completa</b>.

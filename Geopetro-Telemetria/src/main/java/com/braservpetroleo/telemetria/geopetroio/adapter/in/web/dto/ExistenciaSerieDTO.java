@@ -10,7 +10,7 @@ import java.time.Instant;
  * que. Sao nulas quando {@code possuiSerie} e falso.
  *
  * <p>Espelha {@code com.geopetro.monitoramento.dto.ExistenciaSerieDTO} no Geopetro-Backend.
- * Ver specs/contracts/rest-monitoramento.md §7.
+ * Ver specs/SDD/software/apis/rest-monitoramento.md §7.
  */
 public record ExistenciaSerieDTO(
 		String idSondaUnidade,

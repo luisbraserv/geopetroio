@@ -9,7 +9,7 @@ import java.time.Instant;
  *
  * <h2>⚠️ Isto é metade do avaliador do servidor, e de propósito</h2>
  * O Backend é o <b>único produtor do histórico de eventos</b>
- * ({@code specs/features/alarmes.md §3}). A estação <b>sinaliza</b>: som e destaque na tela da
+ * ({@code specs/SDD/negocio/requisitos/alarmes.md §3}). A estação <b>sinaliza</b>: som e destaque na tela da
  * sonda, para quem está ao lado do equipamento. Por isso aqui não há {@code episodioId}, nem
  * {@code ABRIU/ESCALOU/REDUZIU/FECHOU}, nem gravação — só <b>que severidade vale agora</b>.
  *
@@ -40,7 +40,7 @@ public final class AvaliadorLocalDeAlarme {
 	 * <h2>Por que o avaliador tem tipo próprio</h2>
 	 * Antes ele recebia o {@code Limite} do documento do servidor, e isso o amarrava a um documento
 	 * remoto para decidir se o beep desta máquina toca. O alarme da estação passou a ser da estação
-	 * ({@code specs/features/configuracao-da-estacao.md §3}), e a regra não deve saber de onde os
+	 * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3}), e a regra não deve saber de onde os
 	 * números vieram: aqui entra a faixa, venha ela do sininho ou de qualquer outra origem futura.
 	 *
 	 * <p>Sem {@code dispositivoId} e sem {@code ativo} de propósito — identidade e liga/desliga são

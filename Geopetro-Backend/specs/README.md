@@ -10,15 +10,15 @@ O Backend autentica usuários, mantém os cadastros de organização, persiste c
 | Recuperação de senha | [Recuperação por e-mail](recuperacao-senha.md) · [SMTP](configuracao-smtp.md) |
 | Poços e cenários | [Simulador](simulador-pocos.md) |
 | Prefixo HTTP | [API /api](api-prefix.md) |
-| Telemetria histórica e tempo real | [Contratos de sistema](../../specs/contracts/) |
-| Cards e limites | [Cards configuráveis](../../specs/features/cards-configuraveis.md) · [Contrato de configuração](../../specs/contracts/configuracao-sonda.md) |
-| Alarmes | [Feature transversal](../../specs/features/alarmes.md) |
+| Telemetria histórica e tempo real | [MQTT](../../specs/SDD/software/mqtt/) e [APIs](../../specs/SDD/software/apis/) |
+| Cards e limites | [Cards configuráveis](../../specs/SDD/negocio/requisitos/cards-configuraveis.md) · [Contrato de configuração](../../specs/SDD/software/apis/configuracao-sonda.md) |
+| Alarmes | [Feature transversal](../../specs/SDD/negocio/requisitos/alarmes.md) |
 
 ## Arquitetura e acesso
 
 Os nove módulos Maven são `core`, `empresa`, `regional`, `setor`, `unidade-sonda`, `usuario`, `simulador`, `security` e `app`. `core` guarda contratos e portas; `app` compõe a aplicação. Dependências cíclicas entre módulos são evitadas com ports.
 
-Permissão de módulo sozinha não abre recurso: `MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR` e `CIMENTACAO` combinam com `CLIENTE` ou `INTERNO`, além dos privilégios de `ADMIN` e `SUPORTE` ([RN-099](../../specs/business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo)). O escopo do cliente é por unidade concedida; perfis internos operacionais veem a frota.
+Permissão de módulo sozinha não abre recurso: `MONITORAMENTO`, `MONITORAMENTO_REAL`, `SIMULADOR` e `CIMENTACAO` combinam com `CLIENTE` ou `INTERNO`, além dos privilégios de `ADMIN` e `SUPORTE` ([RN-099](../../specs/SDD/negocio/regras/business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo)). O escopo do cliente é por unidade concedida; perfis internos operacionais veem a frota.
 
 A ordem dos matchers em `SecurityConfig` importa: rotas específicas, como `/api/usuarios/me`, vêm antes das gerais. O handshake `/ws` é seguido de autenticação e autorização no STOMP. Assinaturas e entregas conferem acesso à unidade vigente.
 
@@ -30,7 +30,7 @@ O documento de **limites do servidor** é lido/gravado por REST e avaliado pelo 
 
 ## Módulos removidos
 
-Projetos, Processos, Observações e Químicos saíram do Backend. Seus IDs de requisitos permanecem no [inventário](../../specs/current-features.md) e nos [registros históricos](history/README-2026-09.md). Tabelas órfãs e limpeza de produção seguem [OQ-026](../../specs/open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs).
+Projetos, Processos, Observações e Químicos saíram do Backend. Seus IDs de requisitos permanecem no [inventário](../../specs/SDD/negocio/requisitos/current-features.md) e nos [registros históricos](history/README-2026-09.md). Tabelas órfãs e limpeza de produção seguem [OQ-026](../../specs/SDD/negocio/requisitos/open-questions.md#oq-026--o-que-fazer-com-as-tabelas-órfãs).
 
 ## Verificação
 

@@ -8,7 +8,7 @@
 > Spec de feature · **[DECIDIDO 2026-09-05]** · **[FATO 2026-09-09] Commitado** — ver §1
 >
 > Specs de sistema em [`../../../specs/`](../../../specs/) · contexto de produto em
-> [`product-context.md`](../../../specs/product-context.md)
+> [`product-context.md`](../../../specs/SDD/negocio/requisitos/product-context.md)
 
 ## 1. Estado
 
@@ -85,7 +85,7 @@ declarado num relatório entregue ao cliente — provavelmente impresso no próp
 **Unidade de profundidade [DECIDIDO 2026-09-05]:** a tela oferece **metros e pés**; o armazenamento é
 **sempre em metros**, com conversão apenas na exibição. É a mesma decisão que o Horus tomou para
 PSI/kgf-cm² — se a unidade escolhida chegasse ao arquivo, o mesmo campo significaria coisas diferentes
-conforme a configuração vigente no dia. Ver [RN-066](../../../specs/business-rules.md#rn-066--mínima-curvatura-e-profundidade-gravada-em-metros).
+conforme a configuração vigente no dia. Ver [RN-066](../../../specs/SDD/negocio/regras/business-rules.md#rn-066--mínima-curvatura-e-profundidade-gravada-em-metros).
 
 **Sem trajetória, o comportamento atual continua valendo** — poço vertical ou aproximação por fase.
 Isso preserva os cenários existentes e permite entregar a estrutura antes do survey.
@@ -95,13 +95,13 @@ Isso preserva os cenários existentes e permite entregar a estrutura antes do su
 **[DECIDIDO 2026-09-05]** O mesmo poço volta em vários cenários (squeeze, tampão, revisões), e
 redigitar a geometria a cada vez produz divergência entre cenários que descrevem a mesma realidade
 física. `Poço` passa a ser **entidade do sistema**
-([product-context §7](../../../specs/product-context.md#7-poço-passa-a-existir-no-modelo)).
+([product-context §7](../../../specs/SDD/negocio/requisitos/product-context.md#7-poço-passa-a-existir-no-modelo)).
 
 **Consequência para esta feature:** geometria e trajetória **deixam de viver dentro do `formValue`
 opaco do cenário** e passam a pertencer ao poço, referenciado pelo cenário.
 
 ⚠️ **[FATO]** Hoje o backend do simulador é **agnóstico de domínio** — persiste `formValue` como
-`LONGTEXT` e nada mais ([domain-map §4](../../../specs/domain-map.md#4-domínio-de-cimentação)). Tirar
+`LONGTEXT` e nada mais ([domain-map §4](../../../specs/SDD/software/dados/domain-map.md#4-domínio-de-cimentação)). Tirar
 a geometria de dentro do blob é a primeira vez que o backend do simulador passa a conhecer o domínio.
 É mudança de arquitetura, não acréscimo de campo.
 
@@ -110,15 +110,15 @@ os cenários daquele poço de uma vez.
 
 **Consequência aceita:** editar a geometria **muda relatórios antigos**, inclusive já entregues. É
 coerente com a decisão de não congelar relatório
-([product-context §6](../../../specs/product-context.md#6-simulador--o-relatório-é-entregável-ao-cliente)):
+([product-context §6](../../../specs/SDD/negocio/requisitos/product-context.md#6-simulador--o-relatório-é-entregável-ao-cliente)):
 o sistema mostra a realidade como se sabe hoje, não como se sabia no dia da entrega. Ver
-[RN-067](../../../specs/business-rules.md#rn-067--o-cenário-referencia-o-poço).
+[RN-067](../../../specs/SDD/negocio/regras/business-rules.md#rn-067--o-cenário-referencia-o-poço).
 
 ## 5. Validação — elevada a crítica
 
 **[DECIDIDO 2026-09-05]** O relatório do simulador é **entregue ao cliente**. Isso muda a severidade de
-[OQ-009](../../../specs/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador)
-e de [DT-014](../../../specs/technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
+[OQ-009](../../../specs/SDD/negocio/requisitos/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador)
+e de [DT-014](../../../specs/SDD/software/technical-debt.md#dt-014--simulador-sem-validação-de-entrada).
 
 **[FATO]** `WellGeometryIssue` (`level: 'error' | 'warning'`, com `code` e `phaseId`) já existe no
 modelo novo — a estrutura para reportar problema de geometria está pronta. Ela cobre **coerência**
@@ -137,14 +137,14 @@ permanece).
 
 | # | Questão que continua aberta |
 |---|---|
-| 1 | Faixas plausíveis por campo — [OQ-009](../../../specs/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador) |
+| 1 | Faixas plausíveis por campo — [OQ-009](../../../specs/SDD/negocio/requisitos/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador) |
 | 2 | O TVD digitado dos cenários legados: permanece como aproximação para sempre, ou em algum momento vira estação de survey? |
 | 3 | O relatório deve declarar o método de cálculo e a unidade usada? Provável que sim, já que sai da empresa |
 
 ## 7. Ordem sugerida
 
 1. Fechar a estrutura de fases (o que está em curso) e **commitar** — o risco de OneDrive sobre
-   trabalho não versionado é real ([DT-004](../../../specs/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git))
+   trabalho não versionado é real ([DT-004](../../../specs/SDD/software/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git))
 2. Trajetória como estrutura opcional, com `mdToTvd` passando a consultá-la
 3. Entidade Poço no backend, com a geometria migrando para fora do `formValue`
 4. Validação de plausibilidade, quando as faixas forem definidas

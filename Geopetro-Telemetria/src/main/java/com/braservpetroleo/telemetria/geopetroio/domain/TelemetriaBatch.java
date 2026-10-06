@@ -7,7 +7,7 @@ import java.util.List;
  * Um ciclo de leitura da sonda: todas as grandezas habilitadas medidas no mesmo instante.
  *
  * <p>O produtor (Geopetro-Desktop) publica uma mensagem por ciclo (1 segundo). Ver
- * {@code specs/contracts/mqtt-telemetria.md}.
+ * {@code specs/SDD/software/mqtt/mqtt-telemetria.md}.
  *
  * @param idSondaUnidade nome da Unidade/Sonda no cadastro (ex.: SPT-144) — chave de correlacao
  * @param dataHora       instante da leitura, ja normalizado para UTC

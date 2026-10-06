@@ -22,7 +22,7 @@ import com.geopetro.realtime.dto.EstadoRealtimeDTO.LeituraRealtimeDTO;
  * Recebe o estado publicado pelo Geopetro-Desktop e retransmite aos assinantes autorizados.
  *
  * <p><b>Nao persiste nada.</b> A responsabilidade deste canal e o "agora"; o historico segue por
- * MQTT -> Backend-Telemetria -> InfluxDB. Ver specs/contracts/websocket-realtime.md.
+ * MQTT -> Backend-Telemetria -> InfluxDB. Ver specs/SDD/software/apis/websocket-realtime.md.
  */
 @Controller
 public class RealtimeController {

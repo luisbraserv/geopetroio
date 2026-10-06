@@ -16,7 +16,7 @@ import java.util.List;
  * conseguir representar uma sonda: com dois cards de torque e um de temperatura, seriam uma
  * <b>verdade parcial se passando por completa</b>.
  *
- * <p>Contrato em {@code specs/contracts/websocket-realtime.md §3}, mesma forma do MQTT. Isto
+ * <p>Contrato em {@code specs/SDD/software/apis/websocket-realtime.md §3}, mesma forma do MQTT. Isto
  * <b>quebra o consumidor Angular</b> ate o passo 8 — decisao registrada, com o custo a vista, em
  * {@code mqtt-telemetria.md §10}.
  *

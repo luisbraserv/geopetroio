@@ -17,7 +17,7 @@ import com.example.demo.services.AvaliadorLocalDeAlarme.Severidade;
 import com.example.demo.services.LeituraDeCards.Grandeza;
 
 /**
- * O alarme da estação — passo 3 de {@code specs/features/alarmes.md}.
+ * O alarme da estação — passo 3 de {@code specs/SDD/negocio/requisitos/alarmes.md}.
  *
  * <h2>⚠️ Sinaliza, e não registra</h2>
  * <b>Nada aqui é gravado ou publicado.</b> O histórico de eventos tem um produtor só, o Backend
@@ -26,7 +26,7 @@ import com.example.demo.services.LeituraDeCards.Grandeza;
  *
  * <h2>Funciona sem rede, e é esse o ponto</h2>
  * A faixa vem de {@link AlarmesDaEstacao} — configuração <b>desta estação</b>, gravada em disco
- * aqui mesmo ({@code specs/features/configuracao-da-estacao.md §3}). Não há documento remoto no
+ * aqui mesmo ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3}). Não há documento remoto no
  * caminho: uma sonda que nunca teve internet continua lendo o CLP, convertendo e alarmando.
  *
  * <p>⚠️ <b>Isto mudou.</b> Até 2026-09-09 a faixa vinha do documento de limites do servidor, e uma

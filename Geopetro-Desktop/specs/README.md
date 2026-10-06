@@ -6,15 +6,15 @@ O Desktop roda na unidade, lê o CLP, mostra o dashboard e publica telemetria po
 
 | Assunto | Fonte |
 |---|---|
-| Endereços e tipos de card | [Cards configuráveis](../../specs/features/cards-configuraveis.md) |
-| Engrenagem, autenticação e alarme local | [Configuração da estação](../../specs/features/configuracao-da-estacao.md) |
-| Mensagem histórica | [MQTT](../../specs/contracts/mqtt-telemetria.md) |
-| Estado ao vivo | [WebSocket](../../specs/contracts/websocket-realtime.md) |
-| Regras RN e pendências | [Regras de negócio](../../specs/business-rules.md) · [Perguntas OQ](../../specs/open-questions.md) |
+| Endereços e tipos de card | [Cards configuráveis](../../specs/SDD/negocio/requisitos/cards-configuraveis.md) |
+| Engrenagem, autenticação e alarme local | [Configuração da estação](../../specs/SDD/negocio/requisitos/configuracao-da-estacao.md) |
+| Mensagem histórica | [MQTT](../../specs/SDD/software/mqtt/mqtt-telemetria.md) |
+| Estado ao vivo | [WebSocket](../../specs/SDD/software/apis/websocket-realtime.md) |
+| Regras RN e pendências | [Regras de negócio](../../specs/SDD/negocio/regras/business-rules.md) · [Perguntas OQ](../../specs/SDD/negocio/requisitos/open-questions.md) |
 
 ## Leitura e configuração
 
-O documento de **cards da unidade** define quais grandezas e endereços são lidos. IP, rack, slot, DB e intervalo do CLP são editados na engrenagem, mas persistem nesse documento. `CardsState` mantém o snapshot válido e `CardsStore` o grava em `config/cards-da-unidade.json` para reinício sem rede. Unidade sem cards configurados não lê grandezas nem publica telemetria ([RN-088](../../specs/business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).
+O documento de **cards da unidade** define quais grandezas e endereços são lidos. IP, rack, slot, DB e intervalo do CLP são editados na engrenagem, mas persistem nesse documento. `CardsState` mantém o snapshot válido e `CardsStore` o grava em `config/cards-da-unidade.json` para reinício sem rede. Unidade sem cards configurados não lê grandezas nem publica telemetria ([RN-088](../../specs/SDD/negocio/regras/business-rules.md#rn-088--sem-configuração-a-unidade-não-lê-nada)).
 
 A engrenagem exige `ADMIN` ou `SUPORTE` autenticado. A URL do Backend pode ser informada na tela de login inicial. Calibração de peso/torque é local e vinculada à identidade do card. O sininho é a única configuração sem login: mínimo, máximo e liga/desliga do **alarme local**, persistidos em `config/alarmes-locais.json`.
 

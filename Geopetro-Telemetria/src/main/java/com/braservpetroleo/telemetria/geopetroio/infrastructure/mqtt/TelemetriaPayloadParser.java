@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Converte o payload JSON recebido do broker no modelo canonico {@link TelemetriaBatch}.
  *
  * <p><b>Formato unico</b> desde 2026-09-08 — cards por unidade
- * ({@code specs/contracts/mqtt-telemetria.md} secao 3):
+ * ({@code specs/SDD/software/mqtt/mqtt-telemetria.md} secao 3):
  * <pre>
  * {"idSondaUnidade":"SPT-144","dataHora":"...","leituras":[
  *    {"dispositivoId":"PESO_01","tipo":"PESO","unidade":"lbf",

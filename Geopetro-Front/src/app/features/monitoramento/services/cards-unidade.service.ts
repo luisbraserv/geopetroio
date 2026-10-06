@@ -8,9 +8,9 @@ import { ConfiguracaoCards } from './grandezas-de-card';
 /**
  * Leitura do documento de cards de uma Unidade/Sonda.
  *
- * Contrato em `specs/contracts/configuracao-sonda.md §5`. **Somente leitura, de propósito:** os
+ * Contrato em `specs/SDD/software/apis/configuracao-sonda.md §5`. **Somente leitura, de propósito:** os
  * cards são configurados no Geopetro-Desktop, presencialmente, porque acertar byte e rack exige
- * estar na unidade ([RN-086](../../../../../../specs/business-rules.md)). O Front só lê — e é a
+ * estar na unidade ([RN-086](../../../../../../specs/SDD/negocio/regras/business-rules.md)). O Front só lê — e é a
  * leitura que permite montar as telas a partir do que cada unidade declara medir.
  *
  * ⚠️ **A rota é endereçada pelo id numérico**, não pelo nome da sonda. `/api/sondas/{id}/cards`

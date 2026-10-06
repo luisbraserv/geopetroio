@@ -19,7 +19,7 @@ import com.example.demo.services.LeituraDeCards.Grandeza;
 
 /**
  * O alarme da estacao ligando leitura e faixa —
- * {@code specs/features/configuracao-da-estacao.md §3}.
+ * {@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3}.
  *
  * <p>⚠️ <b>Nada aqui grava ou publica.</b> O historico de eventos tem um produtor so, o Backend; a
  * estacao sinaliza para quem esta ao lado do equipamento, inclusive sem rede.

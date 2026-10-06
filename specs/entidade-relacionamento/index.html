@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Diagrama entidade-relacionamento e dicionário de dados de todo o GeopetroIO: MySQL do backend, InfluxDB da telemetria e armazenamento local dos desktops.">
+<title>Modelo de dados GeopetroIO</title>
+<style>
+  /* Layout: cabeçalho e ferramentas no topo, diagrama em tela cheia com pan e zoom, dicionário de dados abaixo.
+     Tokens seguem o Braserv Design System. */
+  :root {
+    color-scheme: light;
+    --bg: #f7f9fc;
+    --surface: #ffffff;
+    --subtle: #edf1f8;
+    --border: #d6deeb;
+    --border-strong: #b7c3d5;
+    --text: #051833;
+    --text-2: #5a667a;
+    --text-3: #757b86;
+    --primary: #154a7a;
+    --hi: #a96525;
+    --hi-soft: #f4d6b8;
+    --line: #8592a6;
+    --canvas: #f2f5fa;
+    --zone: #ffffff;
+    --d-org: #154a7a;
+    --d-acesso: #a96525;
+    --d-monit: #2e8b3a;
+    --d-simul: #6b4fa0;
+    --d-sist: #5a667a;
+    --d-campo: #1f7a80;
+    --k-pk-bg: #f4d6b8; --k-pk-fg: #8d551f;
+    --k-fk-bg: #dce6f0; --k-fk-fg: #154a7a;
+    --k-uk-bg: #edf1f8; --k-uk-fg: #5a667a;
+    --k-tag-bg: #d7eef0; --k-tag-fg: #1f6a70;
+    --font-brand: "Coco Gothic", "Century Gothic", "Trebuchet MS", sans-serif;
+    --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 7px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #010e22; --surface: #061c39; --subtle: #0b2b52; --border: #1d3a60; --border-strong: #2d4f7a;
+      --text: #e8eef7; --text-2: #a9b6c8; --text-3: #8696ad; --primary: #8fb8e0;
+      --hi: #e59a4c; --hi-soft: #4a3216; --line: #5d7393; --canvas: #03142c; --zone: #061a35;
+      --d-org: #6fa3d6; --d-acesso: #e59a4c; --d-monit: #5fbf61; --d-simul: #a98be0; --d-sist: #a9b6c8; --d-campo: #4fc1c8;
+      --k-pk-bg: #4a3216; --k-pk-fg: #f4d6b8;
+      --k-fk-bg: #12355c; --k-fk-fg: #b9d3ee;
+      --k-uk-bg: #0b2b52; --k-uk-fg: #a9b6c8;
+      --k-tag-bg: #0f3c40; --k-tag-fg: #9fe0e4;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #010e22; --surface: #061c39; --subtle: #0b2b52; --border: #1d3a60; --border-strong: #2d4f7a;
+    --text: #e8eef7; --text-2: #a9b6c8; --text-3: #8696ad; --primary: #8fb8e0;
+    --hi: #e59a4c; --hi-soft: #4a3216; --line: #5d7393; --canvas: #03142c; --zone: #061a35;
+    --d-org: #6fa3d6; --d-acesso: #e59a4c; --d-monit: #5fbf61; --d-simul: #a98be0; --d-sist: #a9b6c8; --d-campo: #4fc1c8;
+    --k-pk-bg: #4a3216; --k-pk-fg: #f4d6b8;
+    --k-fk-bg: #12355c; --k-fk-fg: #b9d3ee;
+    --k-uk-bg: #0b2b52; --k-uk-fg: #a9b6c8;
+    --k-tag-bg: #0f3c40; --k-tag-fg: #9fe0e4;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 var(--font-brand);
+    padding-inline: 16px;
+  }
+  .wrap { max-width: 1240px; margin-inline: auto; padding-block: 32px 64px; display: grid; gap: 28px; }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.2; margin: 0; }
+  h1 { font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.3rem); letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; }
+  h3 { font-size: 1.02rem; font-family: var(--font-mono); font-weight: 600; }
+  p { margin: 0; max-width: 72ch; }
+  code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+  a { color: var(--primary); }
+  :focus-visible { outline: 2px solid var(--hi); outline-offset: 2px; }
+
+  header.top { display: grid; gap: 12px; }
+  .eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
+  .lead { color: var(--text-2); }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--text-2); font-size: 0.85rem; }
+  .facts b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Ferramentas */
+  .tools { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: space-between; }
+  .search { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; max-width: 420px; }
+  .search input {
+    width: 100%; font: inherit; font-size: 0.9rem; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+    padding: 8px 10px;
+  }
+  .search output { font-size: 0.8rem; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .zoom { display: flex; gap: 6px; align-items: center; }
+  .btn {
+    font: inherit; font-size: 0.85rem; color: var(--text); cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+    min-width: 36px; height: 36px; padding: 0 10px;
+  }
+  .btn:hover { border-color: var(--primary); }
+  .zoom output { min-width: 3.5em; text-align: center; font-size: 0.8rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.8rem; color: var(--text-2); align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend svg { overflow: visible; }
+  .legend .sep { width: 1px; height: 18px; background: var(--border); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; }
+
+  /* Diagrama */
+  .viewport {
+    position: relative; overflow: auto; height: min(78vh, 900px);
+    background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    cursor: grab; touch-action: pan-x pan-y;
+  }
+  .viewport.dragging { cursor: grabbing; user-select: none; }
+  .stage { position: relative; }
+  .canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .canvas svg { position: absolute; left: 0; top: 0; overflow: visible; }
+
+  .zone-rect { fill: var(--zone); stroke: var(--border-strong); stroke-dasharray: 5 4; }
+  .zone-title { fill: var(--text); font: 600 15px var(--font-brand); }
+  .zone-sub { fill: var(--text-3); font: 12px var(--font-brand); }
+
+  .ln { fill: none; stroke: var(--line); stroke-width: 1.4; }
+  .ln.logico { stroke-dasharray: 6 4; }
+  .halo { fill: none; stroke: var(--canvas); stroke-width: 7; }
+  .ln-g.hi .ln { stroke: var(--hi); stroke-width: 2.2; }
+  .mk path, .mk line { stroke: var(--line); stroke-width: 1.4; fill: none; }
+  .mk circle { stroke: var(--line); stroke-width: 1.4; fill: var(--canvas); }
+  .mk.hi path, .mk.hi line { stroke: var(--hi); stroke-width: 2; }
+  .mk.hi circle { stroke: var(--hi); stroke-width: 2; fill: var(--canvas); }
+  .mk .seta { fill: var(--line); stroke: none; }
+  .mk.hi .seta { fill: var(--hi); }
+  .ln-label { fill: var(--text-2); font: 11.5px var(--font-mono); }
+  .ln-g.hi .ln-label { fill: var(--hi); }
+
+  .card {
+    position: absolute; width: 260px;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+    box-shadow: 0 1px 2px rgba(0, 12, 75, 0.06);
+    cursor: pointer; transition: opacity 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .card:hover { border-color: var(--primary); }
+  .card-h {
+    height: 33px; display: flex; align-items: center; gap: 8px; padding: 0 10px;
+    background: var(--subtle); border-bottom: 1px solid var(--border); border-radius: 4px 4px 0 0;
+  }
+  .card-name { font: 600 13px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  .card-kind { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+  .card ul { list-style: none; margin: 0; padding: 0 0 5px; }
+  .card li { height: 22px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 0 10px 0 8px; font: 12px var(--font-mono); }
+  .card li .cn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card li .ct { color: var(--text-3); font-size: 11px; white-space: nowrap; }
+  .card li.row-match { background: var(--hi-soft); }
+  .keys { display: flex; gap: 2px; }
+  .k { font: 600 8.5px/1 var(--font-mono); padding: 2px 3px; border-radius: 2px; letter-spacing: 0.02em; }
+  .k-PK { background: var(--k-pk-bg); color: var(--k-pk-fg); }
+  .k-FK { background: var(--k-fk-bg); color: var(--k-fk-fg); }
+  .k-UK, .k-IX { background: var(--k-uk-bg); color: var(--k-uk-fg); }
+  .k-TAG { background: var(--k-tag-bg); color: var(--k-tag-fg); }
+  .k-FLD { background: var(--k-uk-bg); color: var(--k-uk-fg); }
+
+  .canvas.has-focus .card:not(.rel), .canvas.has-search .card:not(.match) { opacity: 0.28; }
+  .canvas.has-focus .ln-g:not(.hi), .canvas.has-search .ln-g:not(.both) { opacity: 0.18; }
+  .card.sel { border-color: var(--hi); box-shadow: 0 0 0 2px var(--hi); }
+
+  /* Painel da tabela selecionada */
+  .inspector {
+    display: grid; gap: 6px; padding: 14px 16px; min-height: 64px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  }
+  .inspector .hint { color: var(--text-3); font-size: 0.9rem; }
+  .inspector .meta { font-size: 0.8rem; color: var(--text-3); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+  .inspector ul { margin: 2px 0 0; padding-left: 18px; font-size: 0.88rem; color: var(--text-2); }
+
+  /* Dicionário */
+  section { display: grid; gap: 16px; }
+  .sec-h { display: grid; gap: 6px; border-top: 1px solid var(--border); padding-top: 22px; }
+  .store { display: grid; gap: 14px; }
+  .store > h3 { font-family: var(--font-brand); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+  .ent { display: grid; gap: 8px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); min-width: 0; scroll-margin-top: 16px; }
+  .ent-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  .ent-h .meta { font-size: 0.8rem; color: var(--text-3); display: inline-flex; align-items: center; gap: 6px; }
+  .ent p { color: var(--text-2); font-size: 0.92rem; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.84rem; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); font-weight: 600; white-space: nowrap; }
+  td.c-n, td.c-t { font-family: var(--font-mono); font-size: 0.8rem; white-space: nowrap; }
+  td.c-t, td.c-null { color: var(--text-2); }
+  td.c-obs { color: var(--text-2); min-width: 240px; }
+  tr:last-child td { border-bottom: 0; }
+
+  .notes { display: grid; gap: 10px; padding-left: 20px; margin: 0; color: var(--text-2); max-width: 90ch; }
+  .notes li::marker { color: var(--text-3); }
+  .tag { font: 600 0.7rem var(--font-mono); color: var(--text-2); background: var(--subtle); border-radius: var(--radius-sm); padding: 1px 5px; white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+  @media (max-width: 560px) { .viewport { height: 70vh; } .wrap { padding-block: 20px 48px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Specs · Modelo de dados</span>
+    <h1>Modelo de dados GeopetroIO</h1>
+    <p class="lead">Todas as estruturas persistentes do projeto num só lugar: as tabelas MySQL do Geopetro-Backend, a série de telemetria no InfluxDB e o armazenamento local dos dois desktops. Linha cheia é chave estrangeira declarada no banco. Linha tracejada é vínculo que só existe no código.</p>
+    <div class="facts" id="facts"></div>
+  </header>
+
+  <div class="tools">
+    <label class="search" for="busca">
+      <input id="busca" type="search" placeholder="Buscar tabela ou coluna, ex.: unidade_sonda_id" autocomplete="off">
+      <output id="contagem" for="busca"></output>
+    </label>
+    <div class="zoom" role="group" aria-label="Zoom do diagrama">
+      <button class="btn" type="button" id="zoomMenos" aria-label="Diminuir zoom">−</button>
+      <output id="zoomValor">100%</output>
+      <button class="btn" type="button" id="zoomMais" aria-label="Aumentar zoom">+</button>
+      <button class="btn" type="button" id="zoomAjustar">Ajustar à tela</button>
+      <button class="btn" type="button" id="zoom100">100%</button>
+    </div>
+  </div>
+
+  <div class="legend" id="legenda" aria-label="Legenda"></div>
+
+  <div class="viewport" id="viewport" aria-label="Diagrama entidade-relacionamento. Arraste para mover; clique numa tabela para ver as relações.">
+    <div class="stage" id="stage">
+      <div class="canvas" id="canvas">
+        <svg id="svg" aria-hidden="true"></svg>
+        <div id="cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="inspector" id="inspector" aria-live="polite">
+    <span class="hint">Clique numa tabela para destacar as relações dela. Esc limpa a seleção.</span>
+  </div>
+
+  <section aria-labelledby="h-dic">
+    <div class="sec-h">
+      <h2 id="h-dic">Dicionário de dados</h2>
+      <p class="lead">Colunas na ordem do diagrama, com o tipo físico de cada banco. A coluna Origem indica onde a estrutura nasce ou mudou pela última vez.</p>
+    </div>
+    <div id="dicionario" class="store"></div>
+  </section>
+
+  <section aria-labelledby="h-logico">
+    <div class="sec-h"><h2 id="h-logico">Vínculos sem chave estrangeira</h2></div>
+    <ul class="notes">
+      <li><span class="tag">[FATO]</span> <code>unidades_sondas.nome</code> é o <code>idSondaUnidade</code> dos tópicos MQTT e da measurement <code>telemetria</code> (RN-018). Renomear uma unidade separa o histórico dela no InfluxDB.</li>
+      <li><span class="tag">[FATO]</span> <code>evento_alarme.episodio_id</code> e <code>episodio_alarme_extremo.episodio_id</code> identificam o mesmo episódio. Não há FK entre as duas tabelas; o extremo é semeado a partir do log em V2026.09.09.2 e depois atualizado pelo serviço.</li>
+      <li><span class="tag">[FATO]</span> <code>criado_por</code> e <code>atualizado_por</code> guardam o <code>username</code> de quem gravou, como texto e sem FK para <code>usuarios</code>. Conferido nos serviços de cenários, cards e limites.</li>
+      <li><span class="tag">[FATO]</span> As colunas de <code>leitura_local</code> no Geopetro-Desktop coincidem com as tags e fields do ponto gravado no InfluxDB. As leituras chegam ao servidor pelo tópico <code>telemetria/{idSondaUnidade}/batch</code>.</li>
+      <li><span class="tag">[FATO]</span> <code>usuarios.empresa</code> (texto) convive com <code>usuarios.empresa_id</code> (FK para <code>empresas</code>). <span class="tag">[INFERÊNCIA]</span> O texto é resquício de antes do cadastro de empresas.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-fora">
+    <div class="sec-h"><h2 id="h-fora">Fora do diagrama</h2></div>
+    <ul class="notes">
+      <li><code>flyway_schema_history</code>: controle de versão do Flyway no MySQL. Não é dado de negócio.</li>
+      <li>Geopetro-Front: o simulador guarda estado, relatórios e aditivos no <code>localStorage</code> do navegador. Nada disso chega ao servidor sem o usuário salvar o cenário.</li>
+      <li>Geopetro-Desktop: <code>config/app-settings.json</code> e os snapshots locais guardam configuração da estação, não leituras.</li>
+      <li>Braserv-Horus-Desktop: <code>H2DatabaseService</code> cria uma tabela H2 <code>registro_operacao</code>, mas nenhuma outra classe usa esse serviço. O <code>application.properties</code> declara um datasource MySQL (<code>braservone</code>) sem nenhuma entidade mapeada.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-manter">
+    <div class="sec-h">
+      <h2 id="h-manter">Como manter</h2>
+      <p class="lead">O diagrama e o dicionário saem das constantes <code>TABELAS</code> e <code>RELACOES</code> no início do script deste arquivo. A cada migration em <code>Geopetro-Backend/app/src/main/resources/db/migration</code>, ajuste as colunas aqui no mesmo commit. Tabela nova precisa de uma posição <code>x</code>/<code>y</code> livre no diagrama; as linhas são desenhadas a partir da posição de cada coluna.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const CONFERIDO_EM = '2026-10-06';
+  const ULTIMA_MIGRATION = 'V2026.10.02.1';
+
+  const DOMINIOS = {
+    org:    { nome: 'Organização',               cor: '--d-org' },
+    acesso: { nome: 'Usuários e acesso',         cor: '--d-acesso' },
+    monit:  { nome: 'Monitoramento e alarmes',   cor: '--d-monit' },
+    simul:  { nome: 'Simulador',                 cor: '--d-simul' },
+    sist:   { nome: 'Sistema',                   cor: '--d-sist' },
+    campo:  { nome: 'Telemetria e coleta',       cor: '--d-campo' }
+  };
+
+  const ARMAZENS = {
+    mysql:  { nome: 'MySQL · Geopetro-Backend', sub: 'Flyway · charset utf8mb4', zona: { x: 20, y: 20, w: 1230, h: 1140 } },
+    influx: { nome: 'InfluxDB · Geopetro-Telemetria', sub: 'Sem migrations: esquema nasce na escrita', zona: { x: 1270, y: 20, w: 340, h: 320 } },
+    h2:     { nome: 'H2 local · Geopetro-Desktop', sub: '~/.geopetro-io/data/sonda_geopetro', zona: { x: 1270, y: 370, w: 340, h: 330 } },
+    jsonl:  { nome: 'Arquivo local · Horus-Desktop', sub: 'data/registros_operacao.jsonl', zona: { x: 1270, y: 730, w: 340, h: 300 } }
+  };
+
+  const ENDERECO = 'logradouro, numero, complemento, bairro, cidade, estado, cep';
+
+  // c: [nome, tipo no banco, tipo curto no card, chaves, aceita nulo, observação]
+  const TABELAS = [
+    { id: 'regionais', armazem: 'mysql', dom: 'org', x: 40, y: 124, origem: 'V2026.09.04 (baseline)',
+      desc: 'Regional da Braserv. Topo da hierarquia Regional → Setor → Unidade/Sonda.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['nome', 'varchar(255)', 'varchar', ['UK'], false, ''],
+        ['centro_custo', 'varchar(255)', 'varchar', [], true, '']
+      ] },
+    { id: 'setores', armazem: 'mysql', dom: 'org', x: 350, y: 102, origem: 'V2026.09.04 (baseline)',
+      desc: 'Setor dentro de uma regional.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['regional_id', 'bigint', 'bigint', ['FK'], false, '→ regionais.id'],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['centro_custo', 'varchar(255)', 'varchar', [], true, '']
+      ] },
+    { id: 'unidades_sondas', armazem: 'mysql', dom: 'org', x: 660, y: 80, origem: 'V2026.09.06.1 (coluna tipo)',
+      desc: 'Unidade ou sonda monitorada. É o centro do modelo: limites, cards, alarmes, concessões de cliente e telemetria apontam para ela.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['setor_id', 'bigint', 'bigint', ['FK'], false, '→ setores.id'],
+        ['nome', 'varchar(255)', 'varchar', ['UK'], false, 'Chave de integração com MQTT e InfluxDB (RN-018).'],
+        ['apelido', 'varchar(255)', 'varchar', [], true, ''],
+        ['tipo', 'varchar(32)', 'varchar(32)', [], false, 'SONDA, UNIDADE_BOMBEIO, SLICKLINE_WIRELINE, CIMENTACAO, UCAQ (RN-065). Classificação apenas (RN-074).']
+      ] },
+    { id: 'usuario_roles', armazem: 'mysql', dom: 'acesso', x: 40, y: 284, origem: 'V2026.09.17.1 (roles por módulo)',
+      desc: 'Roles de cada usuário. Desde V2026.09.17.1 o acesso é tipo de conta (CLIENTE ou INTERNO) somado a uma permissão de módulo.',
+      c: [
+        ['username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username'],
+        ['role', 'varchar(255)', 'varchar', ['PK'], false, 'CLIENTE, INTERNO, ADMIN, SUPORTE, MONITORAMENTO, MONITORAMENTO_REAL, SIMULADOR, CIMENTACAO. Era ENUM em bases novas até V2026.09.07.3.']
+      ] },
+    { id: 'recuperacao_senha', armazem: 'mysql', dom: 'acesso', x: 40, y: 392, origem: 'V2026.09.06.3',
+      desc: 'No máximo uma recuperação de senha por usuário (OQ-021). O token nunca é gravado, só o hash. É a única FK com cascata: some junto com o usuário.',
+      c: [
+        ['username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username, ON DELETE CASCADE'],
+        ['token_hash', 'varchar(64)', 'varchar(64)', ['UK'], true, ''],
+        ['credential_hash', 'varchar(64)', 'varchar(64)', [], false, ''],
+        ['issued_at', 'datetime(6)', 'datetime', [], false, ''],
+        ['expires_at', 'datetime(6)', 'datetime', [], false, '']
+      ] },
+    { id: 'empresas', armazem: 'mysql', dom: 'acesso', x: 40, y: 572, origem: 'V2026.09.04 (baseline)',
+      desc: 'Empresa cliente, referenciada pelos usuários do tipo CLIENTE.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['cnpj', 'varchar(255)', 'varchar', ['UK'], true, ''],
+        ['email', 'varchar(255)', 'varchar', [], true, ''],
+        ['telefone', 'varchar(255)', 'varchar', [], true, ''],
+        ['endereço (7)', '7 × varchar(255)', '7 × varchar', [], true, 'Colunas ' + ENDERECO + '.']
+      ] },
+    { id: 'usuarios', armazem: 'mysql', dom: 'acesso', x: 350, y: 284, origem: 'V2026.09.06.2 (sai regional_id)',
+      desc: 'Conta de acesso. Uma tabela para as duas subclasses JPA, separadas por tipo_usuario: CLIENTE usa cliente_id, empresa e empresa_id; INTERNO usa matricula. O vínculo com regional e setor saiu em V2026.09.06.2 (RN-064).',
+      c: [
+        ['username', 'varchar(255)', 'varchar', ['PK'], false, ''],
+        ['tipo_usuario', 'varchar(31)', 'varchar(31)', [], false, 'Discriminador: CLIENTE ou INTERNO (CHECK usuarios_chk_1).'],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['email', 'varchar(255)', 'varchar', [], false, ''],
+        ['password', 'varchar(255)', 'varchar', [], false, ''],
+        ['telefone', 'varchar(255)', 'varchar', [], false, ''],
+        ['status', "enum('ATIVO','INATIVO')", 'enum', [], false, ''],
+        ['cliente_id', 'int', 'int', [], true, 'Só CLIENTE.'],
+        ['empresa', 'varchar(255)', 'varchar', [], true, 'Só CLIENTE. Nome em texto livre.'],
+        ['empresa_id', 'bigint', 'bigint', ['FK'], true, '→ empresas.id. Só CLIENTE.'],
+        ['matricula', 'int', 'int', [], true, 'Só INTERNO.'],
+        ['endereço (7)', '7 × varchar(255)', '7 × varchar', [], true, 'Colunas ' + ENDERECO + '.']
+      ] },
+    { id: 'configuracao_smtp', armazem: 'mysql', dom: 'sist', x: 350, y: 640, origem: 'V2026.09.07.1',
+      desc: 'Configuração de envio de e-mail. Linha única, garantida por CHECK (id = 1). A senha fica cifrada.',
+      c: [
+        ['id', 'bigint', 'bigint', ['PK'], false, 'Sempre 1.'],
+        ['version', 'bigint', 'bigint', [], false, 'Lock otimista.'],
+        ['enabled', 'boolean', 'boolean', [], false, ''],
+        ['host', 'varchar(255)', 'varchar', [], false, ''],
+        ['port', 'int', 'int', [], false, 'CHECK entre 1 e 65535.'],
+        ['transport', 'varchar(16)', 'varchar(16)', [], false, ''],
+        ['auth', 'boolean', 'boolean', [], false, ''],
+        ['username', 'varchar(255)', 'varchar', [], false, ''],
+        ['password_encrypted', 'varchar(8192)', 'varchar', [], true, ''],
+        ['sender_address', 'varchar(255)', 'varchar', [], false, ''],
+        ['frontend_url', 'varchar(2048)', 'varchar', [], false, '']
+      ] },
+    { id: 'usuario_cliente_unidades', armazem: 'mysql', dom: 'acesso', x: 660, y: 262, origem: 'V2026.10.02.1 (garante a tabela)',
+      desc: 'Concessão explícita: quais unidades cada usuário CLIENTE enxerga (RN-048). Junção N:N entre usuarios e unidades_sondas.',
+      c: [
+        ['unidade_sonda_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades_sondas.id'],
+        ['usuario_username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username. Charset e collation copiados de usuarios.username.']
+      ] },
+    { id: 'evento_alarme', armazem: 'mysql', dom: 'monit', x: 660, y: 426, origem: 'V2026.09.09.1',
+      desc: 'Log append-only das transições de alarme do servidor (RN-056, RN-076). Um registro por mudança de estado, não por leitura. Ainda sem política de retenção.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['unidade_sonda_id', 'bigint', 'bigint', ['FK', 'IX'], false, '→ unidades_sondas.id, ON DELETE RESTRICT. Índice com ocorrido_em.'],
+        ['episodio_id', 'char(36)', 'char(36)', ['IX'], false, 'UUID do episódio. Liga ao extremo sem FK.'],
+        ['dispositivo_id', 'varchar(64)', 'varchar(64)', [], false, ''],
+        ['serie', 'varchar(32)', 'varchar(32)', [], true, 'Nula em card de uma grandeza. Separa as séries de um CONTADOR_STROKE (RN-098).'],
+        ['tipo', 'varchar(16)', 'varchar(16)', [], false, 'ABRIU, ESCALOU, REDUZIU, FECHOU.'],
+        ['severidade', 'varchar(16)', 'varchar(16)', [], false, 'ATENCAO, CRITICO.'],
+        ['ocorrido_em', 'datetime(6)', 'datetime', ['IX'], false, ''],
+        ['valor', 'double', 'double', [], false, ''],
+        ['limite_violado', 'varchar(8)', 'varchar(8)', [], false, 'MIN ou MAX.']
+      ] },
+    { id: 'configuracao_sonda', armazem: 'mysql', dom: 'monit', x: 970, y: 80, origem: 'V2026.09.07.2',
+      desc: 'Limites de alarme da unidade, um documento JSON por unidade. Quem enxerga a sonda pode ajustar, inclusive CLIENTE (RN-069).',
+      c: [
+        ['unidade_sonda_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades_sondas.id'],
+        ['version', 'bigint', 'bigint', [], false, 'Lock otimista e revisão exposta na API.'],
+        ['limites_json', 'longtext', 'longtext', [], false, ''],
+        ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
+      ] },
+    { id: 'configuracao_cards', armazem: 'mysql', dom: 'monit', x: 970, y: 262, origem: 'V2026.09.07.4',
+      desc: 'Cards e conexão da unidade (RN-080, RN-089). Fica separado dos limites porque só ADMIN ou SUPORTE gravam. Impede excluir a unidade (RN-063).',
+      c: [
+        ['unidade_sonda_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades_sondas.id, ON DELETE RESTRICT'],
+        ['version', 'bigint', 'bigint', [], false, 'Lock otimista e revisão exposta na API.'],
+        ['conexao_json', 'longtext', 'longtext', [], false, ''],
+        ['cards_json', 'longtext', 'longtext', [], false, ''],
+        ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
+      ] },
+    { id: 'episodio_alarme_extremo', armazem: 'mysql', dom: 'monit', x: 970, y: 470, origem: 'V2026.09.09.2',
+      desc: 'Pior valor de cada episódio de alarme (RN-076). Uma linha por episódio, atualizada enquanto ele dura e mantida depois do FECHOU.',
+      c: [
+        ['episodio_id', 'char(36)', 'char(36)', ['PK'], false, 'Mesmo UUID de evento_alarme.episodio_id.'],
+        ['unidade_sonda_id', 'bigint', 'bigint', ['FK', 'IX'], false, '→ unidades_sondas.id, ON DELETE RESTRICT'],
+        ['valor', 'double', 'double', [], false, ''],
+        ['limite_violado', 'varchar(8)', 'varchar(8)', [], false, 'MIN ou MAX, vindo da abertura do episódio.'],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
+      ] },
+    { id: 'simulador_pastas', armazem: 'mysql', dom: 'simul', x: 660, y: 740, origem: 'V2026.09.04 (baseline)',
+      desc: 'Pasta que agrupa cenários de uma mesma operação do simulador.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['operacao', 'varchar(16)', 'varchar(16)', [], false, 'Rótulo da operação enviado pelo front; o backend não restringe os valores.'],
+        ['criado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
+        ['criado_em', 'datetime(6)', 'datetime', [], true, ''],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], true, '']
+      ] },
+    { id: 'simulador_cenarios', armazem: 'mysql', dom: 'simul', x: 970, y: 718, origem: 'V2026.09.05 (poco_id)',
+      desc: 'Cenário salvo do simulador de cimentação. A pasta precisa ser da mesma operação, o que é validado no serviço. O poço é opcional: cenários antigos seguem sem poço (RN-059, RN-067).',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['pasta_id', 'bigint', 'bigint', ['FK'], true, '→ simulador_pastas.id'],
+        ['poco_id', 'bigint', 'bigint', ['FK', 'IX'], true, '→ simulador_pocos.id, ON DELETE RESTRICT'],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['operacao', 'varchar(16)', 'varchar(16)', [], false, 'Igual à da pasta.'],
+        ['criado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
+        ['form_value', 'longtext', 'longtext', [], false, 'Formulário do cenário serializado.'],
+        ['dados_relatorio', 'text', 'text', [], true, ''],
+        ['criado_em', 'datetime(6)', 'datetime', [], true, ''],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], true, '']
+      ] },
+    { id: 'simulador_pocos', armazem: 'mysql', dom: 'simul', x: 660, y: 950, origem: 'V2026.09.05',
+      desc: 'Poço como entidade própria, com a geometria versionada. Excluir um poço que tem cenários é recusado no banco.',
+      c: [
+        ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
+        ['version', 'bigint', 'bigint', [], false, 'Lock otimista.'],
+        ['nome', 'varchar(255)', 'varchar', [], false, ''],
+        ['geometria', 'longtext', 'longtext', [], false, 'Revestimentos e trechos do poço.'],
+        ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
+        ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
+      ] },
+    { id: 'telemetria', tipo: 'measurement', armazem: 'influx', dom: 'campo', x: 1310, y: 80, origem: 'InfluxTelemetriaRepository',
+      desc: 'Série histórica gravada pelo Geopetro-Telemetria a partir do MQTT. Pontos com as mesmas tags no mesmo instante se sobrescrevem, o que torna o reenvio idempotente.',
+      c: [
+        ['_time', 'timestamp', 'time', [], false, 'Instante da leitura.'],
+        ['idSondaUnidade', 'tag', 'tag', ['TAG'], false, 'Igual a unidades_sondas.nome (RN-018).'],
+        ['dispositivoId', 'tag', 'tag', ['TAG'], false, ''],
+        ['serie', 'tag', 'tag', ['TAG'], true, 'Separa as séries de um mesmo dispositivo.'],
+        ['tipo', 'tag', 'tag', ['TAG'], false, ''],
+        ['unidade', 'tag', 'tag', ['TAG'], false, ''],
+        ['enderecoDb', 'field string', 'field', ['FLD'], false, ''],
+        ['valor', 'field double', 'field', ['FLD'], false, ''],
+        ['valorBruto', 'field double', 'field', ['FLD'], true, 'Gravado só quando a leitura traz o valor bruto.']
+      ] },
+    { id: 'leitura_local', armazem: 'h2', dom: 'campo', x: 1310, y: 430, origem: 'LeituraLocal (JPA)',
+      desc: 'Leituras do PLC gravadas localmente pelo Geopetro-Desktop, com os mesmos campos do ponto que vai para o InfluxDB.',
+      c: [
+        ['id', 'bigint identity', 'bigint', ['PK'], false, ''],
+        ['timestamp', 'timestamp', 'timestamp', ['IX'], true, 'idx_leitura_instante'],
+        ['dispositivo_id', 'varchar(255)', 'varchar', ['IX'], true, 'idx_leitura_dispositivo_instante, com timestamp.'],
+        ['serie', 'varchar(255)', 'varchar', [], true, ''],
+        ['tipo', 'varchar(255)', 'varchar', [], true, ''],
+        ['unidade', 'varchar(255)', 'varchar', [], true, ''],
+        ['endereco_db', 'varchar(255)', 'varchar', [], true, ''],
+        ['valor', 'double', 'double', [], true, ''],
+        ['valor_bruto', 'double', 'double', [], true, '']
+      ] },
+    { id: 'registros_operacao', tipo: 'arquivo', armazem: 'jsonl', dom: 'campo', x: 1310, y: 790, origem: 'JsonRegistroService',
+      desc: 'Registro de operação do Braserv-Horus-Desktop, uma linha JSON por registro. O registros_operacao.json é o formato legado.',
+      c: [
+        ['timestamp', 'string ISO-8601', 'string', [], false, 'ISO_LOCAL_DATE_TIME, sem fuso.'],
+        ['pressao', 'double', 'double', [], false, ''],
+        ['strokeAtual', 'long', 'long', [], false, ''],
+        ['strokeCumulativo', 'long', 'long', [], false, ''],
+        ['vazaoAtual', 'double', 'double', [], false, ''],
+        ['volumeBombeado', 'double', 'double', [], false, '']
+      ] }
+  ];
+
+  // de: [tabela, coluna, lado], para: [tabela, coluna, lado]. Lado L = esquerda, R = direita.
+  // card: [marcador na ponta "de", marcador na ponta "para"].
+  // pista: x da perna vertical. desvio: deslocamento vertical na chegada, para separar linhas que chegam na mesma coluna.
+  const RELACOES = [
+    { de: ['setores', 'regional_id', 'L'], para: ['regionais', 'id', 'R'], card: ['n0', 'um'] },
+    { de: ['unidades_sondas', 'setor_id', 'L'], para: ['setores', 'id', 'R'], card: ['n0', 'um'] },
+    { de: ['usuario_roles', 'username', 'R'], para: ['usuarios', 'username', 'L'], card: ['n0', 'um'], pista: 310, desvio: -4 },
+    { de: ['recuperacao_senha', 'username', 'R'], para: ['usuarios', 'username', 'L'], card: ['z1', 'um'], pista: 320, desvio: 4 },
+    { de: ['usuarios', 'empresa_id', 'L'], para: ['empresas', 'id', 'R'], card: ['n0', 'z1'], pista: 335 },
+    { de: ['usuario_cliente_unidades', 'usuario_username', 'L'], para: ['usuarios', 'username', 'R'], card: ['n0', 'um'] },
+    { de: ['usuario_cliente_unidades', 'unidade_sonda_id', 'R'], para: ['unidades_sondas', 'id', 'R'], card: ['n0', 'um'], pista: 930, desvio: 10 },
+    { de: ['evento_alarme', 'unidade_sonda_id', 'R'], para: ['unidades_sondas', 'id', 'R'], card: ['n0', 'um'], pista: 935, desvio: 5 },
+    { de: ['episodio_alarme_extremo', 'unidade_sonda_id', 'L'], para: ['unidades_sondas', 'id', 'R'], card: ['n0', 'um'], pista: 950, desvio: 0 },
+    { de: ['configuracao_cards', 'unidade_sonda_id', 'L'], para: ['unidades_sondas', 'id', 'R'], card: ['z1', 'um'], pista: 955, desvio: -5 },
+    { de: ['configuracao_sonda', 'unidade_sonda_id', 'L'], para: ['unidades_sondas', 'id', 'R'], card: ['z1', 'um'], pista: 960, desvio: -10 },
+    { de: ['simulador_cenarios', 'pasta_id', 'L'], para: ['simulador_pastas', 'id', 'R'], card: ['n0', 'z1'] },
+    { de: ['simulador_cenarios', 'poco_id', 'L'], para: ['simulador_pocos', 'id', 'R'], card: ['n0', 'z1'], pista: 945 },
+    { de: ['evento_alarme', 'episodio_id', 'R'], para: ['episodio_alarme_extremo', 'episodio_id', 'L'], card: ['n1', 'um'], logico: true },
+    { de: ['telemetria', 'idSondaUnidade', 'L'], para: ['unidades_sondas', 'nome', 'L'], card: ['n0', 'um'], logico: true,
+      via: [[1290, null], [1290, 62], [635, 62], [635, 'fim']], rotulo: { x: 960, y: 56, texto: 'nome = idSondaUnidade (RN-018)' } },
+    { de: ['leitura_local', 'dispositivo_id', 'R'], para: ['telemetria', 'dispositivoId', 'R'], card: [null, 'seta'], logico: true,
+      pista: 1590, rotulo: { x: 1584, y: 360, texto: 'MQTT', ancora: 'end' } }
+  ];
+
+  const LARGURA = 260, CAB = 34, LINHA = 22, RODAPE = 6;
+  const CANVAS_W = 1640, CANVAS_H = 1180;
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  const porId = Object.fromEntries(TABELAS.map(t => [t.id, t]));
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const altura = t => CAB + t.c.length * LINHA + RODAPE;
+  const yColuna = (t, nome) => {
+    const i = t.c.findIndex(c => c[0] === nome);
+    if (i < 0) throw new Error('Coluna ' + nome + ' não existe em ' + t.id);
+    return t.y + CAB + i * LINHA + LINHA / 2;
+  };
+  const xLado = (t, lado) => lado === 'L' ? t.x : t.x + LARGURA;
+  const tipoTabela = t => t.tipo === 'measurement' ? 'measurement' : t.tipo === 'arquivo' ? 'arquivo' : 'tabela';
+  const el = (tag, attrs) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  };
+
+  // ---------- Fatos do cabeçalho ----------
+  const qtd = a => TABELAS.filter(t => t.armazem === a).length;
+  document.getElementById('facts').innerHTML =
+    `<span>Conferido em <b>${CONFERIDO_EM}</b></span>` +
+    `<span>Última migration <b class="mono">${ULTIMA_MIGRATION}</b></span>` +
+    `<span><b>${qtd('mysql')}</b> tabelas MySQL</span>` +
+    `<span><b>${qtd('influx')}</b> measurement InfluxDB</span>` +
+    `<span><b>${qtd('h2')}</b> tabela H2</span>` +
+    `<span><b>${qtd('jsonl')}</b> arquivo JSONL</span>` +
+    `<span><b>${RELACOES.filter(r => !r.logico).length}</b> FKs declaradas</span>`;
+
+  // ---------- Marcadores de cardinalidade ----------
+  const FORMAS = {
+    um:   g => { g.append(el('line', { x1: -6, y1: -7, x2: -6, y2: 7 }), el('line', { x1: -11, y1: -7, x2: -11, y2: 7 })); },
+    z1:   g => { g.append(el('line', { x1: -6, y1: -7, x2: -6, y2: 7 }), el('circle', { cx: -15, cy: 0, r: 4 })); },
+    n0:   g => { g.append(el('path', { d: 'M0,-7 L-12,0 M0,7 L-12,0' }), el('circle', { cx: -17, cy: 0, r: 4 })); },
+    n1:   g => { g.append(el('path', { d: 'M0,-7 L-12,0 M0,7 L-12,0' }), el('line', { x1: -15, y1: -7, x2: -15, y2: 7 })); },
+    seta: g => { g.append(el('path', { d: 'M0,0 L-10,-5 L-10,5 Z', class: 'seta' })); }
+  };
+
+  const svg = document.getElementById('svg');
+  svg.setAttribute('width', CANVAS_W);
+  svg.setAttribute('height', CANVAS_H);
+  svg.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
+  const defs = el('defs', {});
+  for (const forma in FORMAS) {
+    for (const estado of ['n', 'h']) {
+      const m = el('marker', {
+        id: `m-${forma}-${estado}`, viewBox: '-23 -10 25 20', refX: 0, refY: 0,
+        markerWidth: 25, markerHeight: 20, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse',
+        class: estado === 'h' ? 'mk hi' : 'mk'
+      });
+      FORMAS[forma](m);
+      defs.append(m);
+    }
+  }
+  svg.append(defs);
+
+  // ---------- Zonas por armazenamento ----------
+  const gZonas = el('g', {});
+  for (const a of Object.values(ARMAZENS)) {
+    const z = a.zona;
+    gZonas.append(el('rect', { x: z.x, y: z.y, width: z.w, height: z.h, rx: 8, class: 'zone-rect' }));
+    const t = el('text', { x: z.x + 16, y: z.y + 26, class: 'zone-title' });
+    t.textContent = a.nome;
+    const s = el('text', { x: z.x + 16, y: z.y + 44, class: 'zone-sub' });
+    s.textContent = a.sub;
+    gZonas.append(t, s);
+  }
+  svg.append(gZonas);
+
+  // ---------- Linhas ----------
+  const gLinhas = el('g', {});
+  svg.append(gLinhas);
+
+  function pontos(r) {
+    const a = porId[r.de[0]], b = porId[r.para[0]];
+    const ini = [xLado(a, r.de[2]), yColuna(a, r.de[1])];
+    const fim = [xLado(b, r.para[2]), yColuna(b, r.para[1]) + (r.desvio || 0)];
+    if (r.via) {
+      const meio = r.via.map(([x, y]) => [x, y === null ? ini[1] : y === 'fim' ? fim[1] : y]);
+      return [ini, ...meio, fim];
+    }
+    if (r.pista === undefined) return [ini, fim];
+    return [ini, [r.pista, ini[1]], [r.pista, fim[1]], fim];
+  }
+
+  const linhas = RELACOES.map(r => {
+    const d = pontos(r).map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
+    const g = el('g', { class: 'ln-g' });
+    const halo = el('path', { d, class: 'halo' });
+    const linha = el('path', { d, class: 'ln' + (r.logico ? ' logico' : '') });
+    g.append(halo, linha);
+    if (r.rotulo) {
+      const t = el('text', { x: r.rotulo.x, y: r.rotulo.y, class: 'ln-label', 'text-anchor': r.rotulo.ancora || 'middle' });
+      t.textContent = r.rotulo.texto;
+      g.append(t);
+    }
+    gLinhas.append(g);
+    const obj = { r, g, linha };
+    marcar(obj, false);
+    return obj;
+  });
+
+  function marcar(obj, alto) {
+    const s = alto ? 'h' : 'n';
+    const [ini, fim] = obj.r.card;
+    if (ini) obj.linha.setAttribute('marker-start', `url(#m-${ini}-${s})`); else obj.linha.removeAttribute('marker-start');
+    if (fim) obj.linha.setAttribute('marker-end', `url(#m-${fim}-${s})`); else obj.linha.removeAttribute('marker-end');
+    obj.g.classList.toggle('hi', alto);
+  }
+
+  // ---------- Cartões ----------
+  const cartoes = {};
+  const host = document.getElementById('cards');
+  for (const t of TABELAS) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.tabIndex = 0;
+    div.setAttribute('role', 'button');
+    div.setAttribute('aria-pressed', 'false');
+    div.setAttribute('aria-label', `${t.id}, ${tipoTabela(t)}, ${t.c.length} colunas`);
+    div.style.left = t.x + 'px';
+    div.style.top = t.y + 'px';
+    div.style.height = altura(t) + 'px';
+    div.dataset.id = t.id;
+    const dom = DOMINIOS[t.dom];
+    div.innerHTML =
+      `<div class="card-h"><span class="dot" style="background:var(${dom.cor})" title="${esc(dom.nome)}"></span>` +
+      `<span class="card-name">${esc(t.id)}</span><span class="card-kind">${tipoTabela(t)}</span></div>` +
+      '<ul>' + t.c.map(c =>
+        `<li data-col="${esc(c[0])}"><span class="keys">${c[3].map(k => `<span class="k k-${k}">${k}</span>`).join('')}</span>` +
+        `<span class="cn" title="${esc(c[0])}">${esc(c[0])}</span><span class="ct">${esc(c[2])}</span></li>`).join('') +
+      '</ul>';
+    host.append(div);
+    cartoes[t.id] = div;
+  }
+
+  // ---------- Legenda ----------
+  const pict = (ini, fim, logico) =>
+    `<svg width="46" height="14" viewBox="0 0 46 14"><path d="M2,7 H44" class="ln${logico ? ' logico' : ''}"` +
+    (ini ? ` marker-start="url(#m-${ini}-n)"` : '') + (fim ? ` marker-end="url(#m-${fim}-n)"` : '') + '/></svg>';
+  document.getElementById('legenda').innerHTML =
+    Object.values(DOMINIOS).map(d => `<span><i class="dot" style="background:var(${d.cor})"></i>${d.nome}</span>`).join('') +
+    '<i class="sep"></i>' +
+    `<span>${pict(null, 'um')}exatamente um</span>` +
+    `<span>${pict(null, 'z1')}zero ou um</span>` +
+    `<span>${pict(null, 'n0')}zero ou muitos</span>` +
+    `<span>${pict(null, 'n1')}um ou muitos</span>` +
+    `<span>${pict(null, null, true)}vínculo sem FK</span>`;
+
+  // ---------- Seleção ----------
+  const canvas = document.getElementById('canvas');
+  const inspector = document.getElementById('inspector');
+  let selecionada = null;
+
+  function selecionar(id) {
+    selecionada = id;
+    const relacionadas = new Set(id ? [id] : []);
+    for (const l of linhas) {
+      const liga = id && (l.r.de[0] === id || l.r.para[0] === id);
+      if (liga) { relacionadas.add(l.r.de[0]); relacionadas.add(l.r.para[0]); }
+      marcar(l, !!liga);
+    }
+    canvas.classList.toggle('has-focus', !!id);
+    for (const [tid, c] of Object.entries(cartoes)) {
+      c.classList.toggle('rel', relacionadas.has(tid));
+      c.classList.toggle('sel', tid === id);
+      c.setAttribute('aria-pressed', String(tid === id));
+    }
+    // Linhas destacadas vão para o fim do grupo, para ficarem por cima das demais.
+    linhas.filter(l => l.g.classList.contains('hi')).forEach(l => gLinhas.append(l.g));
+    descrever(id);
+  }
+
+  function descrever(id) {
+    if (!id) {
+      inspector.innerHTML = '<span class="hint">Clique numa tabela para destacar as relações dela. Esc limpa a seleção.</span>';
+      return;
+    }
+    const t = porId[id];
+    const rels = RELACOES.filter(r => r.de[0] === id || r.para[0] === id).map(r => {
+      const sai = r.de[0] === id;
+      const outra = sai ? r.para : r.de;
+      const tipo = r.logico ? 'vínculo sem FK' : 'FK';
+      return sai
+        ? `<li><code>${esc(r.de[1])}</code> → <code>${esc(outra[0])}.${esc(outra[1])}</code> · ${tipo}</li>`
+        : `<li><code>${esc(outra[0])}.${esc(outra[1])}</code> → <code>${esc(r.para[1])}</code> · ${tipo}</li>`;
+    });
+    inspector.innerHTML =
+      `<h3>${esc(t.id)}</h3>` +
+      `<div class="meta"><span>${esc(ARMAZENS[t.armazem].nome)}</span>` +
+      `<span><i class="dot" style="background:var(${DOMINIOS[t.dom].cor})"></i> ${esc(DOMINIOS[t.dom].nome)}</span>` +
+      `<a href="#dic-${esc(t.id)}">Ver no dicionário</a></div>` +
+      `<p>${esc(t.desc)}</p>` +
+      (rels.length ? `<ul>${rels.join('')}</ul>` : '<p class="hint">Sem relações com outras estruturas.</p>');
+  }
+
+  host.addEventListener('click', e => {
+    const c = e.target.closest('.card');
+    if (!c || moveu) return;
+    selecionar(selecionada === c.dataset.id ? null : c.dataset.id);
+  });
+  host.addEventListener('keydown', e => {
+    const c = e.target.closest('.card');
+    if (c && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      selecionar(selecionada === c.dataset.id ? null : c.dataset.id);
+    }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && selecionada) selecionar(null); });
+
+  // ---------- Zoom e arraste ----------
+  const viewport = document.getElementById('viewport');
+  const stage = document.getElementById('stage');
+  const zoomValor = document.getElementById('zoomValor');
+  let escala = 1;
+
+  function aplicarEscala(nova, cx, cy) {
+    const anterior = escala;
+    escala = Math.min(1.6, Math.max(0.25, nova));
+    // Mantém o ponto sob o centro (ou sob o cursor) no mesmo lugar.
+    const px = cx ?? viewport.clientWidth / 2, py = cy ?? viewport.clientHeight / 2;
+    const mx = (viewport.scrollLeft + px) / anterior, my = (viewport.scrollTop + py) / anterior;
+    canvas.style.transform = `scale(${escala})`;
+    stage.style.width = CANVAS_W * escala + 'px';
+    stage.style.height = CANVAS_H * escala + 'px';
+    viewport.scrollLeft = mx * escala - px;
+    viewport.scrollTop = my * escala - py;
+    zoomValor.textContent = Math.round(escala * 100) + '%';
+  }
+  const ajustar = () => {
+    aplicarEscala(Math.min(1, (viewport.clientWidth - 2) / CANVAS_W, (viewport.clientHeight - 2) / CANVAS_H));
+    viewport.scrollLeft = 0;
+    viewport.scrollTop = 0;
+  };
+  canvas.style.width = CANVAS_W + 'px';
+  canvas.style.height = CANVAS_H + 'px';
+  document.getElementById('zoomMais').addEventListener('click', () => aplicarEscala(escala * 1.2));
+  document.getElementById('zoomMenos').addEventListener('click', () => aplicarEscala(escala / 1.2));
+  document.getElementById('zoomAjustar').addEventListener('click', ajustar);
+  document.getElementById('zoom100').addEventListener('click', () => aplicarEscala(1));
+  viewport.addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const r = viewport.getBoundingClientRect();
+    aplicarEscala(escala * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+
+  let arraste = null, moveu = false;
+  viewport.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    arraste = { x: e.clientX, y: e.clientY, sl: viewport.scrollLeft, st: viewport.scrollTop };
+    moveu = false;
+  });
+  window.addEventListener('pointermove', e => {
+    if (!arraste) return;
+    const dx = e.clientX - arraste.x, dy = e.clientY - arraste.y;
+    if (!moveu && Math.hypot(dx, dy) < 4) return;
+    moveu = true;
+    viewport.classList.add('dragging');
+    viewport.scrollLeft = arraste.sl - dx;
+    viewport.scrollTop = arraste.st - dy;
+  });
+  window.addEventListener('pointerup', () => {
+    if (!arraste) return;
+    arraste = null;
+    viewport.classList.remove('dragging');
+    // O click que vem logo depois de um arraste não deve selecionar a tabela.
+    setTimeout(() => { moveu = false; }, 0);
+  });
+  viewport.addEventListener('click', e => { if (!e.target.closest('.card') && !moveu && selecionada) selecionar(null); });
+
+  // ---------- Dicionário ----------
+  const dic = document.getElementById('dicionario');
+  const artigos = {};
+  for (const [chave, a] of Object.entries(ARMAZENS)) {
+    const grupo = document.createElement('div');
+    grupo.className = 'store';
+    grupo.innerHTML = `<h3>${esc(a.nome)}</h3>`;
+    for (const t of TABELAS.filter(x => x.armazem === chave)) {
+      const art = document.createElement('article');
+      art.className = 'ent';
+      art.id = 'dic-' + t.id;
+      const dom = DOMINIOS[t.dom];
+      art.innerHTML =
+        `<div class="ent-h"><h3>${esc(t.id)}</h3>` +
+        `<span class="meta"><i class="dot" style="background:var(${dom.cor})"></i>${esc(dom.nome)}</span>` +
+        `<span class="meta">${tipoTabela(t)} · origem <span class="mono">${esc(t.origem)}</span></span></div>` +
+        `<p>${esc(t.desc)}</p>` +
+        '<div class="table-wrap"><table><thead><tr><th>Coluna</th><th>Tipo</th><th>Nulo</th><th>Chave</th><th>Observação</th></tr></thead><tbody>' +
+        t.c.map(c =>
+          `<tr><td class="c-n">${esc(c[0])}</td><td class="c-t">${esc(c[1])}</td>` +
+          `<td class="c-null">${c[4] ? 'sim' : 'não'}</td>` +
+          `<td>${c[3].map(k => `<span class="k k-${k}">${k}</span>`).join(' ')}</td>` +
+          `<td class="c-obs">${esc(c[5])}</td></tr>`).join('') +
+        '</tbody></table></div>';
+      grupo.append(art);
+      artigos[t.id] = art;
+    }
+    dic.append(grupo);
+  }
+
+  // ---------- Busca ----------
+  const busca = document.getElementById('busca');
+  const contagem = document.getElementById('contagem');
+  busca.addEventListener('input', () => {
+    const q = busca.value.trim().toLowerCase();
+    canvas.classList.toggle('has-search', !!q);
+    let n = 0;
+    const casam = new Set();
+    for (const t of TABELAS) {
+      const nomeCasa = t.id.toLowerCase().includes(q);
+      const cols = q ? t.c.filter(c => c[0].toLowerCase().includes(q)).map(c => c[0]) : [];
+      const casa = !q || nomeCasa || cols.length > 0;
+      if (casa && q) { n++; casam.add(t.id); }
+      cartoes[t.id].classList.toggle('match', casa && !!q);
+      cartoes[t.id].querySelectorAll('li').forEach(li => li.classList.toggle('row-match', cols.includes(li.dataset.col)));
+      artigos[t.id].hidden = !casa;
+    }
+    for (const l of linhas) l.g.classList.toggle('both', casam.has(l.r.de[0]) && casam.has(l.r.para[0]));
+    dic.querySelectorAll('.store').forEach(s => { s.hidden = !s.querySelector('.ent:not([hidden])'); });
+    contagem.textContent = q ? (n === 1 ? '1 estrutura' : `${n} estruturas`) : '';
+  });
+
+  ajustar();
+})();
+</script>
+</body>
+</html>

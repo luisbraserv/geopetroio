@@ -6,7 +6,7 @@ import java.time.Instant;
  * Resposta de "esta sonda tem historico?" — RN-072.
  *
  * <p>Espelha {@code ...telemetria.geopetroio.adapter.in.web.dto.ExistenciaSerieDTO} no
- * Backend-Telemetria. Ver specs/contracts/rest-monitoramento.md §7.
+ * Backend-Telemetria. Ver specs/SDD/software/apis/rest-monitoramento.md §7.
  *
  * <p>As datas sao nulas quando {@code possuiSerie} e falso.
  */

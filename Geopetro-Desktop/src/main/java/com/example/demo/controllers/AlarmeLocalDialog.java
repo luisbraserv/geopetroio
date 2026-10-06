@@ -18,7 +18,7 @@ import javafx.stage.Window;
 
 /**
  * O ajuste do alarme desta estação, atrás do sininho do card —
- * {@code specs/features/configuracao-da-estacao.md §3.1}.
+ * {@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.1}.
  *
  * <h2>⚠️ Sem login, e é o único assim</h2>
  * Todo o resto da configuração do Desktop exige {@code ADMIN} ou {@code SUPORTE}. Este não, e a

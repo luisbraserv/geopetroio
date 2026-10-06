@@ -1,7 +1,7 @@
 # Prefixo da API — RN-079
 
 **[DECIDIDO 2026-09-05]** Login e usuários passam para `/api`, conforme
-[`RN-079`](../../specs/business-rules.md#rn-079--a-api-padroniza-o-prefixo-api).
+[`RN-079`](../../specs/SDD/negocio/regras/business-rules.md#rn-079--a-api-padroniza-o-prefixo-api).
 
 ## Contrato da migração
 

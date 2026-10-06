@@ -25,16 +25,16 @@ participa do MQTT — apenas consulta séries já processadas.
 
 | # | Responsabilidade | Onde | Contrato |
 |---|---|---|---|
-| R-01 | Assinar o broker e ingerir telemetria | `infrastructure/mqtt` | [`mqtt-telemetria.md`](../../specs/contracts/mqtt-telemetria.md) |
+| R-01 | Assinar o broker e ingerir telemetria | `infrastructure/mqtt` | [`mqtt-telemetria.md`](../../specs/SDD/software/mqtt/mqtt-telemetria.md) |
 | R-02 | Normalizar os dois formatos de payload | `TelemetriaPayloadParser` | idem, §9 |
 | R-03 | Persistir séries no InfluxDB | `infrastructure/influx` | ver §Esquema |
-| R-04 | Expor API REST de consulta | `adapter/in/web` | [`rest-monitoramento.md`](../../specs/contracts/rest-monitoramento.md) |
+| R-04 | Expor API REST de consulta | `adapter/in/web` | [`rest-monitoramento.md`](../../specs/SDD/software/apis/rest-monitoramento.md) |
 | R-05 | Responder se uma sonda tem série gravada | `ConsultaExistenciaService` | idem, §7 — **[FATO 2026-09-06]** |
 
 ### Fora de escopo — deliberadamente
 
 - **Autorização de usuário.** O Geopetro-Backend valida o vínculo usuário↔sonda antes de chamar. Este serviço não conhece usuários nem regionais.
-- **Decidir sobre cadastro.** R-05 responde *se existe série*, não *se pode excluir*. A regra de exclusão é do Geopetro-Backend, que também é quem trata a indisponibilidade deste serviço como impedimento ([RN-072](../../specs/business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
+- **Decidir sobre cadastro.** R-05 responde *se existe série*, não *se pode excluir*. A regra de exclusão é do Geopetro-Backend, que também é quem trata a indisponibilidade deste serviço como impedimento ([RN-072](../../specs/SDD/negocio/regras/business-rules.md#rn-072--histórico-de-telemetria-conta-como-vínculo)).
 - **Cálculo de grandezas.** A conversão 4-20mA acontece no Geopetro-Desktop. Aqui chegam valores já convertidos — e opcionalmente o bruto, para permitir reprocessamento.
 
 ## Estrutura
@@ -101,7 +101,7 @@ O seed deve obedecer às seguintes guardas e regras:
 - a `SPT-145` deve existir no MySQL do Geopetro-Backend pela migration idempotente
   `V2026.06.15__unidades_spt144_spt145.sql`; ela não é injetada estaticamente no frontend.
 
-Essa dupla guarda é obrigatória por causa da [DT-013](../../specs/technical-debt.md#dt-013--seed-de-dados-sintéticos-sem-guarda):
+Essa dupla guarda é obrigatória por causa da [DT-013](../../specs/SDD/software/technical-debt.md#dt-013--seed-de-dados-sintéticos-sem-guarda):
 uma instalação de campo ou produção nunca pode receber dados fabricados por padrão.
 
 ## Decisões de implementação
@@ -166,7 +166,7 @@ Tudo por variável de ambiente. Ver `src/main/resources/application.yml`.
 | `SERVER_PORT` | `8081` | Porta esperada pelo `nginx.conf` e pelo Geopetro-Backend |
 | `MQTT_BROKER_URL` | `tcp://localhost:1883` | |
 | `MQTT_TOPICO` | `telemetria/+/batch` | Mais restrito que o antigo `telemetria/+/+` |
-| `MQTT_USERNAME` / `MQTT_PASSWORD` | vazio | ⚠️ Ver [SEC-009](../../specs/security-findings.md#sec-009--broker-mqtt-sem-autenticação) |
+| `MQTT_USERNAME` / `MQTT_PASSWORD` | vazio | ⚠️ Ver [SEC-009](../../specs/SDD/software/seguranca/security-findings.md#sec-009--broker-mqtt-sem-autenticação) |
 | `INFLUX_URL` | `http://localhost:8086` | |
 | `INFLUX_TOKEN` | **sem default** | Falha no startup se ausente — melhor que descartar telemetria em silêncio |
 | `INFLUX_ORG` / `INFLUX_BUCKET` | `braserv` / `telemetria` | |
@@ -196,7 +196,7 @@ Mockito 5.14.2 com Byte Buddy 1.15.11 — incapaz de ler o bytecode do **Java 25
 mockagem de classe falhava, derrubando **10 dos 24 testes**. Corrigido fixando `mockito.version` e
 `byte-buddy.version` no `pom.xml`, nas mesmas versões que o Geopetro-Backend já resolve pelo Boot 4.
 A divergência de versão de Boot entre os dois serviços permanece —
-[DT-016](../../specs/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
+[DT-016](../../specs/SDD/software/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto).
 
 | Classe | Cobre |
 |---|---|
@@ -222,10 +222,10 @@ Testcontainer de InfluxDB fecharia essa lacuna e é a próxima adição recomend
 
 | # | Item | Referência |
 |---|---|---|
-| 1 | Broker de produção e **autenticação** | [SEC-009](../../specs/security-findings.md#sec-009--broker-mqtt-sem-autenticação) · [OQ-023](../../specs/open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção) |
+| 1 | Broker de produção e **autenticação** | [SEC-009](../../specs/SDD/software/seguranca/security-findings.md#sec-009--broker-mqtt-sem-autenticação) · [OQ-023](../../specs/SDD/negocio/requisitos/open-questions.md#oq-023--qual-broker-mqtt-será-usado-em-produção) |
 | 2 | Autenticação serviço-a-serviço na API REST | Hoje aberta; o `WebClient` do Geopetro-Backend não envia credencial |
 | 3 | Política de retenção do InfluxDB | Não definida — afeta crescimento de armazenamento |
-| 4 | Buffer de contingência no produtor | [OQ-019](../../specs/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
+| 4 | Buffer de contingência no produtor | [OQ-019](../../specs/SDD/negocio/requisitos/open-questions.md#oq-019--perda-de-telemetria-em-falha-de-mqtt-é-aceitável) |
 | 5 | Endpoint que aceite múltiplos `dispositivoId` numa chamada | Hoje a tela faz 5 requisições em paralelo |
 | 6 | Migração do produtor para o formato alvo | O serviço aceita ambos até lá |
 
@@ -234,6 +234,6 @@ Testcontainer de InfluxDB fecharia essa lacuna e é a próxima adição recomend
 | Risco | Mitigação atual |
 |---|---|
 | **[FATO]** Broker sem autenticação — qualquer host da rede pode publicar telemetria forjada | Nenhuma. Ver ponto 1 acima |
-| **[FATO]** Renomear Unidade/Sonda quebra a continuidade do histórico | Nenhuma — [RN-018](../../specs/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
-| **[FATO]** Escala bruta 0–1000 do CLP não confirmada | `valorBruto` é persistido, permitindo reprocessar se a fórmula mudar — [OQ-016](../../specs/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
-| **[FATO]** OneDrive corrompeu o `.git` deste projeto uma vez | Nenhuma — [DT-004](../../specs/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git) |
+| **[FATO]** Renomear Unidade/Sonda quebra a continuidade do histórico | Nenhuma — [RN-018](../../specs/SDD/negocio/regras/business-rules.md#rn-018--nome-da-unidadesonda-é-chave-de-integração) |
+| **[FATO]** Escala bruta 0–1000 do CLP não confirmada | `valorBruto` é persistido, permitindo reprocessar se a fórmula mudar — [OQ-016](../../specs/SDD/negocio/requisitos/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
+| **[FATO]** OneDrive corrompeu o `.git` deste projeto uma vez | Nenhuma — [DT-004](../../specs/SDD/software/technical-debt.md#dt-004--risco-de-onedrive-sobre-repositórios-git) |

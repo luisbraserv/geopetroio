@@ -33,7 +33,7 @@ local na porta 102.
 Sonda.
 
 **[DECIDIDO 2026-08-26]** Permanece separado do Geopetro-Desktop. A duplicação de capacidades
-([DT-010](../../specs/technical-debt.md#dt-010--duplicação-entre-os-dois-desktops)) é aceita
+([DT-010](../../specs/SDD/software/technical-debt.md#dt-010--duplicação-entre-os-dois-desktops)) é aceita
 conscientemente — mas correções de fórmula precisam ser aplicadas **nos dois repositórios**.
 
 ## Organização
@@ -75,15 +75,15 @@ H2 está no `build.gradle` — mas a classe **nunca é instanciada**. Código mo
 
 | Item | Severidade | Referência |
 |---|---|---|
-| ⚠️ **Credencial MySQL em texto plano no histórico do Git** | **Alta** | [SEC-006](../../specs/security-findings.md#sec-006--credencial-mysql-no-histórico-do-git) |
-| ⚠️ Comentários dizem "10 segundos", constante é 60000ms (**60s**) | Alta | [DT-009](../../specs/technical-debt.md#dt-009--documentação-divergente-do-código) |
-| `H2DatabaseService` nunca instanciada | Baixa | [DT-015](../../specs/technical-debt.md#dt-015--código-morto-inventário) |
+| ⚠️ **Credencial MySQL em texto plano no histórico do Git** | **Alta** | [SEC-006](../../specs/SDD/software/seguranca/security-findings.md#sec-006--credencial-mysql-no-histórico-do-git) |
+| ⚠️ Comentários dizem "10 segundos", constante é 60000ms (**60s**) | Alta | [DT-009](../../specs/SDD/software/technical-debt.md#dt-009--documentação-divergente-do-código) |
+| `H2DatabaseService` nunca instanciada | Baixa | [DT-015](../../specs/SDD/software/technical-debt.md#dt-015--código-morto-inventário) |
 | `VazaoCalculatorService` — só `reset()` é chamado | Baixa | idem |
 | `S7AreaHelper` nunca referenciado | Baixa | idem |
 | Tela "Carregar CSV" inalcançável e sem parser | Baixa | idem |
 | `slf4j-simple` declarado, logging via `System.out` | Baixa | idem |
 | 3 classes duplicando a mesma estrutura de dados | Baixa | — |
-| Namespaces JavaFX inconsistentes nos FXML (21, 21.0.1, 25) | Baixa | [DT-016](../../specs/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto) |
+| Namespaces JavaFX inconsistentes nos FXML (21, 21.0.1, 25) | Baixa | [DT-016](../../specs/SDD/software/technical-debt.md#dt-016--inconsistências-de-organização-de-projeto) |
 | 3,3 MB de telemetria real versionados no Git | Média | idem |
 | `JAVA_HOME` de fallback fixo no `build.gradle` | Baixa | idem |
 
@@ -172,7 +172,7 @@ falha propagada, ouvinte opcional).
 
 ## Design system (revisão 2026-08-31)
 
-**[FATO]** `specs/index.html` é a **fonte normativa**. O `geopetro-design-system.css` (Geopetro-Desktop
+**[FATO]** `specs/SDD/software/frontend/index.html` é a **fonte normativa**. O `geopetro-design-system.css` (Geopetro-Desktop
 e Horus, arquivo idêntico nos dois) transcreve aqueles tokens para JavaFX CSS — rem convertido para
 px na base 16, já que JavaFX não tem custom properties nem unidades relativas.
 
@@ -223,7 +223,7 @@ foi assim que as cores antigas sobreviveram ao redesenho anterior.
 
 | # | Questão | Referência |
 |---|---|---|
-| 1 | A credencial do banco `braservone` ainda é válida? A que sistema pertence? | [OQ-020](../../specs/open-questions.md#oq-020--a-credencial-do-banco-braservone-ainda-é-válida) |
+| 1 | A credencial do banco `braservone` ainda é válida? A que sistema pertence? | [OQ-020](../../specs/SDD/negocio/requisitos/open-questions.md#oq-020--a-credencial-do-banco-braservone-ainda-é-válida) |
 | 2 | Origem de `data/sonda-geopetro.lock` e `sonda_geopetro.mv.db` — não gerados por nenhum código deste repo | — |
 | 3 | "Carregar CSV" é funcionalidade planejada ou abandonada? | — |
 | 4 | Remover a dependência H2 ou reativar persistência relacional? | — |

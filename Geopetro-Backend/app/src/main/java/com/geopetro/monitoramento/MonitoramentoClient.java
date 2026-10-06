@@ -26,7 +26,7 @@ public class MonitoramentoClient {
      * @param serie qual das series do dispositivo; {@code null} significa a serie unica.
      *              ⚠️ Um card de stroke grava tres sob o mesmo {@code dispositivoId} (RN-098), e
      *              omitir o filtro devolve vazio em vez das tres misturadas — ver o contrato em
-     *              specs/contracts/rest-monitoramento.md
+     *              specs/SDD/software/apis/rest-monitoramento.md
      */
     public Optional<MonitoramentoSerieDTO> consultarSerie(String idSondaUnidade, String dispositivoId,
                                                            String serie, Instant inicio, Instant fim) {

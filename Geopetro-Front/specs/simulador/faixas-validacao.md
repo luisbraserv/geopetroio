@@ -1,6 +1,6 @@
 # Faixas de Validação do Simulador — a preencher
 
-> **[PENDENTE 2026-09-05]** · Resolve [OQ-009](../../../specs/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador)
+> **[PENDENTE 2026-09-05]** · Resolve [OQ-009](../../../specs/SDD/negocio/requisitos/open-questions.md#oq-009--quais-são-os-limites-físicos-aceitáveis-no-simulador)
 >
 > **[DECIDIDO 2026-09-05]** As faixas serão **fornecidas pela equipe técnica**. Esta tabela existe para
 > ser preenchida — sem os números, as faixas quantitativas não podem ser escritas.
@@ -9,10 +9,10 @@
 ## Por que isto é crítico
 
 **[DECIDIDO 2026-09-05]** O relatório do simulador é **entregue ao cliente**
-([product-context §6](../../../specs/product-context.md#6-simulador--o-relatório-é-entregável-ao-cliente)).
+([product-context §6](../../../specs/SDD/negocio/requisitos/product-context.md#6-simulador--o-relatório-é-entregável-ao-cliente)).
 
 **[FATO]** Hoje existem ~40 campos numéricos de engenharia **sem nenhum `Validators`** — o único uso na
-feature inteira é no `FormArray` de aditivos ([RN-041](../../../specs/business-rules.md#rn-041--aditivos-são-o-único-campo-validado-do-simulador)).
+feature inteira é no `FormArray` de aditivos ([RN-041](../../../specs/SDD/negocio/regras/business-rules.md#rn-041--aditivos-são-o-único-campo-validado-do-simulador)).
 Um valor fisicamente impossível produz um relatório de aparência impecável, sem um único aviso, e esse
 relatório sai da empresa.
 

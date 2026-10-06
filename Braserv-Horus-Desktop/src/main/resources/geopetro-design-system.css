@@ -1,6 +1,6 @@
 /*
  * Braserv Design System para JavaFX.
- * Fonte normativa: specs/index.html
+ * Fonte normativa: specs/SDD/software/frontend/index.html
  *
  * JavaFX CSS nao oferece custom properties. Por isso os tokens ficam centralizados neste arquivo;
  * FXMLs devem usar styleClass e reservar estilos inline apenas para estados realmente dinamicos.

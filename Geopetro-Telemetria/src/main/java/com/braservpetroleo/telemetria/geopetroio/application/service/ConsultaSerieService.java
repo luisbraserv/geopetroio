@@ -17,7 +17,7 @@ import com.braservpetroleo.telemetria.geopetroio.infrastructure.influx.InfluxTel
  *
  * <p><b>Este servico nao autoriza.</b> Quem valida o vinculo usuario-sonda e o Geopetro-Backend, que
  * possui o cadastro (regional -> setor -> unidade). Aqui so existe leitura de serie temporal.
- * Ver specs/contracts/rest-monitoramento.md.
+ * Ver specs/SDD/software/apis/rest-monitoramento.md.
  */
 @Service
 public class ConsultaSerieService {

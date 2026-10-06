@@ -1,6 +1,6 @@
 /*
  * Braserv Design System para JavaFX.
- * Fonte normativa: specs/index.html
+ * Fonte normativa: specs/SDD/software/frontend/index.html
  *
  * JavaFX CSS nao oferece custom properties. Por isso os tokens ficam centralizados neste arquivo;
  * FXMLs devem usar styleClass e reservar estilos inline apenas para estados realmente dinamicos.
@@ -466,7 +466,7 @@
 }
 
 /* =====================================================================
-   Alarme local — passo 3 de specs/features/alarmes.md.
+   Alarme local — passo 3 de specs/SDD/negocio/requisitos/alarmes.md.
    A estacao SINALIZA; quem registra o evento e o Backend.
 
    ATENCAO: a borda grossa e o rotulo carregam a informacao junto com a

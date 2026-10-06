@@ -12,7 +12,7 @@ server:
 
 # ---------------------------------------------------------------------------
 # MQTT — este servico e o UNICO consumidor do broker.
-# O produtor e o Geopetro-Desktop. Ver specs/contracts/mqtt-telemetria.md.
+# O produtor e o Geopetro-Desktop. Ver specs/SDD/software/mqtt/mqtt-telemetria.md.
 # ---------------------------------------------------------------------------
 mqtt:
   broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}

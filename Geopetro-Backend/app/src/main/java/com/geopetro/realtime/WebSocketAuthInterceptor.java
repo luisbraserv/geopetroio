@@ -75,7 +75,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 	 * <p>⚠️ <b>O sufixo {@code /cards} deixou de ser opcional em 2026-09-09.</b> Ele era opcional
 	 * porque o mesmo prefixo servia ao documento de <b>limites</b>, que o Desktop assinava. Com o
 	 * alarme da estação passando a ser configurado na estação
-	 * ({@code specs/features/configuracao-da-estacao.md §3.3}), aquele tópico ficou sem assinante e
+	 * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}), aquele tópico ficou sem assinante e
 	 * saiu — e mantê-lo aceito aqui deixaria um destino autorizado que ninguém publica nem consome.
 	 *
 	 * <p>⚠️ Errar esta expressão custa nos dois sentidos: frouxa demais abre um destino sem dono;

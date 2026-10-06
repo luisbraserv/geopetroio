@@ -24,7 +24,7 @@ import jakarta.validation.constraints.NotBlank;
  *
  * <p><b>Consumidor unico: o Geopetro-Backend.</b> O caminho e o formato de resposta sao ditados pelo
  * {@code MonitoramentoClient} que ja existe la — este servico foi escrito para encaixar no cliente,
- * nao o contrario. Ver specs/contracts/rest-monitoramento.md.
+ * nao o contrario. Ver specs/SDD/software/apis/rest-monitoramento.md.
  *
  * <p>O frontend nunca chama este servico diretamente: quem valida o vinculo do usuario com a sonda e
  * o Geopetro-Backend, que possui o cadastro.
