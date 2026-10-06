@@ -28,13 +28,13 @@ public class MonitoramentoClient {
      *              omitir o filtro devolve vazio em vez das tres misturadas — ver o contrato em
      *              specs/SDD/software/apis/rest-monitoramento.md
      */
-    public Optional<MonitoramentoSerieDTO> consultarSerie(String idSondaUnidade, String dispositivoId,
+    public Optional<MonitoramentoSerieDTO> consultarSerie(String idUnidade, String dispositivoId,
                                                            String serie, Instant inicio, Instant fim) {
         try {
             MonitoramentoSerieDTO result = webClient.get()
                     .uri(uriBuilder -> {
                         uriBuilder
-                                .path("/api/monitoramentos/sondas/{idSondaUnidade}/series")
+                                .path("/api/monitoramentos/unidades/{idUnidade}/series")
                                 .queryParam("dispositivoId", dispositivoId)
                                 .queryParam("inicio", inicio.toString())
                                 .queryParam("fim", fim.toString());
@@ -43,7 +43,7 @@ public class MonitoramentoClient {
                         if (serie != null && !serie.isBlank()) {
                             uriBuilder.queryParam("serie", serie);
                         }
-                        return uriBuilder.build(idSondaUnidade);
+                        return uriBuilder.build(idUnidade);
                     })
                     .retrieve()
                     .bodyToMono(MonitoramentoSerieDTO.class)
@@ -59,7 +59,7 @@ public class MonitoramentoClient {
     }
 
     /**
-     * Pergunta se a sonda possui serie gravada — RN-072.
+     * Pergunta se a unidade possui serie gravada — RN-072.
      *
      * <p><b>O vazio aqui significa outra coisa que em {@link #consultarSerie}.</b> La, falhar
      * devolvendo vazio custa uma tela sem grafico, e a degradacao graciosa e desejavel. Aqui a
@@ -70,23 +70,23 @@ public class MonitoramentoClient {
      *
      * @return a resposta da Telemetria, ou vazio quando o servico nao pode ser consultado
      */
-    public Optional<ExistenciaSerieDTO> consultarExistencia(String idSondaUnidade) {
+    public Optional<ExistenciaSerieDTO> consultarExistencia(String idUnidade) {
         try {
             ExistenciaSerieDTO resultado = webClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/api/monitoramentos/sondas/{idSondaUnidade}/existe")
-                            .build(idSondaUnidade))
+                            .path("/api/monitoramentos/unidades/{idUnidade}/existe")
+                            .build(idUnidade))
                     .retrieve()
                     .bodyToMono(ExistenciaSerieDTO.class)
                     .block();
             return Optional.ofNullable(resultado);
         } catch (WebClientResponseException e) {
-            log.error("Erro HTTP ao verificar historico da sonda {}: {} {}",
-                    idSondaUnidade, e.getStatusCode(), e.getMessage());
+            log.error("Erro HTTP ao verificar historico da unidade {}: {} {}",
+                    idUnidade, e.getStatusCode(), e.getMessage());
             return Optional.empty();
         } catch (Exception e) {
-            log.error("Aplicacao Monitoramento indisponivel ao verificar historico da sonda {}: {}",
-                    idSondaUnidade, e.getMessage());
+            log.error("Aplicacao Monitoramento indisponivel ao verificar historico da unidade {}: {}",
+                    idUnidade, e.getMessage());
             return Optional.empty();
         }
     }

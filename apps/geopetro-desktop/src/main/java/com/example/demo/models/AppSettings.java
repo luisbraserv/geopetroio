@@ -5,7 +5,7 @@ public class AppSettings {
     // ⚠️ plcIp saiu daqui em 2026-09-10: ele era lido, exibido e salvo — e ignorado. Quem conecta
     // sempre foi conexao.ip do documento de cards da unidade, hoje editado na engrenagem.
     // Ver configuracao-da-estacao.md §4.
-    private String sondaId;
+    private String idUnidade;
     private String telemetriaUrl;
     // Credenciais do broker MQTT. Vazias = conexao anonima, que so funciona se o broker
     // permitir. Em producao o broker exige autenticacao (ver SEC-009 nas specs).
@@ -13,13 +13,13 @@ public class AppSettings {
     private String telemetriaSenha;
 
     /**
-     * Id da Unidade/Sonda no cadastro do Geopetro-Backend.
+     * Id da Unidade no cadastro do Geopetro-Backend.
      *
      * <p>OBRIGATORIO para o tempo real: cada instalacao do Desktop pertence a uma unica
-     * Unidade/Sonda. E este id que endereca o topico e que o backend usa para autorizar a
+     * Unidade. E este id que endereca o topico e que o backend usa para autorizar a
      * publicacao — uma instalacao mal configurada nao consegue escrever na tela de outra sonda.
      */
-    private Long unidadeSondaId;
+    private Long unidadeId;
 
     /** URL base do Geopetro-Backend, ex.: http://localhost:8080 */
     private String backendUrl;
@@ -54,11 +54,11 @@ public class AppSettings {
     private boolean tempoRealAtivo;
 
     public AppSettings() {
-        this.sondaId        = "";
+        this.idUnidade        = "";
         this.telemetriaUrl  = "tcp://localhost:1883";
         this.telemetriaUsuario = "";
         this.telemetriaSenha   = "";
-        this.unidadeSondaId    = null;
+        this.unidadeId    = null;
         this.backendUrl        = "http://localhost:8080";
         this.backendUsuario    = "";
         this.backendSenha      = "";
@@ -74,8 +74,8 @@ public class AppSettings {
         this.tempoRealAtivo      = true;
     }
 
-    public String getSondaId()                          { return sondaId; }
-    public void   setSondaId(String v)                  { this.sondaId = v; }
+    public String getIdUnidade()                          { return idUnidade; }
+    public void   setIdUnidade(String v)                  { this.idUnidade = v; }
 
     public String getTelemetriaUrl()                    { return telemetriaUrl; }
     public void   setTelemetriaUrl(String v)            { this.telemetriaUrl = v; }
@@ -87,8 +87,8 @@ public class AppSettings {
     public void   setTelemetriaSenha(String v)          { this.telemetriaSenha = v; }
 
     /** True quando ha usuario configurado — a senha pode ser vazia em brokers que so exigem usuario. */
-    public Long   getUnidadeSondaId()                   { return unidadeSondaId; }
-    public void   setUnidadeSondaId(Long v)             { this.unidadeSondaId = v; }
+    public Long   getUnidadeId()                   { return unidadeId; }
+    public void   setUnidadeId(Long v)             { this.unidadeId = v; }
 
     public String getBackendUrl()                       { return backendUrl; }
     public void   setBackendUrl(String v)               { this.backendUrl = v; }
@@ -106,7 +106,7 @@ public class AppSettings {
      * O tempo real e um canal adicional, nao um requisito de funcionamento.
      */
     public boolean temConfiguracaoTempoReal() {
-        return unidadeSondaId != null && unidadeSondaId > 0
+        return unidadeId != null && unidadeId > 0
                 && backendUrl != null && !backendUrl.isBlank()
                 && backendUsuario != null && !backendUsuario.isBlank();
     }

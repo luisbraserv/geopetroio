@@ -57,7 +57,7 @@ public class TelemetriaDevSeeder implements ApplicationRunner {
 	public void run(ApplicationArguments args) {
 		int ciclos = semear(Instant.now());
 		log.info("Seed sintetico concluido: sonda={} pontosPorVariavel={} pontosTotais={}",
-				properties.getIdSondaUnidade(), ciclos, ciclos * DISPOSITIVOS.size());
+				properties.getIdUnidade(), ciclos, ciclos * DISPOSITIVOS.size());
 	}
 
 	int semear(Instant agora) {
@@ -76,12 +76,12 @@ public class TelemetriaDevSeeder implements ApplicationRunner {
 		}
 		long intervaloMillis = duracaoMillis / pontosPorVariavel;
 
-		repository.removerSerie(properties.getIdSondaUnidade(), inicio, fimExclusivo);
+		repository.removerSerie(properties.getIdUnidade(), inicio, fimExclusivo);
 		List<TelemetriaBatch> lote = new ArrayList<>(CICLOS_POR_LOTE);
 		for (int ciclo = 0; ciclo < pontosPorVariavel; ciclo++) {
 			Instant instante = inicio.plusMillis((long) ciclo * intervaloMillis);
 			lote.add(new TelemetriaBatch(
-					properties.getIdSondaUnidade(), instante, gerarLeituras(instante)));
+					properties.getIdUnidade(), instante, gerarLeituras(instante)));
 			if (lote.size() == CICLOS_POR_LOTE) {
 				repository.gravarSincrono(lote);
 				lote.clear();
@@ -128,8 +128,8 @@ public class TelemetriaDevSeeder implements ApplicationRunner {
 	}
 
 	private void validarConfiguracao() {
-		if (properties.getIdSondaUnidade() == null || properties.getIdSondaUnidade().isBlank()) {
-			throw new IllegalStateException("telemetria.seed.id-sonda-unidade e obrigatorio");
+		if (properties.getIdUnidade() == null || properties.getIdUnidade().isBlank()) {
+			throw new IllegalStateException("telemetria.seed.id-unidade e obrigatorio");
 		}
 		if (properties.getPontosPorVariavel() <= 0) {
 			throw new IllegalStateException("telemetria.seed.pontos-por-variavel deve ser maior que zero");

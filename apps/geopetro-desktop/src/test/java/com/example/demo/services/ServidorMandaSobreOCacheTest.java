@@ -94,7 +94,7 @@ class ServidorMandaSobreOCacheTest {
         assertTrue(estado.aceitar(naUm, documento(1, 4, "Peso")));
 
         long naDois = estado.conectar(CHAVE, 2L);
-        assertTrue(estado.atual().isEmpty() || estado.atual().orElseThrow().unidadeSondaId() == 2,
+        assertTrue(estado.atual().isEmpty() || estado.atual().orElseThrow().unidadeId() == 2,
                 "nada da unidade 1 atravessa a troca");
         assertTrue(estado.aceitar(naDois, CardsDaUnidade.vazio(2)));
         assertTrue(estado.atual(CHAVE, 2L).orElseThrow().cards().isEmpty(), "a unidade 2 esta vazia, e a tela tambem");
@@ -138,7 +138,7 @@ class ServidorMandaSobreOCacheTest {
         settings.setBackendUrl("http://127.0.0.1:1");
         settings.setBackendUsuario("operador");
         settings.setBackendSenha("test-only");
-        settings.setUnidadeSondaId(unidade);
+        settings.setUnidadeId(unidade);
         settings.setTempoRealAtivo(false); // sem worker tentando rede de verdade
         return settings;
     }
@@ -164,7 +164,7 @@ class ServidorMandaSobreOCacheTest {
         var store = store();
         store.gravar(CHAVE, 1L, documento(1, 8, "Velho"));
         var realtime = new TelemetriaRealtimeService(new CardsState(store),
-                catalogo(List.of(new UnidadeSondaOpcao(1L, "UC-01", "UC-01", null)), false));
+				catalogo(List.of(new UnidadeSondaOpcao(1L, "UC-01", null, "SONDA")), false));
         var settings = settings(1);
         try {
             realtime.atualizarConfiguracao(settings);
@@ -182,7 +182,7 @@ class ServidorMandaSobreOCacheTest {
         var store = store();
         store.gravar(CHAVE, 1L, documento(1, 8, "De outra unidade"));
         var realtime = new TelemetriaRealtimeService(new CardsState(store),
-                catalogo(List.of(new UnidadeSondaOpcao(2L, "UC-02", "UC-02", null)), false));
+				catalogo(List.of(new UnidadeSondaOpcao(2L, "UC-02", null, "SONDA")), false));
         var settings = settings(1);
         try {
             realtime.atualizarConfiguracao(settings);

@@ -31,7 +31,7 @@ import jakarta.validation.constraints.NotBlank;
  */
 @RestController
 @RequestMapping("/api/monitoramentos")
-@Tag(name = "Monitoramento", description = "Consulta de series temporais de telemetria de sondas")
+@Tag(name = "Monitoramento", description = "Consulta de series temporais de telemetria das unidades")
 public class MonitoramentoController {
 
 	private final ConsultaSerieService service;
@@ -42,13 +42,13 @@ public class MonitoramentoController {
 		this.existenciaService = existenciaService;
 	}
 
-	@GetMapping("/sondas/{idSondaUnidade}/series")
-	@Operation(summary = "Consulta a serie de um dispositivo numa sonda",
+	@GetMapping("/unidades/{idUnidade}/series")
+	@Operation(summary = "Consulta a serie de um dispositivo numa unidade",
 			description = "Retorna os pontos do intervalo. Acima do teto configurado "
 					+ "(telemetria.max-pontos-por-serie) a serie e agregada por janela, para nao "
 					+ "devolver dezenas de milhares de pontos.")
 	public ResponseEntity<MonitoramentoSerieDTO> consultarSerie(
-			@PathVariable @NotBlank String idSondaUnidade,
+			@PathVariable @NotBlank String idUnidade,
 
 			@Parameter(description = "Id do card, gerado como <TIPO>_<NN>. Ex.: PESO_01, TORQUE_02, "
 					+ "PRESSAO_01, CONTADOR_STROKE_01. O conjunto e por unidade, nao do sistema.")
@@ -66,18 +66,18 @@ public class MonitoramentoController {
 			@Parameter(description = "Instante final, ISO-8601 em UTC")
 			@RequestParam Instant fim) {
 
-		return ResponseEntity.ok(service.consultar(idSondaUnidade, dispositivoId, serie, inicio, fim));
+		return ResponseEntity.ok(service.consultar(idUnidade, dispositivoId, serie, inicio, fim));
 	}
 
-	@GetMapping("/sondas/{idSondaUnidade}/existe")
-	@Operation(summary = "Informa se a sonda possui serie gravada",
+	@GetMapping("/unidades/{idUnidade}/existe")
+	@Operation(summary = "Informa se a unidade possui serie gravada",
 			description = "Responde a exclusao de cadastro no Geopetro-Backend (RN-072): historico de "
 					+ "telemetria conta como vinculo. Devolve tambem o primeiro e o ultimo ponto, "
 					+ "para a recusa dizer de quando ate quando ha telemetria. Consulta os extremos "
 					+ "da serie, nao varredura.")
 	public ResponseEntity<ExistenciaSerieDTO> consultarExistencia(
-			@PathVariable @NotBlank String idSondaUnidade) {
+			@PathVariable @NotBlank String idUnidade) {
 
-		return ResponseEntity.ok(existenciaService.consultar(idSondaUnidade));
+		return ResponseEntity.ok(existenciaService.consultar(idUnidade));
 	}
 }

@@ -8,7 +8,8 @@ public class TelemetriaSeedProperties {
 
 	private boolean habilitado;
 
-	private String idSondaUnidade = "SPT-145";
+	/** Id da unidade no Braserv-Core que recebe a serie sintetica. */
+	private String idUnidade = "SPT-145";
 
 	private int pontosPorVariavel = 28_800;
 
@@ -20,12 +21,12 @@ public class TelemetriaSeedProperties {
 		this.habilitado = habilitado;
 	}
 
-	public String getIdSondaUnidade() {
-		return idSondaUnidade;
+	public String getIdUnidade() {
+		return idUnidade;
 	}
 
-	public void setIdSondaUnidade(String idSondaUnidade) {
-		this.idSondaUnidade = idSondaUnidade;
+	public void setIdUnidade(String idUnidade) {
+		this.idUnidade = idUnidade;
 	}
 
 	public int getPontosPorVariavel() {

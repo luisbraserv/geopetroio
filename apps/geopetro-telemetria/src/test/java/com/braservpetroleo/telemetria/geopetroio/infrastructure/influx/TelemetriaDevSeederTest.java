@@ -41,7 +41,7 @@ class TelemetriaDevSeederTest {
 		assertThat(batches.get(1).dataHora()).isEqualTo(Instant.parse("2026-08-27T06:00:00Z"));
 		assertThat(batches.getLast().dataHora()).isEqualTo(Instant.parse("2026-08-28T00:00:00Z"));
 		assertThat(batches).allSatisfy(batch -> {
-			assertThat(batch.idSondaUnidade()).isEqualTo("SPT-145");
+			assertThat(batch.idUnidade()).isEqualTo("SPT-145");
 			// Os ids passaram a ser os que os cards geram, e o contador de stroke produz TRES
 			// series sob o mesmo dispositivoId (RN-098).
 			assertThat(batch.leituras())
@@ -79,7 +79,7 @@ class TelemetriaDevSeederTest {
 
 	private static TelemetriaSeedProperties propriedadesDeTeste() {
 		TelemetriaSeedProperties properties = new TelemetriaSeedProperties();
-		properties.setIdSondaUnidade("SPT-145");
+		properties.setIdUnidade("SPT-145");
 		properties.setPontosPorVariavel(8);
 		return properties;
 	}

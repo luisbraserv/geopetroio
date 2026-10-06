@@ -47,7 +47,7 @@ public final class CopiaDeCards {
 		if (origem == null || destino == null) {
 			throw new CopiaRecusadaException("Escolha a unidade de origem.");
 		}
-		if (origem.unidadeSondaId() == destino.unidadeSondaId()) {
+		if (origem.unidadeId() == destino.unidadeId()) {
 			throw new CopiaRecusadaException("A unidade de origem e a de destino sao a mesma.");
 		}
 

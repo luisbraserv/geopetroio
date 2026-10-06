@@ -122,7 +122,7 @@ public class MonitoringController {
             CardDinamico card = construir(g);
             cardsDinamicos.put(chave(g), card);
             int largura = g.tipo() == CardsDaUnidade.Tipo.TEMPERATURA || g.tipo() == CardsDaUnidade.Tipo.NIVEL_TANQUE ? 1 : 2;
-            if (!cardsPane.addCard(settingsService.loadSettings().getUnidadeSondaId() + "|" + chave(g), (javafx.scene.layout.Region) card.no(), largura)) {
+            if (!cardsPane.addCard(settingsService.loadSettings().getUnidadeId() + "|" + chave(g), (javafx.scene.layout.Region) card.no(), largura)) {
                 estadoMonitoramento.setText("A grade está cheia. Reduza o tamanho dos cards para liberar espaço.");
                 estadoMonitoramento.setVisible(true);
                 estadoMonitoramento.setManaged(true);
@@ -493,7 +493,7 @@ public class MonitoringController {
         List<LeituraDeCards.Grandeza> grandezas = CardsDoMonitoramento.montar(documentoAtual,
                 sondaService.grandezas(documentoAtual), plcConnectionService.isConnected());
         String mensagem = null;
-        if (settings.getUnidadeSondaId() == null) {
+        if (settings.getUnidadeId() == null) {
             mensagem = "Selecione a unidade em Configurações para carregar os cards.";
         } else if (telemetriaRealtimeService.unidadeIndisponivel(settings)) {
             mensagem = "A unidade configurada nesta estação não está disponível no servidor para este usuário. Selecione outra em Configurações.";

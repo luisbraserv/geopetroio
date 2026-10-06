@@ -40,11 +40,11 @@ public class IngestaoTelemetriaService {
 
 		if (ciclos % LOG_A_CADA == 0) {
 			log.info("Ingestao: {} ciclos, {} leituras acumuladas. Ultimo: unidade={} dataHora={}",
-					ciclos, leituras, batch.idSondaUnidade(), batch.dataHora());
+					ciclos, leituras, batch.idUnidade(), batch.dataHora());
 		}
 		else if (log.isDebugEnabled()) {
 			log.debug("Ciclo ingerido: unidade={} dataHora={} leituras={}",
-					batch.idSondaUnidade(), batch.dataHora(), batch.leituras().size());
+					batch.idUnidade(), batch.dataHora(), batch.leituras().size());
 		}
 	}
 

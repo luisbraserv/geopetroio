@@ -65,14 +65,14 @@
                <Label text="Equipamento" styleClass="cartao-titulo" />
 
                <!--
-                  A Unidade/Sonda vem ANTES da conexao de proposito: a conexao mora no documento
+                  A Unidade vem ANTES da conexao de proposito: a conexao mora no documento
                   daquela unidade, e sem ela escolhida nao ha o que ler nem onde gravar.
                -->
                <VBox spacing="5.0">
-                  <Label text="Unidade/Sonda desta estação" styleClass="rotulo" />
+                  <Label text="Unidade desta estação" styleClass="rotulo" />
                   <HBox spacing="8.0">
                      <ComboBox fx:id="cmbUnidadeSonda" maxWidth="Infinity" HBox.hgrow="ALWAYS"
-                               promptText="Escolha a Unidade/Sonda" />
+                               promptText="Escolha a Unidade" />
                      <Button fx:id="btnRecarregar" text="Buscar" styleClass="botao-secundario" />
                   </HBox>
                   <Label fx:id="lblUnidadeStatus" styleClass="ajuda" />
@@ -88,7 +88,7 @@
                -->
                <Label text="Conexão com o CLP" styleClass="cartao-titulo" />
                <Label styleClass="cartao-nota"
-                      text="Fica guardada na Unidade/Sonda, não nesta estação: rack, slot, DB e intervalo descrevem o modelo de CLP e são copiados ao configurar uma sonda igual." />
+                      text="Fica guardada na Unidade, não nesta estação: rack, slot, DB e intervalo descrevem o modelo de CLP e são copiados ao configurar uma sonda igual." />
 
                <VBox spacing="5.0">
                   <Label text="IP do PLC" styleClass="rotulo" />
@@ -186,7 +186,7 @@
                </VBox>
 
                <Label styleClass="ajuda"
-                      text="O canal de tempo real é autenticado, não é público: a sonda faz login para obter um token e só então pode publicar. Sem isso, qualquer um na rede poderia injetar leituras falsas nesta unidade. As mesmas credenciais carregam a lista de Unidades/Sondas acima." />
+                      text="O canal de tempo real é autenticado, não é público: a sonda faz login para obter um token e só então pode publicar. Sem isso, qualquer um na rede poderia injetar leituras falsas nesta unidade. As mesmas credenciais carregam a lista de Unidades acima." />
             </VBox>
 
             <!--

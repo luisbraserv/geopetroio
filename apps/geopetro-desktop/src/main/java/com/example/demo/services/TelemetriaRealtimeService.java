@@ -93,7 +93,7 @@ public class TelemetriaRealtimeService {
     private final CardsState cards;
 
     /**
-     * Lista de Unidades/Sondas do usuario desta estacao: antes de aceitar a configuracao de uma
+     * Lista de Unidades do usuario desta estacao: antes de aceitar a configuracao de uma
      * unidade, o canal confere se ela ainda existe para ele no servidor.
      */
     private final UnidadeSondaCatalogoService catalogo;
@@ -137,10 +137,10 @@ public class TelemetriaRealtimeService {
      * <p>Vazio significa unidade nao configurada — estado normal (RN-092), e nao erro.
      */
     public java.util.Optional<com.example.demo.models.CardsDaUnidade> cardsAtuais(AppSettings settings) {
-        if (settings == null || settings.getUnidadeSondaId() == null) {
+        if (settings == null || settings.getUnidadeId() == null) {
             return java.util.Optional.empty();
         }
-        return cards.atual(chaveCache(alvo(settings)), settings.getUnidadeSondaId());
+        return cards.atual(chaveCache(alvo(settings)), settings.getUnidadeId());
     }
 
     /**
@@ -148,13 +148,13 @@ public class TelemetriaRealtimeService {
      * lista do usuario. Diferente de "sem rede": ai o cache continua valendo (RN-088).
      */
     public boolean unidadeIndisponivel(AppSettings settings) {
-        return settings != null && settings.getUnidadeSondaId() != null
-                && java.util.Objects.equals(unidadeIndisponivel.get(), settings.getUnidadeSondaId());
+        return settings != null && settings.getUnidadeId() != null
+                && java.util.Objects.equals(unidadeIndisponivel.get(), settings.getUnidadeId());
     }
     private String chaveCache(Alvo alvo) { return alvo == null ? null : alvo.backend() + "\n" + alvo.usuario(); }
     private Alvo alvo(AppSettings settings) {
         return settings == null || !settings.temConfiguracaoTempoReal() ? null :
-            new Alvo(normalizarBase(settings.getBackendUrl()), settings.getUnidadeSondaId(), settings.getBackendUsuario(), settings.getBackendSenha());
+            new Alvo(normalizarBase(settings.getBackendUrl()), settings.getUnidadeId(), settings.getBackendUsuario(), settings.getBackendSenha());
     }
 
 	/**
@@ -178,7 +178,7 @@ public class TelemetriaRealtimeService {
         if (novo == null) { configuracao.set(null); return; }
         // Snapshot das credenciais evita mutacao de AppSettings durante login/reconexao.
         AppSettings snapshot = new AppSettings();
-        snapshot.setBackendUrl(novo.backend()); snapshot.setUnidadeSondaId(novo.unidade());
+        snapshot.setBackendUrl(novo.backend()); snapshot.setUnidadeId(novo.unidade());
         snapshot.setBackendUsuario(novo.usuario()); snapshot.setBackendSenha(novo.senha());
         // O interruptor viaja no snapshot porque quem o consulta e o worker, e ele so enxerga
         // daqui — §6.
@@ -298,7 +298,7 @@ public class TelemetriaRealtimeService {
         alvoConectado = destino; ultimaSolicitacao = System.nanoTime();
         conectado.set(true);
 		logger.info("Canal de tempo real conectado ao backend {} (unidade {}).",
-				settings.getBackendUrl(), settings.getUnidadeSondaId());
+				settings.getBackendUrl(), settings.getUnidadeId());
 	}
 
 	/**
@@ -338,7 +338,7 @@ public class TelemetriaRealtimeService {
 
 	private void enviarEstadoMaisRecente() throws Exception {
 		EstadoAtual estado = estadoAtual.get();
-		if (estado == null || client == null || alvoConectado == null || !java.util.Objects.equals(estado.unidadeSondaId(), alvoConectado.unidade())) {
+		if (estado == null || client == null || alvoConectado == null || !java.util.Objects.equals(estado.unidadeId(), alvoConectado.unidade())) {
 			return;
 		}
 		client.enviarEstado(estado);

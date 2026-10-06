@@ -46,14 +46,14 @@ class CanalDeCardsTest {
     private String frameCards(long unidade, long revisao) throws Exception {
         String json = new com.fasterxml.jackson.databind.ObjectMapper()
                 .writeValueAsString(documento(unidade, revisao));
-        return "MESSAGE\nsubscription:cards-snapshot\ndestination:/app/config/unidades-sondas/7/cards\n\n"
+        return "MESSAGE\nsubscription:cards-snapshot\ndestination:/app/config/unidades/7/cards\n\n"
                 + json + '\0';
     }
 
     /** Frame no destino dos LIMITES — que ninguem mais assina, e que nao pode virar card. */
     private String frameNoDestinoAntigoDeLimites() {
-        return "MESSAGE\nsubscription:config-snapshot\ndestination:/app/config/unidades-sondas/7\n\n"
-                + "{\"schemaVersion\":1,\"unidadeSondaId\":7,\"revisao\":9,\"limites\":[]}" + '\0';
+        return "MESSAGE\nsubscription:config-snapshot\ndestination:/app/config/unidades/7\n\n"
+                + "{\"schemaVersion\":1,\"unidadeId\":7,\"revisao\":9,\"limites\":[]}" + '\0';
     }
 
     private WebSocket.Listener listener(StompRealtimeClient client) throws Exception {
@@ -181,7 +181,7 @@ class CanalDeCardsTest {
         client.solicitarConfiguracao();
 
         assertThat(enviados).anyMatch(f -> f.contains("id:cards-snapshot")
-                && f.contains("destination:/app/config/unidades-sondas/144/cards\n"));
+                && f.contains("destination:/app/config/unidades/144/cards\n"));
         assertThat(enviados).noneMatch(f -> f.contains("id:config-snapshot"))
                 .as("o canal de limites nao e mais assinado");
     }

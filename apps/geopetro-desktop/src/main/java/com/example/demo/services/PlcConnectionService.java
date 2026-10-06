@@ -175,7 +175,7 @@ public class PlcConnectionService {
                         + erroS7(result) + " Verifique a rede, o acesso S7 e os parâmetros de conexão do PLC.");
             }
             conexaoEmUso = conexao;
-            unidadeEmUso = documento.unidadeSondaId();
+            unidadeEmUso = documento.unidadeId();
             backendEmUso = settings.getBackendUrl();
             // Abrir a sessão S7 não prova que o DB pode ser lido. Só confirmar após receber
             // e converter a primeira amostra; a falha chega ao mesmo diálogo de conexão.
@@ -231,7 +231,7 @@ public class PlcConnectionService {
         try {
             AppSettings settings = settingsService.loadSettings();
             CardsDaUnidade documento = telemetriaRealtimeService.cardsAtuais(settings).orElse(null);
-            if (documento == null || documento.unidadeSondaId() != unidadeEmUso
+            if (documento == null || documento.unidadeId() != unidadeEmUso
                     || !Objects.equals(settings.getBackendUrl(), backendEmUso)
                     || !Objects.equals(documento.conexao(), conexaoEmUso)) {
                 throw new IllegalStateException("A configuração da conexão ou a unidade mudou. Reconecte o PLC para ler os dados atuais.");
@@ -292,7 +292,7 @@ public class PlcConnectionService {
             // intermediarios sao descartados de proposito — a tela quer o "agora", nao a fila.
             try {
                 telemetriaRealtimeService.publicarEstado(settings,
-                        new EstadoAtual(settings.getUnidadeSondaId(), Instant.now(), leituras));
+                        new EstadoAtual(settings.getUnidadeId(), Instant.now(), leituras));
             } catch (RuntimeException e) {
                 logger.error("Falha ao encaminhar tempo real; leitura local do PLC preservada", e);
             }

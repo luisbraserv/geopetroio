@@ -36,7 +36,7 @@ class ConsultaExistenciaServiceTest {
 
 		ExistenciaSerieDTO resposta = service.consultar("SPT-144");
 
-		assertThat(resposta.idSondaUnidade()).isEqualTo("SPT-144");
+		assertThat(resposta.idUnidade()).isEqualTo("SPT-144");
 		assertThat(resposta.possuiSerie()).isTrue();
 		assertThat(resposta.primeiroPonto()).isEqualTo(primeiro);
 		assertThat(resposta.ultimoPonto()).isEqualTo(ultimo);
@@ -45,11 +45,11 @@ class ConsultaExistenciaServiceTest {
 	@Test
 	@DisplayName("sonda sem serie responde possuiSerie=false com datas nulas, e nao e erro")
 	void sondaSemSerie() {
-		when(repository.consultarIntervalo("SPT-999")).thenReturn(Optional.empty());
+		when(repository.consultarIntervalo("SEM-DADOS")).thenReturn(Optional.empty());
 
-		ExistenciaSerieDTO resposta = service.consultar("SPT-999");
+		ExistenciaSerieDTO resposta = service.consultar("SEM-DADOS");
 
-		assertThat(resposta.idSondaUnidade()).isEqualTo("SPT-999");
+		assertThat(resposta.idUnidade()).isEqualTo("SEM-DADOS");
 		assertThat(resposta.possuiSerie()).isFalse();
 		assertThat(resposta.primeiroPonto()).isNull();
 		assertThat(resposta.ultimoPonto()).isNull();

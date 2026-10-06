@@ -30,7 +30,7 @@ import com.influxdb.query.FluxTable;
  * <h2>Esquema</h2>
  * <pre>
  * measurement: telemetria
- * tags:   idSondaUnidade, dispositivoId, tipo, codigoOrigem, unidade
+	 * tags:   idUnidade, dispositivoId, tipo, codigoOrigem, unidade
  * fields: valor (double), valorBruto (double, opcional), nome (string)
  * time:   instante da leitura, em UTC
  * </pre>
@@ -94,7 +94,7 @@ public class InfluxTelemetriaRepository {
 		List<Point> pontos = new ArrayList<>(batch.leituras().size());
 		for (LeituraTelemetria leitura : batch.leituras()) {
 			Point ponto = Point.measurement(properties.getMeasurement())
-					.addTag("idSondaUnidade", batch.idSondaUnidade())
+					.addTag("idUnidade", batch.idUnidade())
 					.addTag("dispositivoId", leitura.dispositivoId())
 					// RN-098: as tres grandezas de um card de stroke dividem o mesmo dispositivoId.
 					// Sem esta tag elas colidiriam no mesmo ponto — mesma measurement, mesmas tags,
@@ -123,14 +123,14 @@ public class InfluxTelemetriaRepository {
 	}
 
 	/** Remove uma serie no intervalo informado. O fim segue a semantica exclusiva do InfluxDB. */
-	public void removerSerie(String idSondaUnidade, Instant inicio, Instant fim) {
-		validarIdentificador("idSondaUnidade", idSondaUnidade);
+	public void removerSerie(String idUnidade, Instant inicio, Instant fim) {
+		validarIdentificador("idUnidade", idUnidade);
 		if (inicio == null || fim == null || !inicio.isBefore(fim)) {
 			throw new IllegalArgumentException("intervalo invalido: inicio deve ser anterior a fim");
 		}
 
 		String predicate = "_measurement=\"" + escapar(properties.getMeasurement())
-				+ "\" AND idSondaUnidade=\"" + idSondaUnidade + "\"";
+				+ "\" AND idUnidade=\"" + idUnidade + "\"";
 		deleteApi.delete(
 				inicio.atOffset(ZoneOffset.UTC),
 				fim.atOffset(ZoneOffset.UTC),
@@ -149,17 +149,17 @@ public class InfluxTelemetriaRepository {
 	 * @param maxPontos teto de pontos; acima disso agrega por janela em vez de devolver bruto
 	 * @param agregar   se false, nao agrega — o Influx apenas devolve o bruto do periodo
 	 */
-	public List<PontoSerie> consultarSerie(String idSondaUnidade, String dispositivoId, String serie,
+	public List<PontoSerie> consultarSerie(String idUnidade, String dispositivoId, String serie,
 			Instant inicio, Instant fim, int maxPontos, boolean agregar) {
 
-		validarIdentificador("idSondaUnidade", idSondaUnidade);
+		validarIdentificador("idUnidade", idUnidade);
 		validarIdentificador("dispositivoId", dispositivoId);
 		validarIdentificador("serie", tagDaSerie(serie));
 		if (inicio == null || fim == null || !inicio.isBefore(fim)) {
 			throw new IllegalArgumentException("intervalo invalido: inicio deve ser anterior a fim");
 		}
 
-		String flux = montarFlux(idSondaUnidade, dispositivoId, serie, inicio, fim, maxPontos, agregar);
+		String flux = montarFlux(idUnidade, dispositivoId, serie, inicio, fim, maxPontos, agregar);
 		log.debug("Flux: {}", flux);
 
 		List<FluxTable> tabelas = queryApi.query(flux);
@@ -188,22 +188,22 @@ public class InfluxTelemetriaRepository {
 	 *
 	 * @return vazio quando nao ha nenhum ponto para a sonda
 	 */
-	public Optional<IntervaloSerie> consultarIntervalo(String idSondaUnidade) {
-		validarIdentificador("idSondaUnidade", idSondaUnidade);
+	public Optional<IntervaloSerie> consultarIntervalo(String idUnidade) {
+		validarIdentificador("idUnidade", idUnidade);
 
-		Instant primeiro = extremo(idSondaUnidade, "first");
+		Instant primeiro = extremo(idUnidade, "first");
 		if (primeiro == null) {
 			return Optional.empty();
 		}
-		Instant ultimo = extremo(idSondaUnidade, "last");
+		Instant ultimo = extremo(idUnidade, "last");
 		return Optional.of(new IntervaloSerie(primeiro, ultimo == null ? primeiro : ultimo));
 	}
 
-	private Instant extremo(String idSondaUnidade, String funcao) {
+	private Instant extremo(String idUnidade, String funcao) {
 		String flux = "from(bucket: \"" + escapar(properties.getBucket()) + "\")\n"
 				+ "  |> range(start: 0)\n"
 				+ "  |> filter(fn: (r) => r._measurement == \"" + escapar(properties.getMeasurement()) + "\")\n"
-				+ "  |> filter(fn: (r) => r.idSondaUnidade == \"" + idSondaUnidade + "\")\n"
+				+ "  |> filter(fn: (r) => r.idUnidade == \"" + idUnidade + "\")\n"
 				+ "  |> filter(fn: (r) => r._field == \"valor\")\n"
 				+ "  |> " + funcao + "()\n"
 				+ "  |> keep(columns: [\"_time\"])";
@@ -227,7 +227,7 @@ public class InfluxTelemetriaRepository {
 		return escolhido;
 	}
 
-	private String montarFlux(String idSondaUnidade, String dispositivoId, String serie,
+	private String montarFlux(String idUnidade, String dispositivoId, String serie,
 			Instant inicio, Instant fim, int maxPontos, boolean agregar) {
 
 		StringBuilder flux = new StringBuilder()
@@ -235,7 +235,7 @@ public class InfluxTelemetriaRepository {
 				.append("  |> range(start: ").append(inicio).append(", stop: ").append(fim).append(")\n")
 				.append("  |> filter(fn: (r) => r._measurement == \"")
 				.append(escapar(properties.getMeasurement())).append("\")\n")
-				.append("  |> filter(fn: (r) => r.idSondaUnidade == \"").append(idSondaUnidade).append("\")\n")
+				.append("  |> filter(fn: (r) => r.idUnidade == \"").append(idUnidade).append("\")\n")
 				.append("  |> filter(fn: (r) => r.dispositivoId == \"").append(dispositivoId).append("\")\n")
 				// Espelha exatamente o que a escrita grava em LeituraTelemetria.serieTag().
 				.append("  |> filter(fn: (r) => r.serie == \"").append(tagDaSerie(serie)).append("\")\n")

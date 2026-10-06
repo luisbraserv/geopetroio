@@ -19,11 +19,11 @@ class CardsOfflineTest {
         var settings = new AppSettings();
         settings.setBackendUrl("http://127.0.0.1:1");
         settings.setBackendUsuario("operador"); settings.setBackendSenha("test-only");
-        settings.setUnidadeSondaId(7L);
+        settings.setUnidadeId(7L);
         try {
             realtime.atualizarConfiguracao(settings);
             assertEquals(doc, realtime.cardsAtuais(settings).orElseThrow(), "cache independe de login bem-sucedido");
-            settings.setUnidadeSondaId(8L);
+            settings.setUnidadeId(8L);
             realtime.atualizarConfiguracao(settings);
             assertTrue(realtime.cardsAtuais(settings).isEmpty());
         } finally { realtime.encerrar(); }
@@ -52,7 +52,7 @@ class CardsOfflineTest {
         var settings = new AppSettings();
         settings.setBackendUrl("http://127.0.0.1:1");
         settings.setBackendUsuario("operador"); settings.setBackendSenha("test-only");
-        settings.setUnidadeSondaId(7L);
+        settings.setUnidadeId(7L);
         settings.setTempoRealAtivo(false);
         try {
             realtime.atualizarConfiguracao(settings);

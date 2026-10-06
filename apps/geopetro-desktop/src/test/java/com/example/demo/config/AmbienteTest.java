@@ -43,7 +43,7 @@ class AmbienteTest {
         settings.setBackendUrl("http://localhost:8080");
         settings.setTelemetriaUrl("tcp://localhost:1883");
         settings.setBackendUsuario("operador");
-        settings.setUnidadeSondaId(5L);
+        settings.setUnidadeId(5L);
         return settings;
     }
 
@@ -71,7 +71,7 @@ class AmbienteTest {
         assertEquals("http://2.25.227.207", lido.getBackendUrl());
         assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
         assertEquals("operador", lido.getBackendUsuario(), "o resto da configuracao continua o da estacao");
-        assertEquals(5L, lido.getUnidadeSondaId());
+        assertEquals(5L, lido.getUnidadeId());
     }
 
     @Test

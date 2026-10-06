@@ -25,8 +25,8 @@ class BackendLoginRouteTest {
                 if (!payload.contains("\"username\":\"test-user\"") || !payload.contains("\"password\":\"test-only\"")) {
                     status = 400; body = "{}";
                 } else { status = 200; body = "{\"token\":\"test-token\"}"; }
-            } else if (path.equals("/api/sondas/minhas") && "Bearer test-token".equals(exchange.getRequestHeaders().getFirst("Authorization"))) {
-                status = 200; body = "[{\"id\":1,\"nome\":\"Teste\",\"idSondaUnidade\":\"TEST-1\"}]";
+            } else if (path.equals("/api/monitoramento/unidades/minhas") && "Bearer test-token".equals(exchange.getRequestHeaders().getFirst("Authorization"))) {
+				status = 200; body = "[{\"id\":1,\"nome\":\"TEST-1\",\"apelido\":\"Teste\",\"tipo\":\"SONDA\"}]";
             } else { status = 404; body = "{}"; }
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
@@ -41,7 +41,7 @@ class BackendLoginRouteTest {
     @Test void catalogAuthenticatesThenUsesTheBearerTokenToListUnits() {
         var units = new UnidadeSondaCatalogoService().listar(base, "test-user", "test-only");
         assertEquals(1, units.size());
-        assertEquals(java.util.List.of("POST /api/auth/login", "GET /api/sondas/minhas"), java.util.List.copyOf(requests));
+        assertEquals(java.util.List.of("POST /api/auth/login", "GET /api/monitoramento/unidades/minhas"), java.util.List.copyOf(requests));
     }
 
     @Test void realtimeLoginUsesTheSameNewEndpointWithoutStartingTheWorker() {

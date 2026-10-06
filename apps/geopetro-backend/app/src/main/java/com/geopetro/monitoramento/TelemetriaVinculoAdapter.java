@@ -18,8 +18,7 @@ import com.geopetro.vinculos.VinculoDaUnidade;
  * relacional: a serie vive no InfluxDB, dentro de outro servico, e o Geopetro-Backend so sabe dela
  * perguntando. Mora no modulo {@code app} porque e onde o {@link MonitoramentoClient} existe.
  *
- * <p>A consulta e por <b>nome</b>, nao por id: o nome da Unidade e a chave de integracao com a
- * telemetria (RN-018). Por isso o adaptador precisa traduzir id em nome antes de perguntar.
+	 * <p>A consulta e pelo nome da unidade, que continua sendo a chave da serie (RN-018).
  *
  */
 @Component
@@ -50,8 +49,9 @@ public class TelemetriaVinculoAdapter implements VinculoDaUnidade {
 	public Optional<String> descrever(long unidadeId) {
 		String nome;
 		try {
-			// A serie e indexada pelo nome (RN-018); o nome vem do core, sem cache.
-			nome = unidades.buscarSemCache(unidadeId).map(CatalogoDeUnidadesPort.Unidade::nome).orElse(null);
+			nome = unidades.buscarSemCache(unidadeId)
+					.map(CatalogoDeUnidadesPort.Unidade::nome)
+					.orElse(null);
 		} catch (BraservCoreIndisponivelException indisponivel) {
 			throw new FonteIndisponivelException("nao foi possivel obter o nome da unidade no Braserv-Core");
 		}

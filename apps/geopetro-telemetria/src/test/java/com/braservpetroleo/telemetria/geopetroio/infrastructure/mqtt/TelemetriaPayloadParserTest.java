@@ -41,7 +41,7 @@ class TelemetriaPayloadParserTest {
 	void formatoDeCards() {
 		String json = """
 				{
-				  "idSondaUnidade": "SPT-144",
+				  "idUnidade": "SPT-144",
 				  "dataHora": "2026-09-08T14:32:05.120",
 				  "leituras": [
 				    {"dispositivoId":"PESO_01","tipo":"PESO","unidade":"lbf",
@@ -51,7 +51,7 @@ class TelemetriaPayloadParserTest {
 
 		TelemetriaBatch batch = parser.parse("SPT-144", json);
 
-		assertThat(batch.idSondaUnidade()).isEqualTo("SPT-144");
+		assertThat(batch.idUnidade()).isEqualTo("SPT-144");
 		assertThat(batch.leituras()).hasSize(1);
 		var leitura = batch.leituras().get(0);
 		assertThat(leitura.dispositivoId()).isEqualTo("PESO_01");
@@ -68,7 +68,7 @@ class TelemetriaPayloadParserTest {
 	void tresSeriesDoStroke() {
 		String json = """
 				{
-				  "idSondaUnidade": "SPT-144",
+				  "idUnidade": "SPT-144",
 				  "dataHora": "2026-09-08T14:32:05.120",
 				  "leituras": [
 				    {"dispositivoId":"CONTADOR_STROKE_01","serie":"stroke","tipo":"CONTADOR_STROKE",
@@ -101,7 +101,7 @@ class TelemetriaPayloadParserTest {
 		// da frota seria gravado como "DESCONHECIDO" — ou descartado.
 		String json = """
 				{
-				  "idSondaUnidade": "SPT-150",
+				  "idUnidade": "SPT-150",
 				  "dataHora": "2026-09-08T14:32:05.120",
 				  "leituras": [
 				    {"dispositivoId":"NIVEL_TANQUE_01","tipo":"NIVEL_TANQUE","unidade":"bbl",
@@ -122,7 +122,7 @@ class TelemetriaPayloadParserTest {
 		// no historico que ninguem consegue interpretar depois — pior que nao gravar.
 		String json = """
 				{
-				  "idSondaUnidade": "SPT-144",
+				  "idUnidade": "SPT-144",
 				  "dataHora": "2026-09-08T14:32:05.120",
 				  "leituras": [
 				    {"dispositivoId":"PESO_01","unidade":"lbf","valor":1},
@@ -143,7 +143,7 @@ class TelemetriaPayloadParserTest {
 	void semEnderecoDb() {
 		// O endereco e rastreabilidade, nao identidade: a falta dele nao justifica perder a medicao.
 		String json = """
-				{"idSondaUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
+				{"idUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
 				 "leituras":[{"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi","valor":1}]}""";
 
 		assertThat(parser.parse("SPT-144", json).leituras().get(0).enderecoDb())
@@ -154,7 +154,7 @@ class TelemetriaPayloadParserTest {
 	@DisplayName("converte hora local da sonda para UTC")
 	void converteParaUtc() {
 		String json = """
-				{"idSondaUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
+				{"idUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
 				 "leituras":[{"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi",
 				 "enderecoDb":"DBW10","valor":1}]}""";
 
@@ -167,7 +167,7 @@ class TelemetriaPayloadParserTest {
 	@DisplayName("respeita o offset quando ele vier explicito")
 	void respeitaOffsetExplicito() {
 		String json = """
-				{"idSondaUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120-03:00",
+				{"idUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120-03:00",
 				 "leituras":[{"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi",
 				 "enderecoDb":"DBW10","valor":1}]}""";
 
@@ -179,11 +179,11 @@ class TelemetriaPayloadParserTest {
 	@DisplayName("usa a unidade do topico quando o corpo diverge")
 	void topicoTemPrecedencia() {
 		String json = """
-				{"idSondaUnidade":"OUTRA","dataHora":"2026-09-08T14:32:05.120",
+				{"idUnidade":"OUTRA","dataHora":"2026-09-08T14:32:05.120",
 				 "leituras":[{"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi",
 				 "enderecoDb":"DBW10","valor":1}]}""";
 
-		assertThat(parser.parse("SPT-144", json).idSondaUnidade()).isEqualTo("SPT-144");
+		assertThat(parser.parse("SPT-144", json).idUnidade()).isEqualTo("SPT-144");
 	}
 
 	@Test
@@ -194,7 +194,7 @@ class TelemetriaPayloadParserTest {
 				 "leituras":[{"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi",
 				 "enderecoDb":"DBW10","valor":1}]}""";
 
-		assertThat(parser.parse("SPT-144", json).idSondaUnidade()).isEqualTo("SPT-144");
+		assertThat(parser.parse("SPT-144", json).idUnidade()).isEqualTo("SPT-144");
 	}
 
 	@Test
@@ -202,7 +202,7 @@ class TelemetriaPayloadParserTest {
 	void leituraInvalidaNaoDescartaOCiclo() {
 		String json = """
 				{
-				  "idSondaUnidade": "SPT-144",
+				  "idUnidade": "SPT-144",
 				  "dataHora": "2026-09-08T14:32:05.120",
 				  "leituras": [
 				    {"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi",
@@ -231,7 +231,7 @@ class TelemetriaPayloadParserTest {
 	@DisplayName("rejeita batch sem leituras")
 	void batchSemLeituras() {
 		String json = """
-				{"idSondaUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120","leituras":[]}""";
+				{"idUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120","leituras":[]}""";
 
 		assertThatThrownBy(() -> parser.parse("SPT-144", json))
 				.isInstanceOf(TelemetriaPayloadParser.PayloadInvalidoException.class);
@@ -241,10 +241,21 @@ class TelemetriaPayloadParserTest {
 	@DisplayName("rejeita batch em que nenhuma leitura sobrevive")
 	void nenhumaLeituraValida() {
 		String json = """
-				{"idSondaUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
+				{"idUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
 				 "leituras":[{"dispositivoId":"PESO_01","valor":1}]}""";
 
 		assertThatThrownBy(() -> parser.parse("SPT-144", json))
 				.isInstanceOf(TelemetriaPayloadParser.PayloadInvalidoException.class);
+	}
+
+	@Test
+	@DisplayName("campo antigo no corpo e ignorado; idUnidade vem do topico")
+	void campoAntigoNoCorpoEIgnorado() {
+		String json = """
+				{"idSondaUnidade":"SPT-144","dataHora":"2026-09-08T14:32:05.120",
+				 "leituras":[{"dispositivoId":"PRESSAO_01","tipo":"PRESSAO","unidade":"psi",
+				 "enderecoDb":"DBW10","valor":1}]}""";
+
+		assertThat(parser.parse("SPT-144", json).idUnidade()).isEqualTo("SPT-144");
 	}
 }

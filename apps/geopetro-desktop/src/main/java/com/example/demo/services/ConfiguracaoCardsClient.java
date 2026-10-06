@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 /**
- * Lê e grava o documento de cards no Geopetro-Backend — {@code /api/sondas/{id}/cards}.
+ * Lê e grava o documento de cards no Geopetro-Backend — {@code /api/monitoramento/unidades/{id}/cards}.
  *
  * <h2>Autentica pela sessão de configuração, não pela credencial de serviço</h2>
  * O token vem de {@link SessaoConfiguracao}, que é uma pessoa {@code ADMIN} ou {@code SUPORTE}. A
@@ -88,13 +88,13 @@ public class ConfiguracaoCardsClient {
 	 * Unidade sem configuração devolve o documento vazio, <b>não</b> um erro: é o estado normal de
 	 * quem ainda não foi configurado (RN-092).
 	 */
-	public CardsDaUnidade ler(long unidadeSondaId) {
-		HttpResponse<String> resposta = chamar("GET", unidadeSondaId, null);
+	public CardsDaUnidade ler(long unidadeId) {
+		HttpResponse<String> resposta = chamar("GET", unidadeId, null);
 		if (resposta.statusCode() == 404) {
-			return CardsDaUnidade.vazio(unidadeSondaId);
+			return CardsDaUnidade.vazio(unidadeId);
 		}
-		exigirSucesso(resposta, unidadeSondaId);
-		return converter(resposta.body(), unidadeSondaId);
+		exigirSucesso(resposta, unidadeId);
+		return converter(resposta.body(), unidadeId);
 	}
 
 	/**
@@ -120,14 +120,14 @@ public class ConfiguracaoCardsClient {
 	 *
 	 * @param base o documento que a tela carregou, para saber o que mudou debaixo dela
 	 */
-	public CardsDaUnidade salvarConexao(long unidadeSondaId, CardsDaUnidade base,
+	public CardsDaUnidade salvarConexao(long unidadeId, CardsDaUnidade base,
 			CardsDaUnidade.Conexao nova) {
-		CardsDaUnidade atual = ler(unidadeSondaId);
+		CardsDaUnidade atual = ler(unidadeId);
 		if (!Objects.equals(base.conexao(), atual.conexao())) {
 			throw new CardsDesatualizadosException(
 					"A conexao do CLP foi alterada por outra pessoa. Recarregue antes de salvar.");
 		}
-		return salvar(unidadeSondaId,
+		return salvar(unidadeId,
 				new CardsDaUnidade.Alteracao(atual.revisao(), nova, atual.cards()));
 	}
 
@@ -139,14 +139,14 @@ public class ConfiguracaoCardsClient {
 	 * e reenviar a que ela leu ao abrir apontaria a estação para o CLP anterior se alguém tivesse
 	 * corrigido o IP na engrenagem no intervalo.
 	 */
-	public CardsDaUnidade salvarCards(long unidadeSondaId, CardsDaUnidade base,
+	public CardsDaUnidade salvarCards(long unidadeId, CardsDaUnidade base,
 			List<CardsDaUnidade.Card> novos) {
-		CardsDaUnidade atual = ler(unidadeSondaId);
+		CardsDaUnidade atual = ler(unidadeId);
 		if (!base.cards().equals(atual.cards())) {
 			throw new CardsDesatualizadosException(
 					"Os cards foram alterados por outra pessoa. Recarregue antes de salvar.");
 		}
-		return salvar(unidadeSondaId,
+		return salvar(unidadeId,
 				new CardsDaUnidade.Alteracao(atual.revisao(), atual.conexao(), novos));
 	}
 
@@ -159,17 +159,17 @@ public class ConfiguracaoCardsClient {
 	 * {@link #salvarCards} de propósito — quem copia está reescrevendo a unidade inteira, e fazer
 	 * isso por cima da alteração de outra pessoa é o pior momento para não avisar.
 	 */
-	public CardsDaUnidade salvarTudo(long unidadeSondaId, CardsDaUnidade base,
+	public CardsDaUnidade salvarTudo(long unidadeId, CardsDaUnidade base,
 			CardsDaUnidade.Conexao nova, List<CardsDaUnidade.Card> novos) {
-		CardsDaUnidade atual = ler(unidadeSondaId);
+		CardsDaUnidade atual = ler(unidadeId);
 		if (!Objects.equals(base.conexao(), atual.conexao()) || !base.cards().equals(atual.cards())) {
 			throw new CardsDesatualizadosException(
 					"A configuracao foi alterada por outra pessoa. Recarregue antes de salvar.");
 		}
-		return salvar(unidadeSondaId, new CardsDaUnidade.Alteracao(atual.revisao(), nova, novos));
+		return salvar(unidadeId, new CardsDaUnidade.Alteracao(atual.revisao(), nova, novos));
 	}
 
-	public CardsDaUnidade salvar(long unidadeSondaId, CardsDaUnidade.Alteracao alteracao) {
+	public CardsDaUnidade salvar(long unidadeId, CardsDaUnidade.Alteracao alteracao) {
 		String corpo;
 		try {
 			corpo = mapper.writeValueAsString(alteracao);
@@ -177,13 +177,13 @@ public class ConfiguracaoCardsClient {
 			throw new CardsIndisponiveisException("Nao foi possivel montar a configuracao: " + e.getMessage());
 		}
 
-		HttpResponse<String> resposta = chamar("PUT", unidadeSondaId, corpo);
+		HttpResponse<String> resposta = chamar("PUT", unidadeId, corpo);
 		if (resposta.statusCode() == 409) {
 			throw new CardsDesatualizadosException(
 					"Os cards foram alterados por outra pessoa. Recarregue antes de salvar.");
 		}
-		exigirSucesso(resposta, unidadeSondaId);
-		CardsDaUnidade salvo = converter(resposta.body(), unidadeSondaId);
+		exigirSucesso(resposta, unidadeId);
+		CardsDaUnidade salvo = converter(resposta.body(), unidadeId);
 		if (alteracao.conexao() != null && alteracao.conexao().usaTsap()
 				&& (salvo.conexao() == null
 						|| !Objects.equals(alteracao.conexao().tsapLocal(), salvo.conexao().tsapLocal())
@@ -194,7 +194,7 @@ public class ConfiguracaoCardsClient {
 		return salvo;
 	}
 
-	private HttpResponse<String> chamar(String metodo, long unidadeSondaId, String corpo) {
+	private HttpResponse<String> chamar(String metodo, long unidadeId, String corpo) {
 		String token = sessao.token().orElseThrow(() -> new CardsIndisponiveisException(
 				"A sessao de configuracao nao esta aberta."));
 		String base = base();
@@ -204,7 +204,7 @@ public class ConfiguracaoCardsClient {
 				: HttpRequest.BodyPublishers.ofString(corpo, StandardCharsets.UTF_8);
 
 		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create(base + "/api/sondas/" + unidadeSondaId + "/cards"))
+				.uri(URI.create(base + "/api/monitoramento/unidades/" + unidadeId + "/cards"))
 				.header("Authorization", "Bearer " + token)
 				.header("Content-Type", "application/json")
 				.timeout(TIMEOUT)
@@ -218,7 +218,7 @@ public class ConfiguracaoCardsClient {
 			throw new CardsIndisponiveisException("Consulta interrompida.");
 		} catch (Exception e) {
 			logger.warn("Falha ao falar com o backend sobre os cards da unidade {}: {}",
-					unidadeSondaId, e.getMessage());
+					unidadeId, e.getMessage());
 			throw new CardsIndisponiveisException("Nao foi possivel falar com o Backend: " + e.getMessage());
 		}
 	}
@@ -227,7 +227,7 @@ public class ConfiguracaoCardsClient {
 	 * ⚠️ O 401 aqui significa <b>token expirado</b>, não senha errada: a sessão já autenticou uma
 	 * vez. Dizer "credencial invalida" mandaria a pessoa conferir a senha que estava certa.
 	 */
-	private void exigirSucesso(HttpResponse<String> resposta, long unidadeSondaId) {
+	private void exigirSucesso(HttpResponse<String> resposta, long unidadeId) {
 		int status = resposta.statusCode();
 		if (status == 200) {
 			return;
@@ -242,7 +242,7 @@ public class ConfiguracaoCardsClient {
 		if (status == 400 || status == 422) {
 			throw new CardsIndisponiveisException(mensagemDoBackend(resposta.body()));
 		}
-		logger.warn("Backend respondeu HTTP {} nos cards da unidade {}.", status, unidadeSondaId);
+		logger.warn("Backend respondeu HTTP {} nos cards da unidade {}.", status, unidadeId);
 		throw new CardsIndisponiveisException("Backend respondeu HTTP " + status + ".");
 	}
 
@@ -265,12 +265,12 @@ public class ConfiguracaoCardsClient {
 		return "O Backend recusou a configuracao.";
 	}
 
-	private CardsDaUnidade converter(String corpo, long unidadeSondaId) {
+	private CardsDaUnidade converter(String corpo, long unidadeId) {
 		try {
 			CardsDaUnidade documento = mapper.readValue(corpo, CardsDaUnidade.class);
-			return documento == null ? CardsDaUnidade.vazio(unidadeSondaId) : documento;
+			return documento == null ? CardsDaUnidade.vazio(unidadeId) : documento;
 		} catch (Exception e) {
-			logger.warn("Resposta de cards ilegivel para a unidade {}: {}", unidadeSondaId, e.getMessage());
+			logger.warn("Resposta de cards ilegivel para a unidade {}: {}", unidadeId, e.getMessage());
 			throw new CardsIndisponiveisException("Resposta inesperada do Backend.");
 		}
 	}

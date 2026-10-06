@@ -42,7 +42,7 @@ class PlcConnectionServiceTest {
     @BeforeEach void preparar() {
         documento.set(documento(new Conexao("192.168.0.3", 0, 1, 1, 1000)));
         var settings = new AppSettings();
-        settings.setUnidadeSondaId(2L);
+        settings.setUnidadeId(2L);
         settings.setBackendUrl("http://servidor");
         when(settingsService.loadSettings()).thenReturn(settings);
         when(realtime.cardsAtuais(settings)).thenAnswer(call -> Optional.of(documento.get()));

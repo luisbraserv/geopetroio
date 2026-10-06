@@ -75,8 +75,8 @@ public class TelemetriaMqttService {
             return;
         }
 
-        if (settings == null || settings.getSondaId() == null || settings.getSondaId().isBlank()) {
-            logger.debug("Telemetria MQTT nao configurada: sondaId vazio.");
+        if (settings == null || settings.getIdUnidade() == null || settings.getIdUnidade().isBlank()) {
+            logger.debug("Telemetria MQTT nao configurada: idUnidade vazio.");
             return;
         }
 
@@ -86,7 +86,7 @@ public class TelemetriaMqttService {
         }
 
         LeituraPendente leitura = new LeituraPendente(
-                settings.getSondaId().trim(),
+                settings.getIdUnidade().trim(),
                 normalizarBrokerUrl(settings.getTelemetriaUrl()),
                 settings.getTelemetriaUsuario(),
                 settings.getTelemetriaSenha(),
@@ -110,7 +110,7 @@ public class TelemetriaMqttService {
     /** Publicacao efetiva, executada pelo worker. */
     private void publicar(LeituraPendente pendente) {
         String brokerUrl = pendente.brokerUrl();
-        String sondaId = pendente.sondaId();
+        String idUnidade = pendente.idUnidade();
         String usuario = pendente.usuario();
         String senha = pendente.senha();
         LocalDateTime dataHora = pendente.dataHora();
@@ -122,7 +122,7 @@ public class TelemetriaMqttService {
 
         try {
             MqttClient mqtt = conectar(brokerUrl, usuario, senha);
-            publicarBatch(mqtt, sondaId, dataHora, leituras);
+            publicarBatch(mqtt, idUnidade, dataHora, leituras);
         } catch (Exception e) {
             // Nao relanca: o worker precisa continuar consumindo. A leitura ja saiu da fila —
             // perde-se este ciclo no MQTT, mas ele permanece gravado no H2 local.
@@ -216,7 +216,7 @@ public class TelemetriaMqttService {
      * {@code LeituraDeCards.paraPublicar}, que aplica RN-037 e RN-099 num lugar so.
      */
     private record LeituraPendente(
-            String sondaId,
+            String idUnidade,
             String brokerUrl,
             String usuario,
             String senha,
@@ -294,7 +294,7 @@ public class TelemetriaMqttService {
     private void publicarBatch(MqttClient mqtt, String unidade, LocalDateTime dataHora,
                                List<String> leituras) throws Exception {
         String payload = String.format(Locale.US,
-                "{\"idSondaUnidade\":\"%s\",\"dataHora\":\"%s\",\"leituras\":[%s]}",
+				"{\"idUnidade\":\"%s\",\"dataHora\":\"%s\",\"leituras\":[%s]}",
                 unidade,
                 dataHora.format(FORMATTER),
                 String.join(",", leituras));

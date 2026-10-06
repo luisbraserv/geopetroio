@@ -13,12 +13,12 @@ import java.time.Instant;
  * Ver specs/SDD/software/apis/rest-monitoramento.md §7.
  */
 public record ExistenciaSerieDTO(
-		String idSondaUnidade,
+		String idUnidade,
 		boolean possuiSerie,
 		Instant primeiroPonto,
 		Instant ultimoPonto) {
 
-	public static ExistenciaSerieDTO vazia(String idSondaUnidade) {
-		return new ExistenciaSerieDTO(idSondaUnidade, false, null, null);
+	public static ExistenciaSerieDTO vazia(String idUnidade) {
+		return new ExistenciaSerieDTO(idUnidade, false, null, null);
 	}
 }

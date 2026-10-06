@@ -23,7 +23,7 @@ public class SettingsService {
 
     private static final Logger logger = LoggerFactory.getLogger(SettingsService.class);
 
-    private static final Pattern SONDA_ID_PATTERN        = Pattern.compile("\"sondaId\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+    private static final Pattern SONDA_ID_PATTERN        = Pattern.compile("\"idUnidade\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern TELEMETRIA_URL_PATTERN  = Pattern.compile("\"telemetriaUrl\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern TELEMETRIA_USER_PATTERN = Pattern.compile("\"telemetriaUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern TELEMETRIA_PASS_PATTERN = Pattern.compile("\"telemetriaSenha\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
@@ -32,7 +32,7 @@ public class SettingsService {
     private static final Pattern BACKEND_URL_PATTERN   = Pattern.compile("\"backendUrl\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_USER_PATTERN  = Pattern.compile("\"backendUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_PASS_PATTERN  = Pattern.compile("\"backendSenha\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
-    private static final Pattern UNIDADE_SONDA_ID_PATTERN = Pattern.compile("\"unidadeSondaId\"\\s*:\\s*(\\d+)");
+    private static final Pattern UNIDADE_SONDA_ID_PATTERN = Pattern.compile("\"unidadeId\"\\s*:\\s*(\\d+)");
     // Interruptores de telemetria — §6. Ausentes num arquivo antigo significam LIGADO: ver
     // parseBooleanOuLigado.
     private static final Pattern MQTT_ATIVA_PATTERN    = Pattern.compile("\"telemetriaMqttAtiva\"\\s*:\\s*(true|false)");
@@ -65,7 +65,7 @@ public class SettingsService {
             // aquele valor apontaria a estacao para outro CLP no primeiro boot depois da
             // atualizacao, porque quem conecta sempre foi o documento da unidade. §4.
             Matcher m = SONDA_ID_PATTERN.matcher(content);
-            if (m.find()) settings.setSondaId(unescapeJson(m.group(1)));
+            if (m.find()) settings.setIdUnidade(unescapeJson(m.group(1)));
 
             m = TELEMETRIA_URL_PATTERN.matcher(content);
             if (m.find()) settings.setTelemetriaUrl(unescapeJson(m.group(1)));
@@ -86,7 +86,7 @@ public class SettingsService {
             if (m.find()) settings.setBackendSenha(unescapeJson(m.group(1)));
 
             m = UNIDADE_SONDA_ID_PATTERN.matcher(content);
-            if (m.find()) settings.setUnidadeSondaId(Long.parseLong(m.group(1)));
+            if (m.find()) settings.setUnidadeId(Long.parseLong(m.group(1)));
 
             m = PUMP_CONSTANT_PATTERN.matcher(content);
             if (m.find()) settings.setPumpConstant(Double.parseDouble(m.group(1)));
@@ -183,16 +183,16 @@ public class SettingsService {
     public void saveSettings(AppSettings settings) {
         try {
             Files.createDirectories(settingsPath.getParent());
-            String sondaId       = settings.getSondaId()        == null ? "" : settings.getSondaId();
+            String idUnidade       = settings.getIdUnidade()        == null ? "" : settings.getIdUnidade();
             String telemetriaUrl = settings.getTelemetriaUrl()  == null ? "tcp://localhost:1883" : settings.getTelemetriaUrl();
             String telemetriaUsuario = settings.getTelemetriaUsuario() == null ? "" : settings.getTelemetriaUsuario();
             String telemetriaSenha   = settings.getTelemetriaSenha()   == null ? "" : settings.getTelemetriaSenha();
             String content = "{\n"
-                    + "  \"sondaId\" : \"" + escapeJson(sondaId) + "\",\n"
+                    + "  \"idUnidade\" : \"" + escapeJson(idUnidade) + "\",\n"
                     + "  \"telemetriaUrl\" : \"" + escapeJson(telemetriaUrl) + "\",\n"
                     + "  \"telemetriaUsuario\" : \"" + escapeJson(telemetriaUsuario) + "\",\n"
                     + "  \"telemetriaSenha\" : \"" + escapeJson(telemetriaSenha) + "\",\n"
-                    + "  \"unidadeSondaId\" : " + (settings.getUnidadeSondaId() == null ? 0 : settings.getUnidadeSondaId()) + ",\n"
+                    + "  \"unidadeId\" : " + (settings.getUnidadeId() == null ? 0 : settings.getUnidadeId()) + ",\n"
                     + "  \"backendUrl\" : \"" + escapeJson(settings.getBackendUrl() == null ? "" : settings.getBackendUrl()) + "\",\n"
                     + "  \"backendUsuario\" : \"" + escapeJson(settings.getBackendUsuario() == null ? "" : settings.getBackendUsuario()) + "\",\n"
                     + "  \"backendSenha\" : \"" + escapeJson(settings.getBackendSenha() == null ? "" : settings.getBackendSenha()) + "\",\n"
@@ -319,13 +319,13 @@ public class SettingsService {
         saveSettings(settings);
     }
 
-    public void updateSondaId(String sondaId) {
+    public void updateIdUnidade(String idUnidade) {
         AppSettings settings = loadSettings();
-        settings.setSondaId(sondaId);
+        settings.setIdUnidade(idUnidade);
         saveSettings(settings);
     }
 
-    public String getSondaId() { return loadSettings().getSondaId(); }
+    public String getIdUnidade() { return loadSettings().getIdUnidade(); }
 
     public void updateTelemetriaUrl(String url) {
         AppSettings settings = loadSettings();
@@ -353,9 +353,9 @@ public class SettingsService {
      * outro backend sem trocar as credenciais, ou trocar a unidade sem o resto, deixaria a conexao
      * num estado invalido ate a proxima edicao.
      */
-    public void updateTempoReal(Long unidadeSondaId, String backendUrl, String usuario, String senha) {
+    public void updateTempoReal(Long unidadeId, String backendUrl, String usuario, String senha) {
         AppSettings settings = loadSettings();
-        settings.setUnidadeSondaId(unidadeSondaId);
+        settings.setUnidadeId(unidadeId);
         settings.setBackendUrl(backendUrl == null ? "" : backendUrl.trim());
         settings.setBackendUsuario(usuario == null ? "" : usuario.trim());
         settings.setBackendSenha(senha == null ? "" : senha);

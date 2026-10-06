@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * O documento de cards de uma Unidade/Sonda, do lado do Desktop — RN-080.
+ * O documento de cards de uma Unidade, do lado do Desktop — RN-080.
  *
  * <p>Espelha {@code com.geopetro.cards.ConfiguracaoCards} do backend. São dois modelos porque são
  * dois processos: o backend usa Jackson 3 e valida como dono do dado; aqui a mesma forma existe
@@ -18,7 +18,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * {@code specs/SDD/negocio/requisitos/cards-configuraveis.md §5}.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record CardsDaUnidade(int schemaVersion, long unidadeSondaId, long revisao,
+public record CardsDaUnidade(int schemaVersion, long unidadeId, long revisao,
 		Conexao conexao, List<Card> cards, String atualizadoPor, String atualizadoEm)
 		implements DocumentoDaUnidade {
 
@@ -27,8 +27,8 @@ public record CardsDaUnidade(int schemaVersion, long unidadeSondaId, long revisa
 	}
 
 	/** Documento de unidade ainda não configurada: revisão 0, nenhum card (RN-092). */
-	public static CardsDaUnidade vazio(long unidadeSondaId) {
-		return new CardsDaUnidade(1, unidadeSondaId, 0, null, List.of(), null, null);
+	public static CardsDaUnidade vazio(long unidadeId) {
+		return new CardsDaUnidade(1, unidadeId, 0, null, List.of(), null, null);
 	}
 
 	public boolean configurada() {

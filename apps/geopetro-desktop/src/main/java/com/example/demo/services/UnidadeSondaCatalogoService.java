@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Busca no Geopetro-Backend as Unidades/Sondas que o usuario de servico desta estacao pode ver.
+ * Busca no Geopetro-Backend as Unidades que o usuario de servico desta estacao pode ver.
  *
  * <p>Serve a tela de Configuracoes: em vez de digitar o id numerico do cadastro e o codigo do
  * historico separadamente, o usuario escolhe a sonda numa lista e os dois enderecos vem prontos e
@@ -69,7 +69,7 @@ public class UnidadeSondaCatalogoService {
             Thread.currentThread().interrupt();
             throw new CatalogoIndisponivelException("Consulta interrompida.");
         } catch (Exception e) {
-            logger.warn("Falha ao listar Unidades/Sondas no backend: {}", e.getMessage());
+            logger.warn("Falha ao listar Unidades no backend: {}", e.getMessage());
             throw new CatalogoIndisponivelException("Não foi possível falar com o Backend: " + e.getMessage());
         }
     }
@@ -99,7 +99,7 @@ public class UnidadeSondaCatalogoService {
             Thread.currentThread().interrupt();
             throw new CatalogoIndisponivelException("Consulta interrompida.");
         } catch (Exception e) {
-            logger.warn("Falha ao listar Unidades/Sondas com o token da sessao: {}", e.getMessage());
+            logger.warn("Falha ao listar Unidades com o token da sessao: {}", e.getMessage());
             throw new CatalogoIndisponivelException("Não foi possível falar com o Backend: " + e.getMessage());
         }
     }
@@ -131,7 +131,7 @@ public class UnidadeSondaCatalogoService {
 
     private List<UnidadeSondaOpcao> buscarSondas(String base, String token) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(base + "/api/sondas/minhas"))
+				.uri(URI.create(base + "/api/monitoramento/unidades/minhas"))
                 .header("Authorization", "Bearer " + token)
                 .timeout(TIMEOUT)
                 .GET()
@@ -139,7 +139,7 @@ public class UnidadeSondaCatalogoService {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() == 403) {
-            throw new CatalogoIndisponivelException("Este usuário não tem acesso a nenhuma Unidade/Sonda.");
+            throw new CatalogoIndisponivelException("Este usuário não tem acesso a nenhuma Unidade.");
         }
         if (response.statusCode() != 200) {
             throw new CatalogoIndisponivelException("Backend respondeu HTTP " + response.statusCode() + ".");
@@ -157,11 +157,11 @@ public class UnidadeSondaCatalogoService {
                 // Sem o id numerico nao da para enderecar o tempo real; a entrada nao serve.
                 continue;
             }
-            opcoes.add(new UnidadeSondaOpcao(
-                    id.asLong(),
-                    texto(no, "idSondaUnidade"),
-                    texto(no, "nome"),
-                    texto(no, "apelido")));
+			opcoes.add(new UnidadeSondaOpcao(
+					id.asLong(),
+					texto(no, "nome"),
+					texto(no, "apelido"),
+					texto(no, "tipo")));
         }
         return opcoes;
     }

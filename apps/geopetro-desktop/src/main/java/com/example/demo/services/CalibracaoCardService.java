@@ -36,7 +36,7 @@ public class CalibracaoCardService {
 					.map(c -> Objects.equals(c.dispositivoId(), card.dispositivoId())
 							? comRange(c, rangeBar) : c)
 						.toList();
-			salvo = cliente.salvarCards(base.unidadeSondaId(), base, novos);
+			salvo = cliente.salvarCards(base.unidadeId(), base, novos);
 		}
 		calibracoes.gravar(card.dispositivoId(), calibracao);
 		return salvo;

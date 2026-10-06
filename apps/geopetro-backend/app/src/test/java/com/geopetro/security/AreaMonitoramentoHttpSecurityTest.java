@@ -37,7 +37,7 @@ import com.geopetro.security.config.JwtAuthenticationFilter;
 import com.geopetro.security.config.SecurityConfig;
 
 /**
- * As rotas de {@code /api/sondas} nao tem todas a mesma regra, e a ordem delas no
+ * As rotas de {@code /api/monitoramento/unidades} nao tem todas a mesma regra, e a ordem delas no
  * {@code SecurityConfig} e o que faz a diferenca valer.
  *
  * <h2>O caso que este teste existe para impedir</h2>

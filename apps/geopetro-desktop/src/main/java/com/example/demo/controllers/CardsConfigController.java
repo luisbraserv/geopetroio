@@ -53,7 +53,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
- * A tela que configura os cards de uma Unidade/Sonda — passo 6 de
+ * A tela que configura os cards de uma Unidade — passo 6 de
  * {@code specs/SDD/negocio/requisitos/cards-configuraveis.md §13}.
  *
  * <h2>Edita um rascunho, não o documento</h2>
@@ -144,7 +144,7 @@ public class CardsConfigController {
 
 	private final ObservableList<Card> rascunho = FXCollections.observableArrayList();
 
-	private long unidadeSondaId;
+	private long unidadeId;
 	private String dispositivoInicial;
 	private boolean modoCardInicial;
 
@@ -308,11 +308,11 @@ public class CardsConfigController {
 	private void carregar() {
 		long id = idDaUnidadeConfigurada();
 		if (id <= 0) {
-			status("Escolha a Unidade/Sonda desta estação em Configurações antes de configurar os cards.");
+			status("Escolha a Unidade desta estação em Configurações antes de configurar os cards.");
 			desabilitarEdicao(true);
 			return;
 		}
-		unidadeSondaId = id;
+		unidadeId = id;
 		lblTitulo.setText(modoCardInicial ? "Configuração do card" : "Cards da unidade " + id);
 
 		emSegundoPlano("Carregando…", () -> cliente.ler(id), documento -> {
@@ -346,7 +346,7 @@ public class CardsConfigController {
 
 	private long idDaUnidadeConfigurada() {
 		AppSettings configuracoes = settings.loadSettings();
-		Long id = configuracoes == null ? null : configuracoes.getUnidadeSondaId();
+		Long id = configuracoes == null ? null : configuracoes.getUnidadeId();
 		return id == null ? 0 : id;
 	}
 
@@ -638,7 +638,7 @@ public class CardsConfigController {
 
 		emSegundoPlano("Buscando unidades…", () -> catalogo.listarComToken(base, token), unidades -> {
 			List<UnidadeSondaOpcao> outras = unidades.stream()
-					.filter(u -> u.id() != null && u.id() != unidadeSondaId)
+					.filter(u -> u.id() != null && u.id() != unidadeId)
 					.toList();
 			if (outras.isEmpty()) {
 				status("Não há outra unidade disponível para copiar.");
@@ -661,7 +661,7 @@ public class CardsConfigController {
 		emSegundoPlano("Lendo a configuração de " + origem.rotulo() + "…",
 				() -> cliente.ler(origem.id()),
 				documento -> {
-					var destino = new CardsDaUnidade(1, unidadeSondaId, documentoCarregado.revisao(),
+					var destino = new CardsDaUnidade(1, unidadeId, documentoCarregado.revisao(),
 							conexaoAtual(), List.copyOf(rascunho), null, null);
 					try {
 						var copia = CopiaDeCards.copiar(documento, destino);
@@ -710,8 +710,8 @@ public class CardsConfigController {
 		var conexao = conexaoCopiada;
 		emSegundoPlano("Salvando…",
 				() -> conexao == null
-						? cliente.salvarCards(unidadeSondaId, base, cards)
-						: cliente.salvarTudo(unidadeSondaId, base, conexao, cards),
+						? cliente.salvarCards(unidadeId, base, cards)
+						: cliente.salvarTudo(unidadeId, base, conexao, cards),
 				salvo -> {
 					documentoCarregado = salvo;
 					conexaoCopiada = null;
@@ -759,7 +759,7 @@ public class CardsConfigController {
 		tarefa.setOnFailed(evento -> {
 			ocupado(false);
 			Throwable causa = tarefa.getException();
-			logger.warn("Falha na configuracao de cards da unidade {}: {}", unidadeSondaId,
+			logger.warn("Falha na configuracao de cards da unidade {}: {}", unidadeId,
 					causa == null ? "desconhecida" : causa.getMessage());
 			if (causa instanceof ConfiguracaoCardsClient.CardsDesatualizadosException) {
 				// Aqui nao adianta tentar de novo: e preciso recarregar e refazer sobre o gravado.

@@ -9,15 +9,15 @@ import java.util.List;
  * <p>O produtor (Geopetro-Desktop) publica uma mensagem por ciclo (1 segundo). Ver
  * {@code specs/SDD/software/mqtt/mqtt-telemetria.md}.
  *
- * @param idSondaUnidade nome da Unidade/Sonda no cadastro (ex.: SPT-144) — chave de correlacao
+	 * @param idUnidade      nome da unidade no Braserv-Core, chave de correlacao da serie (RN-018)
  * @param dataHora       instante da leitura, ja normalizado para UTC
  * @param leituras       ao menos uma leitura
  */
-public record TelemetriaBatch(String idSondaUnidade, Instant dataHora, List<LeituraTelemetria> leituras) {
+public record TelemetriaBatch(String idUnidade, Instant dataHora, List<LeituraTelemetria> leituras) {
 
 	public TelemetriaBatch {
-		if (idSondaUnidade == null || idSondaUnidade.isBlank()) {
-			throw new IllegalArgumentException("idSondaUnidade e obrigatorio");
+		if (idUnidade == null || idUnidade.isBlank()) {
+			throw new IllegalArgumentException("idUnidade e obrigatorio");
 		}
 		if (dataHora == null) {
 			throw new IllegalArgumentException("dataHora e obrigatoria");

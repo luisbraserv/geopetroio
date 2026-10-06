@@ -1,7 +1,7 @@
 package com.example.demo.models;
 
 /**
- * O que os documentos de configuração de uma Unidade/Sonda têm em comum.
+ * O que os documentos de configuração de uma Unidade têm em comum.
  *
  * <p>Hoje há <b>um</b>: {@link CardsDaUnidade}, o que a unidade lê. O ciclo de vida dele é o que esta
  * interface descreve — chega pelo canal de tempo real, só substitui o anterior se a revisão for
@@ -19,7 +19,7 @@ package com.example.demo.models;
 public interface DocumentoDaUnidade {
 
 	/** A unidade a que este documento pertence. */
-	long unidadeSondaId();
+	long unidadeId();
 
 	/**
 	 * Revisão do documento. Só substitui o que está em memória se for <b>maior</b>.

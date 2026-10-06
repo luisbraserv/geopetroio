@@ -36,7 +36,7 @@ class ConsultaSerieServiceTest {
 
 		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "PRESSAO_01", null, t, t.plusSeconds(60));
 
-		assertThat(serie.idSondaUnidade()).isEqualTo("SPT-144");
+		assertThat(serie.idUnidade()).isEqualTo("SPT-144");
 		assertThat(serie.dispositivoId()).isEqualTo("PRESSAO_01");
 		assertThat(serie.pontos()).hasSize(2);
 		assertThat(serie.pontos().get(0).dataHora()).isEqualTo(t);
@@ -54,7 +54,7 @@ class ConsultaSerieServiceTest {
 		MonitoramentoSerieDTO serie = service.consultar("SPT-144", "PRESSAO_01", null, t, t.plusSeconds(60));
 
 		assertThat(serie.pontos()).isEmpty();
-		assertThat(serie.idSondaUnidade()).isEqualTo("SPT-144");
+		assertThat(serie.idUnidade()).isEqualTo("SPT-144");
 	}
 
 	@Test

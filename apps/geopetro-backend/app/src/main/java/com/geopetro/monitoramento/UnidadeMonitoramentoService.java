@@ -93,10 +93,10 @@ public class UnidadeMonitoramentoService {
         if (!usuarioPossuiAcessoAUnidade(username, unidadeId)) {
             return Optional.empty();
         }
-        Unidade unidade = unidades.buscar(unidadeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Unidade nao encontrada: " + unidadeId));
-        // A telemetria e indexada pelo NOME da unidade (RN-018).
-        return monitoramentoClient.consultarSerie(unidade.nome(), dispositivoId, serie, inicio, fim);
+		Unidade unidade = unidades.buscar(unidadeId)
+				.orElseThrow(() -> new ResourceNotFoundException("Unidade nao encontrada: " + unidadeId));
+		// A telemetria continua indexada pelo nome da unidade (RN-018).
+		return monitoramentoClient.consultarSerie(unidade.nome(), dispositivoId, serie, inicio, fim);
     }
 
     /**

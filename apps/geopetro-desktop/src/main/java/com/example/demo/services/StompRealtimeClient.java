@@ -79,7 +79,7 @@ class StompRealtimeClient {
 		// apareceria depois — e o worker acharia que esta publicando.
 		conexaoEstabelecida.get(TIMEOUT_CONEXAO.toSeconds(), TimeUnit.SECONDS);
         if (unidade != null) {
-            enviarTexto(assinar("cards-updates", "/topic/config/unidades-sondas/" + unidade + "/cards"));
+			enviarTexto(assinar("cards-updates", "/topic/config/unidades/" + unidade + "/cards"));
             solicitarConfiguracao();
             // ⚠️ A espera e pelo snapshot de CARDS, e nao mais pelo de limites. Sem cards o Desktop
             // nao sabe o que ler (RN-088), entao e este o documento que precisa ter chegado antes de
@@ -94,7 +94,7 @@ class StompRealtimeClient {
     void solicitarConfiguracao() throws Exception {
         if (unidade == null) return;
         enviarTexto("UNSUBSCRIBE\nid:cards-snapshot\n\n" + NULO);
-        enviarTexto(assinar("cards-snapshot", "/app/config/unidades-sondas/" + unidade + "/cards"));
+		enviarTexto(assinar("cards-snapshot", "/app/config/unidades/" + unidade + "/cards"));
     }
 
     /** Frame SUBSCRIBE. Extraido porque o formato tem de ser identico nas duas assinaturas. */
@@ -135,8 +135,8 @@ class StompRealtimeClient {
 				.map(StompRealtimeClient::leituraJson)
 				.collect(java.util.stream.Collectors.joining(","));
 		return String.format(Locale.US,
-				"{\"unidadeSondaId\":%d,\"timestamp\":\"%s\",\"leituras\":[%s]}",
-				estado.unidadeSondaId(), estado.timestamp(), leituras);
+				"{\"unidadeId\":%d,\"timestamp\":\"%s\",\"leituras\":[%s]}",
+				estado.unidadeId(), estado.timestamp(), leituras);
 	}
 
 	/** {@code serie} sai do JSON quando ausente: so o card de stroke tem mais de uma grandeza. */
@@ -223,8 +223,8 @@ class StompRealtimeClient {
                     if (header.startsWith("subscription:")) subscription = header.substring(13);
                 }
                 String corpo = normalized.substring(divider + 2);
-                String topico = "/topic/config/unidades-sondas/" + unidade;
-                String app = "/app/config/unidades-sondas/" + unidade;
+				String topico = "/topic/config/unidades/" + unidade;
+				String app = "/app/config/unidades/" + unidade;
 
                 // ⚠️ O sufixo /cards continua sendo conferido por igualdade exata, e nao por
                 // "termina com": o destino dos limites e PREFIXO do de cards. O canal de limites nao
@@ -236,7 +236,7 @@ class StompRealtimeClient {
                 if (!atualizacao && !snapshot) return;
 
                 var documento = JSON.readValue(corpo, CardsDaUnidade.class);
-                if (documento.unidadeSondaId() != unidade) return;
+                if (documento.unidadeId() != unidade) return;
                 receberCards.accept(documento);
                 snapshotRecebido.complete(null);
             } catch (Exception e) {

@@ -29,19 +29,19 @@ public class ConsultaExistenciaService {
 		this.repository = repository;
 	}
 
-	public ExistenciaSerieDTO consultar(String idSondaUnidade) {
-		return repository.consultarIntervalo(idSondaUnidade)
+	public ExistenciaSerieDTO consultar(String idUnidade) {
+		return repository.consultarIntervalo(idUnidade)
 				.map(intervalo -> {
-					log.debug("Sonda {} possui serie de {} a {}", idSondaUnidade,
+					log.debug("Unidade {} possui serie de {} a {}", idUnidade,
 							intervalo.primeiroPonto(), intervalo.ultimoPonto());
-					return new ExistenciaSerieDTO(idSondaUnidade, true,
+					return new ExistenciaSerieDTO(idUnidade, true,
 							intervalo.primeiroPonto(), intervalo.ultimoPonto());
 				})
 				.orElseGet(() -> {
 					// Ausencia de serie e resposta legitima, nao erro: sonda cadastrada que nunca
 					// publicou, ou cujo historico ja saiu pela retencao.
-					log.debug("Sonda {} nao possui serie gravada", idSondaUnidade);
-					return ExistenciaSerieDTO.vazia(idSondaUnidade);
+					log.debug("Unidade {} nao possui serie gravada", idUnidade);
+					return ExistenciaSerieDTO.vazia(idUnidade);
 				});
 	}
 }

@@ -216,24 +216,24 @@ public class SettingsController {
             return;
         }
         if (unidade == null || unidade.id() == null) {
-            desligarConexao("Escolha a Unidade/Sonda para editar a conexão do CLP.");
+            desligarConexao("Escolha a Unidade para editar a conexão do CLP.");
             return;
         }
 
-        long unidadeSondaId = unidade.id();
+        long unidadeId = unidade.id();
         desligarConexao("Lendo a conexão do CLP…");
 
         Task<com.example.demo.models.CardsDaUnidade> tarefa = new Task<>() {
             @Override
             protected com.example.demo.models.CardsDaUnidade call() {
-                return cardsClient.ler(unidadeSondaId);
+                return cardsClient.ler(unidadeId);
             }
         };
         tarefa.setOnSucceeded(e -> {
             // Outra troca de unidade pode ter acontecido enquanto esta leitura corria; a resposta
             // atrasada nao pode sobrescrever a selecao atual.
             UnidadeSondaOpcao agora = cmbUnidadeSonda.getSelectionModel().getSelectedItem();
-            if (agora == null || agora.id() == null || agora.id() != unidadeSondaId) {
+            if (agora == null || agora.id() == null || agora.id() != unidadeId) {
                 return;
             }
             documentoCarregado = tarefa.getValue();
@@ -317,7 +317,7 @@ public class SettingsController {
     }
 
     // ------------------------------------------------------------------
-    // Unidade/Sonda
+    // Unidade
     // ------------------------------------------------------------------
 
     /**
@@ -327,15 +327,15 @@ public class SettingsController {
      * offline daria a impressao de que a unidade se perdeu.
      */
     private void mostrarSelecaoSalva(AppSettings settings) {
-        Long id = settings.getUnidadeSondaId();
-        String codigo = settings.getSondaId();
+        Long id = settings.getUnidadeId();
+        String codigo = settings.getIdUnidade();
 
         if (id == null && (codigo == null || codigo.isBlank())) {
-            lblUnidadeStatus.setText("Nenhuma Unidade/Sonda configurada. Use \"Buscar\" para listar.");
+            lblUnidadeStatus.setText("Nenhuma Unidade configurada. Use \"Buscar\" para listar.");
             return;
         }
 
-        UnidadeSondaOpcao salva = new UnidadeSondaOpcao(id, codigo, codigo, null);
+		UnidadeSondaOpcao salva = new UnidadeSondaOpcao(id, codigo, null, null);
         cmbUnidadeSonda.setItems(FXCollections.observableArrayList(salva));
         cmbUnidadeSonda.getSelectionModel().select(salva);
         lblUnidadeStatus.setText(descreverSelecao(id, codigo) + " (salvo). Use \"Buscar\" para trocar.");
@@ -379,11 +379,11 @@ public class SettingsController {
 
     private void aplicarUnidades(List<UnidadeSondaOpcao> unidades) {
         if (unidades == null || unidades.isEmpty()) {
-            lblUnidadeStatus.setText("O Backend não retornou nenhuma Unidade/Sonda para este usuário.");
+            lblUnidadeStatus.setText("O Backend não retornou nenhuma Unidade para este usuário.");
             return;
         }
 
-        Long idAtual = settingsService.loadSettings().getUnidadeSondaId();
+        Long idAtual = settingsService.loadSettings().getUnidadeId();
         cmbUnidadeSonda.setItems(FXCollections.observableArrayList(unidades));
 
         UnidadeSondaOpcao aSelecionar = unidades.stream()
@@ -486,9 +486,9 @@ public class SettingsController {
 
         // Uma escolha alimenta os dois enderecos: o codigo textual do historico (topico MQTT) e o
         // id numerico do tempo real (topico WebSocket).
-        settingsService.updateSondaId(unidade == null || unidade.idSondaUnidade() == null
+		settingsService.updateIdUnidade(unidade == null || unidade.nome() == null
                 ? ""
-                : unidade.idSondaUnidade().trim());
+				: unidade.nome().trim());
 
         settingsService.updateTempoReal(
                 unidade == null ? null : unidade.id(),
@@ -518,7 +518,7 @@ public class SettingsController {
             return;
         }
 
-        long unidadeSondaId = unidade.id();
+        long unidadeId = unidade.id();
         var base = documentoCarregado;
         com.example.demo.models.CardsDaUnidade.Conexao nova;
         try {
@@ -539,7 +539,7 @@ public class SettingsController {
         Task<com.example.demo.models.CardsDaUnidade> tarefa = new Task<>() {
             @Override
             protected com.example.demo.models.CardsDaUnidade call() {
-                return cardsClient.salvarConexao(unidadeSondaId, base, nova);
+                return cardsClient.salvarConexao(unidadeId, base, nova);
             }
         };
         tarefa.setOnSucceeded(e -> closeWindow());

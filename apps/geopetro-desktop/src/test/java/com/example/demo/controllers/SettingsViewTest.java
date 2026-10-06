@@ -59,7 +59,7 @@ class SettingsViewTest {
         Parent raiz = carregarNaThreadDaUi();
 
         assertNotNull(raiz, "o FXML deveria ter carregado");
-        assertNotNull(raiz.lookup("#cmbUnidadeSonda"), "seletor de Unidade/Sonda ausente");
+        assertNotNull(raiz.lookup("#cmbUnidadeSonda"), "seletor de Unidade ausente");
         assertNotNull(raiz.lookup("#btnSave"), "botao Salvar ausente");
         assertNotNull(raiz.lookup("#txtPlcIp"), "campo de IP do PLC ausente");
     }
@@ -101,7 +101,7 @@ class SettingsViewTest {
         assertNotNull(raiz.lookup("#cmbUnidadeSonda"));
         // Os dois campos de texto da versao anterior nao devem ter sobrevivido.
         assertEquals(null, raiz.lookup("#txtSondaId"), "campo antigo txtSondaId ainda na tela");
-        assertEquals(null, raiz.lookup("#txtUnidadeSondaId"), "campo antigo txtUnidadeSondaId ainda na tela");
+        assertEquals(null, raiz.lookup("#txtUnidadeId"), "campo antigo txtUnidadeId ainda na tela");
     }
 
     /**
@@ -120,7 +120,7 @@ class SettingsViewTest {
         Parent raiz = carregarNaThreadDaUi();
 
         assertTrue(raiz.lookup("#cartaoEquipamento").isDisabled(),
-                "IP do CLP e Unidade/Sonda exigem ADMIN ou SUPORTE");
+                "IP do CLP e Unidade exigem ADMIN ou SUPORTE");
         // ⚠️ cartaoCards saiu da tela em 2026-09-10 — ver oCartaoDeCardsVisiveisSumiu().
         assertTrue(raiz.lookup("#cartaoTempoReal").isDisabled(),
                 "URL do Backend e credenciais entraram no portao");

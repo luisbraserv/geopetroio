@@ -29,7 +29,7 @@ class TelemetriaMqttDesligadaTest {
 
 	private AppSettings configurada() {
 		AppSettings settings = new AppSettings();
-		settings.setSondaId("SONDA-01");
+		settings.setIdUnidade("SONDA-01");
 		settings.setTelemetriaUrl("tcp://127.0.0.1:1883");
 		return settings;
 	}

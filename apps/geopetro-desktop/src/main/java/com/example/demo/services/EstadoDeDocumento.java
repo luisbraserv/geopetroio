@@ -14,7 +14,7 @@ import com.example.demo.models.DocumentoDaUnidade;
  *   <tr><td>Geração de conexão</td>
  *       <td>Um snapshot que chega atrasado, de uma conexão já encerrada, sobrescrever o atual</td></tr>
  *   <tr><td>Unidade</td>
- *       <td>Configuração de outra Unidade/Sonda entrar como se fosse desta</td></tr>
+ *       <td>Configuração de outra Unidade entrar como se fosse desta</td></tr>
  *   <tr><td>Revisão maior</td>
  *       <td>Regressão: um snapshot antigo que chegue fora de ordem não desfaz o mais novo</td></tr>
  * </table>
@@ -69,7 +69,7 @@ public abstract class EstadoDeDocumento<T extends DocumentoDaUnidade> {
 
 	public synchronized boolean aceitar(long connection, T snapshot) {
 		if (connection != generation || unidade == null || snapshot == null
-				|| snapshot.unidadeSondaId() != unidade) {
+				|| snapshot.unidadeId() != unidade) {
 			return false;
 		}
 		boolean primeiraRespostaDaConexao = confirmadoNaGeracao != connection;

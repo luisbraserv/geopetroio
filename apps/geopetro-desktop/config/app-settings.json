@@ -1,9 +1,9 @@
 {
-  "sondaId" : "BK-21",
+  "idUnidade" : "BK-21",
   "telemetriaUrl" : "tcp://localhost:1883",
   "telemetriaUsuario" : "",
   "telemetriaSenha" : "",
-  "unidadeSondaId" : 5,
+  "unidadeId" : 5,
   "backendUrl" : "http://2.25.227.207",
   "backendUsuario" : "luis.silveira",
   "backendSenha" : "",

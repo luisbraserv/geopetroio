@@ -44,7 +44,7 @@ class MonitoringControllerTest {
     @Test void cardsAparecemSemClpSobrevivemANavegacaoEAtualizamComADefinicao() throws Exception {
         onFx(() -> {
             var doc = new AtomicReference<>(documento(3, "Pressão", true));
-            var settings = new AppSettings(); settings.setUnidadeSondaId(1L);
+            var settings = new AppSettings(); settings.setUnidadeId(1L);
             var settingsService = mock(SettingsService.class); when(settingsService.loadSettings()).thenReturn(settings);
             var realtime = mock(TelemetriaRealtimeService.class);
             when(realtime.cardsAtuais(settings)).thenAnswer(inv -> Optional.ofNullable(doc.get()));
@@ -90,7 +90,7 @@ class MonitoringControllerTest {
      */
     @Test void oSininhoAparecePorCardEODestaqueSobreviveAFaltaDeLeitura() throws Exception {
         onFx(() -> {
-            var settings = new AppSettings(); settings.setUnidadeSondaId(1L);
+            var settings = new AppSettings(); settings.setUnidadeId(1L);
             var settingsService = mock(SettingsService.class); when(settingsService.loadSettings()).thenReturn(settings);
             var realtime = mock(TelemetriaRealtimeService.class);
             when(realtime.cardsAtuais(settings)).thenReturn(Optional.of(documento(3, "Pressão", true)));

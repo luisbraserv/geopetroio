@@ -109,10 +109,10 @@ class SettingsServiceTest {
             Files.createDirectories(config);
             Files.writeString(config.resolve("app-settings.json"), """
                     {
-                      "sondaId" : "SONDA-01",
+                      "idUnidade" : "SONDA-01",
                       "telemetriaUrl" : "tcp://10.0.0.20:1883",
                       "backendUrl" : "http://10.0.0.10:8080",
-                      "unidadeSondaId" : 144
+                      "unidadeId" : 144
                     }
                     """);
 

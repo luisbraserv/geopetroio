@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * <p><b>Formato unico</b> desde 2026-09-08 — cards por unidade
  * ({@code specs/SDD/software/mqtt/mqtt-telemetria.md} secao 3):
  * <pre>
- * {"idSondaUnidade":"SPT-144","dataHora":"...","leituras":[
+	 * {"idUnidade":"SPT-144","dataHora":"...","leituras":[
  *    {"dispositivoId":"PESO_01","tipo":"PESO","unidade":"lbf",
  *     "enderecoDb":"DBW4","valor":184300.5,"valorBruto":412},
  *    {"dispositivoId":"CONTADOR_STROKE_01","serie":"vazao","tipo":"CONTADOR_STROKE",
@@ -41,7 +41,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * varia de unidade para unidade. Nao ha formato antigo a manter. Ver secao 9 do contrato.
  *
  * <p>A colisao de nomes que exigia cuidado — {@code unidade} no envelope era o id da sonda, e dentro
- * da leitura e a unidade de medida — some junto: so ha {@code idSondaUnidade} no envelope.
+	 * da leitura e a unidade de medida — some junto: so ha {@code idUnidade} no envelope.
  */
 @Component
 public class TelemetriaPayloadParser {
@@ -57,8 +57,8 @@ public class TelemetriaPayloadParser {
 	}
 
 	/**
-	 * @param topicoUnidade id da sonda extraido do topico, usado como fallback e para detectar
-	 *                      divergencia com o corpo da mensagem
+	 * @param topicoUnidade nome da unidade extraido do topico; e ele que vale, e o corpo serve para
+	 *                      detectar divergencia
 	 * @throws PayloadInvalidoException se o payload nao puder ser interpretado
 	 */
 	public TelemetriaBatch parse(String topicoUnidade, String json) {
@@ -73,18 +73,18 @@ public class TelemetriaPayloadParser {
 			throw new PayloadInvalidoException("payload nao e um objeto JSON");
 		}
 
-		String idSonda = texto(raiz, "idSondaUnidade");
-
-		if (idSonda == null || idSonda.isBlank()) {
-			// O topico ja carrega a unidade; usa-lo evita descartar uma leitura por um campo ausente.
-			idSonda = topicoUnidade;
-		}
-		else if (topicoUnidade != null && !topicoUnidade.isBlank() && !topicoUnidade.equals(idSonda)) {
-			// Divergencia entre topico e corpo: o topico e a fonte de verdade (define o roteamento),
-			// mas isso indica produtor mal configurado e merece visibilidade.
+		// O topico e a fonte de verdade: e ele que define o roteamento no broker.
+		String idUnidade = texto(raiz, "idUnidade");
+		if (idUnidade == null || idUnidade.isBlank()) {
+			idUnidade = topicoUnidade;
+		} else if (topicoUnidade != null && !topicoUnidade.isBlank()
+				&& !topicoUnidade.equals(idUnidade)) {
 			log.warn("Divergencia de unidade: topico='{}' corpo='{}'. Usando o do topico.",
-					topicoUnidade, idSonda);
-			idSonda = topicoUnidade;
+					topicoUnidade, idUnidade);
+			idUnidade = topicoUnidade;
+		}
+		if (idUnidade == null || idUnidade.isBlank()) {
+			throw new PayloadInvalidoException("idUnidade e obrigatorio");
 		}
 
 		Instant dataHora = parseDataHora(texto(raiz, "dataHora"));
@@ -102,14 +102,14 @@ public class TelemetriaPayloadParser {
 			catch (RuntimeException e) {
 				// Uma leitura corrompida nao deve descartar o ciclo inteiro: as demais grandezas
 				// daquele instante continuam validas e uteis.
-				log.warn("Leitura ignorada no batch da unidade '{}': {}", idSonda, e.getMessage());
+				log.warn("Leitura ignorada no batch da unidade '{}': {}", idUnidade, e.getMessage());
 			}
 		}
 		if (leituras.isEmpty()) {
 			throw new PayloadInvalidoException("nenhuma leitura valida no batch");
 		}
 
-		return new TelemetriaBatch(idSonda, dataHora, leituras);
+		return new TelemetriaBatch(idUnidade, dataHora, leituras);
 	}
 
 	/**

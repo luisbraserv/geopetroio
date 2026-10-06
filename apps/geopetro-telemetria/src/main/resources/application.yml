@@ -53,7 +53,7 @@ telemetria:
   seed:
     # Exige tambem o profile "dev". Em producao, manter sempre desabilitado.
     habilitado: ${TELEMETRIA_SEED_HABILITADO:false}
-    id-sonda-unidade: ${TELEMETRIA_SEED_SONDA:SPT-145}
+    id-unidade: ${TELEMETRIA_SEED_ID_UNIDADE:SPT-145}
     pontos-por-variavel: ${TELEMETRIA_SEED_PONTOS_POR_VARIAVEL:28800}
 
 springdoc:

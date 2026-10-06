@@ -28,7 +28,7 @@ import com.example.demo.models.CardsDaUnidade.Tipo;
 import com.sun.net.httpserver.HttpServer;
 
 /**
- * O cliente de {@code /api/sondas/{id}/cards} — passo 6 de {@code cards-configuraveis.md §13}.
+ * O cliente de {@code /api/monitoramento/unidades/{id}/cards} — passo 6 de {@code cards-configuraveis.md §13}.
  *
  * <p>Backend de verdade num servidor local, como em {@link SessaoConfiguracaoTest}: o que se quer
  * provar é o comportamento diante das respostas reais, inclusive as de erro, que são metade do valor
@@ -51,7 +51,7 @@ class ConfiguracaoCardsClientTest {
 	@BeforeEach
 	void subir() throws Exception {
 		servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-		servidor.createContext("/api/sondas", troca -> {
+		servidor.createContext("/api/monitoramento/unidades", troca -> {
 			chamadas.add(new Chamada(
 					troca.getRequestMethod(),
 					troca.getRequestURI().getPath(),
@@ -93,7 +93,7 @@ class ConfiguracaoCardsClientTest {
 	@DisplayName("le o documento e devolve os cards")
 	void leDocumento() {
 		corpo = """
-				{"schemaVersion":1,"unidadeSondaId":144,"revisao":7,
+				{"schemaVersion":1,"unidadeId":144,"revisao":7,
 				 "conexao":{"ip":"192.168.0.10","rack":0,"slot":1,"dbNumero":1,"intervaloLeituraMs":1000},
 				 "cards":[{"dispositivoId":"PRESSAO_01","nome":"Bomba de Lama","tipo":"PRESSAO",
 				           "byteInicial":10,"ativo":true,"visivel":true,"ordem":0,
@@ -115,7 +115,7 @@ class ConfiguracaoCardsClientTest {
 	@Test
 	@DisplayName("o token da sessao vai no Authorization — nao a credencial de servico")
 	void mandaOTokenDaSessao() {
-		corpo = "{\"unidadeSondaId\":144,\"revisao\":1,\"cards\":[]}";
+		corpo = "{\"unidadeId\":144,\"revisao\":1,\"cards\":[]}";
 
 		cliente().ler(144);
 
@@ -123,13 +123,13 @@ class ConfiguracaoCardsClientTest {
 		// monitoramento. Se ela gravasse cards, qualquer maquina reconfiguraria qualquer unidade.
 		assertEquals("Bearer token-da-sessao", chamadas.peek().autorizacao());
 		assertEquals("GET", chamadas.peek().metodo());
-		assertEquals("/api/sondas/144/cards", chamadas.peek().caminho());
+		assertEquals("/api/monitoramento/unidades/144/cards", chamadas.peek().caminho());
 	}
 
 	@Test
 	@DisplayName("unidade sem configuracao devolve documento vazio, nao erro")
 	void unidadeNaoConfigurada() {
-		corpo = "{\"schemaVersion\":1,\"unidadeSondaId\":145,\"revisao\":0,\"cards\":[]}";
+		corpo = "{\"schemaVersion\":1,\"unidadeId\":145,\"revisao\":0,\"cards\":[]}";
 
 		var documento = cliente().ler(145);
 
@@ -151,7 +151,7 @@ class ConfiguracaoCardsClientTest {
 	@Test
 	@DisplayName("salva mandando PUT com a revisao lida")
 	void salva() {
-		corpo = "{\"unidadeSondaId\":144,\"revisao\":8,\"cards\":[]}";
+		corpo = "{\"unidadeId\":144,\"revisao\":8,\"cards\":[]}";
 		var alteracao = new CardsDaUnidade.Alteracao(7,
 				new Conexao("192.168.0.10", 0, 1, 1, 1000),
 				List.of(new Card(null, "Bomba de Lama", Tipo.PRESSAO, 10, true, true, 0,
@@ -169,7 +169,7 @@ class ConfiguracaoCardsClientTest {
 	@Test
 	@DisplayName("card novo vai sem dispositivoId, e os parametros nao usados nao vao")
 	void cardNovoVaiEnxuto() {
-		corpo = "{\"unidadeSondaId\":144,\"revisao\":1,\"cards\":[]}";
+		corpo = "{\"unidadeId\":144,\"revisao\":1,\"cards\":[]}";
 		var alteracao = new CardsDaUnidade.Alteracao(0, Conexao.padrao(),
 				List.of(new Card(null, "Peso", Tipo.PESO, 4, true, true, 0, Parametros.vazio())));
 
@@ -275,7 +275,7 @@ class ConfiguracaoCardsClientTest {
 	@DisplayName("campo novo no backend nao derruba a leitura")
 	void campoDesconhecido() {
 		corpo = """
-				{"schemaVersion":1,"unidadeSondaId":144,"revisao":2,"cards":[],
+				{"schemaVersion":1,"unidadeId":144,"revisao":2,"cards":[],
 				 "campoQueAindaNaoExisteAqui":{"algo":1}}""";
 
 		assertEquals(2, cliente().ler(144).revisao());
@@ -284,11 +284,11 @@ class ConfiguracaoCardsClientTest {
 	@Test
 	@DisplayName("a barra final na URL do backend nao duplica no caminho")
 	void barraFinal() {
-		corpo = "{\"unidadeSondaId\":144,\"revisao\":1,\"cards\":[]}";
+		corpo = "{\"unidadeId\":144,\"revisao\":1,\"cards\":[]}";
 
 		cliente(base + "/", "t").ler(144);
 
-		assertEquals("/api/sondas/144/cards", chamadas.peek().caminho());
+		assertEquals("/api/monitoramento/unidades/144/cards", chamadas.peek().caminho());
 	}
 
 	// ==================================================================================
@@ -301,7 +301,7 @@ class ConfiguracaoCardsClientTest {
 
 	/** O documento que o servidor tem "agora", devolvido tanto no GET quanto no PUT. */
 	private void servidorTem(String conexaoJson, String cardsJson, int revisao) {
-		corpo = "{\"schemaVersion\":1,\"unidadeSondaId\":144,\"revisao\":" + revisao
+		corpo = "{\"schemaVersion\":1,\"unidadeId\":144,\"revisao\":" + revisao
 				+ ",\"conexao\":" + conexaoJson + ",\"cards\":" + cardsJson + "}";
 	}
 

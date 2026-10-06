@@ -20,12 +20,12 @@ import java.util.List;
  * <b>quebra o consumidor Angular</b> ate o passo 8 — decisao registrada, com o custo a vista, em
  * {@code mqtt-telemetria.md §10}.
  *
- * @param unidadeSondaId id da Unidade/Sonda no cadastro do Geopetro-Backend
+ * @param unidadeId id da Unidade no cadastro do Geopetro-Backend
  * @param timestamp      instante da leitura, em UTC
  * @param leituras       so cards visiveis, e so grandezas com valor (RN-037, RN-099)
  */
 public record EstadoAtual(
-		Long unidadeSondaId,
+		Long unidadeId,
 		Instant timestamp,
 		List<LeituraPublicada> leituras) {
 
