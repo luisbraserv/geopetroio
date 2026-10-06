@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Guarda o topico de cards na saida.
  *
  * <p><b>Por que existe uma segunda guarda.</b> A de configuracao casa
- * {@code /config/unidades-sondas/{id}} terminando no id — o topico de cards tem sufixo e passaria
+ * {@code /config/unidades/{id}} terminando no id — o topico de cards tem sufixo e passaria
  * sem verificacao nenhuma. Cada topico e guardado ao lado da regra de acesso que lhe corresponde.
  *
  * <p>Confere a cada entrega, e nao so no SUBSCRIBE: uma sessao que ja assinava continua sendo
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 public class ConfiguracaoCardsOutbound implements ChannelInterceptor {
 
     private static final Pattern DESTINO =
-        Pattern.compile("^/(?:topic|app)/config/unidades-sondas/([1-9][0-9]{0,18})/cards$");
+        Pattern.compile("^/(?:topic|app)/config/unidades/([1-9][0-9]{0,18})/cards$");
 
     private final ObjectProvider<SimpUserRegistry> registry;
     private final ConfiguracaoCardsAccess access;

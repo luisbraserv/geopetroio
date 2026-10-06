@@ -1,16 +1,23 @@
 package com.geopetro.cards;
 
-import com.geopetro.core.port.VinculoCadastroPort;
 import java.util.Optional;
+
 import org.springframework.stereotype.Component;
 
-/** Cards configurados impedem a exclusao da unidade — RN-063. */
+import com.geopetro.vinculos.VinculoDaUnidade;
+
+/** Cards configurados contam como uso da unidade — RN-116. */
 @Component
-public class ConfiguracaoCardsVinculo implements VinculoCadastroPort {
-    private final ConfiguracaoCardsRepository repository;
-    public ConfiguracaoCardsVinculo(ConfiguracaoCardsRepository repository) { this.repository = repository; }
-    @Override public Cadastro cadastro() { return Cadastro.UNIDADE_SONDA; }
-    @Override public Optional<String> descreverVinculo(Long id) {
-        return repository.existsById(id) ? Optional.of("cards configurados") : Optional.empty();
-    }
+public class ConfiguracaoCardsVinculo implements VinculoDaUnidade {
+
+	private final ConfiguracaoCardsRepository repository;
+
+	public ConfiguracaoCardsVinculo(ConfiguracaoCardsRepository repository) {
+		this.repository = repository;
+	}
+
+	@Override
+	public Optional<String> descrever(long unidadeId) {
+		return repository.existsById(unidadeId) ? Optional.of("cards configurados") : Optional.empty();
+	}
 }

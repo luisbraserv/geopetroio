@@ -16,12 +16,7 @@
 	<packaging>pom</packaging>
 
 	<modules>
-		<module>core</module>
-		<module>empresa</module>
-		<module>regional</module>
-		<module>setor</module>
-		<module>usuario</module>
-		<module>unidade-sonda</module>
+		<module>comum</module>
 		<module>simulador</module>
 		<module>security</module>
 		<module>app</module>

@@ -1,6 +1,6 @@
 package com.geopetro.simulador.domain;
 
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import java.util.*;
 import java.util.function.DoubleUnaryOperator;
 import static com.geopetro.simulador.domain.PocoGeometry.*;

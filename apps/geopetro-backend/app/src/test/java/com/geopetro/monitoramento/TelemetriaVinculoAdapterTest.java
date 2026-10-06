@@ -1,6 +1,8 @@
 package com.geopetro.monitoramento;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,103 +14,86 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.core.port.VinculoCadastroPort.Cadastro;
+import com.geopetro.comum.port.AcessoDoUsuarioPort.BraservCoreIndisponivelException;
+import com.geopetro.comum.port.CatalogoDeUnidadesPort;
+import com.geopetro.comum.port.CatalogoDeUnidadesPort.Unidade;
 import com.geopetro.monitoramento.dto.ExistenciaSerieDTO;
-import com.geopetro.unidadesonda.adapter.out.persistence.entity.UnidadeSondaEntity;
-import com.geopetro.unidadesonda.repository.UnidadeSondaJpaRepository;
+import com.geopetro.vinculos.VinculoDaUnidade.FonteIndisponivelException;
 
-/**
- * RN-072 — historico de telemetria conta como vinculo.
- *
- * <p>O caso que mais importa aqui e a <b>indisponibilidade</b>: e a unica situacao do sistema em que
- * "nao sei" precisa ser tratado como "nao pode", porque a alternativa apaga um cadastro que talvez
- * nao pudesse ser apagado — e so um dos dois erros tem volta.
- */
+/** RN-072, RN-116: o historico de telemetria conta como uso da unidade. */
 class TelemetriaVinculoAdapterTest {
 
 	private final MonitoramentoClient client = mock(MonitoramentoClient.class);
-	private final UnidadeSondaJpaRepository repository = mock(UnidadeSondaJpaRepository.class);
+	private final CatalogoDeUnidadesPort catalogo = mock(CatalogoDeUnidadesPort.class);
+	private final TelemetriaVinculoAdapter adapter = new TelemetriaVinculoAdapter(client, catalogo);
 
-	private final TelemetriaVinculoAdapter adapter = new TelemetriaVinculoAdapter(client, repository);
-
-	private void cadastro(Long id, String nome) {
-		UnidadeSondaEntity unidade = new UnidadeSondaEntity();
-		unidade.setId(id);
-		unidade.setNome(nome);
-		when(repository.findById(id)).thenReturn(Optional.of(unidade));
+	private void cadastro(long id, String nome) {
+		when(catalogo.buscarSemCache(id)).thenReturn(Optional.of(new Unidade(id, nome, null, "SONDA", "ATIVA", 1L)));
 	}
 
 	@Test
-	@DisplayName("responde pelo cadastro de Unidade/Sonda")
-	void respondePelaUnidadeSonda() {
-		assertThat(adapter.cadastro()).isEqualTo(Cadastro.UNIDADE_SONDA);
-	}
-
-	@Test
-	@DisplayName("sonda sem historico nao impede a exclusao")
-	void semHistoricoNaoImpede() {
+	@DisplayName("unidade sem historico: nada impede")
+	void semHistorico() {
 		cadastro(1L, "SPT-144");
-		when(client.consultarExistencia("SPT-144"))
-				.thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-144", false, null, null)));
+		when(client.consultarExistencia("SPT-144")).thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-144", false, null, null)));
 
-		assertThat(adapter.descreverVinculo(1L)).isEmpty();
+		assertThat(adapter.descrever(1L)).isEmpty();
 	}
 
 	@Test
-	@DisplayName("sonda com historico impede, dizendo de quando ate quando")
-	void comHistoricoImpedeComDatas() {
+	@DisplayName("unidade com historico: diz de quando ate quando, em UTC")
+	void comHistoricoComDatas() {
 		cadastro(1L, "SPT-144");
-		when(client.consultarExistencia("SPT-144")).thenReturn(Optional.of(new ExistenciaSerieDTO(
-				"SPT-144", true,
-				Instant.parse("2026-03-01T00:00:00Z"),
-				Instant.parse("2026-09-05T12:00:00Z"))));
+		when(client.consultarExistencia("SPT-144")).thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-144", true,
+				Instant.parse("2026-03-01T10:00:00Z"), Instant.parse("2026-09-05T23:59:00Z"))));
 
-		// Datas em UTC, nao no fuso da maquina: 2026-03-01T00:00:00Z vira 28/02 em qualquer fuso
-		// negativo, e a mensagem passaria a depender de onde a aplicacao roda.
-		assertThat(adapter.descreverVinculo(1L))
-				.contains("telemetria de 01/03/2026 a 05/09/2026");
+		assertThat(adapter.descrever(1L)).contains("telemetria de 01/03/2026 a 05/09/2026");
 	}
 
 	@Test
-	@DisplayName("telemetria indisponivel IMPEDE a exclusao — nao sei vale como nao pode")
-	void indisponivelImpede() {
+	@DisplayName("historico sem datas ainda conta como uso")
+	void historicoSemDatas() {
+		cadastro(1L, "SPT-144");
+		when(client.consultarExistencia("SPT-144")).thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-144", true, null, null)));
+
+		assertThat(adapter.descrever(1L)).contains("historico de telemetria gravado");
+	}
+
+	@Test
+	@DisplayName("telemetria indisponivel: falha, em vez de responder 'sem uso'")
+	void telemetriaIndisponivel() {
 		cadastro(1L, "SPT-144");
 		when(client.consultarExistencia("SPT-144")).thenReturn(Optional.empty());
 
-		assertThat(adapter.descreverVinculo(1L))
-				.hasValueSatisfying(descricao -> assertThat(descricao)
-						.contains("nao foi possivel confirmar")
-						.contains("indisponivel"));
+		assertThatThrownBy(() -> adapter.descrever(1L)).isInstanceOf(FonteIndisponivelException.class)
+				.hasMessageContaining("Telemetria");
 	}
 
 	@Test
-	@DisplayName("consulta a telemetria pelo nome da sonda, que e a chave de integracao")
+	@DisplayName("consulta a telemetria pelo nome que o core informa agora, a chave de integracao (RN-018)")
 	void consultaPeloNome() {
 		cadastro(7L, "SPT-201");
-		when(client.consultarExistencia("SPT-201"))
-				.thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-201", false, null, null)));
+		when(client.consultarExistencia("SPT-201")).thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-201", false, null, null)));
 
-		adapter.descreverVinculo(7L);
+		adapter.descrever(7L);
 
 		verify(client).consultarExistencia("SPT-201");
 	}
 
 	@Test
-	@DisplayName("cadastro inexistente nao vira impedimento nem consulta a telemetria")
-	void cadastroInexistenteNaoConsulta() {
-		when(repository.findById(99L)).thenReturn(Optional.empty());
+	@DisplayName("unidade que o core nao conhece: sem uso, e a telemetria nem e consultada")
+	void unidadeDesconhecida() {
+		when(catalogo.buscarSemCache(99L)).thenReturn(Optional.empty());
 
-		assertThat(adapter.descreverVinculo(99L)).isEmpty();
-		verify(client, never()).consultarExistencia(org.mockito.ArgumentMatchers.anyString());
+		assertThat(adapter.descrever(99L)).isEmpty();
+		verify(client, never()).consultarExistencia(anyString());
 	}
 
 	@Test
-	@DisplayName("historico sem datas ainda impede")
-	void historicoSemDatasImpede() {
-		cadastro(1L, "SPT-144");
-		when(client.consultarExistencia("SPT-144"))
-				.thenReturn(Optional.of(new ExistenciaSerieDTO("SPT-144", true, null, null)));
+	@DisplayName("core sem resposta para dar o nome: falha")
+	void coreIndisponivel() {
+		when(catalogo.buscarSemCache(1L)).thenThrow(new BraservCoreIndisponivelException("fora", null));
 
-		assertThat(adapter.descreverVinculo(1L)).contains("historico de telemetria gravado");
+		assertThatThrownBy(() -> adapter.descrever(1L)).isInstanceOf(FonteIndisponivelException.class);
 	}
 }

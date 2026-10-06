@@ -14,12 +14,9 @@
 	<name>Geopetro-Backend</name>
 
 	<dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
 		<dependency>
 			<groupId>com.geopetro</groupId>
-			<artifactId>core</artifactId>
+			<artifactId>comum</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
@@ -35,31 +32,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.geopetro</groupId>
-			<artifactId>empresa</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.geopetro</groupId>
-			<artifactId>regional</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.geopetro</groupId>
-			<artifactId>setor</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.geopetro</groupId>
-			<artifactId>usuario</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.geopetro</groupId>
-			<artifactId>unidade-sonda</artifactId>
-			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.geopetro</groupId>

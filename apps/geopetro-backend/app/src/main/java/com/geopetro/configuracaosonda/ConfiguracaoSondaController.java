@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
  * Os limites de alarme, por REST — RN-069.
  *
  * <p>⚠️ <b>Sem canal STOMP, e não por esquecimento.</b> Este documento tinha um tópico
- * ({@code /topic/config/unidades-sondas/{id}}) e um snapshot por {@code @SubscribeMapping}, ambos
+ * ({@code /topic/config/unidades/{id}}) e um snapshot por {@code @SubscribeMapping}, ambos
  * criados para o Geopetro-Desktop, que avaliava os limites localmente. Em 2026-09-09 o alarme da
  * estação passou a ser configurado <b>na estação</b>
  * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}) e a assinatura saiu de lá; o Front nunca
@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.*;
 public class ConfiguracaoSondaController {
     private final ConfiguracaoSondaService service;
     public ConfiguracaoSondaController(ConfiguracaoSondaService service) { this.service = service; }
-    @GetMapping("/api/sondas/{id}/configuracao")
+    @GetMapping("/api/monitoramento/unidades/{id}/configuracao")
     public ConfiguracaoSonda ler(@PathVariable long id, Principal principal) { return service.ler(principal.getName(), id); }
-    @PutMapping("/api/sondas/{id}/configuracao")
+    @PutMapping("/api/monitoramento/unidades/{id}/configuracao")
     public ConfiguracaoSonda salvar(@PathVariable long id, @RequestBody ConfiguracaoSonda.Alteracao update, Principal principal) {
         return service.salvar(principal.getName(), id, update);
     }

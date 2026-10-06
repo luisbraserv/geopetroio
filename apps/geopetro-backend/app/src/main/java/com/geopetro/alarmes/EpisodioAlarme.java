@@ -23,7 +23,7 @@ import com.geopetro.alarmes.EventoAlarme.Tipo;
  * @param fechadoEm        {@code null} enquanto o episódio não fechou
  * @param valorExtremo     o pior valor medido, na direção violada
  */
-public record EpisodioAlarme(String episodioId, long unidadeSondaId, String dispositivoId, String serie,
+public record EpisodioAlarme(String episodioId, long unidadeId, String dispositivoId, String serie,
 		Severidade severidadeMaxima, LimiteViolado limiteViolado, Instant abertoEm, Instant fechadoEm,
 		Double valorExtremo, List<Fato> fatos) {
 
@@ -68,7 +68,7 @@ public record EpisodioAlarme(String episodioId, long unidadeSondaId, String disp
 		// episodio e possivel e exotico — e o resumo continua dizendo por onde ela comecou.
 		LimiteViolado lado = abertura.limiteViolado();
 
-		return new EpisodioAlarme(abertura.episodioId(), abertura.unidadeSondaId(), abertura.dispositivoId(),
+		return new EpisodioAlarme(abertura.episodioId(), abertura.unidadeId(), abertura.dispositivoId(),
 				abertura.serie(), maxima, lado, abertura.ocorridoEm(),
 				ultimo.tipo() == Tipo.FECHOU ? ultimo.ocorridoEm() : null,
 				extremoGravado != null ? extremoGravado : extremo(fatos, lado),

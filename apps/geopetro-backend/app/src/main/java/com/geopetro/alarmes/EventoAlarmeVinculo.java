@@ -4,16 +4,11 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
-import com.geopetro.core.port.VinculoCadastroPort;
+import com.geopetro.vinculos.VinculoDaUnidade;
 
-/**
- * Histórico de alarmes impede a exclusão da unidade — RN-063.
- *
- * <p>Sem esta porta a exclusão quebraria em violação de FK, devolvendo {@code 500} genérico. Com
- * ela, quem tenta excluir lê <b>o que</b> impede.
- */
+/** O historico de alarmes conta como uso da unidade — RN-116. */
 @Component
-public class EventoAlarmeVinculo implements VinculoCadastroPort {
+public class EventoAlarmeVinculo implements VinculoDaUnidade {
 
 	private final EventoAlarmeRepository repository;
 
@@ -22,12 +17,7 @@ public class EventoAlarmeVinculo implements VinculoCadastroPort {
 	}
 
 	@Override
-	public Cadastro cadastro() {
-		return Cadastro.UNIDADE_SONDA;
-	}
-
-	@Override
-	public Optional<String> descreverVinculo(Long id) {
-		return repository.existsByUnidadeSondaId(id) ? Optional.of("historico de alarmes") : Optional.empty();
+	public Optional<String> descrever(long unidadeId) {
+		return repository.existsByUnidadeId(unidadeId) ? Optional.of("historico de alarmes") : Optional.empty();
 	}
 }

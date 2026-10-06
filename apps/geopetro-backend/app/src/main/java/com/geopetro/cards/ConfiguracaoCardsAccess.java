@@ -6,10 +6,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import com.geopetro.security.application.ContaAtivaVerificador;
-import com.geopetro.usuario.adapter.out.persistence.repository.UsuarioJpaRepository;
-import com.geopetro.usuario.domain.model.Role;
+import com.geopetro.comum.port.AcessoDoUsuarioPort;
+import com.geopetro.security.authorization.PermissoesDoUsuario;
+import com.geopetro.security.authorization.Role;
 
 /**
  * Quem lê e quem grava os cards — RN-086.
@@ -36,13 +37,13 @@ public class ConfiguracaoCardsAccess {
 
 	private final ConfiguracaoSondaAccess monitoramento;
 	private final ContaAtivaVerificador contas;
-	private final UsuarioJpaRepository usuarios;
+	private final AcessoDoUsuarioPort acessos;
 
 	public ConfiguracaoCardsAccess(ConfiguracaoSondaAccess monitoramento, ContaAtivaVerificador contas,
-			UsuarioJpaRepository usuarios) {
+			AcessoDoUsuarioPort acessos) {
 		this.monitoramento = monitoramento;
 		this.contas = contas;
-		this.usuarios = usuarios;
+		this.acessos = acessos;
 	}
 
 	public boolean podeLer(String username, long id) {
@@ -55,7 +56,7 @@ public class ConfiguracaoCardsAccess {
 
 	public void exigirLeitura(String username, long id) {
 		if (!podeLer(username, id)) {
-			throw new BusinessException("Sem acesso aos cards desta Unidade/Sonda.", HttpStatus.FORBIDDEN);
+			throw new BusinessException("Sem acesso aos cards desta Unidade.", HttpStatus.FORBIDDEN);
 		}
 	}
 
@@ -67,12 +68,13 @@ public class ConfiguracaoCardsAccess {
 		if (!podeGravar(username, id)) {
 			throw new BusinessException("Apenas ADMIN ou SUPORTE configuram os cards.", HttpStatus.FORBIDDEN);
 		}
+		monitoramento.exigirUnidadeExistente(id);
 	}
 
 	private boolean ehConfigurador(String username) {
-		return usuarios.findById(username)
-				.map(usuario -> usuario.getRoles() != null
-						&& usuario.getRoles().stream().anyMatch(CONFIGURADORES::contains))
+		// Roles atuais, do Braserv-Core: quem perdeu SUPORTE deixa de configurar em ate 10 s.
+		return acessos.buscar(username)
+				.map(acesso -> PermissoesDoUsuario.roles(acesso.roles()).stream().anyMatch(CONFIGURADORES::contains))
 				.orElse(false);
 	}
 }

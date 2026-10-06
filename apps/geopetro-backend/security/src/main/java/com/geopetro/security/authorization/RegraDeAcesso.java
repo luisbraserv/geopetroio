@@ -14,7 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
-import com.geopetro.usuario.domain.model.Role;
+import com.geopetro.security.authorization.Role;
 
 /**
  * Uma regra de acesso: <b>uma lista de combinacoes</b>, qualquer uma delas suficiente, cada uma

@@ -3,7 +3,7 @@ package com.geopetro.configuracaosonda;
 import com.geopetro.cards.CardsDeclarados;
 import com.geopetro.cards.ConfiguracaoCards.Card;
 import com.geopetro.cards.ConfiguracaoCards.Tipo;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.*;
 import javax.sql.DataSource;
@@ -65,7 +65,7 @@ class ConfiguracaoSondaServiceTest {
         var view = service.ler("ana", 7);
         assertEquals(0, view.revisao()); assertTrue(view.limites().isEmpty()); assertNull(view.atualizadoEm());
         assertEquals(0, repository.count()); verify(access).exigir("ana", 7);
-        assertTrue(new ConfiguracaoSondaVinculo(repository).descreverVinculo(7L).isEmpty());
+        assertTrue(new ConfiguracaoSondaVinculo(repository).descrever(7L).isEmpty());
     }
     @Test void persistsRevisionAuthorAndLimitsAndSurvivesRestart() {
         var limit = new Limite("PRESSAO_01", null, null, 100.0, null, 120.0, 3, 5, true);
@@ -79,7 +79,7 @@ class ConfiguracaoSondaServiceTest {
         assertEquals(2, save(1, List.of()).revisao());
         assertEquals(409, assertThrows(BusinessException.class, () -> save(1, List.of(limit))).getStatus().value());
         assertTrue(service.ler("ana", 7).limites().isEmpty());
-        assertTrue(new ConfiguracaoSondaVinculo(repository).descreverVinculo(7L).isPresent());
+        assertTrue(new ConfiguracaoSondaVinculo(repository).descrever(7L).isPresent());
     }
     @Test void rollbackNaoDeixaConfiguracaoPelaMetade() {
         new TransactionTemplate(manager).executeWithoutResult(status -> {

@@ -1,105 +1,69 @@
 package com.geopetro.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.geopetro.comum.port.AcessoDoUsuarioPort;
+import com.geopetro.comum.port.AcessoDoUsuarioPort.AcessoDoUsuario;
+import com.geopetro.comum.port.AcessoDoUsuarioPort.BraservCoreIndisponivelException;
 import com.geopetro.security.application.ContaAtivaVerificador;
-import com.geopetro.usuario.application.port.out.UsuarioRepositoryPort;
-import com.geopetro.usuario.domain.model.StatusUsuario;
 
 /**
- * RN-062 — desativar usuario corta o acesso na hora.
- *
- * <p>Antes disto, o token valia uma hora e nada consultava o estado da conta: desativar um usuario
- * so tinha efeito quando o token dele expirava.
+ * RN-062: desativar no Braserv-Core corta o acesso aqui. O cache de 10 s e a tolerancia de 5 min
+ * com o core fora do ar sao testados em {@code AcessoDoUsuarioAdapterTest}, onde moram.
  */
 class ContaAtivaVerificadorTest {
 
-	private final UsuarioRepositoryPort repositorio = mock(UsuarioRepositoryPort.class);
+	private final AcessoDoUsuarioPort acessos = mock(AcessoDoUsuarioPort.class);
+	private final ContaAtivaVerificador verificador = new ContaAtivaVerificador(acessos);
 
-	private ContaAtivaVerificador comCache(long segundos) {
-		return new ContaAtivaVerificador(repositorio, segundos);
+	private static Optional<AcessoDoUsuario> acesso(String username, boolean ativo) {
+		return Optional.of(new AcessoDoUsuario(username, "INTERNO", ativo, Set.of("INTERNO"), Set.of()));
 	}
 
 	@Test
 	@DisplayName("usuario ativo passa")
 	void usuarioAtivoPassa() {
-		when(repositorio.buscarStatusPorUsername("joao")).thenReturn(Optional.of(StatusUsuario.ATIVO));
-
-		assertThat(comCache(10).ativa("joao")).isTrue();
+		when(acessos.buscar("ana")).thenReturn(acesso("ana", true));
+		assertThat(verificador.ativa("ana")).isTrue();
 	}
 
 	@Test
 	@DisplayName("usuario inativo e barrado")
 	void usuarioInativoEBarrado() {
-		when(repositorio.buscarStatusPorUsername("joao")).thenReturn(Optional.of(StatusUsuario.INATIVO));
-
-		assertThat(comCache(10).ativa("joao")).isFalse();
+		when(acessos.buscar("ana")).thenReturn(acesso("ana", false));
+		assertThat(verificador.ativa("ana")).isFalse();
 	}
 
 	@Test
-	@DisplayName("username ausente no banco e barrado — usuario removido")
+	@DisplayName("username ausente no core e barrado — usuario removido")
 	void usuarioInexistenteEBarrado() {
-		when(repositorio.buscarStatusPorUsername("fantasma")).thenReturn(Optional.empty());
-
-		assertThat(comCache(10).ativa("fantasma")).isFalse();
+		when(acessos.buscar("fantasma")).thenReturn(Optional.empty());
+		assertThat(verificador.ativa("fantasma")).isFalse();
 	}
 
 	@Test
-	@DisplayName("username nulo ou vazio e barrado sem tocar o banco")
+	@DisplayName("username nulo ou vazio e barrado sem perguntar ao core")
 	void usernameVazioEBarrado() {
-		ContaAtivaVerificador verificador = comCache(10);
-
 		assertThat(verificador.ativa(null)).isFalse();
-		assertThat(verificador.ativa("  ")).isFalse();
-		verify(repositorio, times(0)).buscarStatusPorUsername(org.mockito.ArgumentMatchers.anyString());
+		assertThat(verificador.ativa(" ")).isFalse();
+		verify(acessos, never()).buscar(any());
 	}
 
 	@Test
-	@DisplayName("o cache evita uma consulta por requisicao")
-	void cacheEvitaConsultaPorRequisicao() {
-		when(repositorio.buscarStatusPorUsername("joao")).thenReturn(Optional.of(StatusUsuario.ATIVO));
-		ContaAtivaVerificador verificador = comCache(60);
-
-		for (int i = 0; i < 5; i++) {
-			assertThat(verificador.ativa("joao")).isTrue();
-		}
-
-		verify(repositorio, times(1)).buscarStatusPorUsername("joao");
-	}
-
-	@Test
-	@DisplayName("com cache desligado, cada chamada reconsulta e a desativacao aparece na proxima")
-	void semCacheADesativacaoApareceNaProximaChamada() {
-		when(repositorio.buscarStatusPorUsername("joao"))
-				.thenReturn(Optional.of(StatusUsuario.ATIVO))
-				.thenReturn(Optional.of(StatusUsuario.INATIVO));
-
-		ContaAtivaVerificador verificador = comCache(0);
-
-		assertThat(verificador.ativa("joao")).isTrue();
-		assertThat(verificador.ativa("joao")).isFalse();
-		verify(repositorio, times(2)).buscarStatusPorUsername("joao");
-	}
-
-	@Test
-	@DisplayName("contas diferentes nao compartilham entrada de cache")
-	void contasDiferentesNaoSeMisturam() {
-		when(repositorio.buscarStatusPorUsername("ativo")).thenReturn(Optional.of(StatusUsuario.ATIVO));
-		when(repositorio.buscarStatusPorUsername("inativo")).thenReturn(Optional.of(StatusUsuario.INATIVO));
-
-		ContaAtivaVerificador verificador = comCache(60);
-
-		assertThat(verificador.ativa("ativo")).isTrue();
-		assertThat(verificador.ativa("inativo")).isFalse();
-		assertThat(verificador.ativa("ativo")).isTrue();
+	@DisplayName("core indisponivel sem resposta recente: barra, em vez de deixar passar")
+	void coreIndisponivelBarra() {
+		when(acessos.buscar("ana")).thenThrow(new BraservCoreIndisponivelException("fora", null));
+		assertThat(verificador.ativa("ana")).isFalse();
 	}
 }

@@ -14,12 +14,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import com.geopetro.security.application.ContaAtivaVerificador;
-import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioEntity;
-import com.geopetro.usuario.adapter.out.persistence.entity.UsuarioInternoEntity;
-import com.geopetro.usuario.adapter.out.persistence.repository.UsuarioJpaRepository;
-import com.geopetro.usuario.domain.model.Role;
+import com.geopetro.comum.port.AcessoDoUsuarioPort;
+import com.geopetro.comum.port.AcessoDoUsuarioPort.AcessoDoUsuario;
+import com.geopetro.security.authorization.Role;
 
 /**
  * RN-086 — ler e gravar cards têm autoridades diferentes.
@@ -31,15 +30,18 @@ class ConfiguracaoCardsAccessTest {
 
 	private final ConfiguracaoSondaAccess monitoramento = mock(ConfiguracaoSondaAccess.class);
 	private final ContaAtivaVerificador contas = mock(ContaAtivaVerificador.class);
-	private final UsuarioJpaRepository usuarios = mock(UsuarioJpaRepository.class);
+	private final AcessoDoUsuarioPort usuarios = mock(AcessoDoUsuarioPort.class);
 
 	private final ConfiguracaoCardsAccess access =
 			new ConfiguracaoCardsAccess(monitoramento, contas, usuarios);
 
+	private static Optional<AcessoDoUsuario> acesso(String nome, Role... roles) {
+		return Optional.of(new AcessoDoUsuario(nome, "INTERNO", true,
+				java.util.Arrays.stream(roles).map(Role::name).collect(java.util.stream.Collectors.toSet()), Set.of()));
+	}
+
 	private void usuarioCom(String nome, Role... roles) {
-		UsuarioEntity usuario = new UsuarioInternoEntity();
-		usuario.setRoles(Set.of(roles));
-		when(usuarios.findById(nome)).thenReturn(Optional.of(usuario));
+		when(usuarios.buscar(nome)).thenReturn(acesso(nome, roles));
 		when(contas.ativa(nome)).thenReturn(true);
 	}
 
@@ -90,9 +92,7 @@ class ConfiguracaoCardsAccessTest {
 	@Test
 	@DisplayName("conta desativada nao configura, mesmo sendo SUPORTE — RN-062")
 	void contaDesativadaNaoConfigura() {
-		UsuarioEntity usuario = new UsuarioInternoEntity();
-		usuario.setRoles(Set.of(Role.SUPORTE));
-		when(usuarios.findById("demitido")).thenReturn(Optional.of(usuario));
+		when(usuarios.buscar("demitido")).thenReturn(acesso("demitido", Role.SUPORTE));
 		when(contas.ativa("demitido")).thenReturn(false);
 		when(monitoramento.permite(anyString(), anyLong())).thenReturn(false);
 
@@ -105,7 +105,7 @@ class ConfiguracaoCardsAccessTest {
 	void usuarioInexistente() {
 		when(monitoramento.permite(anyString(), anyLong())).thenReturn(false);
 		when(contas.ativa("fantasma")).thenReturn(true);
-		when(usuarios.findById("fantasma")).thenReturn(Optional.empty());
+		when(usuarios.buscar("fantasma")).thenReturn(Optional.empty());
 
 		assertThat(access.podeGravar("fantasma", 7L)).isFalse();
 	}

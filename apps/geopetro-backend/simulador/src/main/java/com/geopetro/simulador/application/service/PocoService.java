@@ -1,7 +1,7 @@
 package com.geopetro.simulador.application.service;
 
-import com.geopetro.core.exception.BusinessException;
-import com.geopetro.core.exception.ResourceNotFoundException;
+import com.geopetro.comum.exception.BusinessException;
+import com.geopetro.comum.exception.ResourceNotFoundException;
 import com.geopetro.simulador.adapter.in.web.request.PocoRequest;
 import com.geopetro.simulador.adapter.out.persistence.entity.PocoEntity;
 import com.geopetro.simulador.adapter.out.persistence.repository.*;

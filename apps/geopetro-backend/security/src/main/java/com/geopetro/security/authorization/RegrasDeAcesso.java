@@ -1,6 +1,5 @@
 package com.geopetro.security.authorization;
 
-import com.geopetro.usuario.domain.model.Role;
 
 /**
  * Quem alcanca cada modulo — <b>declaracao unica</b>, consumida pelo HTTP ({@code SecurityConfig}),
@@ -21,10 +20,10 @@ import com.geopetro.usuario.domain.model.Role;
 public final class RegrasDeAcesso {
 
 	/**
-	 * Monitoramento da Unidade/Sonda: a tela de series ({@code /api/sondas/*}{@code /monitoramentos/**}).
+	 * Monitoramento da Unidade: a tela de series ({@code /api/monitoramento/unidades/*}{@code /series}).
 	 *
 	 * <p>{@code ADMIN} sozinho entra; os demais precisam da permissao de modulo somada ao tipo de
-	 * conta. O <b>escopo</b> do que cada um ve continua em {@code SondaMonitoramentoService}: a frota
+	 * conta. O <b>escopo</b> do que cada um ve continua em {@code UnidadeMonitoramentoService}: a frota
 	 * inteira para conta interna, so as unidades concedidas para cliente (RN-047).
 	 */
 	public static final RegraDeAcesso MONITORAMENTO = RegraDeAcesso.exigindo(Role.ADMIN)
@@ -46,27 +45,27 @@ public final class RegrasDeAcesso {
 			.ou(Role.INTERNO, Role.MONITORAMENTO_REAL);
 
 	/**
-	 * Recursos comuns a <b>toda</b> a area Sonda/Unidade: a lista de sondas do usuario
-	 * ({@code /api/sondas/minhas}) e o documento de cards.
+	 * Recursos comuns a <b>toda</b> a area de monitoramento: a lista de unidades do usuario
+	 * ({@code /api/monitoramento/unidades/minhas}) e o documento de cards.
 	 *
 	 * <p>Qualquer uma das duas permissoes de monitoramento basta, e e por isso que existe. As quatro
-	 * telas da area — series, tempo real, limites e historico — comecam escolhendo uma sonda e
+	 * telas da area — series, tempo real, limites e historico — comecam escolhendo uma unidade e
 	 * lendo os cards dela. Exigir {@code MONITORAMENTO} aqui deixaria quem recebeu apenas o tempo
-	 * real com a tela liberada e a lista de sondas em 403: acesso concedido que nao funciona, com o
+	 * real com a tela liberada e a lista de unidades em 403: acesso concedido que nao funciona, com o
 	 * sintoma longe da causa.
 	 */
-	public static final RegraDeAcesso AREA_SONDA = MONITORAMENTO
+	public static final RegraDeAcesso AREA_MONITORAMENTO = MONITORAMENTO
 			.ou(Role.CLIENTE, Role.MONITORAMENTO_REAL)
 			.ou(Role.INTERNO, Role.MONITORAMENTO_REAL);
 
 	/**
 	 * Cards da unidade — RN-086. Leitura de quem esta na area, <b>mais</b> {@code SUPORTE}.
 	 *
-	 * <p>{@code SUPORTE} nao monitora (nao esta em {@link #AREA_SONDA}), mas configura o que a
+	 * <p>{@code SUPORTE} nao monitora (nao esta em {@link #AREA_MONITORAMENTO}), mas configura o que a
 	 * borda le. Aqui se garante apenas que ele chega ao recurso; quem le e quem grava e decidido em
 	 * {@code ConfiguracaoCardsAccess}.
 	 */
-	public static final RegraDeAcesso CARDS_DA_UNIDADE = AREA_SONDA.ou(Role.SUPORTE);
+	public static final RegraDeAcesso CARDS_DA_UNIDADE = AREA_MONITORAMENTO.ou(Role.SUPORTE);
 
 	/**
 	 * Simulador de Cimentacao: {@code /api/simulador/**}.
@@ -94,19 +93,6 @@ public final class RegrasDeAcesso {
 	public static final RegraDeAcesso ESCOPO_FROTA_INTEIRA = RegraDeAcesso.exigindo(Role.ADMIN)
 			.ou(Role.INTERNO, Role.MONITORAMENTO)
 			.ou(Role.INTERNO, Role.MONITORAMENTO_REAL);
-
-	/** Cadastros administrativos — usuarios, empresas, regionais, setores. */
-	public static final RegraDeAcesso ADMINISTRACAO = RegraDeAcesso.exigindo(Role.ADMIN);
-
-	/**
-	 * Configuracoes do sistema — RN-086.
-	 *
-	 * <p>Separada de {@link #ADMINISTRACAO} de proposito: {@code SUPORTE} <b>configura</b> o sistema,
-	 * mas nao administra cadastro. Juntar as duas faria o suporte virar um segundo {@code ADMIN} por
-	 * descuido.
-	 */
-	public static final RegraDeAcesso CONFIGURACAO = RegraDeAcesso.exigindo(Role.ADMIN)
-			.ou(Role.SUPORTE);
 
 	private RegrasDeAcesso() {
 	}

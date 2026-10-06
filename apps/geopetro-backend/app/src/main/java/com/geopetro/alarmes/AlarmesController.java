@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
 
 /**
- * O que está alarmando agora numa Unidade/Sonda.
+ * O que está alarmando agora numa Unidade.
  *
  * <h2>Por que existe, se o alarme já viaja no tempo real</h2>
  * A projeção acompanha cada ciclo de leituras, então quem está com a tela conectada já a recebe. O
@@ -50,7 +50,7 @@ public class AlarmesController {
 	 * <p>⚠️ <b>É projeção, não histórico.</b> Responde "o que está alarmando?", que é outra pergunta
 	 * de "o que aconteceu?" — esta se responde pelo log de eventos, que ainda não tem rota.
 	 */
-	@GetMapping("/api/sondas/{id}/alarmes")
+	@GetMapping("/api/monitoramento/unidades/{id}/alarmes")
 	public List<AlarmeAtivo> ativos(@PathVariable long id, Principal principal) {
 		access.exigir(principal == null ? null : principal.getName(), id);
 		return motor.ativos(id);
@@ -67,7 +67,7 @@ public class AlarmesController {
 	 * O log cresce sem política de retenção, e uma consulta sem limite funcionaria por meses antes de
 	 * derrubar a tela de uma sonda movimentada.
 	 */
-	@GetMapping("/api/sondas/{id}/alarmes/historico")
+	@GetMapping("/api/monitoramento/unidades/{id}/alarmes/historico")
 	public HistoricoDeAlarmes.Pagina historico(@PathVariable long id,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant inicio,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant fim,

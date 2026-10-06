@@ -34,7 +34,7 @@ import com.geopetro.security.authorization.RegrasDeAcesso;
  *       continua ativa e fixa o usuario na sessao. Reutiliza o mesmo {@link TokenPort} do login
  *       REST.</li>
  *   <li><b>SUBSCRIBE</b> — confere <b>duas</b> coisas: se o perfil alcanca aquele modulo
- *       ({@link RegrasDeAcesso}) e se aquele usuario pode ver aquela Unidade/Sonda
+ *       ({@link RegrasDeAcesso}) e se aquele usuario pode ver aquela Unidade
  *       ({@link ConfiguracaoSondaAccess}). Uma nao substitui a outra: a primeira responde "pode ver
  *       tempo real?", a segunda "pode ver <i>esta</i> sonda?".</li>
  *   <li><b>SEND</b> — confere que quem publica ainda tem conta ativa; a autorizacao por unidade
@@ -67,8 +67,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 	 *
 	 * <p>São dois, e cada um tem forma própria:
 	 * <ul>
-	 *   <li>{@code /topic/realtime/unidades-sondas/{id}} — as leituras ao vivo, <b>sem</b> sufixo.</li>
-	 *   <li>{@code /topic/config/unidades-sondas/{id}/cards} e {@code /app/config/...} — o documento
+	 *   <li>{@code /topic/realtime/unidades/{id}} — as leituras ao vivo, <b>sem</b> sufixo.</li>
+	 *   <li>{@code /topic/config/unidades/{id}/cards} e {@code /app/config/...} — o documento
 	 *       de cards, com o sufixo <b>obrigatório</b>.</li>
 	 * </ul>
 	 *
@@ -84,15 +84,15 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 	 *
 	 * <p>⚠️ <b>A permissão de módulo difere entre os dois destinos</b> — desde 2026-09-17. As leituras
 	 * ao vivo exigem {@code MONITORAMENTO_REAL}; o documento de cards aceita qualquer uma das duas
-	 * permissões ({@code AREA_SONDA}), porque todas as telas da área se montam a partir dele — quem
+	 * permissões ({@code AREA_MONITORAMENTO}), porque todas as telas da área se montam a partir dele — quem
 	 * só tem séries precisa saber o que a unidade mede, e quem só tem tempo real também. O escopo
 	 * por unidade é o mesmo para os dois.
 	 * A diferença de autoridade na <b>gravação</b> continua no REST, por
 	 * {@code ConfiguracaoCardsAccess} (RN-086, RN-089).
 	 */
 	private static final Pattern TOPICO_REALTIME = Pattern.compile(
-			"^(?:/topic/realtime/unidades-sondas/([1-9][0-9]{0,18})"
-					+ "|/(?:topic|app)/config/unidades-sondas/([1-9][0-9]{0,18})/cards)$");
+			"^(?:/topic/realtime/unidades/([1-9][0-9]{0,18})"
+					+ "|/(?:topic|app)/config/unidades/([1-9][0-9]{0,18})/cards)$");
 
 	/** Destino que o Geopetro-Desktop usa para publicar o estado. */
 	private static final String DESTINO_PUBLICACAO = "/app/realtime/estado";
@@ -169,14 +169,14 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 		// casa por vez, e o outro vem nulo — e e isso que diz qual permissao de modulo exigir.
 		boolean tempoReal = matcher.group(1) != null;
 		String id = tempoReal ? matcher.group(1) : matcher.group(2);
-		Long unidadeSondaId;
-        try { unidadeSondaId = Long.valueOf(id); }
+		Long unidadeId;
+        try { unidadeId = Long.valueOf(id); }
         catch (NumberFormatException e) { throw new WebSocketNaoAutorizadoException("Unidade invalida."); }
 
 		// Permissao de MODULO. Sem esta verificacao, esconder o Tempo Real no menu seria o unico
 		// controle: quem tivesse apenas MONITORAMENTO assinaria as leituras ao vivo por este canal,
 		// que e onde elas realmente trafegam.
-		RegraDeAcesso regra = tempoReal ? RegrasDeAcesso.MONITORAMENTO_REAL : RegrasDeAcesso.AREA_SONDA;
+		RegraDeAcesso regra = tempoReal ? RegrasDeAcesso.MONITORAMENTO_REAL : RegrasDeAcesso.AREA_MONITORAMENTO;
 		if (!permissoes.satisfaz(username, regra)) {
 			log.warn("Assinatura NEGADA por perfil: usuario={} destino={} exige {}", username, destino, regra);
 			throw new WebSocketNaoAutorizadoException("Perfil sem acesso a este recurso.");
@@ -185,12 +185,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 		// Escopo por UNIDADE. `permite` soma conta ativa ao escopo por perfil: as duas condicoes
 		// negam a assinatura, e a mensagem nao distingue qual delas — quem nao tem acesso nao
 		// precisa saber o motivo.
-		if (!acesso.permite(username, unidadeSondaId)) {
-			log.warn("Assinatura NEGADA: usuario={} tentou acessar unidade={}", username, unidadeSondaId);
-			throw new WebSocketNaoAutorizadoException("Sem acesso a esta Unidade/Sonda.");
+		if (!acesso.permite(username, unidadeId)) {
+			log.warn("Assinatura NEGADA: usuario={} tentou acessar unidade={}", username, unidadeId);
+			throw new WebSocketNaoAutorizadoException("Sem acesso a esta Unidade.");
 		}
 
-		log.debug("Assinatura autorizada: usuario={} unidade={}", username, unidadeSondaId);
+		log.debug("Assinatura autorizada: usuario={} unidade={}", username, unidadeId);
 		return message;
 	}
 
@@ -213,7 +213,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 		}
 
 		// A autorizacao por unidade acontece no controller, onde o corpo ja foi desserializado
-		// e o unidadeSondaId e conhecido.
+		// e o unidadeId e conhecido.
 		return message;
 	}
 

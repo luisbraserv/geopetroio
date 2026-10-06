@@ -1,6 +1,6 @@
 package com.geopetro.simulador;
 
-import com.geopetro.core.exception.*;
+import com.geopetro.comum.exception.*;
 import com.geopetro.simulador.adapter.in.web.request.*;
 import com.geopetro.simulador.adapter.in.web.response.CenarioResponse;
 import com.geopetro.simulador.adapter.out.persistence.entity.*;

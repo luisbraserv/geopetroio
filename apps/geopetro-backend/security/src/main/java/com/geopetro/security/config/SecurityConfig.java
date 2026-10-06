@@ -2,11 +2,12 @@ package com.geopetro.security.config;
 
 import java.util.List;
 
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,9 +18,24 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.geopetro.security.authorization.RegrasDeAcesso;
+import com.geopetro.security.braservcore.TokensDoCore;
 
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.http.HttpServletResponse;
+
+/**
+ * Seguranca do Geopetro-Backend depois do Braserv-Core (spec braserv-core §6).
+ *
+ * <p>Este backend nao tem mais login, cadastro nem configuracao de e-mail: tudo isso e servido
+ * pelo core. Aqui sobram o monitoramento, o tempo real e o simulador, protegidos por token de pessoa
+ * emitido pelo core, e uma rota interna que so o core chama.
+ */
 @Configuration
 public class SecurityConfig {
+
+	/** Unico sistema que pode perguntar pelos vinculos de uma unidade (contrato §5). */
+	static final String SERVICO_DO_CORE = "braserv-core";
+	static final String ESCOPO_VINCULOS = "unidades:vinculos";
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final List<String> allowedOrigins;
@@ -33,84 +49,80 @@ public class SecurityConfig {
 		this.allowedOriginPatterns = allowedOriginPatterns;
 	}
 
+	/**
+	 * {@code /internal/**}: so o Braserv-Core, com token de servico e o escopo de vinculos. O proxy
+	 * nao publica esta rota; esta cadeia e a segunda barreira.
+	 */
 	@Bean
+	@Order(1)
+	SecurityFilterChain internoFilterChain(HttpSecurity http, TokensDoCore tokens) throws Exception {
+		return http
+				.securityMatcher("/internal/**")
+				.csrf(AbstractHttpConfigurer::disable)
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(HttpMethod.GET, "/internal/v1/unidades/*/vinculos")
+						.access((autenticacao, contexto) -> {
+							var a = autenticacao.get();
+							boolean doCore = a != null && a.isAuthenticated() && SERVICO_DO_CORE.equals(a.getName());
+							boolean comEscopo = doCore && a.getAuthorities().stream()
+									.anyMatch(g -> (ServicoDoCoreFilter.PREFIXO_AUTHORITY + ESCOPO_VINCULOS).equals(g.getAuthority()));
+							return new AuthorizationDecision(comEscopo);
+						})
+						.anyRequest().denyAll())
+				.exceptionHandling(ex -> ex
+						.authenticationEntryPoint((request, response, e) ->
+								response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+						.accessDeniedHandler((request, response, e) ->
+								response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden")))
+				.addFilterBefore(new ServicoDoCoreFilter(tokens), UsernamePasswordAuthenticationFilter.class)
+				.build();
+	}
+
+	@Bean
+	@Order(2)
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		return http
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/recuperacao-senha", "/api/auth/recuperacao-senha/confirmar")
-						.permitAll()
+						// O 403 de uma regra abaixo vira um despacho interno para /error, que nao carrega
+						// o token. Sem liberar esse despacho, quem esta logado sem permissao receberia 401
+						// ("faca login") em vez de 403, e o Front trata 401 como sessao vencida (DT-017).
+						.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 						.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
 						.permitAll()
 						// Probes de liveness/readiness do orquestrador, que nao se autentica.
-						// Apenas /health e exposto (management.endpoints.web.exposure.include),
-						// e sem detalhes (show-details=never), entao nao vaza configuracao.
 						.requestMatchers("/actuator/health", "/actuator/health/**")
 						.permitAll()
-						// Handshake do WebSocket. Nao ha como exigir Authorization aqui: o
-						// navegador nao envia headers customizados no handshake. A autenticacao
-						// acontece no frame CONNECT do STOMP e a autorizacao por unidade no
-						// SUBSCRIBE — ver WebSocketAuthInterceptor.
+						// Handshake do WebSocket. O navegador nao envia headers customizados no
+						// handshake: a autenticacao acontece no CONNECT do STOMP e a autorizacao por
+						// unidade no SUBSCRIBE — ver WebSocketAuthInterceptor.
 						.requestMatchers("/ws", "/ws/**")
 						.permitAll()
 						// Acesso por COMBINACAO de roles, nao por lista — ver RegrasDeAcesso.
-						// `hasAnyRole` nao serve aqui: MONITORAMENTO sozinha nao concede nada, ela
-						// vale somada ao tipo de conta (CLIENTE ou INTERNO).
+						// Do mais especifico ao mais geral: a primeira regra que casa decide, e
+						// /api/monitoramento/** no fim engoliria as anteriores se viesse antes.
 						//
-						// A ordem abaixo vai do mais especifico ao mais geral dentro de
-						// /api/sondas: a primeira regra que casa decide, e /api/sondas/** no fim
-						// engoliria as anteriores se viesse antes.
-						//
-						// Cards: SUPORTE entra aqui e so aqui dentro de /api/sondas. Ele configura
-						// o sistema, nao acompanha operacao — dar-lhe a rota inteira seria mais do
-						// que "configurar". Quem pode LER e GRAVAR e decidido em
+						// Cards: SUPORTE entra aqui e so aqui. Quem pode LER e GRAVAR e decidido em
 						// ConfiguracaoCardsAccess; aqui so se garante que o perfil chega ao recurso.
-						.requestMatchers("/api/sondas/*/cards")
+						.requestMatchers("/api/monitoramento/unidades/*/cards")
 						.access(RegrasDeAcesso.CARDS_DA_UNIDADE)
-						// Limites de alarme e historico de alarmes seguem o tempo real (RN-069):
-						// acompanhar o ao vivo, ajustar o limite e ler o historico sao a mesma
-						// autoridade. Conceder monitoramento sem MONITORAMENTO_REAL nao abre estes.
-						.requestMatchers("/api/sondas/*/configuracao", "/api/sondas/*/alarmes", "/api/sondas/*/alarmes/**")
+						// Limites e historico de alarmes seguem o tempo real (RN-069).
+						.requestMatchers("/api/monitoramento/unidades/*/configuracao",
+								"/api/monitoramento/unidades/*/alarmes", "/api/monitoramento/unidades/*/alarmes/**")
 						.access(RegrasDeAcesso.MONITORAMENTO_REAL)
-						// A lista de sondas serve as QUATRO telas da area, e por isso aceita
-						// qualquer uma das duas permissoes. Exigir MONITORAMENTO aqui deixaria quem
-						// recebeu apenas o tempo real com a tela aberta e a lista em 403.
-						.requestMatchers("/api/sondas/minhas")
-						.access(RegrasDeAcesso.AREA_SONDA)
-						// Series historicas: a tela de Monitoramento. CLIENTE tambem acessa, mas o
-						// SondaMonitoramentoService restringe o escopo dele as unidades concedidas
-						// no cadastro; conta interna enxerga a frota inteira (RN-047).
-						// O /api/sondas/** que fecha o bloco e a rede de seguranca: um endpoint
-						// novo nasce exigindo monitoramento em vez de herdar `authenticated`.
-						.requestMatchers("/api/sondas/*/monitoramentos/**", "/api/sondas/**")
+						// A lista de unidades serve as QUATRO telas da area, e por isso aceita qualquer
+						// uma das duas permissoes.
+						.requestMatchers("/api/monitoramento/unidades/minhas")
+						.access(RegrasDeAcesso.AREA_MONITORAMENTO)
+						// Series historicas e a rede de seguranca: um endpoint novo da area nasce
+						// exigindo monitoramento em vez de herdar `authenticated`.
+						.requestMatchers("/api/monitoramento/**")
 						.access(RegrasDeAcesso.MONITORAMENTO)
 						.requestMatchers("/api/simulador/**")
 						.access(RegrasDeAcesso.SIMULADOR_CIMENTACAO)
-						// Cadastro de apoio das telas internas. CIMENTACAO saiu desta lista em
-						// 2026-09-17: ela virou permissao de dominio e passou a ser combinavel com
-						// CLIENTE (Simulador de Cimentacao), o que daria a um cliente a lista de
-						// setores e da frota inteira — dado interno, e nao o que a role concede.
-						.requestMatchers("/api/setores/**", "/api/unidades-sondas/**")
-						.hasAnyRole("INTERNO", "ADMIN")
-						// Regionais: leitura liberada aos perfis internos (as telas de setor e
-						// unidade/sonda precisam listar regionais); escrita so ADMIN.
-						.requestMatchers(HttpMethod.GET, "/api/regionais/**")
-						.hasAnyRole("INTERNO", "ADMIN")
-						.requestMatchers("/api/regionais/**")
-						.hasRole("ADMIN")
-						// Autoatendimento: precisa vir ANTES de /api/usuarios/** para nao herdar ADMIN.
-						.requestMatchers(HttpMethod.PATCH, "/api/usuarios/me", "/api/usuarios/me/senha")
-						.authenticated()
-						// Configuracoes do sistema: ADMIN e SUPORTE (RN-086). Vem ANTES do
-						// bloco de cadastros para nao herdar a restricao a ADMIN.
-						.requestMatchers("/api/configuracoes/**")
-						.access(RegrasDeAcesso.CONFIGURACAO)
-						// Cadastros seguem exclusivos de ADMIN: SUPORTE configura o sistema,
-						// nao administra usuario nem empresa.
-						.requestMatchers("/api/empresas/**", "/api/usuarios/**")
-						.access(RegrasDeAcesso.ADMINISTRACAO)
 						.anyRequest()
 						.authenticated())
 				.exceptionHandling(ex -> ex

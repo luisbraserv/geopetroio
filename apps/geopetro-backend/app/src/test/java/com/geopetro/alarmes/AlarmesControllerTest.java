@@ -21,7 +21,7 @@ import org.springframework.http.HttpStatus;
 import com.geopetro.alarmes.EventoAlarme.LimiteViolado;
 import com.geopetro.alarmes.EventoAlarme.Severidade;
 import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 /**
  * A rota que expoe a projecao — quem ve o alarme e quem ja enxerga a sonda (RN-069).
@@ -62,7 +62,7 @@ class AlarmesControllerTest {
 	/** ⚠️ Autorizar depois de consultar vazaria o estado da sonda de outro cliente. */
 	@Test
 	void semAcessoNaoChegaAConsultarAProjecao() {
-		doThrow(new BusinessException("Sem acesso a esta Unidade/Sonda.", HttpStatus.FORBIDDEN))
+		doThrow(new BusinessException("Sem acesso a esta Unidade.", HttpStatus.FORBIDDEN))
 				.when(access).exigir(anyString(), anyLong());
 
 		assertThatThrownBy(() -> controller.ativos(7, ANA)).isInstanceOf(BusinessException.class);
@@ -88,7 +88,7 @@ class AlarmesControllerTest {
 	/** A mesma autorizacao das duas pontas: o historico da sonda e tao restrito quanto o estado dela. */
 	@Test
 	void semAcessoNaoChegaAConsultarOHistorico() {
-		doThrow(new BusinessException("Sem acesso a esta Unidade/Sonda.", HttpStatus.FORBIDDEN))
+		doThrow(new BusinessException("Sem acesso a esta Unidade.", HttpStatus.FORBIDDEN))
 				.when(access).exigir(anyString(), anyLong());
 
 		assertThatThrownBy(() -> controller.historico(7, INICIO, FIM, ANA))

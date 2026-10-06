@@ -15,7 +15,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.geopetro.cards.ConfiguracaoCards.Alteracao;
 import com.geopetro.cards.ConfiguracaoCards.Card;
 import com.geopetro.cards.ConfiguracaoCards.Conexao;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class ConfiguracaoCardsService {
 
 	/** Tópico próprio: o documento de cards não viaja junto com o de limites. */
-	public static final String TOPICO = "/topic/config/unidades-sondas/%d/cards";
+	public static final String TOPICO = "/topic/config/unidades/%d/cards";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -64,7 +64,7 @@ public class ConfiguracaoCardsService {
 
 		if (entity == null) {
 			entity = new ConfiguracaoCardsEntity();
-			entity.unidadeSondaId = id;
+			entity.unidadeId = id;
 		}
 		entity.conexaoJson = JSON.writeValueAsString(update.conexao());
 		entity.cardsJson = JSON.writeValueAsString(identificados);
@@ -104,7 +104,7 @@ public class ConfiguracaoCardsService {
 	}
 
 	private ConfiguracaoCards dto(ConfiguracaoCardsEntity e) {
-		return new ConfiguracaoCards(1, e.unidadeSondaId, e.version + 1,
+		return new ConfiguracaoCards(1, e.unidadeId, e.version + 1,
 				JSON.readValue(e.conexaoJson, Conexao.class), cards(e), e.atualizadoPor, e.atualizadoEm);
 	}
 

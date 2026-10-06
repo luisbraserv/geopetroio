@@ -25,6 +25,7 @@ class PocoSecurityTest {
     static class Config {
         @Bean PocoService pocoService() { return mock(PocoService.class); }
         @Bean JwtAuthenticationFilter jwtAuthenticationFilter() { return new JwtAuthenticationFilter(mock(TokenPort.class), mock(ContaAtivaVerificador.class)); }
+        @Bean com.geopetro.security.braservcore.TokensDoCore tokensDoCore() { return mock(com.geopetro.security.braservcore.TokensDoCore.class); }
     }
     private AnnotationConfigWebApplicationContext context;
     private MockMvc mvc;
@@ -77,7 +78,7 @@ class PocoSecurityTest {
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(context.getBean(PocoService.class));
         when(context.getBean(PocoService.class).atualizar(eq(1L), any(), eq("ana")))
-                .thenThrow(new com.geopetro.core.exception.BusinessException("Recarregue o poço.", org.springframework.http.HttpStatus.CONFLICT));
+                .thenThrow(new com.geopetro.comum.exception.BusinessException("Recarregue o poço.", org.springframework.http.HttpStatus.CONFLICT));
         String request = new tools.jackson.databind.json.JsonMapper().writeValueAsString(
                 new com.geopetro.simulador.adapter.in.web.request.PocoRequest("Poço", PocoGeometryTest.vertical(1500), 0L));
         mvc.perform(put("/api/simulador/pocos/1").with(user("ana").roles("INTERNO", "SIMULADOR", "CIMENTACAO"))

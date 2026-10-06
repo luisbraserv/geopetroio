@@ -10,7 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 /**
  * O que aconteceu — a leitura do log de eventos, agrupada em excursões.
@@ -58,12 +58,12 @@ public class HistoricoDeAlarmes {
 	}
 
 	@Transactional(readOnly = true)
-	public Pagina consultar(long unidadeSondaId, Instant inicio, Instant fim) {
+	public Pagina consultar(long unidadeId, Instant inicio, Instant fim) {
 		validar(inicio, fim);
 
 		// Pede um a mais que o teto: se vier, e porque havia mais, e nao ha segunda consulta so para
 		// descobrir isso.
-		List<String> ids = eventos.episodiosNaJanela(unidadeSondaId, inicio, fim,
+		List<String> ids = eventos.episodiosNaJanela(unidadeId, inicio, fim,
 				PageRequest.of(0, MAXIMO_EPISODIOS + 1));
 		boolean truncado = ids.size() > MAXIMO_EPISODIOS;
 		if (truncado) {

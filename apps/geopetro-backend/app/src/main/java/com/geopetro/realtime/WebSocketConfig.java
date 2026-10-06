@@ -18,7 +18,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *   Geopetro-Desktop --SEND--> /app/realtime/estado --> RealtimeController
  *                                                          |
  *                                                          v
- *   Angular   &lt;--SUBSCRIBE-- /topic/realtime/unidades-sondas/{id}
+ *   Angular   &lt;--SUBSCRIBE-- /topic/realtime/unidades/{id}
  * </pre>
  *
  * <p><b>Broker em memoria, de proposito.</b> Estes dados sao efemeros — o "agora" de uma sonda, com
@@ -66,7 +66,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      * Guardas de saída: cada tópico revalida o acesso a <b>cada entrega</b>, e não só no SUBSCRIBE.
      *
      * <p>Uma tela aberta assina no login e fica horas conectada; sem isto, desativar a conta ou
-     * revogar o acesso à Unidade/Sonda cortaria o HTTP e deixaria a entrega de pé (RN-062).
+     * revogar o acesso à Unidade cortaria o HTTP e deixaria a entrega de pé (RN-062).
      *
      * <p>⚠️ Eram três. A do documento de <b>limites</b> saiu em 2026-09-09 junto com o tópico que ela
      * protegia — ele ficou sem assinante quando o alarme da estação passou a ser configurado na

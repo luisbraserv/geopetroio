@@ -9,7 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.geopetro.core.exception.RegraNegocioException;
+import com.geopetro.comum.exception.RegraNegocioException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -32,6 +32,13 @@ public class ApiExceptionHandler {
         return build(HttpStatus.CONFLICT, "O registro foi alterado. Recarregue antes de salvar.", request.getRequestURI(), List.of());
     }
 
+	/** Usuario e unidades vem do Braserv-Core; sem ele, e sem resposta recente, o servico nao decide. */
+	@ExceptionHandler(com.geopetro.comum.port.AcessoDoUsuarioPort.BraservCoreIndisponivelException.class)
+	ResponseEntity<ApiErrorResponse> handleCoreIndisponivel(HttpServletRequest request) {
+		return build(HttpStatus.SERVICE_UNAVAILABLE, "Cadastro indisponivel no momento. Tente novamente em instantes.",
+				request.getRequestURI(), List.of());
+	}
+
 	@ExceptionHandler(RegraNegocioException.class)
 	ResponseEntity<ApiErrorResponse> handleRegraNegocio(RegraNegocioException exception, HttpServletRequest request) {
 		return build(exception.getStatus(), exception.getMessage(), request.getRequestURI(), List.of());
@@ -46,7 +53,7 @@ public class ApiExceptionHandler {
 	/**
 	 * Parâmetro obrigatório que não veio — 400, e não 500.
 	 *
-	 * <p>Sem este handler, {@code GET /api/sondas/1/alarmes/historico} sem {@code inicio} caía no
+	 * <p>Sem este handler, {@code GET /api/monitoramento/unidades/1/alarmes/historico} sem {@code inicio} caía no
 	 * {@code Exception} genérico abaixo e respondia "Erro interno do servidor": o cliente não tinha
 	 * como distinguir uma chamada malfeita — que ele corrige — de um servidor com problema, que ele
 	 * só pode reportar.

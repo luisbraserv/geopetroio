@@ -53,7 +53,7 @@ class AlarmesHttpErrosTest {
 	@Test
 	@DisplayName("historico sem periodo responde 400, nomeando o parametro que falta")
 	void periodoAusenteEBadRequest() throws Exception {
-		mvc.perform(get("/api/sondas/1/alarmes/historico").principal(ANA))
+		mvc.perform(get("/api/monitoramento/unidades/1/alarmes/historico").principal(ANA))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.status").value(400))
 				.andExpect(jsonPath("$.details[0]").value("inicio: obrigatório"));
@@ -62,7 +62,7 @@ class AlarmesHttpErrosTest {
 	@Test
 	@DisplayName("historico com data ilegivel responde 400")
 	void dataInvalidaEBadRequest() throws Exception {
-		mvc.perform(get("/api/sondas/1/alarmes/historico")
+		mvc.perform(get("/api/monitoramento/unidades/1/alarmes/historico")
 				.param("inicio", "invalid")
 				.param("fim", "2026-09-09T23:59:59Z")
 				.principal(ANA))
@@ -77,7 +77,7 @@ class AlarmesHttpErrosTest {
 	 */
 	@Test
 	void aRespostaNaoVazaODetalheInternoDaConversao() throws Exception {
-		mvc.perform(get("/api/sondas/1/alarmes/historico")
+		mvc.perform(get("/api/monitoramento/unidades/1/alarmes/historico")
 				.param("inicio", "invalid")
 				.param("fim", "2026-09-09T23:59:59Z")
 				.principal(ANA))
@@ -91,7 +91,7 @@ class AlarmesHttpErrosTest {
 				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
 				.thenReturn(new HistoricoDeAlarmes.Pagina(List.of(), false));
 
-		mvc.perform(get("/api/sondas/1/alarmes/historico")
+		mvc.perform(get("/api/monitoramento/unidades/1/alarmes/historico")
 				.param("inicio", "2026-09-09T00:00:00Z")
 				.param("fim", "2026-09-09T23:59:59Z")
 				.principal(ANA))

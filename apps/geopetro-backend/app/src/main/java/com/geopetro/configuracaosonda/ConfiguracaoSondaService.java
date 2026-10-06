@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import com.geopetro.cards.CardsDeclarados;
 import com.geopetro.cards.GrandezasDeCard;
 import com.geopetro.cards.GrandezasDeCard.Grandeza;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -29,10 +29,10 @@ public class ConfiguracaoSondaService {
         return repository.findById(id).map(this::dto).orElseGet(() -> new ConfiguracaoSonda(1, id, 0, List.of(), null, null));
     }
     @Transactional public ConfiguracaoSonda salvar(String username, long id, Alteracao update) {
-        access.exigir(username, id); validar(update, grandezasDeclaradas(id));
+        access.exigir(username, id); access.exigirUnidadeExistente(id); validar(update, grandezasDeclaradas(id));
         var entity = repository.findById(id).orElse(null);
         if (update.revisao() != (entity == null ? 0 : entity.version + 1)) throw conflict();
-        if (entity == null) { entity = new ConfiguracaoSondaEntity(); entity.unidadeSondaId = id; }
+        if (entity == null) { entity = new ConfiguracaoSondaEntity(); entity.unidadeId = id; }
         entity.limitesJson = JSON.writeValueAsString(update.limites());
         entity.atualizadoPor = username; entity.atualizadoEm = Instant.now();
         ConfiguracaoSonda snapshot;
@@ -40,7 +40,7 @@ public class ConfiguracaoSondaService {
         catch (DataIntegrityViolationException e) { throw conflict(); }
         // ⚠️ Nao ha publicacao em tempo real deste documento, e nao e esquecimento.
         //
-        // Ele existia para o Desktop, que assinava /topic/config/unidades-sondas/{id} e avaliava os
+        // Ele existia para o Desktop, que assinava /topic/config/unidades/{id} e avaliava os
         // limites localmente. Em 2026-09-09 o alarme da estacao passou a ser configurado na estacao
         // (configuracao-da-estacao.md §3.3) e a assinatura saiu; o Front nunca assinou — le e grava
         // por REST. O topico ficou sem assinante nenhum e foi removido junto.
@@ -62,7 +62,7 @@ public class ConfiguracaoSondaService {
         return GrandezasDeCard.declaradas(cards.de(id)).stream().map(Grandeza::chave).collect(Collectors.toSet());
     }
     private ConfiguracaoSonda dto(ConfiguracaoSondaEntity e) {
-        return new ConfiguracaoSonda(1, e.unidadeSondaId, e.version + 1,
+        return new ConfiguracaoSonda(1, e.unidadeId, e.version + 1,
             Arrays.asList(JSON.readValue(e.limitesJson, Limite[].class)), e.atualizadoPor, e.atualizadoEm);
     }
     private BusinessException conflict() { return new BusinessException("A configuracao foi alterada. Recarregue antes de salvar.", HttpStatus.CONFLICT); }

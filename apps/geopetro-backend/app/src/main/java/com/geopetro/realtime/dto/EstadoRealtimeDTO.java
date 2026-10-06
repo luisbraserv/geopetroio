@@ -6,7 +6,7 @@ import java.util.List;
 import com.geopetro.alarmes.AlarmeAtivo;
 
 /**
- * Estado instantaneo de uma Unidade/Sonda, retransmitido em tempo real.
+ * Estado instantaneo de uma Unidade, retransmitido em tempo real.
  *
  * <p><b>Nao e persistido.</b> Este canal existe apenas para refletir o "agora" na tela; o historico
  * segue pelo caminho MQTT -> Geopetro-Telemetria -> InfluxDB. Ver
@@ -36,13 +36,13 @@ import com.geopetro.alarmes.AlarmeAtivo;
  * destaque do ciclo anterior — um alarme aceso sobre um numero que ja voltou a faixa, ou pior, o
  * contrario.
  *
- * @param unidadeSondaId id da Unidade/Sonda no cadastro — identifica a origem e o topico de destino
+ * @param unidadeId id da Unidade no cadastro — identifica a origem e o topico de destino
  * @param timestamp      instante da leitura no CLP, em UTC
  * @param leituras       so cards visiveis, e so grandezas com valor (RN-037, RN-099)
  * @param alarmes        episodios abertos apos este ciclo; preenchido pelo servidor, nulo no envio
  */
 public record EstadoRealtimeDTO(
-		Long unidadeSondaId,
+		Long unidadeId,
 		Instant timestamp,
 		List<LeituraRealtimeDTO> leituras,
 		List<AlarmeAtivo> alarmes) {

@@ -32,8 +32,8 @@ public class ExtremoDoEpisodioEntity {
 	@Column(name = "episodio_id", length = 36)
 	String episodioId;
 
-	@Column(name = "unidade_sonda_id", nullable = false)
-	Long unidadeSondaId;
+	@Column(name = "unidade_id", nullable = false)
+	Long unidadeId;
 
 	@Column(name = "valor", nullable = false)
 	Double valor;
@@ -51,7 +51,7 @@ public class ExtremoDoEpisodioEntity {
 	static ExtremoDoEpisodioEntity de(Extremo extremo, Instant agora) {
 		var entity = new ExtremoDoEpisodioEntity();
 		entity.episodioId = extremo.episodioId();
-		entity.unidadeSondaId = extremo.unidadeSondaId();
+		entity.unidadeId = extremo.unidadeId();
 		entity.valor = extremo.valor();
 		entity.limiteViolado = extremo.limiteViolado();
 		entity.atualizadoEm = agora;

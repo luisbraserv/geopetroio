@@ -237,16 +237,16 @@ class MotorDeAlarmesTest {
 		assertThat(reiniciado.ativos(UNIDADE)).isEmpty();
 	}
 
-	/** O vinculo diz o que impede a exclusao da unidade, em vez de estourar violacao de FK — RN-063. */
+	/** O historico de alarmes conta como uso: o core nao apaga a unidade — RN-116. */
 	@Test
 	void oHistoricoDeAlarmesImpedeAExclusaoDaUnidade() {
 		var vinculo = new EventoAlarmeVinculo(repository);
-		assertThat(vinculo.descreverVinculo(UNIDADE)).isEmpty();
+		assertThat(vinculo.descrever(UNIDADE)).isEmpty();
 
 		declara(pressao());
 		motor.avaliar(UNIDADE, List.of(leitura("PRESSAO_01", null, 130.0)));
 
-		assertThat(vinculo.descreverVinculo(UNIDADE)).contains("historico de alarmes");
+		assertThat(vinculo.descrever(UNIDADE)).contains("historico de alarmes");
 	}
 
 	// --- A02: o pico medido entre duas transicoes -------------------------------

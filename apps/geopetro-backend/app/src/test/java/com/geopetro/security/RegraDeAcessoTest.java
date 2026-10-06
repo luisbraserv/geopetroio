@@ -15,7 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import com.geopetro.security.authorization.RegraDeAcesso;
 import com.geopetro.security.authorization.RegrasDeAcesso;
-import com.geopetro.usuario.domain.model.Role;
+import com.geopetro.security.authorization.Role;
 
 /**
  * A regra de acesso por COMBINACAO — o que substituiu as listas de roles em 2026-09-17.
@@ -95,14 +95,14 @@ class RegraDeAcessoTest {
 	@Test
 	@DisplayName("a area Sonda/Unidade aceita qualquer uma das duas permissoes")
 	void areaSondaAceitaQualquerUmaDasPermissoes() {
-		assertThat(RegrasDeAcesso.AREA_SONDA.satisfeitaPor(Set.of(Role.CLIENTE, Role.MONITORAMENTO))).isTrue();
-		assertThat(RegrasDeAcesso.AREA_SONDA.satisfeitaPor(Set.of(Role.CLIENTE, Role.MONITORAMENTO_REAL))).isTrue();
-		assertThat(RegrasDeAcesso.AREA_SONDA.satisfeitaPor(Set.of(Role.INTERNO, Role.MONITORAMENTO_REAL))).isTrue();
-		assertThat(RegrasDeAcesso.AREA_SONDA.satisfeitaPor(Set.of(Role.ADMIN))).isTrue();
-		assertThat(RegrasDeAcesso.AREA_SONDA.satisfeitaPor(Set.of(Role.CLIENTE)))
+		assertThat(RegrasDeAcesso.AREA_MONITORAMENTO.satisfeitaPor(Set.of(Role.CLIENTE, Role.MONITORAMENTO))).isTrue();
+		assertThat(RegrasDeAcesso.AREA_MONITORAMENTO.satisfeitaPor(Set.of(Role.CLIENTE, Role.MONITORAMENTO_REAL))).isTrue();
+		assertThat(RegrasDeAcesso.AREA_MONITORAMENTO.satisfeitaPor(Set.of(Role.INTERNO, Role.MONITORAMENTO_REAL))).isTrue();
+		assertThat(RegrasDeAcesso.AREA_MONITORAMENTO.satisfeitaPor(Set.of(Role.ADMIN))).isTrue();
+		assertThat(RegrasDeAcesso.AREA_MONITORAMENTO.satisfeitaPor(Set.of(Role.CLIENTE)))
 				.as("tipo de conta sozinho segue sem acesso")
 				.isFalse();
-		assertThat(RegrasDeAcesso.AREA_SONDA.satisfeitaPor(Set.of(Role.CLIENTE, Role.SIMULADOR, Role.CIMENTACAO)))
+		assertThat(RegrasDeAcesso.AREA_MONITORAMENTO.satisfeitaPor(Set.of(Role.CLIENTE, Role.SIMULADOR, Role.CIMENTACAO)))
 				.as("quem so tem simulador nao entra na area de sonda")
 				.isFalse();
 	}
@@ -113,7 +113,6 @@ class RegraDeAcessoTest {
 		assertThat(RegrasDeAcesso.CARDS_DA_UNIDADE.satisfeitaPor(Set.of(Role.SUPORTE))).isTrue();
 		assertThat(RegrasDeAcesso.MONITORAMENTO.satisfeitaPor(Set.of(Role.SUPORTE))).isFalse();
 		assertThat(RegrasDeAcesso.MONITORAMENTO_REAL.satisfeitaPor(Set.of(Role.SUPORTE))).isFalse();
-		assertThat(RegrasDeAcesso.ADMINISTRACAO.satisfeitaPor(Set.of(Role.SUPORTE))).isFalse();
 	}
 
 	// --- canal HTTP -------------------------------------------------------------

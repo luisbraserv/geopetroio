@@ -20,7 +20,7 @@ import com.geopetro.configuracaosonda.ConfiguracaoSondaAccess;
  * <h2>Por que o SUBSCRIBE nao basta</h2>
  * {@link WebSocketAuthInterceptor} autoriza a assinatura <b>uma vez</b>, no momento em que ela e
  * pedida. Uma tela aberta assina no login e fica horas conectada: desativar a conta, ou revogar o
- * acesso do {@code CLIENTE} aquela Unidade/Sonda, nao faria a entrega parar — o corte de acesso
+ * acesso do {@code CLIENTE} aquela Unidade, nao faria a entrega parar — o corte de acesso
  * valeria para o HTTP e nao para o canal que mostra a sonda ao vivo.
  *
  * <p>Por isso a verificacao se repete a <b>cada mensagem</b>, do mesmo jeito que
@@ -38,7 +38,7 @@ public class RealtimeOutbound implements ChannelInterceptor {
 	private static final Logger log = LoggerFactory.getLogger(RealtimeOutbound.class);
 
 	private static final Pattern DESTINO =
-			Pattern.compile("^/topic/realtime/unidades-sondas/([1-9][0-9]{0,18})$");
+			Pattern.compile("^/topic/realtime/unidades/([1-9][0-9]{0,18})$");
 
 	private final ObjectProvider<SimpUserRegistry> registry;
 	private final ConfiguracaoSondaAccess acesso;

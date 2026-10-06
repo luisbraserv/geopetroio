@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 /**
- * Documento de cards de uma Unidade/Sonda — RN-080.
+ * Documento de cards de uma Unidade — RN-080.
  *
  * <p><b>Separado do documento de limites</b>, com revisão própria e endpoint próprio (RN-089).
  * Num documento só, o cliente que ajusta um limite devolveria o documento inteiro — cards
@@ -19,7 +19,7 @@ import com.geopetro.core.exception.BusinessException;
  * <p>Este documento diz <b>o que a unidade lê</b>: onde no CLP, com que regra de conversão e com
  * que nome na tela. Sem ele a unidade não produz telemetria (RN-088).
  */
-public record ConfiguracaoCards(int schemaVersion, long unidadeSondaId, long revisao,
+public record ConfiguracaoCards(int schemaVersion, long unidadeId, long revisao,
 		Conexao conexao, List<Card> cards, String atualizadoPor, Instant atualizadoEm) {
 
 	public ConfiguracaoCards {

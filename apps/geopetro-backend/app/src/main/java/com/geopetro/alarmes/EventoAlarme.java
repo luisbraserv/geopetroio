@@ -26,7 +26,7 @@ import com.geopetro.cards.GrandezasDeCard.Grandeza;
  * @param valor         a leitura que provocou o fato
  * @param limiteViolado qual lado da faixa foi rompido
  */
-public record EventoAlarme(Long id, String episodioId, long unidadeSondaId, String dispositivoId,
+public record EventoAlarme(Long id, String episodioId, long unidadeId, String dispositivoId,
 		String serie, Tipo tipo, Severidade severidade, Instant ocorridoEm, double valor,
 		LimiteViolado limiteViolado) {
 

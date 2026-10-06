@@ -79,9 +79,9 @@ public class MotorDeAlarmes {
 	private static final Logger log = LoggerFactory.getLogger(MotorDeAlarmes.class);
 
 	/** Identidade da grandeza vigiada: unidade mais {@code dispositivoId} mais série (RN-098). */
-	private record Chave(long unidadeSondaId, String dispositivoId, String serie) {
-		static Chave de(long unidadeSondaId, Limite limite) {
-			return new Chave(unidadeSondaId, limite.dispositivoId(), normalizar(limite.serie()));
+	private record Chave(long unidadeId, String dispositivoId, String serie) {
+		static Chave de(long unidadeId, Limite limite) {
+			return new Chave(unidadeId, limite.dispositivoId(), normalizar(limite.serie()));
 		}
 	}
 
@@ -118,24 +118,24 @@ public class MotorDeAlarmes {
 	 * @return o que está alarmando <b>depois</b> deste ciclo — é o que viaja junto das leituras que
 	 *         o provocaram, para o destaque na tela nunca descrever a leitura anterior
 	 */
-	public List<AlarmeAtivo> avaliar(long unidadeSondaId, List<LeituraRealtimeDTO> leituras) {
-		Lock trava = travas.computeIfAbsent(unidadeSondaId, id -> new ReentrantLock());
+	public List<AlarmeAtivo> avaliar(long unidadeId, List<LeituraRealtimeDTO> leituras) {
+		Lock trava = travas.computeIfAbsent(unidadeId, id -> new ReentrantLock());
 		trava.lock();
 		try {
-			Ciclo ciclo = transacoes.execute(status -> gravar(unidadeSondaId, leituras));
+			Ciclo ciclo = transacoes.execute(status -> gravar(unidadeId, leituras));
 			// Aqui a transacao ja confirmou: so agora a tela pode falar de um episodio que existe.
 			if (ciclo != null) {
 				estados.putAll(ciclo.atualizados());
 			}
-			return ativos(unidadeSondaId);
+			return ativos(unidadeId);
 		} finally {
 			trava.unlock();
 		}
 	}
 
 	/** Roda dentro da transação: calcula e grava, sem tocar na projeção. */
-	private Ciclo gravar(long unidadeSondaId, List<LeituraRealtimeDTO> leituras) {
-		Map<Chave, Limite> vigiadas = vigiadas(unidadeSondaId);
+	private Ciclo gravar(long unidadeId, List<LeituraRealtimeDTO> leituras) {
+		Map<Chave, Limite> vigiadas = vigiadas(unidadeId);
 		Instant agora = Instant.now();
 		var registrados = new ArrayList<EventoAlarme>();
 		var picos = new LinkedHashMap<String, Extremo>();
@@ -146,7 +146,7 @@ public class MotorDeAlarmes {
 			if (leitura == null || leitura.valor() == null || !Double.isFinite(leitura.valor())) {
 				continue;
 			}
-			var chave = new Chave(unidadeSondaId, leitura.dispositivoId(), normalizar(leitura.serie()));
+			var chave = new Chave(unidadeId, leitura.dispositivoId(), normalizar(leitura.serie()));
 			Limite limite = vigiadas.get(chave);
 			if (limite == null) {
 				continue;
@@ -155,7 +155,7 @@ public class MotorDeAlarmes {
 			// identidade no mesmo ciclo enxergariam ambas o mapa anterior — vazio — e abririam dois
 			// episodios para uma excursao so, um deles sem estado que o feche depois.
 			Estado anterior = atualizados.containsKey(chave) ? atualizados.get(chave) : estados.get(chave);
-			Resultado resultado = AvaliadorDeAlarme.avaliar(anterior, limite, unidadeSondaId,
+			Resultado resultado = AvaliadorDeAlarme.avaliar(anterior, limite, unidadeId,
 					leitura.valor(), agora);
 			atualizados.put(chave, resultado.estado());
 			if (resultado.evento() != null) {
@@ -163,7 +163,7 @@ public class MotorDeAlarmes {
 			}
 			registrarPico(picos, resultado.extremo(), anterior);
 		}
-		encerrarOrfaos(unidadeSondaId, vigiadas, agora, registrados, picos, atualizados);
+		encerrarOrfaos(unidadeId, vigiadas, agora, registrados, picos, atualizados);
 		persistir(registrados, picos, agora);
 		return new Ciclo(atualizados);
 	}
@@ -193,15 +193,15 @@ public class MotorDeAlarmes {
 	 * <p>Desativar ou apagar um limite com alarme aberto deixaria o episódio na tela para sempre,
 	 * sobre um limite que já não existe — e nada no sistema o fecharia.
 	 */
-	private void encerrarOrfaos(long unidadeSondaId, Map<Chave, Limite> vigiadas, Instant agora,
+	private void encerrarOrfaos(long unidadeId, Map<Chave, Limite> vigiadas, Instant agora,
 			List<EventoAlarme> registrados, Map<String, Extremo> picos, Map<Chave, Estado> atualizados) {
 		for (var entrada : estados.entrySet()) {
 			Chave chave = entrada.getKey();
-			if (chave.unidadeSondaId() != unidadeSondaId || vigiadas.containsKey(chave)
+			if (chave.unidadeId() != unidadeId || vigiadas.containsKey(chave)
 					|| !entrada.getValue().temEpisodioAberto()) {
 				continue;
 			}
-			Resultado resultado = AvaliadorDeAlarme.encerrar(entrada.getValue(), unidadeSondaId,
+			Resultado resultado = AvaliadorDeAlarme.encerrar(entrada.getValue(), unidadeId,
 					chave.dispositivoId(), chave.serie(), agora);
 			atualizados.put(chave, resultado.estado());
 			if (resultado.evento() != null) {
@@ -223,28 +223,28 @@ public class MotorDeAlarmes {
 			eventos.saveAll(registrados.stream().map(EventoAlarmeEntity::de).toList());
 			for (EventoAlarme evento : registrados) {
 				log.info("Alarme {} {} em unidade={} grandeza={} valor={}", evento.tipo(), evento.severidade(),
-						evento.unidadeSondaId(), evento.grandeza().chave(), evento.valor());
+						evento.unidadeId(), evento.grandeza().chave(), evento.valor());
 			}
 		}
 	}
 
 	/** Só limite ativo vigia. Desativado não avalia, e o que estava aberto por ele fecha. */
-	private Map<Chave, Limite> vigiadas(long unidadeSondaId) {
+	private Map<Chave, Limite> vigiadas(long unidadeId) {
 		var mapa = new HashMap<Chave, Limite>();
-		for (Limite limite : limites.de(unidadeSondaId)) {
+		for (Limite limite : limites.de(unidadeId)) {
 			if (limite != null && limite.ativo()) {
-				mapa.put(Chave.de(unidadeSondaId, limite), limite);
+				mapa.put(Chave.de(unidadeId, limite), limite);
 			}
 		}
 		return mapa;
 	}
 
 	/** O que está alarmando agora numa unidade, do mais grave para o mais antigo. */
-	public List<AlarmeAtivo> ativos(long unidadeSondaId) {
+	public List<AlarmeAtivo> ativos(long unidadeId) {
 		var lista = new ArrayList<AlarmeAtivo>();
 		estados.forEach((chave, estado) -> {
-			if (chave.unidadeSondaId() == unidadeSondaId && estado.temEpisodioAberto()) {
-				lista.add(new AlarmeAtivo(unidadeSondaId, chave.dispositivoId(), chave.serie(),
+			if (chave.unidadeId() == unidadeId && estado.temEpisodioAberto()) {
+				lista.add(new AlarmeAtivo(unidadeId, chave.dispositivoId(), chave.serie(),
 						estado.episodioId(), estado.confirmada(), estado.abertoEm(), estado.valorExtremo(),
 						estado.limiteViolado()));
 			}
@@ -278,7 +278,7 @@ public class MotorDeAlarmes {
 			for (List<EventoAlarme> fatos : porEpisodio.values()) {
 				EventoAlarme abertura = fatos.get(0);
 				EventoAlarme atual = fatos.get(fatos.size() - 1);
-				var chave = new Chave(atual.unidadeSondaId(), atual.dispositivoId(), normalizar(atual.serie()));
+				var chave = new Chave(atual.unidadeId(), atual.dispositivoId(), normalizar(atual.serie()));
 				ExtremoDoEpisodioEntity pico = picos.get(atual.episodioId());
 				// `desde` recebe o instante do ultimo fato: a severidade vale desde entao, e o tempo
 				// minimo da proxima transicao so comeca a contar quando a leitura mudar.

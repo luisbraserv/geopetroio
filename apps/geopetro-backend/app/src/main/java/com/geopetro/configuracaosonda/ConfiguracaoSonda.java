@@ -4,10 +4,10 @@ import java.time.Instant;
 import java.util.*;
 
 import com.geopetro.cards.GrandezasDeCard.Grandeza;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 /**
- * Documento de limites de alarme de uma Unidade/Sonda.
+ * Documento de limites de alarme de uma Unidade.
  *
  * <p><b>Separado do documento de cards</b>, com revisão e endpoint próprios (RN-089): quem ajusta um
  * limite é quem enxerga a sonda, inclusive {@code CLIENTE} (RN-069), e quem configura os cards é
@@ -24,7 +24,7 @@ import com.geopetro.core.exception.BusinessException;
  * vocabulário passa a ser <b>o que a unidade declara no documento de cards</b> — ver
  * {@code specs/SDD/software/apis/configuracao-sonda.md §5}.
  */
-public record ConfiguracaoSonda(int schemaVersion, long unidadeSondaId, long revisao,
+public record ConfiguracaoSonda(int schemaVersion, long unidadeId, long revisao,
         List<Limite> limites, String atualizadoPor, Instant atualizadoEm) {
 
     public ConfiguracaoSonda { limites = List.copyOf(limites); }

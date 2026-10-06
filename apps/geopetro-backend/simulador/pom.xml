@@ -15,7 +15,7 @@
     <dependencies>
         <dependency>
             <groupId>com.geopetro</groupId>
-            <artifactId>core</artifactId>
+            <artifactId>comum</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

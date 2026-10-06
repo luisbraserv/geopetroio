@@ -15,9 +15,9 @@ import org.springframework.stereotype.Component;
  *
  * <p><b>Por que isto existe.</b> O perfil default e {@code dev}. Se um container subir sem
  * {@code SPRING_PROFILES_ACTIVE=prod}, o {@code application-prod.properties} nunca e lido — e a
- * aplicacao usa o MySQL de localhost e o segredo JWT de desenvolvimento, <b>mesmo que
- * {@code DB_URL} e {@code JWT_SECRET} estejam definidos</b>. O sintoma seria um erro de conexao
- * confuso, ou pior: se houver um MySQL local, ela sobe funcionando com uma chave JWT publica.
+ * aplicacao usa o MySQL de localhost e o Braserv-Core de localhost, <b>mesmo que {@code DB_URL} e
+ * {@code CORE_URL} estejam definidos</b>. O sintoma seria um erro de conexao confuso, ou pior: se
+ * houver um MySQL local, ela sobe funcionando contra o banco errado.
  *
  * <p>A imagem Docker ja define {@code SPRING_PROFILES_ACTIVE=prod}. Esta classe cobre o caso de
  * alguem sobrescrever isso por engano, ou rodar o jar direto sem o perfil.
@@ -67,7 +67,7 @@ public class ProfileGuard {
 				ATENCAO: perfil '{}' ativo com banco NAO local.
 
 				O application-prod.properties NAO foi carregado. A aplicacao esta
-				usando o segredo JWT de desenvolvimento, que e publico no repositorio.
+				usando o banco e o Braserv-Core de desenvolvimento.
 
 				Defina SPRING_PROFILES_ACTIVE=prod.
 				*********************************************************************

@@ -28,7 +28,7 @@ import com.geopetro.realtime.dto.EstadoRealtimeDTO.LeituraRealtimeDTO;
 public class RealtimeController {
 
 	private static final Logger log = LoggerFactory.getLogger(RealtimeController.class);
-	private static final String TOPICO_BASE = "/topic/realtime/unidades-sondas/";
+	private static final String TOPICO_BASE = "/topic/realtime/unidades/";
 
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ConfiguracaoSondaAccess acesso;
@@ -43,14 +43,14 @@ public class RealtimeController {
 
 	@MessageMapping("/realtime/estado")
 	public void receberEstado(@Payload EstadoRealtimeDTO estado, Principal remetente) {
-		if (estado == null || estado.unidadeSondaId() == null) {
-			log.warn("Estado descartado: unidadeSondaId ausente.");
+		if (estado == null || estado.unidadeId() == null) {
+			log.warn("Estado descartado: unidadeId ausente.");
 			return;
 		}
 
 		if (temIdentidadeRepetida(estado.leituras())) {
 			log.warn("Estado descartado: a unidade={} repetiu uma grandeza no mesmo ciclo.",
-					estado.unidadeSondaId());
+					estado.unidadeId());
 			return;
 		}
 
@@ -60,24 +60,24 @@ public class RealtimeController {
 		// acesso. Sem isto, uma instalacao mal configurada (ou forjada) sobrescreveria a tela
 		// de outra sonda. `permite` soma a conta ativa ao escopo (RN-062): desativar a conta da
 		// estacao precisa interromper a publicacao, e nao so as chamadas HTTP dela.
-		if (!acesso.permite(username, estado.unidadeSondaId())) {
+		if (!acesso.permite(username, estado.unidadeId())) {
 			log.warn("Publicacao NEGADA: usuario={} tentou publicar na unidade={}",
-					username, estado.unidadeSondaId());
-			throw new WebSocketNaoAutorizadoException("Sem permissao para publicar nesta Unidade/Sonda.");
+					username, estado.unidadeId());
+			throw new WebSocketNaoAutorizadoException("Sem permissao para publicar nesta Unidade.");
 		}
 
 		// Carimba o instante de recepcao se o produtor nao informou — a tela precisa saber
 		// quao recente e o dado para sinalizar defasagem.
 		Instant timestamp = estado.timestamp() != null ? estado.timestamp() : Instant.now();
 
-		EstadoRealtimeDTO paraEnviar = new EstadoRealtimeDTO(estado.unidadeSondaId(), timestamp,
+		EstadoRealtimeDTO paraEnviar = new EstadoRealtimeDTO(estado.unidadeId(), timestamp,
 				estado.leituras(), avaliarAlarmes(estado));
 
-		messagingTemplate.convertAndSend(TOPICO_BASE + estado.unidadeSondaId(), paraEnviar);
+		messagingTemplate.convertAndSend(TOPICO_BASE + estado.unidadeId(), paraEnviar);
 
 		if (log.isTraceEnabled()) {
 			log.trace("Estado retransmitido: unidade={} timestamp={} alarmes={}",
-					paraEnviar.unidadeSondaId(), paraEnviar.timestamp(), paraEnviar.alarmes().size());
+					paraEnviar.unidadeId(), paraEnviar.timestamp(), paraEnviar.alarmes().size());
 		}
 	}
 
@@ -133,11 +133,11 @@ public class RealtimeController {
 	 */
 	private List<AlarmeAtivo> avaliarAlarmes(EstadoRealtimeDTO estado) {
 		try {
-			return alarmes.avaliar(estado.unidadeSondaId(), estado.leituras());
+			return alarmes.avaliar(estado.unidadeId(), estado.leituras());
 		} catch (RuntimeException e) {
 			log.error("Alarmes nao avaliados para a unidade={}; a retransmissao seguiu normal.",
-					estado.unidadeSondaId(), e);
-			return alarmes.ativos(estado.unidadeSondaId());
+					estado.unidadeId(), e);
+			return alarmes.ativos(estado.unidadeId());
 		}
 	}
 }

@@ -32,8 +32,8 @@ public class LimitesDeclarados {
 
 	/** Unidade sem documento devolve lista vazia: sonda sem limite não alarma, e é estado normal. */
 	@Transactional(readOnly = true)
-	public List<Limite> de(long unidadeSondaId) {
-		return repository.findById(unidadeSondaId).map(LimitesDeclarados::limites).orElseGet(List::of);
+	public List<Limite> de(long unidadeId) {
+		return repository.findById(unidadeId).map(LimitesDeclarados::limites).orElseGet(List::of);
 	}
 
 	private static List<Limite> limites(ConfiguracaoSondaEntity entity) {

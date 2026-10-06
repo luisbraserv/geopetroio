@@ -37,7 +37,7 @@ import com.geopetro.realtime.dto.EstadoRealtimeDTO.LeituraRealtimeDTO;
  */
 class RealtimeControllerTest {
 
-	private static final String TOPICO = "/topic/realtime/unidades-sondas/7";
+	private static final String TOPICO = "/topic/realtime/unidades/7";
 	private static final Principal ANA = () -> "ana";
 
 	private SimpMessagingTemplate mensagens;

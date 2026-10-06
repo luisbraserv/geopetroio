@@ -111,7 +111,7 @@ class WebSocketAuthInterceptorTest {
 		when(acesso.permite("joao", 7L)).thenReturn(true);
 
 		StompHeaderAccessor accessor = accessorComUsuario(StompCommand.SUBSCRIBE, "joao");
-		accessor.setDestination("/topic/realtime/unidades-sondas/7");
+		accessor.setDestination("/topic/realtime/unidades/7");
 
 		assertThat(interceptor.preSend(mensagem(accessor), canal)).isNotNull();
 	}
@@ -124,7 +124,7 @@ class WebSocketAuthInterceptorTest {
 		when(acesso.permite("cliente", 99L)).thenReturn(false);
 
 		StompHeaderAccessor accessor = accessorComUsuario(StompCommand.SUBSCRIBE, "cliente");
-		accessor.setDestination("/topic/realtime/unidades-sondas/99");
+		accessor.setDestination("/topic/realtime/unidades/99");
 
 		assertThatThrownBy(() -> interceptor.preSend(mensagem(accessor), canal))
 				.isInstanceOf(WebSocketNaoAutorizadoException.class)
@@ -147,7 +147,7 @@ class WebSocketAuthInterceptorTest {
 	@DisplayName("assinatura sem usuario autenticado e recusada")
 	void assinaturaSemUsuario() {
 		StompHeaderAccessor accessor = accessor(StompCommand.SUBSCRIBE);
-		accessor.setDestination("/topic/realtime/unidades-sondas/1");
+		accessor.setDestination("/topic/realtime/unidades/1");
 
 		assertThatThrownBy(() -> interceptor.preSend(mensagem(accessor), canal))
 				.isInstanceOf(WebSocketNaoAutorizadoException.class);
@@ -167,7 +167,7 @@ class WebSocketAuthInterceptorTest {
 		when(acesso.permite("observador", 7L)).thenReturn(true);
 
 		StompHeaderAccessor accessor = accessorComUsuario(StompCommand.SUBSCRIBE, "observador");
-		accessor.setDestination("/topic/realtime/unidades-sondas/7");
+		accessor.setDestination("/topic/realtime/unidades/7");
 
 		assertThatThrownBy(() -> interceptor.preSend(mensagem(accessor), canal))
 				.isInstanceOf(WebSocketNaoAutorizadoException.class)
@@ -182,12 +182,12 @@ class WebSocketAuthInterceptorTest {
 	@Test
 	@DisplayName("assinatura dos cards aceita a area, sem exigir tempo real")
 	void cardsExigemApenasMonitoramento() {
-		when(permissoes.satisfaz("observador", RegrasDeAcesso.AREA_SONDA)).thenReturn(true);
+		when(permissoes.satisfaz("observador", RegrasDeAcesso.AREA_MONITORAMENTO)).thenReturn(true);
 		when(permissoes.satisfaz("observador", RegrasDeAcesso.MONITORAMENTO_REAL)).thenReturn(false);
 		when(acesso.permite("observador", 7L)).thenReturn(true);
 
 		StompHeaderAccessor accessor = accessorComUsuario(StompCommand.SUBSCRIBE, "observador");
-		accessor.setDestination("/topic/config/unidades-sondas/7/cards");
+		accessor.setDestination("/topic/config/unidades/7/cards");
 
 		assertThat(interceptor.preSend(mensagem(accessor), canal)).isNotNull();
 	}
@@ -237,7 +237,7 @@ class WebSocketAuthInterceptorTest {
 		when(acesso.permite("demitido", 7L)).thenReturn(false);
 
 		StompHeaderAccessor accessor = accessorComUsuario(StompCommand.SUBSCRIBE, "demitido");
-		accessor.setDestination("/topic/realtime/unidades-sondas/7");
+		accessor.setDestination("/topic/realtime/unidades/7");
 
 		assertThatThrownBy(() -> interceptor.preSend(mensagem(accessor), canal))
 				.isInstanceOf(WebSocketNaoAutorizadoException.class)

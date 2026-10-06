@@ -3,7 +3,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 @Entity @Table(name = "configuracao_sonda")
 public class ConfiguracaoSondaEntity {
-    @Id @Column(name = "unidade_sonda_id") Long unidadeSondaId;
+    @Id @Column(name = "unidade_id") Long unidadeId;
     @Version Long version;
     @Column(name = "limites_json", nullable = false, columnDefinition = "LONGTEXT") String limitesJson;
     @Column(name = "atualizado_por", nullable = false) String atualizadoPor;

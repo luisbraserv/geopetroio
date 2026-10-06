@@ -1,13 +1,23 @@
 package com.geopetro.configuracaosonda;
-import com.geopetro.core.port.VinculoCadastroPort;
+
 import java.util.Optional;
+
 import org.springframework.stereotype.Component;
+
+import com.geopetro.vinculos.VinculoDaUnidade;
+
+/** Limites de alarme configurados contam como uso da unidade — RN-116. */
 @Component
-public class ConfiguracaoSondaVinculo implements VinculoCadastroPort {
-    private final ConfiguracaoSondaRepository repository;
-    public ConfiguracaoSondaVinculo(ConfiguracaoSondaRepository repository) { this.repository = repository; }
-    @Override public Cadastro cadastro() { return Cadastro.UNIDADE_SONDA; }
-    @Override public Optional<String> descreverVinculo(Long id) {
-        return repository.existsById(id) ? Optional.of("configuracao remota vinculada a unidade") : Optional.empty();
-    }
+public class ConfiguracaoSondaVinculo implements VinculoDaUnidade {
+
+	private final ConfiguracaoSondaRepository repository;
+
+	public ConfiguracaoSondaVinculo(ConfiguracaoSondaRepository repository) {
+		this.repository = repository;
+	}
+
+	@Override
+	public Optional<String> descrever(long unidadeId) {
+		return repository.existsById(unidadeId) ? Optional.of("limites de alarme configurados") : Optional.empty();
+	}
 }

@@ -42,7 +42,7 @@ public interface EventoAlarmeRepository extends JpaRepository<EventoAlarmeEntity
 		return fatosDosEpisodiosAbertos(Tipo.FECHOU);
 	}
 
-	boolean existsByUnidadeSondaId(Long unidadeSondaId);
+	boolean existsByUnidadeId(Long unidadeId);
 
 	/**
 	 * Episódios com algum fato na janela, do mais recente para o mais antigo.
@@ -55,7 +55,7 @@ public interface EventoAlarmeRepository extends JpaRepository<EventoAlarmeEntity
 	 */
 	@Query("""
 			SELECT e.episodioId FROM EventoAlarmeEntity e
-			WHERE e.unidadeSondaId = :unidade
+			WHERE e.unidadeId = :unidade
 			  AND e.ocorridoEm >= :inicio AND e.ocorridoEm <= :fim
 			GROUP BY e.episodioId
 			ORDER BY MAX(e.ocorridoEm) DESC

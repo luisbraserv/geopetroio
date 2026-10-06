@@ -28,7 +28,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import com.geopetro.alarmes.EventoAlarme.LimiteViolado;
 import com.geopetro.alarmes.EventoAlarme.Severidade;
 import com.geopetro.alarmes.EventoAlarme.Tipo;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 import jakarta.persistence.EntityManagerFactory;
 

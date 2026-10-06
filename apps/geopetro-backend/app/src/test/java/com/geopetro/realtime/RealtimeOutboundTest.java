@@ -57,7 +57,7 @@ class RealtimeOutboundTest {
 		registraDono("ana");
 		when(acesso.permite("ana", 7L)).thenReturn(true);
 
-		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades-sondas/7"), canal)).isNotNull();
+		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades/7"), canal)).isNotNull();
 	}
 
 	/** ⚠️ O caso do achado: a assinatura ja estava aberta quando a conta foi desativada. */
@@ -67,7 +67,7 @@ class RealtimeOutboundTest {
 		registraDono("demitido");
 		when(acesso.permite("demitido", 7L)).thenReturn(false);
 
-		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades-sondas/7"), canal)).isNull();
+		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades/7"), canal)).isNull();
 	}
 
 	/** Sessao sem dono no registro: na duvida nao entrega, e a proxima leitura chega em 1s. */
@@ -75,7 +75,7 @@ class RealtimeOutboundTest {
 	void sessaoSemDonoNaoRecebe() {
 		when(registro.getUsers()).thenReturn(Set.of());
 
-		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades-sondas/7"), canal)).isNull();
+		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades/7"), canal)).isNull();
 	}
 
 	/** Falha ao verificar tambem nao entrega: alarme para quem nao deveria ve-lo e pior. */
@@ -84,7 +84,7 @@ class RealtimeOutboundTest {
 		registraDono("ana");
 		when(acesso.permite("ana", 7L)).thenThrow(new IllegalStateException("banco fora"));
 
-		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades-sondas/7"), canal)).isNull();
+		assertThat(guarda.preSend(mensagem("/topic/realtime/unidades/7"), canal)).isNull();
 	}
 
 	/**
@@ -95,7 +95,7 @@ class RealtimeOutboundTest {
 	 */
 	@Test
 	void destinoDeOutroTopicoPassaSemMexer() {
-		Message<byte[]> mensagem = mensagem("/topic/config/unidades-sondas/7/cards");
+		Message<byte[]> mensagem = mensagem("/topic/config/unidades/7/cards");
 
 		assertThat(guarda.preSend(mensagem, canal)).isSameAs(mensagem);
 	}

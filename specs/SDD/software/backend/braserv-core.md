@@ -315,13 +315,22 @@ backend é o único.
 | Coluna de referência | `unidade_sonda_id` | `unidade_id` |
 | Cadastro (core) | `/api/unidades-sondas/**` | `/api/unidades/**` |
 | Monitoramento (backend) | `/api/sondas/minhas` | `/api/monitoramento/unidades/minhas` |
-| Séries (backend) | `/api/sondas/{idSondaUnidade}/monitoramentos/series` | `/api/monitoramento/unidades/{idUnidade}/series` |
+| Séries (backend) | `/api/sondas/{idSondaUnidade}/monitoramentos/series` | `/api/monitoramento/unidades/{id}/series`, com o **id numérico** |
 | Cards, limites, alarmes (backend) | `/api/sondas/{id}/cards`, `/configuracao`, `/alarmes`, `/alarmes/historico` | `/api/monitoramento/unidades/{id}/cards`, `/configuracao`, `/alarmes`, `/alarmes/historico` |
 | Tópicos WebSocket | `/topic/realtime/unidades-sondas/{id}`, `/topic/config/unidades-sondas/{id}` e `/{id}/cards` | `/topic/realtime/unidades/{id}`, `/topic/config/unidades/{id}` e `/{id}/cards` |
 | Tópico MQTT | `telemetria/{idSondaUnidade}/batch` | `telemetria/{idUnidade}/batch` |
 | Payload MQTT e tag InfluxDB | `idSondaUnidade` | `idUnidade` |
 | Configuração do Desktop | `unidadeSondaId` | `unidadeId` |
 | Telas | "Unidade/Sonda", "Sondas" | "Unidade", "Unidades" |
+
+**[DECIDIDO na implementação, 2026-10-06]** Todas as rotas de `/api/monitoramento/unidades/{id}` usam o
+id numérico, inclusive a de séries, que antes recebia o nome. O backend traduz o id no nome pelo catálogo do
+core antes de consultar a Telemetria. Assim o Front usa um identificador só, e não convivem dois nomes quase
+iguais (`idUnidade` para o nome, `unidadeId` para o número). A lista `/minhas` devolve `id`, `nome`,
+`apelido` e `tipo`; o campo `idSondaUnidade` saiu, porque repetia o nome.
+
+O contrato **entre o backend e a Telemetria** (`/api/monitoramentos/sondas/{idSondaUnidade}/...` e os campos
+que ela devolve) só muda na fase 4, junto com a Telemetria: mudar um lado só quebraria a consulta de séries.
 
 O monitoramento ganha o prefixo `/api/monitoramento` para não disputar `/api/unidades` com o core: o
 proxy roteia por prefixo, sem expressão regular.

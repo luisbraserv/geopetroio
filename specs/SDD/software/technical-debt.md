@@ -318,7 +318,7 @@ ao relatório se não for capturado por uma relação entre campos.
 
 ## DT-017 · Logado sem permissão recebe 401 em vez de 403
 
-**Severidade: Média** · Geopetro-Backend · Aberto
+**Severidade: Média** · ✅ **Resolvido em 2026-10-06** no Braserv-Core e no Geopetro-Backend
 
 **[FATO 2026-10-06]** Encontrado no Braserv-Core, que copiou a configuração de segurança do backend. No servidor real, o `403` de uma regra de acesso vira um despacho interno para `/error`, que não carrega o token. A segunda passagem pela segurança trata a requisição como anônima e responde `401`. O MockMvc não reproduz o despacho, por isso os testes de segurança passavam.
 
@@ -326,4 +326,4 @@ ao relatório se não for capturado por uma relação entre campos.
 
 **[INFERÊNCIA]** O Geopetro-Backend tem a mesma configuração (`SecurityConfig` sem liberar o despacho de erro) e deve ter o mesmo comportamento; não foi conferido com o backend rodando.
 
-**Correção:** `.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` no início da cadeia. Aplicada no Braserv-Core em 2026-10-06, com o teste `ProibidoNaoViraNaoAutenticadoTest`, que faz a requisição HTTP real. No backend, entra na fase 3 do [Braserv-Core](backend/braserv-core.md), que reescreve a segurança dele.
+**Correção:** `.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` no início da cadeia. Aplicada no Braserv-Core em 2026-10-06, com o teste `ProibidoNaoViraNaoAutenticadoTest`, que faz a requisição HTTP real. No backend, corrigida na fase 3 do [Braserv-Core](backend/braserv-core.md), com o mesmo teste por HTTP real.

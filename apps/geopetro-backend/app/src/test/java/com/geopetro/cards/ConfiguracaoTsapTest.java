@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import com.geopetro.cards.ConfiguracaoCards.*;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 class ConfiguracaoTsapTest {
     private void validar(Integer local, Integer remoto) {

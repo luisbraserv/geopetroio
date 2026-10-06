@@ -1,6 +1,6 @@
 package com.geopetro.simulador;
 
-import com.geopetro.core.exception.ResourceNotFoundException;
+import com.geopetro.comum.exception.ResourceNotFoundException;
 import com.geopetro.simulador.adapter.in.web.CenarioSimuladorController;
 import com.geopetro.simulador.adapter.in.web.PastaSimuladorController;
 import com.geopetro.simulador.adapter.in.web.request.CenarioRequest;

@@ -36,8 +36,8 @@ public class CardsDeclarados {
 	}
 
 	@Transactional(readOnly = true)
-	public List<Card> de(long unidadeSondaId) {
-		return repository.findById(unidadeSondaId).map(CardsDeclarados::cards).orElseGet(List::of);
+	public List<Card> de(long unidadeId) {
+		return repository.findById(unidadeId).map(CardsDeclarados::cards).orElseGet(List::of);
 	}
 
 	/** Um só lugar desserializa a coluna, para os dois caminhos não divergirem. */

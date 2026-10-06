@@ -2,7 +2,7 @@ package com.geopetro.simulador;
 
 import com.geopetro.simulador.domain.*;
 import com.geopetro.simulador.adapter.out.persistence.entity.PocoGeometryConverter;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static com.geopetro.simulador.domain.PocoGeometry.*;

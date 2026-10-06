@@ -25,8 +25,8 @@ public class EventoAlarmeEntity {
 	@Column(name = "episodio_id", nullable = false, length = 36)
 	String episodioId;
 
-	@Column(name = "unidade_sonda_id", nullable = false)
-	Long unidadeSondaId;
+	@Column(name = "unidade_id", nullable = false)
+	Long unidadeId;
 
 	@Column(name = "dispositivo_id", nullable = false, length = 64)
 	String dispositivoId;
@@ -59,7 +59,7 @@ public class EventoAlarmeEntity {
 	static EventoAlarmeEntity de(EventoAlarme evento) {
 		var entity = new EventoAlarmeEntity();
 		entity.episodioId = evento.episodioId();
-		entity.unidadeSondaId = evento.unidadeSondaId();
+		entity.unidadeId = evento.unidadeId();
 		entity.dispositivoId = evento.dispositivoId();
 		entity.serie = evento.serie();
 		entity.tipo = evento.tipo();
@@ -71,7 +71,7 @@ public class EventoAlarmeEntity {
 	}
 
 	EventoAlarme paraDominio() {
-		return new EventoAlarme(id, episodioId, unidadeSondaId, dispositivoId, serie, tipo, severidade,
+		return new EventoAlarme(id, episodioId, unidadeId, dispositivoId, serie, tipo, severidade,
 				ocorridoEm, valor, limiteViolado);
 	}
 }

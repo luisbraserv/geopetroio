@@ -1,81 +1,47 @@
 package com.geopetro.security.application;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.geopetro.usuario.application.port.out.UsuarioRepositoryPort;
-import com.geopetro.usuario.domain.model.StatusUsuario;
+import com.geopetro.comum.port.AcessoDoUsuarioPort;
+import com.geopetro.comum.port.AcessoDoUsuarioPort.AcessoDoUsuario;
+import com.geopetro.comum.port.AcessoDoUsuarioPort.BraservCoreIndisponivelException;
 
 /**
- * Responde se a conta continua ativa — RN-062.
+ * Responde se a conta continua ativa — RN-062, RN-107.
  *
- * <p>O token JWT carrega username e roles, e vale uma hora sem renovacao. Sem esta verificacao,
- * desativar um usuario so teria efeito quando o token dele expirasse. A consulta acontece a cada
- * requisicao autenticada, por isso e uma projecao de um campo, protegida por um cache curto.
+ * <p>O token vale uma hora e nao sabe que o usuario foi desativado no minuto seguinte ao login. O
+ * estado atual vem do Braserv-Core, por {@link AcessoDoUsuarioPort}, que guarda a resposta por
+ * 10 s: essa e a janela do corte. Com o core fora do ar, o ultimo estado conhecido vale por ate
+ * 5 min (D-4); passado isso, a conta e tratada como inativa.
  *
- * <p><b>O cache define a janela do corte.</b> Um usuario desativado continua passando por ate
- * {@code security.cache-status-segundos} — poucos segundos, contra a hora inteira de antes.
- * Aumentar esse valor alarga a janela; e o unico botao que troca corte rapido por menos consultas.
+ * <p>Usuario inexistente no core responde {@code false}: username valido no token e ausente no
+ * cadastro significa usuario removido, e negar e a leitura segura.
  *
  * <p>Nao ha revogacao de token individual: um token vazado de usuario <i>ativo</i> segue valido
- * ate expirar.
+ * ate expirar (SEC-008).
  */
 @Component
 public class ContaAtivaVerificador {
 
-	/** Teto de entradas antes de uma limpeza das expiradas. A frota de usuarios e pequena. */
-	private static final int LIMITE_ENTRADAS = 10_000;
+	private static final Logger log = LoggerFactory.getLogger(ContaAtivaVerificador.class);
 
-	private final UsuarioRepositoryPort usuarioRepositoryPort;
-	private final Duration validadeCache;
-	private final Map<String, Registro> cache = new ConcurrentHashMap<>();
+	private final AcessoDoUsuarioPort acessos;
 
-	public ContaAtivaVerificador(UsuarioRepositoryPort usuarioRepositoryPort,
-			@Value("${security.cache-status-segundos:10}") long cacheSegundos) {
-		this.usuarioRepositoryPort = usuarioRepositoryPort;
-		this.validadeCache = Duration.ofSeconds(Math.max(0, cacheSegundos));
+	public ContaAtivaVerificador(AcessoDoUsuarioPort acessos) {
+		this.acessos = acessos;
 	}
 
-	/**
-	 * Uma conta inexistente responde {@code false}: username valido no token e ausente no banco
-	 * significa usuario removido, e negar e a leitura segura.
-	 */
 	public boolean ativa(String username) {
 		if (username == null || username.isBlank()) {
 			return false;
 		}
-
-		long agora = System.nanoTime();
-		Registro registro = cache.get(username);
-
-		if (registro != null && registro.valido(agora)) {
-			return registro.ativa();
-		}
-
-		if (cache.size() >= LIMITE_ENTRADAS) {
-			cache.values().removeIf(entrada -> !entrada.valido(agora));
-		}
-
-		Optional<StatusUsuario> status = usuarioRepositoryPort.buscarStatusPorUsername(username);
-		boolean ativa = status.filter(StatusUsuario.ATIVO::equals).isPresent();
-		cache.put(username, new Registro(ativa, agora + validadeCache.toNanos()));
-		return ativa;
-	}
-
-	/** Descarta o cache inteiro. Existe para os testes; nao ha caminho de producao que chame. */
-	public void limpar() {
-		cache.clear();
-	}
-
-	private record Registro(boolean ativa, long expiraEm) {
-
-		boolean valido(long agora) {
-			return agora - expiraEm < 0;
+		try {
+			return acessos.buscar(username).map(AcessoDoUsuario::ativo).orElse(false);
+		} catch (BraservCoreIndisponivelException indisponivel) {
+			log.warn("Acesso de {} negado: {}", username, indisponivel.getMessage());
+			return false;
 		}
 	}
 }

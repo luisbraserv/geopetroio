@@ -15,6 +15,6 @@ import com.geopetro.alarmes.EventoAlarme.Severidade;
  * @param desde        quando o episódio abriu
  * @param valorExtremo o pior valor do episódio, na direção violada
  */
-public record AlarmeAtivo(long unidadeSondaId, String dispositivoId, String serie, String episodioId,
+public record AlarmeAtivo(long unidadeId, String dispositivoId, String serie, String episodioId,
 		Severidade severidadeAtual, Instant desde, Double valorExtremo, LimiteViolado limiteViolado) {
 }

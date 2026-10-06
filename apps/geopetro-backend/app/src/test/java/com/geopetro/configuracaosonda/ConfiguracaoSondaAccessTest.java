@@ -1,8 +1,8 @@
 package com.geopetro.configuracaosonda;
 
-import com.geopetro.monitoramento.SondaMonitoramentoService;
+import com.geopetro.monitoramento.UnidadeMonitoramentoService;
 import com.geopetro.security.application.ContaAtivaVerificador;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -10,7 +10,7 @@ import static org.mockito.Mockito.*;
 class ConfiguracaoSondaAccessTest {
     @Test void requiresActiveAccountAndCurrentUnitAccessForEveryRequest() {
         var accounts = mock(ContaAtivaVerificador.class);
-        var monitoramento = mock(SondaMonitoramentoService.class);
+        var monitoramento = mock(UnidadeMonitoramentoService.class);
         var access = new ConfiguracaoSondaAccess(monitoramento, accounts);
         when(accounts.ativa("ana")).thenReturn(true);
         when(monitoramento.usuarioPossuiAcessoAUnidade("ana", 7L)).thenReturn(true);

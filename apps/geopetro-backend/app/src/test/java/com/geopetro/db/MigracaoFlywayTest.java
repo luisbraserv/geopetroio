@@ -73,7 +73,7 @@ class MigracaoFlywayTest {
 	void baseVaziaMigraDoZero() throws SQLException {
 		flyway().migrate();
 
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1", "2026.10.02.1");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1", "2026.10.02.1", "2026.10.06.1");
 		assertThat(existeTabela("simulador_pocos")).isTrue();
         assertThat(existeTabela("recuperacao_senha")).isTrue();
         assertThat(existeTabela("configuracao_smtp")).isTrue();
@@ -176,7 +176,7 @@ class MigracaoFlywayTest {
 
 		// Se o baseline tivesse sido executado, os CREATE TABLE teriam colidido e a migracao
 		// falharia. Ele entra so como registro.
-		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1", "2026.10.02.1");
+		assertThat(versoesAplicadas()).containsExactly("2026.09.04", "2026.09.05", "2026.09.06.1", "2026.09.06.2", "2026.09.06.3", "2026.09.07.1", "2026.09.07.2", "2026.09.07.3", "2026.09.07.4", "2026.09.09.1", "2026.09.09.2", "2026.09.17.1", "2026.10.02.1", "2026.10.06.1");
 		assertThat(tipoDoRegistro("2026.09.04")).isEqualTo("BASELINE");
 		assertThat(tipoDoRegistro("2026.09.05")).isEqualTo("SQL");
 
@@ -325,21 +325,34 @@ class MigracaoFlywayTest {
     }
 
     @Test
-    void configuracaoSondaPreservaUnidadeNaMigracaoEProtegeVinculo() throws SQLException {
+    @DisplayName("Braserv-Core: unidade_sonda_id vira unidade_id, os dados ficam e as quatro FKs caem")
+    void unidadeIdSemFkPreservaOsDados() throws SQLException {
         Flyway.configure().dataSource(URL_SCHEMA, USUARIO, SENHA)
-            .locations("classpath:db/migration").target("2026.09.07.1").load().migrate();
+            .locations("classpath:db/migration").target("2026.10.02.1").load().migrate();
         executarNoSchema("INSERT INTO regionais (id, nome) VALUES (7, 'Teste')");
         executarNoSchema("INSERT INTO setores (id, nome, regional_id) VALUES (7, 'Teste', 7)");
         executarNoSchema("INSERT INTO unidades_sondas (id, nome, setor_id, tipo) VALUES (7, 'Teste', 7, 'SONDA')");
-        flyway().migrate();
-        assertThat(contar("SELECT COUNT(*) FROM unidades_sondas WHERE id = 7")).isEqualTo(1);
-        String insert = "INSERT INTO configuracao_sonda (unidade_sonda_id, version, limites_json, atualizado_por, atualizado_em) VALUES ";
-        executarNoSchema(insert + "(7, 0, '[]', 'ana', NOW(6))");
-        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema(insert + "(8, 0, '[]', 'ana', NOW(6))"));
-        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema(insert + "(7, 0, '[]', 'ana', NOW(6))"));
+        executarNoSchema("INSERT INTO configuracao_sonda (unidade_sonda_id, version, limites_json, atualizado_por, atualizado_em) VALUES (7, 0, '[]', 'ana', NOW(6))");
+        // Antes do corte, a FK ainda protegia o vinculo.
         org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema("DELETE FROM unidades_sondas WHERE id = 7"));
+
         flyway().migrate();
-        assertThat(contar("SELECT COUNT(*) FROM configuracao_sonda WHERE unidade_sonda_id = 7 AND version = 0")).isEqualTo(1);
+
+        for (String tabela : new String[] { "configuracao_sonda", "configuracao_cards", "evento_alarme", "episodio_alarme_extremo" }) {
+            assertThat(contar("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '" + SCHEMA
+                + "' AND TABLE_NAME = '" + tabela + "' AND COLUMN_NAME = 'unidade_id'")).as(tabela + ".unidade_id").isEqualTo(1);
+            assertThat(contar("SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = '" + SCHEMA
+                + "' AND TABLE_NAME = '" + tabela + "' AND REFERENCED_TABLE_NAME IS NOT NULL")).as(tabela + " sem FK").isEqualTo(0);
+        }
+        assertThat(contar("SELECT COUNT(*) FROM configuracao_sonda WHERE unidade_id = 7 AND version = 0")).as("dado preservado").isEqualTo(1);
+        // A unidade vive no Braserv-Core: o backend aceita um id que nao esta neste banco.
+        executarNoSchema("INSERT INTO configuracao_sonda (unidade_id, version, limites_json, atualizado_por, atualizado_em) VALUES (8, 0, '[]', 'ana', NOW(6))");
+        // A chave primaria continua: um documento por unidade.
+        org.junit.jupiter.api.Assertions.assertThrows(SQLException.class, () -> executarNoSchema(
+            "INSERT INTO configuracao_sonda (unidade_id, version, limites_json, atualizado_por, atualizado_em) VALUES (7, 0, '[]', 'ana', NOW(6))"));
+
+        // Idempotente: rodar de novo nao quebra.
+        flyway().migrate();
     }
 
     /**

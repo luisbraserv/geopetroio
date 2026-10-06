@@ -16,7 +16,7 @@ import com.geopetro.cards.ConfiguracaoCards.Conexao;
 import com.geopetro.cards.ConfiguracaoCards.FormaTanque;
 import com.geopetro.cards.ConfiguracaoCards.Parametros;
 import com.geopetro.cards.ConfiguracaoCards.Tipo;
-import com.geopetro.core.exception.BusinessException;
+import com.geopetro.comum.exception.BusinessException;
 
 /** RN-080, RN-081, RN-091 — o que o documento de cards aceita e o que recusa. */
 class ConfiguracaoCardsTest {

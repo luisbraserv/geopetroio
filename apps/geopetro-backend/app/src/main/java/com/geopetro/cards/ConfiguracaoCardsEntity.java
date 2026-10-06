@@ -7,7 +7,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "configuracao_cards")
 public class ConfiguracaoCardsEntity {
-    @Id @Column(name = "unidade_sonda_id") Long unidadeSondaId;
+    @Id @Column(name = "unidade_id") Long unidadeId;
     @Version Long version;
     @Column(name = "conexao_json", nullable = false, columnDefinition = "LONGTEXT") String conexaoJson;
     @Column(name = "cards_json", nullable = false, columnDefinition = "LONGTEXT") String cardsJson;
