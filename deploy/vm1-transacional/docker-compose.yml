@@ -24,21 +24,66 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-geopetro_io}
       MYSQL_USER: ${DB_USERNAME:?defina no .env}
       MYSQL_PASSWORD: ${DB_PASSWORD:?defina no .env}
+      CORE_DB_NAME: ${CORE_DB_NAME:-braserv_core}
+      CORE_DB_USERNAME: ${CORE_DB_USERNAME:-braserv_core}
+      CORE_DB_PASSWORD: ${CORE_DB_PASSWORD:?defina CORE_DB_PASSWORD no .env}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
       - --default-time-zone=-03:00
     volumes:
       - mysql-data:/var/lib/mysql
-      # Sem mysql-init desde 2026-09-06: quem cria e evolui o schema e o Flyway,
-      # no startup do backend. O antigo 01-schema.sql virou o baseline
-      # V2026.09.04 em app/src/main/resources/db/migration. Ver README.
+      - ../mysql-init/01-core-database.sh:/docker-entrypoint-initdb.d/01-core-database.sh:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 20s
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  core:
+    build:
+      context: ../../apps/core
+      dockerfile: Dockerfile
+    image: braserv/core:${TAG:-latest}
+    container_name: braserv-core
+    restart: unless-stopped
+    networks:
+      default:
+        aliases: [braserv-core]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${CORE_DB_NAME:-braserv_core}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DB_USERNAME: ${CORE_DB_USERNAME:-braserv_core}
+      DB_PASSWORD: ${CORE_DB_PASSWORD}
+      JWT_CHAVE_PRIVADA: /run/secrets/jwt-private.pem
+      JWT_CHAVES_PUBLICAS_ANTERIORES: ${JWT_CHAVES_PUBLICAS_ANTERIORES:-}
+      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
+      CORE_SEGREDO_INICIAL_BACKEND: ${CORE_CLIENTE_SEGREDO:?defina CORE_CLIENTE_SEGREDO no .env}
+      GEOPETRO_BACKEND_URL: http://backend:8080
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS}
+      PASSWORD_RECOVERY_ENABLED: ${PASSWORD_RECOVERY_ENABLED:-false}
+      PASSWORD_RECOVERY_FRONTEND_URL: ${PASSWORD_RECOVERY_FRONTEND_URL:-}
+      PASSWORD_RECOVERY_FROM: ${PASSWORD_RECOVERY_FROM:-}
+      SMTP_SETTINGS_ENCRYPTION_KEY: ${SMTP_SETTINGS_ENCRYPTION_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-true}
+    secrets:
+      - source: core-jwt-private
+        target: jwt-private.pem
+    volumes:
+      - smtp-secrets:/app/secrets
+    expose:
+      - "8082"
 
   backend:
     build:
@@ -52,6 +97,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      core:
+        condition: service_healthy
     environment:
       # A imagem ja define SPRING_PROFILES_ACTIVE=prod. Explicito aqui para que
       # fique visivel na leitura do compose — sem isto, o application-prod.properties
@@ -60,25 +107,13 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-geopetro_io}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
-      JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
-      PASSWORD_RECOVERY_ENABLED: ${PASSWORD_RECOVERY_ENABLED:-false}
-      PASSWORD_RECOVERY_FRONTEND_URL: ${PASSWORD_RECOVERY_FRONTEND_URL:-}
-      PASSWORD_RECOVERY_FROM: ${PASSWORD_RECOVERY_FROM:-}
-      SMTP_SETTINGS_ENCRYPTION_KEY: ${SMTP_SETTINGS_ENCRYPTION_KEY:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USERNAME: ${SMTP_USERNAME:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_AUTH: ${SMTP_AUTH:-true}
-      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
-      SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-true}
+      CORE_URL: http://core:8082
+      CORE_CLIENTE_ID: geopetro-backend
+      CORE_CLIENTE_SEGREDO: ${CORE_CLIENTE_SEGREDO:?defina CORE_CLIENTE_SEGREDO no .env}
       # Aponta para a VM-2. Substitua pelo IP/host real da maquina de telemetria.
       MONITORAMENTO_BASE_URL: ${MONITORAMENTO_BASE_URL:?defina o endereco da VM-2 no .env}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS}
-    volumes:
-      - smtp-secrets:/app/secrets
     expose:
       - "8080"
 
@@ -90,6 +125,7 @@ services:
     container_name: geopetro-front
     restart: unless-stopped
     depends_on:
+      - core
       - backend
     ports:
       # Porta externa configuravel: na VM-1 a 80 ja e do IIS, que permanece no ar.
@@ -104,3 +140,7 @@ services:
 volumes:
   smtp-secrets:
   mysql-data:
+
+secrets:
+  core-jwt-private:
+    file: ./core/keys/jwt-private.pem

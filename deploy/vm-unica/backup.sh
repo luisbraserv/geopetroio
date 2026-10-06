@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-# Backup diario da VM unica: MySQL, InfluxDB e a chave SMTP.
+# Backup diario da VM unica: os dois databases, InfluxDB e chaves.
 #
 #   ./backup.sh                       # grava em /var/backups/geopetro
 #   BACKUP_DIR=/mnt/bk ./backup.sh
@@ -21,7 +21,7 @@ mkdir -p "$DESTINO"
 
 # As credenciais ja estao no ambiente de cada container; nada do .env passa pela linha de comando.
 docker compose exec -T mysql sh -c \
-  'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' \
+  'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE" "$CORE_DB_NAME"' \
   | gzip > "$DESTINO/mysql-$stamp.sql.gz"
 
 docker compose exec -T influxdb sh -c \
@@ -29,8 +29,12 @@ docker compose exec -T influxdb sh -c \
   > "$DESTINO/influx-$stamp.tar.gz"
 
 # Sem esta chave, a senha SMTP gravada no banco nao pode ser lida de volta.
-docker run --rm --volumes-from "$(docker compose ps -q backend)" alpine \
+docker run --rm --volumes-from "$(docker compose ps -q core)" alpine \
   tar -C /app -czf - secrets > "$DESTINO/smtp-secrets-$stamp.tar.gz"
+
+# A perda da chave privada invalida sessoes e impede reproduzir a identidade do
+# emissor depois de restaurar o banco. O arquivo e sensivel: proteja o destino.
+tar -C core -czf "$DESTINO/core-jwt-keys-$stamp.tar.gz" keys
 
 find "$DESTINO" -type f -name '*.gz' -mtime +"$DIAS" -delete
 echo "$(date -Is) backup ok em $DESTINO ($stamp)"

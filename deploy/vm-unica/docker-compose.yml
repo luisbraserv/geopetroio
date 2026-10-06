@@ -32,13 +32,18 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-geopetro_io}
       MYSQL_USER: ${DB_USERNAME:?defina no .env}
       MYSQL_PASSWORD: ${DB_PASSWORD:?defina no .env}
+      CORE_DB_NAME: ${CORE_DB_NAME:-braserv_core}
+      CORE_DB_USERNAME: ${CORE_DB_USERNAME:-braserv_core}
+      CORE_DB_PASSWORD: ${CORE_DB_PASSWORD:?defina CORE_DB_PASSWORD no .env}
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
       - --default-time-zone=-03:00
     volumes:
       - mysql-data:/var/lib/mysql
-      # Sem mysql-init: o schema e do Flyway, no startup do backend.
+      # Cria somente o database/usuario do core em volumes novos. Os schemas
+      # continuam pertencendo aos Flyways de cada aplicacao.
+      - ../mysql-init/01-core-database.sh:/docker-entrypoint-initdb.d/01-core-database.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 20s
@@ -123,30 +128,29 @@ services:
     expose:
       - "8081"
 
-  backend:
+  core:
     build:
-      context: ../../apps/geopetro-backend
+      context: ../../apps/core
       dockerfile: Dockerfile
-    image: geopetro/geopetro-backend:${TAG:-latest}
+    image: braserv/core:${TAG:-latest}
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
-    mem_limit: ${BACKEND_MEM:-1536m}
+    mem_limit: ${CORE_MEM:-1024m}
     networks:
       default:
-        # O nginx do front faz proxy para 'geopetro-backend:8080' (apps/geopetro-frontend/nginx.conf).
-        aliases: [geopetro-backend]
+        aliases: [braserv-core]
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-geopetro_io}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      DB_URL: jdbc:mysql://mysql:3306/${CORE_DB_NAME:-braserv_core}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DB_USERNAME: ${CORE_DB_USERNAME:-braserv_core}
+      DB_PASSWORD: ${CORE_DB_PASSWORD}
+      JWT_CHAVE_PRIVADA: /run/secrets/jwt-private.pem
+      JWT_CHAVES_PUBLICAS_ANTERIORES: ${JWT_CHAVES_PUBLICAS_ANTERIORES:-}
       JWT_EXPIRATION_SECONDS: ${JWT_EXPIRATION_SECONDS:-3600}
-      MONITORAMENTO_BASE_URL: http://telemetria:8081
-      # Uma origem so: o dominio. O padrao de origem tambem vale para o handshake do
-      # WebSocket (WebSocketConfig); vazio, o navegador nao conecta ao tempo real.
+      CORE_SEGREDO_INICIAL_BACKEND: ${CORE_CLIENTE_SEGREDO:?defina CORE_CLIENTE_SEGREDO no .env}
+      GEOPETRO_BACKEND_URL: http://backend:8080
       CORS_ALLOWED_ORIGINS: https://${DOMINIO:?defina DOMINIO no .env}
       CORS_ALLOWED_ORIGIN_PATTERNS: https://${DOMINIO}
       PASSWORD_RECOVERY_ENABLED: ${PASSWORD_RECOVERY_ENABLED:-false}
@@ -160,9 +164,43 @@ services:
       SMTP_AUTH: ${SMTP_AUTH:-true}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-true}
+    secrets:
+      - source: core-jwt-private
+        target: jwt-private.pem
     volumes:
-      # Chave de cifra da senha SMTP: entra no backup junto com o MySQL.
       - smtp-secrets:/app/secrets
+    expose:
+      - "8082"
+
+  backend:
+    build:
+      context: ../../apps/geopetro-backend
+      dockerfile: Dockerfile
+    image: geopetro/geopetro-backend:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      core:
+        condition: service_healthy
+    mem_limit: ${BACKEND_MEM:-1536m}
+    networks:
+      default:
+        # O nginx do front faz proxy para 'geopetro-backend:8080' (apps/geopetro-frontend/nginx.conf).
+        aliases: [geopetro-backend]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-geopetro_io}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CORE_URL: http://core:8082
+      CORE_CLIENTE_ID: geopetro-backend
+      CORE_CLIENTE_SEGREDO: ${CORE_CLIENTE_SEGREDO:?defina CORE_CLIENTE_SEGREDO no .env}
+      MONITORAMENTO_BASE_URL: http://telemetria:8081
+      # Uma origem so: o dominio. O padrao de origem tambem vale para o handshake do
+      # WebSocket (WebSocketConfig); vazio, o navegador nao conecta ao tempo real.
+      CORS_ALLOWED_ORIGINS: https://${DOMINIO:?defina DOMINIO no .env}
+      CORS_ALLOWED_ORIGIN_PATTERNS: https://${DOMINIO}
     expose:
       - "8080"
 
@@ -173,6 +211,7 @@ services:
     image: geopetro/front:${TAG:-latest}
     restart: unless-stopped
     depends_on:
+      - core
       - backend
       - telemetria
     # Sem porta no host: so o caddy fala com ele. O build 'k8s' usa caminhos
@@ -208,3 +247,8 @@ volumes:
   smtp-secrets:
   caddy-data:
   caddy-config:
+
+secrets:
+  # Apenas o core recebe a chave privada; o backend obtem chaves publicas pelo JWKS.
+  core-jwt-private:
+    file: ./core/keys/jwt-private.pem

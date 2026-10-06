@@ -83,7 +83,7 @@ instrução diz o que é seu trabalho, o que não pode ser tocado e quando parar
 - A primeira subida (`docker compose up -d --build`) compila Maven e Angular dentro da VM e leva vários
   minutos. Acompanhe com `docker compose logs -f backend`.
 - Se um container reiniciar em laço, leia `docker compose logs <serviço>` antes de mexer em qualquer
-  coisa. Causas comuns já conhecidas estão no README (`JWT_SECRET` vazio, `mosquitto/passwd` ausente,
+  coisa. Causas comuns já conhecidas estão no README (`CORE_CLIENTE_SEGREDO` vazio, chave RS256 ou `mosquitto/passwd` ausente,
   DNS ou porta 80 impedindo o certificado).
 - Faça o teste final de fora da VM sempre que possível: peça ao usuário para abrir o endereço no
   navegador dele e entrar.

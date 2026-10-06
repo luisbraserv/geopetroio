@@ -118,7 +118,8 @@ Preencha:
 |---|---|
 | `MYSQL_ROOT_PASSWORD` | `openssl rand -base64 24` |
 | `DB_PASSWORD` | `openssl rand -base64 24` |
-| `JWT_SECRET` | `openssl rand -base64 48` — a aplicação **não sobe** vazio, de propósito |
+| `CORE_DB_PASSWORD` | `openssl rand -hex 24` |
+| `CORE_CLIENTE_SEGREDO` | `openssl rand -hex 32` |
 | `FRONT_PORT` | `8090` |
 | `TELEMETRIA_HOST_IP` | placeholder (ex.: `127.0.0.1`) até a VM-2 existir |
 | `MONITORAMENTO_BASE_URL` | placeholder (ex.: `http://127.0.0.1:8081`) |
@@ -127,9 +128,14 @@ Preencha:
 Então:
 
 ```bash
-docker compose up -d --build      # a primeira vez demora: compila backend e front
+mkdir -p core/keys
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out core/keys/jwt-private.pem
+openssl pkey -in core/keys/jwt-private.pem -pubout -out core/keys/jwt-public.pem
+chmod 600 core/keys/jwt-private.pem
+
+docker compose up -d --build      # a primeira vez demora: compila core, backend e front
 docker compose ps
-docker compose logs -f backend
+docker compose logs -f core backend
 ```
 
 ---
@@ -137,7 +143,8 @@ docker compose logs -f backend
 ## Passo 5 · Verificar
 
 ```bash
-# 1. Backend de pé
+# 1. Core e backend de pé
+docker compose exec core curl -s localhost:8082/actuator/health/readiness
 docker compose exec backend curl -s localhost:8080/actuator/health/readiness
 
 # 2. Front respondendo
@@ -165,7 +172,8 @@ Se abrir aqui mas não de fora, o problema é o passo 3.
 | Abre na VM, não abre na rede | `portproxy` ausente ou apontando para IP velho | `.\03-publicar-portas.ps1 -Renovar` |
 | Após reboot, nada responde | WSL não acordou | Verificar as duas tarefas no Agendador |
 | `docker: command not found` | Passo 2 não rodou, ou rodou sem systemd | `wsl --shutdown` e repetir o passo 2 |
-| Backend reinicia em laço | `JWT_SECRET` vazio ou MySQL sem schema | `docker compose logs backend` |
+| Core reinicia em laço | chave RS256 ausente ou database do Core indisponível | `docker compose logs core` |
+| Backend reinicia em laço | Core indisponível ou MySQL sem schema | `docker compose logs backend` |
 | Gráfico de Monitoramento vazio | **Esperado** — VM-2 não existe | Sem ação até criar a VM-2 |
 
 ---

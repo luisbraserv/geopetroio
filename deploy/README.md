@@ -20,7 +20,8 @@ armazenamento.
 │  VM-1 · TRANSACIONAL     │              │  VM-2 · TELEMETRIA       │
 │                          │   REST 8081  │                          │
 │  front (nginx :80)       │─────────────►│  mosquitto  :1883        │
-│  geopetro-backend :8080     │              │  telemetria :8081        │
+│  Braserv-Core :8082         │              │  telemetria :8081        │
+│  geopetro-backend :8080     │              │                          │
 │  mysql :3306 (loopback)  │              │  influxdb :8086 (loop.)  │
 └──────────────────────────┘              └──────────────────────────┘
      read-heavy, intermitente                write-heavy, contínuo 24/7
@@ -107,14 +108,20 @@ cd deploy/vm1-transacional
 cp .env.example .env
 ```
 
-### 1. Gerar o segredo JWT
+### 1. Gerar as credenciais e o par RS256
 
 ```bash
-openssl rand -base64 48
+openssl rand -hex 24    # CORE_DB_PASSWORD
+openssl rand -hex 32    # CORE_CLIENTE_SEGREDO
+mkdir -p core/keys
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out core/keys/jwt-private.pem
+openssl pkey -in core/keys/jwt-private.pem -pubout -out core/keys/jwt-public.pem
+chmod 600 core/keys/jwt-private.pem
 ```
 
-⚠️ A aplicação **falha no startup** se `JWT_SECRET` estiver vazio — deliberado
-([SEC-004](../specs/SDD/software/seguranca/security-findings.md#sec-004--segredo-jwt-sem-valor-padrão)).
+A chave privada é montada somente no Braserv-Core. O backend valida tokens pela chave pública
+publicada internamente no JWKS. Para banco existente, siga a movimentação do
+[`vm-unica/README.md`, passo 5](vm-unica/README.md#passo-5--banco-de-dados) antes de subir o Core.
 
 ### 2. Apontar para a VM-2
 
@@ -125,12 +132,13 @@ telemetria.
 
 ```bash
 docker compose up -d
-docker compose logs -f backend
+docker compose logs -f core backend
 ```
 
 ### 4. Verificar
 
 ```bash
+docker compose exec core curl -s localhost:8082/actuator/health/readiness
 docker compose exec backend curl -s localhost:8080/actuator/health/readiness
 ```
 
@@ -138,7 +146,8 @@ docker compose exec backend curl -s localhost:8080/actuator/health/readiness
 
 ## O schema do banco
 
-**[FATO 2026-09-06]** O schema é do **Flyway**, e só dele. Antes conviviam três mecanismos —
+**[FATO 2026-09-06]** Cada schema é do **Flyway** da aplicação dona: `braserv_core` pelo Core e
+`geopetro_io` pelo backend. Antes conviviam três mecanismos —
 `ddl-auto`, scripts SQL rodados à mão e um initializer em runtime; a fila de scripts pendentes era
 conferida de memória, e esquecer um derrubava a subida da aplicação.
 
@@ -207,8 +216,9 @@ existir. **Não rodam mais** — seus efeitos estão dentro do baseline. Ficam c
 
 | Variável | Onde | Gerar com |
 |---|---|---|
-| `JWT_SECRET` | VM-1 | `openssl rand -base64 48` |
-| `MYSQL_ROOT_PASSWORD` · `DB_PASSWORD` | VM-1 | `openssl rand -base64 24` |
+| `CORE_CLIENTE_SEGREDO` | VM-1 | `openssl rand -hex 32` |
+| chave privada RS256 | VM-1, somente Core | `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072` |
+| `MYSQL_ROOT_PASSWORD` · `DB_PASSWORD` · `CORE_DB_PASSWORD` | VM-1 | `openssl rand -hex 24` |
 | `INFLUX_TOKEN` | VM-2 | `openssl rand -hex 32` |
 | `INFLUX_ADMIN_PASSWORD` | VM-2 | `openssl rand -base64 24` |
 | `MQTT_PASSWORD` | VM-2 + sondas | `openssl rand -base64 24` |
@@ -252,7 +262,7 @@ do Geopetro-Desktop, ou as sondas com a versão antiga param de publicar.
 
 Os `docker-compose.yml` são a via recomendada para duas VMs. Se migrar para Kubernetes:
 
-- Os **nomes de Service** devem ser `geopetro-backend` e `telemetria` — o `nginx.conf` do frontend faz proxy por esses nomes.
+- Os **nomes de Service** devem ser `braserv-core`, `geopetro-backend` e `telemetria` — o `nginx.conf` do frontend faz proxy por esses nomes.
 - Probes: `/actuator/health/readiness` e `/actuator/health/liveness` nos dois backends.
 - Use `Secret` (não `ConfigMap`) para as variáveis da tabela acima.
 - MySQL e InfluxDB precisam de `PersistentVolumeClaim` — ou, preferencialmente, serviços gerenciados.

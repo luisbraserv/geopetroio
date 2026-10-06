@@ -21,18 +21,19 @@ topologia em duas VMs; esta pasta junta as duas.
 | 80, 443 | caddy | internet (usuários, Desktops das sondas, Let's Encrypt) |
 | 1883 | mosquitto | Desktops das sondas |
 
-MySQL, InfluxDB, backend e telemetria **não** publicam porta no host: só existem na rede interna do
+MySQL, InfluxDB, core, backend e telemetria **não** publicam porta no host: só existem na rede interna do
 compose. O front é compilado com a configuração `k8s` (caminhos relativos), então SPA, API, WebSocket e
 telemetria saem do mesmo domínio, sem CORS.
 
 | Arquivo | Papel |
 |---|---|
-| `docker-compose.yml` | Os sete serviços |
+| `docker-compose.yml` | Os oito serviços |
 | `.env.example` | Variáveis; copie para `.env` (não versionado) |
 | `caddy/Caddyfile` | TLS e redirecionamento HTTP → HTTPS |
 | `mosquitto/mosquitto.conf` | Broker com autenticação obrigatória (SEC-009) |
 | `mosquitto/passwd` | Gerado na VM (passo 4); não versionado |
-| `backup.sh` | Backup diário de MySQL, InfluxDB e chave SMTP |
+| `core/mover-para-core.sql` | Movimentação única dos nove cadastros já existentes |
+| `backup.sh` | Backup diário dos dois databases, InfluxDB e chaves |
 
 ---
 
@@ -43,7 +44,7 @@ telemetria saem do mesmo domínio, sem CORS.
   [`deploy/vm1-transacional/windows`](../vm1-transacional/windows/README.md) e publique as portas 80, 443
   e 1883 (o `03-publicar-portas.ps1` publica uma porta por execução). Se o IIS ocupa a 80/443, o
   Let's Encrypt não funciona sem liberar essas portas.
-- **8 GB de RAM** ou mais (o build do Angular e do Maven acontece na VM; depois rodam duas JVMs, MySQL e
+- **8 GB de RAM** ou mais (o build do Angular e do Maven acontece na VM; depois rodam três JVMs, MySQL e
   InfluxDB) e **40 GB de disco** livres.
 - **DNS:** registro A de `geopetro.braservpetroleo.com.br` apontando para o IP público da VM.
 - **Rede:** 80 e 443 abertas para a internet (o Let's Encrypt valida pela 80); 1883 aberta para as sondas.
@@ -79,6 +80,17 @@ chmod 600 .env
 Preencha `ACME_EMAIL` e gere cada segredo na própria VM com o comando indicado acima da variável
 (`openssl rand ...`). `DOMINIO` já vem com `geopetro.braservpetroleo.com.br`.
 
+Gere o par RS256. A chave privada não é versionada nem entregue ao backend; o Compose a monta como
+segredo somente no Core. A pública fica para auditoria e rotação:
+
+```bash
+mkdir -p core/keys
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out core/keys/jwt-private.pem
+openssl pkey -in core/keys/jwt-private.pem -pubout -out core/keys/jwt-public.pem
+chmod 600 core/keys/jwt-private.pem
+chmod 644 core/keys/jwt-public.pem
+```
+
 ## Passo 3 · Conferir DNS e portas antes de subir
 
 ```bash
@@ -104,8 +116,24 @@ sudo chown 1883:1883 mosquitto/passwd && sudo chmod 600 mosquitto/passwd
 
 ## Passo 5 · Banco de dados
 
-**Não há criação automática de usuário.** Uma base vazia sobe com o schema completo (o Flyway cria tudo
-no startup do backend), mas sem nenhum login. Escolha um caminho **antes** de subir o backend.
+O MySQL cria `geopetro_io` e `braserv_core`, cada um com seu usuário, ao inicializar um volume novo.
+Em volume já existente, o diretório `docker-entrypoint-initdb.d` não roda novamente; por isso crie/ajuste
+o database e o usuário do Core de forma idempotente antes da movimentação:
+
+```bash
+set -a; . ./.env; set +a
+docker compose up -d mysql
+docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' <<SQL
+CREATE DATABASE IF NOT EXISTS \`$CORE_DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS '$CORE_DB_USERNAME'@'%' IDENTIFIED BY '$CORE_DB_PASSWORD';
+ALTER USER '$CORE_DB_USERNAME'@'%' IDENTIFIED BY '$CORE_DB_PASSWORD';
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '$CORE_DB_USERNAME'@'%';
+GRANT ALL PRIVILEGES ON \`$CORE_DB_NAME\`.* TO '$CORE_DB_USERNAME'@'%';
+FLUSH PRIVILEGES;
+SQL
+```
+
+Escolha um caminho abaixo. Não suba o `core` antes de executar o passo 5A em uma base existente.
 
 ### 5A · Importar o banco existente (recomendado)
 
@@ -130,14 +158,32 @@ Bases antigas, com `utf8mb4_unicode_ci` ou sem histórico do Flyway, são aceita
 migrations pendentes na primeira subida. Leia antes os avisos de [`deploy/README.md`](../README.md#o-schema-do-banco)
 (a `V2026.09.06.2` descarta vínculos regionais).
 
+Com Core e backend parados, mova os nove cadastros. O script valida origem, destino e contagens e
+falha antes da movimentação se o estado não for o esperado:
+
+```bash
+docker compose stop core backend 2>/dev/null || true
+docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' \
+  < core/mover-para-core.sql
+```
+
 ### 5B · Base nova e primeiro administrador
 
-Suba tudo (passo 6). Com o backend `healthy`, o schema existe. Gere o hash BCrypt da senha e crie o
+Suba tudo (passo 6). Os dois Flyways criam seus schemas. Como o baseline histórico do backend ainda
+precisa atender bancos antigos, ele também cria nove tabelas legadas vazias em `geopetro_io`; remova-as
+com o script que recusa a operação se encontrar qualquer dado:
+
+```bash
+docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' \
+  < core/remover-legado-base-nova.sql
+```
+
+Com `core` e `backend` saudáveis, gere o hash BCrypt da senha e crie o
 usuário (troque usuário, nome, e-mail, telefone e senha):
 
 ```bash
 HASH=$(docker run --rm httpd:alpine htpasswd -nbBC 10 x 'SENHA-FORTE-AQUI' | cut -d: -f2 | sed 's/^\$2y/$2a/')
-docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' <<SQL
+docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$CORE_DB_NAME"' <<SQL
 INSERT INTO usuarios (tipo_usuario, username, nome, email, telefone, matricula, password, status)
 VALUES ('INTERNO', 'admin', 'Administrador', 'admin@braservpetroleo.com.br', '(82) 99999-0000', 1, '$HASH', 'ATIVO');
 INSERT INTO usuario_roles (username, role) VALUES ('admin', 'INTERNO'), ('admin', 'ADMIN');
@@ -158,22 +204,26 @@ Deve começar com `{"token":`. Entre pela tela e cadastre os demais usuários po
 ## Passo 6 · Subir
 
 ```bash
-docker compose up -d --build          # a primeira vez compila backend, telemetria e front
+docker compose up -d --build          # a primeira vez compila core, backend, telemetria e front
 docker compose ps                     # todos "running"/"healthy" em alguns minutos
-docker compose logs -f backend        # Flyway e "Started"
+docker compose logs -f core backend   # Flyway e "Started"
 ```
 
 ## Passo 7 · Verificar
 
 ```bash
 D=geopetro.braservpetroleo.com.br
+docker compose exec core curl -fsS localhost:8082/actuator/health/readiness; echo
 docker compose exec backend curl -fsS localhost:8080/actuator/health/readiness; echo
 docker compose exec telemetria curl -fsS localhost:8081/actuator/health; echo
+docker compose exec backend curl -fsS http://core:8082/.well-known/jwks.json; echo
 docker compose logs telemetria | grep -E "Conectado ao broker|Assinado"
 curl -sI http://$D | head -3                                  # 308 para https
 curl -s -o /dev/null -w '%{http_code}\n' https://$D           # 200 (SPA)
 curl -s -o /dev/null -w '%{http_code}\n' -X POST https://$D/api/auth/login \
   -H 'Content-Type: application/json' -d '{"username":"x","password":"x"}'   # 401: API alcançada
+curl -s -o /dev/null -w '%{http_code}\n' https://$D/.well-known/jwks.json         # 404: não publicado
+curl -s -o /dev/null -w '%{http_code}\n' https://$D/internal/v1/unidades          # 404: não publicado
 curl -s -o /dev/null -w '%{http_code}\n' --http1.1 https://$D/ws \
   -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
   -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' -H "Origin: https://$D"  # 101: WebSocket
@@ -201,7 +251,8 @@ sudo mkdir -p /var/backups/geopetro && sudo chown "$USER" /var/backups/geopetro
 ```
 
 Restaurar o MySQL: `gunzip -c mysql-<data>.sql.gz | docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'`.
-O backup fica na mesma VM; copie a pasta para fora com regularidade.
+O backup inclui os dois databases, a chave SMTP e o par RS256. Ele contém segredos e fica na mesma VM;
+proteja-o e copie a pasta para fora com regularidade.
 
 ## Passo 10 · Firewall
 
