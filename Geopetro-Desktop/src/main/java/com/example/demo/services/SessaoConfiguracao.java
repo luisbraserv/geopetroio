@@ -96,7 +96,7 @@ public class SessaoConfiguracao {
 	 *
 	 * <h2>⚠️ Por que o endereço entra aqui</h2>
 	 * Desde 2026-09-10 a engrenagem inteira exige sessão
-	 * ({@code specs/features/configuracao-da-estacao.md §5}) — inclusive o campo com a URL do
+	 * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §5}) — inclusive o campo com a URL do
 	 * Backend. Isso fecharia a porta sobre si mesma: sem URL não há login, e sem login não se define
 	 * a URL. Uma estação recém-instalada não teria por onde começar.
 	 *
@@ -108,7 +108,8 @@ public class SessaoConfiguracao {
 	 */
 	public synchronized Resultado abrir(String usuario, String senha, String servidor) {
 		AppSettings configuracoes = settings.loadSettings();
-		String informado = normalizarBase(servidor);
+		// No app instalado o servidor e o de producao, definido no build: o digitado nao vale.
+		String informado = com.example.demo.config.Ambiente.backendUrl().isPresent() ? null : normalizarBase(servidor);
 		String base = informado != null ? informado
 				: normalizarBase(configuracoes == null ? null : configuracoes.getBackendUrl());
 		if (base == null) {

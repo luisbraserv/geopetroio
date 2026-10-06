@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.config.Ambiente;
 import com.example.demo.config.AppPaths;
 
 import java.io.IOException;
@@ -46,7 +47,15 @@ public class SettingsService {
         this.settingsPath = AppPaths.configDir().resolve("app-settings.json");
     }
 
+    /**
+     * Le o arquivo de configuracoes. No app instalado, backend e broker sao os de producao, definidos
+     * no build ({@link Ambiente}), qualquer que seja o valor gravado.
+     */
     public AppSettings loadSettings() {
+        return Ambiente.aplicar(lerArquivo());
+    }
+
+    private AppSettings lerArquivo() {
         if (Files.notExists(settingsPath)) return new AppSettings();
         try {
             String content = Files.readString(settingsPath, StandardCharsets.UTF_8);

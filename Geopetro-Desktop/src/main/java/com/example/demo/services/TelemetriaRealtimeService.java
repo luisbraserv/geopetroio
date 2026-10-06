@@ -6,8 +6,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.models.AppSettings;
 import com.example.demo.models.EstadoAtual;
+import com.example.demo.models.UnidadeSondaOpcao;
 
 import jakarta.annotation.PreDestroy;
 
@@ -83,18 +86,42 @@ public class TelemetriaRealtimeService {
      * o que mantém uma sonda medindo depois de reiniciar sem rede.
      *
      * <p>⚠️ <b>Os limites de alarme não chegam mais por aqui.</b> O alarme da estação é configurado
-     * na estação ({@code specs/features/configuracao-da-estacao.md §3.3}) — buscar no servidor uma
+     * na estação ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3.3}) — buscar no servidor uma
      * faixa para tocar um beep nesta máquina era uma volta pela rede para responder o que já estava
      * respondido aqui.
      */
     private final CardsState cards;
+
+    /**
+     * Lista de Unidades/Sondas do usuario desta estacao: antes de aceitar a configuracao de uma
+     * unidade, o canal confere se ela ainda existe para ele no servidor.
+     */
+    private final UnidadeSondaCatalogoService catalogo;
+
+    /**
+     * Unidade que o servidor respondeu nao estar disponivel para este usuario — excluida, acesso
+     * revogado, ou o id apontando para nada depois de o banco ser recriado. A tela usa para dizer o
+     * que fazer, em vez de "aguardando configuracao".
+     */
+    private final AtomicReference<Long> unidadeIndisponivel = new AtomicReference<>();
+
+    /**
+     * Acorda o worker quando a configuracao muda. Sem isto, trocar de unidade durante a espera de
+     * reconexao (ate {@link #BACKOFF_MAXIMO}) deixaria a tela com os cards da anterior todo esse tempo.
+     */
+    private final Semaphore acordar = new Semaphore(0);
 
     public TelemetriaRealtimeService() {
         this(new CardsState());
     }
 
     TelemetriaRealtimeService(CardsState cards) {
+        this(cards, new UnidadeSondaCatalogoService());
+    }
+
+    TelemetriaRealtimeService(CardsState cards, UnidadeSondaCatalogoService catalogo) {
         this.cards = cards;
+        this.catalogo = catalogo;
     }
     /** Mesmo login da sessao de configuracao — uma implementacao so, para nao divergirem. */
     private final BackendLogin backendLogin = new BackendLogin(httpClient);
@@ -114,6 +141,15 @@ public class TelemetriaRealtimeService {
             return java.util.Optional.empty();
         }
         return cards.atual(chaveCache(alvo(settings)), settings.getUnidadeSondaId());
+    }
+
+    /**
+     * {@code true} quando o servidor respondeu que a unidade configurada nesta estacao nao esta na
+     * lista do usuario. Diferente de "sem rede": ai o cache continua valendo (RN-088).
+     */
+    public boolean unidadeIndisponivel(AppSettings settings) {
+        return settings != null && settings.getUnidadeSondaId() != null
+                && java.util.Objects.equals(unidadeIndisponivel.get(), settings.getUnidadeSondaId());
     }
     private String chaveCache(Alvo alvo) { return alvo == null ? null : alvo.backend() + "\n" + alvo.usuario(); }
     private Alvo alvo(AppSettings settings) {
@@ -135,6 +171,9 @@ public class TelemetriaRealtimeService {
             String chave = chaveCache(novo);
             Long unidade = novo == null ? null : novo.unidade();
             cards.conectar(chave, unidade);
+            unidadeIndisponivel.set(null);
+            // Troca de unidade (ou de servidor) vale ja: o worker sai da espera e busca a nova.
+            acordar.release();
         }
         if (novo == null) { configuracao.set(null); return; }
         // Snapshot das credenciais evita mutacao de AppSettings durante login/reconexao.
@@ -171,6 +210,7 @@ public class TelemetriaRealtimeService {
 	 */
 	private void loop() {
 		Duration backoff = BACKOFF_INICIAL;
+		Alvo ultimoDesejado = null;
 
 		while (ativo.get() && !Thread.currentThread().isInterrupted()) {
 			try {
@@ -178,6 +218,12 @@ public class TelemetriaRealtimeService {
                 if (!java.util.Objects.equals(desejado, alvoConectado)) {
                     fecharClienteSilenciosamente(); conectado.set(false);
                     cards.conectar(chaveCache(desejado), desejado == null ? null : desejado.unidade());
+                }
+                // Unidade nova comeca com espera curta. Comparar com o alvo CONECTADO aqui zeraria a
+                // espera a cada falha (ele so e definido quando a conexao da certo) e martelaria o backend.
+                if (!java.util.Objects.equals(desejado, ultimoDesejado)) {
+                    backoff = BACKOFF_INICIAL;
+                    ultimoDesejado = desejado;
                 }
                 if (desejado == null) { dormir(INTERVALO_ENVIO); continue; }
 
@@ -245,6 +291,7 @@ public class TelemetriaRealtimeService {
 		String token = autenticar(settings);
 		Alvo destino = alvo(settings);
         long generationCards = cards.conectar(chaveCache(destino), destino.unidade());
+        verificarDisponibilidade(destino, token);
         client = new StompRealtimeClient(urlWebSocket(destino.backend()), token, destino.unidade(),
             documento -> cards.aceitar(generationCards, documento));
 		client.conectar();
@@ -252,6 +299,29 @@ public class TelemetriaRealtimeService {
         conectado.set(true);
 		logger.info("Canal de tempo real conectado ao backend {} (unidade {}).",
 				settings.getBackendUrl(), settings.getUnidadeSondaId());
+	}
+
+	/**
+	 * Confere, antes de aceitar configuracao, se a unidade desta estacao esta entre as que o
+	 * servidor lista para o usuario.
+	 *
+	 * <p>Disponivel: segue, e a primeira resposta do servidor substitui o cache (ver
+	 * {@link EstadoDeDocumento}). Indisponivel: o documento dela e descartado, em memoria e em disco,
+	 * e a conexao nao abre — o worker tenta de novo no proximo ciclo, entao devolver o acesso no
+	 * servidor basta para a estacao voltar.
+	 *
+	 * <p>Falha de rede ou de login aqui sobe como excecao comum e <b>nao</b> descarta nada: sem
+	 * resposta do servidor, o cache em disco continua sendo o que mantem a estacao medindo (RN-088).
+	 */
+	private void verificarDisponibilidade(Alvo destino, String token) {
+		List<UnidadeSondaOpcao> disponiveis = catalogo.listarComToken(destino.backend(), token);
+		if (disponiveis.stream().noneMatch(u -> java.util.Objects.equals(u.id(), destino.unidade()))) {
+			cards.descartar(chaveCache(destino), destino.unidade());
+			unidadeIndisponivel.set(destino.unidade());
+			throw new IllegalStateException("a unidade " + destino.unidade()
+					+ " nao esta disponivel para este usuario no backend; escolha outra em Configuracoes");
+		}
+		unidadeIndisponivel.set(null);
 	}
 
 	/**
@@ -292,8 +362,11 @@ public class TelemetriaRealtimeService {
 		return dobrado.compareTo(BACKOFF_MAXIMO) > 0 ? BACKOFF_MAXIMO : dobrado;
 	}
 
+	/** Espera o intervalo, ou menos se a configuracao mudar no meio ({@link #acordar}). */
 	private void dormir(Duration duracao) throws InterruptedException {
-		TimeUnit.MILLISECONDS.sleep(duracao.toMillis());
+		if (acordar.tryAcquire(duracao.toMillis(), TimeUnit.MILLISECONDS)) {
+			acordar.drainPermits();
+		}
 	}
 
 	private void fecharClienteSilenciosamente() {

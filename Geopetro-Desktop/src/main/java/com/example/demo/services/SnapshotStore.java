@@ -103,6 +103,23 @@ public abstract class SnapshotStore<T extends DocumentoDaUnidade> {
 		}
 	}
 
+	/** Apaga o snapshot gravado, mas só se ele pertencer exatamente a esta chave e unidade. */
+	public void apagar(String chave, Long unidade) {
+		if (chave == null || unidade == null || !Files.exists(arquivo)) {
+			return;
+		}
+		try {
+			var envelope = JSON.getTypeFactory().constructParametricType(Entrada.class, tipo);
+			Entrada<T> entrada = JSON.readValue(Files.readString(arquivo), envelope);
+			if (entrada != null && Objects.equals(entrada.chave(), chave) && Objects.equals(entrada.unidade(), unidade)) {
+				Files.deleteIfExists(arquivo);
+				logger.info("Cache de {} da unidade {} apagado: a unidade nao esta disponivel no servidor.", rotulo, unidade);
+			}
+		} catch (Exception e) {
+			logger.warn("Nao foi possivel apagar o cache de {}: {}", rotulo, e.getMessage());
+		}
+	}
+
 	/**
 	 * Prefere a movimentação atômica; alguns sistemas de arquivos do Windows a recusam quando o
 	 * destino existe, e aí o REPLACE_EXISTING simples resolve.

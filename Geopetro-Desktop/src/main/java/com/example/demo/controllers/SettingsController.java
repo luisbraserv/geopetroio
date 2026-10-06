@@ -155,6 +155,7 @@ public class SettingsController {
         txtBackendUrl.setText(settings.getBackendUrl());
         txtBackendUsuario.setText(settings.getBackendUsuario());
         txtBackendSenha.setText(settings.getBackendSenha());
+        travarEnderecosDeProducao();
 
         mostrarSelecaoSalva(settings);
 
@@ -172,6 +173,23 @@ public class SettingsController {
 
         carregarConexao();
         observarLargura();
+    }
+
+    /**
+     * No app instalado, backend e broker sao os de producao, definidos no build ({@code Ambiente}):
+     * a tela os mostra, mas nao deixa editar. Digitar ali nao teria efeito — o carregamento das
+     * configuracoes os substitui — e um campo editavel que nao vale e pior que um travado.
+     */
+    private void travarEnderecosDeProducao() {
+        if (!com.example.demo.config.Ambiente.producao()) {
+            return;
+        }
+        var aviso = new javafx.scene.control.Tooltip("Endereço de produção, definido na instalação.");
+        for (TextField campo : List.of(txtBackendUrl, txtTelemetriaUrl)) {
+            campo.setEditable(false);
+            campo.setFocusTraversable(false);
+            campo.setTooltip(aviso);
+        }
     }
 
     // ------------------------------------------------------------------

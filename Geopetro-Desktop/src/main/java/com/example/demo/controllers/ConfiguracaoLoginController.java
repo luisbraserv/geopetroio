@@ -94,6 +94,12 @@ public class ConfiguracaoLoginController {
 		// redigitado a cada login.
 		var configuracoes = settingsService.loadSettings();
 		txtServidor.setText(configuracoes == null ? "" : configuracoes.getBackendUrl());
+		// No app instalado o servidor e o de producao, definido no build: aparece, mas nao se edita.
+		if (com.example.demo.config.Ambiente.producao()) {
+			txtServidor.setEditable(false);
+			txtServidor.setFocusTraversable(false);
+			txtServidor.setTooltip(new javafx.scene.control.Tooltip("Endereço de produção, definido na instalação."));
+		}
 
 		// O foco vai para o servidor quando ele esta vazio — estacao nova —, e para o usuario quando
 		// ja ha endereco, que e o caso de todo dia.

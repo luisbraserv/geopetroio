@@ -323,7 +323,7 @@ public class MonitoringController {
     }
 
     /**
-     * O destaque do alarme local — passo 3 de {@code specs/features/alarmes.md}.
+     * O destaque do alarme local — passo 3 de {@code specs/SDD/negocio/requisitos/alarmes.md}.
      *
      * <p>⚠️ Isto <b>sinaliza</b> e nao registra: o historico de eventos tem um produtor so, o
      * Backend. Aqui o objetivo e chamar quem esta ao lado do equipamento, inclusive sem rede.
@@ -495,6 +495,8 @@ public class MonitoringController {
         String mensagem = null;
         if (settings.getUnidadeSondaId() == null) {
             mensagem = "Selecione a unidade em Configurações para carregar os cards.";
+        } else if (telemetriaRealtimeService.unidadeIndisponivel(settings)) {
+            mensagem = "A unidade configurada nesta estação não está disponível no servidor para este usuário. Selecione outra em Configurações.";
         } else if (documentoAtual == null) {
             mensagem = "A configuração dos cards ainda não está disponível nesta estação. Verifique a conexão e o acesso ao servidor em Configurações.";
         } else if (documentoAtual.cards().isEmpty()) {
