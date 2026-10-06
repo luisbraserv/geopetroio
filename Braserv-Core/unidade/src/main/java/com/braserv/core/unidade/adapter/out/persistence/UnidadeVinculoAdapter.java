@@ -1,0 +1,38 @@
+package com.braserv.core.unidade.adapter.out.persistence;
+
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
+import com.braserv.core.comum.port.VinculoCadastroPort;
+import com.braserv.core.unidade.repository.UnidadeJpaRepository;
+
+/**
+ * Unidades impedem a exclusao da Regional e do Setor a que pertencem — RN-063.
+ *
+ * <p>Duas portas em uma classe seriam impossiveis: cada bean responde por um {@link Cadastro}. Por
+ * isso o vinculo com o Setor mora em {@link UnidadeSetorVinculoAdapter}.
+ */
+@Component
+public class UnidadeVinculoAdapter implements VinculoCadastroPort {
+
+	private final UnidadeJpaRepository repository;
+
+	public UnidadeVinculoAdapter(UnidadeJpaRepository repository) {
+		this.repository = repository;
+	}
+
+	@Override
+	public Cadastro cadastro() {
+		return Cadastro.REGIONAL;
+	}
+
+	@Override
+	public Optional<String> descreverVinculo(Long regionalId) {
+		long total = repository.countBySetor_RegionalId(regionalId);
+		if (total == 0) {
+			return Optional.empty();
+		}
+		return Optional.of(total == 1 ? "1 unidade vinculada" : total + " unidades vinculadas");
+	}
+}

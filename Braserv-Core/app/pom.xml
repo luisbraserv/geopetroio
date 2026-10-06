@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.braserv</groupId>
+		<artifactId>braserv-core</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+
+	<artifactId>app</artifactId>
+	<name>Braserv-Core</name>
+
+	<dependencies>
+		<dependency><groupId>com.braserv</groupId><artifactId>comum</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>regional</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>setor</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>unidade</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>empresa</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>usuario</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>com.braserv</groupId><artifactId>identidade</artifactId><version>${project.version}</version></dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<!-- Health probes de liveness/readiness exigidos pelo Docker -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<!--
+		  Flyway e o dono do schema. Sao TRES dependencias, e faltar qualquer uma falha
+		  de um jeito diferente (licao do Geopetro-Backend, 2026-09-07):
+
+		  - flyway-core   : o motor
+		  - flyway-mysql  : o suporte a MySQL vive num modulo separado desde o Flyway 9
+		  - spring-boot-flyway : a autoconfiguracao. Sem ela o Flyway fica no classpath
+		                    e simplesmente NAO RODA, e o Hibernate valida um schema que
+		                    ninguem migrou.
+		-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-mysql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-flyway</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>Braserv-Core-${project.version}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+</project>

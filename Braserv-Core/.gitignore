@@ -1,0 +1,50 @@
+HELP.md
+target/
+**/target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Local secrets ###
+.env
+*.env
+application-local.properties
+**/application-local.properties
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+*.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+.logs/
+backend-run.*.log
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Logs ###
+*.log
+
+### MQTT Paho persistence (gerado em runtime) ###
+*-tcp*localhost*/
+*.lck
