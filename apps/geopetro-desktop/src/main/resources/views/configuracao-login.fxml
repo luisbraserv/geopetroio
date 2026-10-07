@@ -34,13 +34,13 @@
         mora nela: sem ele nao ha login, e sem login nao se define ele. Uma estacao nova nao teria
         por onde comecar. Vem preenchido com o que ja estiver gravado. -->
    <VBox spacing="5.0">
-      <Label text="Servidor" styleClass="rotulo" />
-      <TextField fx:id="txtServidor" promptText="Ex.: https://geopetro.braserv.com.br" maxWidth="Infinity" />
+      <Label text="Braserv-Core" styleClass="rotulo" />
+      <TextField fx:id="txtServidor" promptText="Ex.: http://localhost:8082" maxWidth="Infinity" />
    </VBox>
 
    <VBox spacing="5.0">
       <Label text="Usuário" styleClass="rotulo" />
-      <TextField fx:id="txtUsuario" promptText="Usuário do Geopetro-Backend" maxWidth="Infinity" />
+      <TextField fx:id="txtUsuario" promptText="Usuário do Braserv-Core" maxWidth="Infinity" />
    </VBox>
 
    <VBox spacing="5.0">
@@ -52,7 +52,7 @@
    <Label fx:id="lblErro" styleClass="estado-erro" wrapText="true" maxWidth="Infinity" visible="false" managed="false" />
 
    <HBox spacing="10.0" alignment="CENTER_RIGHT">
-      <Label fx:id="lblAguarde" styleClass="ajuda" text="Falando com o Backend…"
+      <Label fx:id="lblAguarde" styleClass="ajuda" text="Falando com o Braserv-Core…"
              visible="false" managed="false" />
       <Region HBox.hgrow="ALWAYS" />
       <Button fx:id="btnCancelar" text="Cancelar" styleClass="botao-secundario" cancelButton="true" />

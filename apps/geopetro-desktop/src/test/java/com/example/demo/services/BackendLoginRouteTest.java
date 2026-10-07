@@ -39,13 +39,37 @@ class BackendLoginRouteTest {
     @AfterEach void stop() { server.stop(0); }
 
     @Test void catalogAuthenticatesThenUsesTheBearerTokenToListUnits() {
-        var units = new UnidadeSondaCatalogoService().listar(base, "test-user", "test-only");
+        var units = new UnidadeSondaCatalogoService().listar(base, base, "test-user", "test-only");
         assertEquals(1, units.size());
         assertEquals(java.util.List.of("POST /api/auth/login", "GET /api/monitoramento/unidades/minhas"), java.util.List.copyOf(requests));
     }
 
+    @Test void catalogAuthenticatesInCoreAndListsUnitsInBackend() throws Exception {
+        var coreRequests = new ConcurrentLinkedQueue<String>();
+        var core = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        core.createContext("/api/auth/login", exchange -> {
+            coreRequests.add(exchange.getRequestMethod() + " " + exchange.getRequestURI().getPath());
+            byte[] bytes = "{\"token\":\"test-token\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (var output = exchange.getResponseBody()) { output.write(bytes); }
+        });
+        core.start();
+        try {
+            String coreBase = "http://127.0.0.1:" + core.getAddress().getPort();
+            var units = new UnidadeSondaCatalogoService().listar(
+                    coreBase, base, "test-user", "test-only");
+
+            assertEquals(1, units.size());
+            assertEquals(java.util.List.of("POST /api/auth/login"), java.util.List.copyOf(coreRequests));
+            assertEquals(java.util.List.of("GET /api/monitoramento/unidades/minhas"), java.util.List.copyOf(requests));
+        } finally {
+            core.stop(0);
+        }
+    }
+
     @Test void realtimeLoginUsesTheSameNewEndpointWithoutStartingTheWorker() {
         var settings = new AppSettings();
+        settings.setCoreUrl(base);
         settings.setBackendUrl(base);
         settings.setBackendUsuario("test-user");
         settings.setBackendSenha("test-only");

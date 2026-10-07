@@ -24,7 +24,10 @@ public class AppSettings {
     /** URL base do Geopetro-Backend, ex.: http://localhost:8080 */
     private String backendUrl;
 
-    /** Credenciais do usuario de servico que o Desktop usa para autenticar no Geopetro-Backend. */
+    /** URL base do Braserv-Core, que autentica os usuarios, ex.: http://localhost:8082 */
+    private String coreUrl;
+
+    /** Credenciais do usuario de servico: login no Core e uso do token no Geopetro-Backend. */
     private String backendUsuario;
     private String backendSenha;
     private double pumpConstant;
@@ -60,6 +63,7 @@ public class AppSettings {
         this.telemetriaSenha   = "";
         this.unidadeId    = null;
         this.backendUrl        = "http://localhost:8080";
+        this.coreUrl           = "http://localhost:8082";
         this.backendUsuario    = "";
         this.backendSenha      = "";
         this.pumpConstant   = 0.0;
@@ -93,6 +97,9 @@ public class AppSettings {
     public String getBackendUrl()                       { return backendUrl; }
     public void   setBackendUrl(String v)               { this.backendUrl = v; }
 
+    public String getCoreUrl()                          { return coreUrl; }
+    public void   setCoreUrl(String v)                  { this.coreUrl = v; }
+
     public String getBackendUsuario()                   { return backendUsuario; }
     public void   setBackendUsuario(String v)           { this.backendUsuario = v; }
 
@@ -108,6 +115,7 @@ public class AppSettings {
     public boolean temConfiguracaoTempoReal() {
         return unidadeId != null && unidadeId > 0
                 && backendUrl != null && !backendUrl.isBlank()
+                && coreUrl != null && !coreUrl.isBlank()
                 && backendUsuario != null && !backendUsuario.isBlank();
     }
 

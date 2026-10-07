@@ -64,7 +64,7 @@ public class SessaoConfiguracao {
 		record Liberada(String usuario) implements Resultado {
 		}
 
-		/** Credencial errada, ou conta desativada — o backend não distingue os dois aqui. */
+		/** Credencial errada, ou conta desativada — o Core não distingue os dois aqui. */
 		record CredencialInvalida() implements Resultado {
 		}
 
@@ -78,12 +78,12 @@ public class SessaoConfiguracao {
 		record PerfilSemPermissao(String usuario) implements Resultado {
 		}
 
-		/** Backend inalcançável. Sem rede não se configura, e não há validação local. */
-		record BackendIndisponivel(String motivo) implements Resultado {
+		/** Braserv-Core inalcançável. Sem rede não se configura, e não há validação local. */
+		record CoreIndisponivel(String motivo) implements Resultado {
 		}
 
-		/** Falta a URL do backend nas configurações do Desktop. */
-		record BackendNaoConfigurado() implements Resultado {
+		/** Falta a URL do Braserv-Core nas configurações do Desktop. */
+		record CoreNaoConfigurado() implements Resultado {
 		}
 	}
 
@@ -97,7 +97,7 @@ public class SessaoConfiguracao {
 	 * <h2>⚠️ Por que o endereço entra aqui</h2>
 	 * Desde 2026-09-10 a engrenagem inteira exige sessão
 	 * ({@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §5}) — inclusive o campo com a URL do
-	 * Backend. Isso fecharia a porta sobre si mesma: sem URL não há login, e sem login não se define
+	 * Braserv-Core. Isso fecharia a porta sobre si mesma: sem URL não há login, e sem login não se define
 	 * a URL. Uma estação recém-instalada não teria por onde começar.
 	 *
 	 * <p>A saída é pedir o endereço <b>no próprio login</b>, que é exatamente quando ele é
@@ -109,11 +109,11 @@ public class SessaoConfiguracao {
 	public synchronized Resultado abrir(String usuario, String senha, String servidor) {
 		AppSettings configuracoes = settings.loadSettings();
 		// No app instalado o servidor e o de producao, definido no build: o digitado nao vale.
-		String informado = com.example.demo.config.Ambiente.backendUrl().isPresent() ? null : normalizarBase(servidor);
+		String informado = com.example.demo.config.Ambiente.coreUrl().isPresent() ? null : normalizarBase(servidor);
 		String base = informado != null ? informado
-				: normalizarBase(configuracoes == null ? null : configuracoes.getBackendUrl());
+				: normalizarBase(configuracoes == null ? null : configuracoes.getCoreUrl());
 		if (base == null) {
-			return new Resultado.BackendNaoConfigurado();
+			return new Resultado.CoreNaoConfigurado();
 		}
 		if (usuario == null || usuario.isBlank() || senha == null || senha.isEmpty()) {
 			return new Resultado.CredencialInvalida();
@@ -123,12 +123,12 @@ public class SessaoConfiguracao {
 		try {
 			identidade = login.autenticar(base, usuario.trim(), senha);
 		} catch (IllegalStateException recusado) {
-			// O backend respondeu, e disse nao.
+			// O Core respondeu, e disse nao.
 			logger.info("Login de configuracao recusado para {}.", usuario);
 			return new Resultado.CredencialInvalida();
 		} catch (Exception indisponivel) {
-			logger.warn("Backend inalcancavel no login de configuracao: {}", indisponivel.getMessage());
-			return new Resultado.BackendIndisponivel(indisponivel.getMessage());
+			logger.warn("Braserv-Core inalcancavel no login de configuracao: {}", indisponivel.getMessage());
+			return new Resultado.CoreIndisponivel(indisponivel.getMessage());
 		}
 
 		if (identidade.roles().stream().noneMatch(CONFIGURADORES::contains)) {
@@ -141,9 +141,9 @@ public class SessaoConfiguracao {
 		// O endereco so e gravado depois de o servidor ACEITAR a credencial: um endereco digitado
 		// errado nao substitui o que estava funcionando.
 		if (informado != null && !informado.equals(normalizarBase(
-				configuracoes == null ? null : configuracoes.getBackendUrl()))) {
-			settings.updateBackendUrl(informado);
-			logger.info("Endereco do Backend definido no login de configuracao.");
+				configuracoes == null ? null : configuracoes.getCoreUrl()))) {
+			settings.updateCoreUrl(informado);
+			logger.info("Endereco do Braserv-Core definido no login de configuracao.");
 		}
 
 		logger.info("Sessao de configuracao aberta por {}.", atual.usuario());

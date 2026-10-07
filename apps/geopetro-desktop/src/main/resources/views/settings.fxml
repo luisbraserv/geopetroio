@@ -171,8 +171,14 @@
                       text="Desmarcado, esta unidade some da tela remota e o servidor deixa de avaliar alarmes dela. O alarme desta estação continua funcionando, e os cards já baixados continuam desenhando." />
 
                <VBox spacing="5.0">
+                  <Label text="URL do Braserv-Core" styleClass="rotulo" />
+                  <TextField fx:id="txtCoreUrl" promptText="Ex.: http://localhost:8082" maxWidth="Infinity" />
+                  <Label styleClass="ajuda" text="Login e usuários pertencem ao Core." />
+               </VBox>
+
+               <VBox spacing="5.0">
                   <Label text="URL do Backend" styleClass="rotulo" />
-                  <TextField fx:id="txtBackendUrl" promptText="Ex.: http://10.0.0.10:8080" maxWidth="Infinity" />
+                  <TextField fx:id="txtBackendUrl" promptText="Ex.: http://localhost:8080" maxWidth="Infinity" />
                </VBox>
 
                <VBox spacing="5.0">
@@ -186,7 +192,7 @@
                </VBox>
 
                <Label styleClass="ajuda"
-                      text="O canal de tempo real é autenticado, não é público: a sonda faz login para obter um token e só então pode publicar. Sem isso, qualquer um na rede poderia injetar leituras falsas nesta unidade. As mesmas credenciais carregam a lista de Unidades acima." />
+                      text="O login é feito no Braserv-Core; o token resultante autoriza o WebSocket e a lista de Unidades no Backend. As mesmas credenciais carregam a lista acima." />
             </VBox>
 
             <!--

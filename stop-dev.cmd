@@ -23,6 +23,7 @@ echo [1/2] Fechando as janelas das aplicacoes...
 
 REM As janelas foram abertas com titulos conhecidos pelo start-dev.cmd.
 taskkill /FI "WINDOWTITLE eq GeopetroIO :: Geopetro-Backend (8080)*" /T /F >nul 2>&1
+taskkill /FI "WINDOWTITLE eq GeopetroIO :: Braserv-Core (8082)*"     /T /F >nul 2>&1
 taskkill /FI "WINDOWTITLE eq GeopetroIO :: Telemetria (8081)*"    /T /F >nul 2>&1
 taskkill /FI "WINDOWTITLE eq GeopetroIO :: Frontend (4200)*"      /T /F >nul 2>&1
 echo   Janelas encerradas.

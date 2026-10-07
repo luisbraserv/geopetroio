@@ -94,6 +94,12 @@ class MigracaoFlywayTest {
 		executarNoSchema("INSERT INTO regionais (id, nome) VALUES (1, 'Bahia')");
 		executarNoSchema("INSERT INTO setores (id, regional_id, nome) VALUES (1, 1, 'Reconcavo')");
 		executarNoSchema("INSERT INTO unidades (id, setor_id, nome, tipo) VALUES (7, 1, 'SPT-144', 'SONDA')");
+		executarNoSchema("""
+				INSERT INTO usuarios (username, tipo_usuario, nome, email, password, telefone, status, matricula)
+				VALUES ('interno', 'INTERNO', 'Interno', 'interno@example.test', 'x', '71999999999', 'ATIVO', 1)""");
+		executarNoSchema("INSERT INTO usuario_roles (username, role) VALUES "
+				+ "('interno', 'INTERNO'), ('interno', 'DEPARTAMENTO_PESSOAL'), "
+				+ "('interno', 'SISTEMA_GESTAO_INTEGRADA')");
 
 		flyway().migrate();
 
@@ -103,6 +109,11 @@ class MigracaoFlywayTest {
 				.isEqualTo(1);
 		assertThat(contar("SELECT COUNT(*) FROM unidades WHERE id = 7 AND status = 'ATIVA'"))
 				.as("a unidade movida continua la, e nasce ativa").isEqualTo(1);
+		assertThat(contar("SELECT COUNT(*) FROM usuario_roles WHERE username = 'interno' AND role = 'INTERNO'"))
+				.as("a role valida e preservada").isEqualTo(1);
+		assertThat(contar("SELECT COUNT(*) FROM usuario_roles WHERE username = 'interno' "
+				+ "AND role IN ('DEPARTAMENTO_PESSOAL', 'SISTEMA_GESTAO_INTEGRADA')"))
+				.as("roles antigas sem regra de acesso sao removidas").isZero();
 		assertThat(existeTabela("servicos_clientes")).isTrue();
 	}
 

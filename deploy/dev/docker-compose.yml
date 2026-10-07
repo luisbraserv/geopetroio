@@ -2,7 +2,7 @@
 # INFRAESTRUTURA DE DESENVOLVIMENTO LOCAL
 #
 # Sobe InfluxDB e Mosquitto sempre; MySQL apenas sob demanda (ver o
-# comentario no servico). Backend, telemetria e frontend rodam
+# comentario no servico). Braserv-Core, backend, telemetria e frontend rodam
 # NATIVAMENTE (mvnw / ng serve) para permitir hot reload e debug —
 # ver start-dev.cmd na raiz.
 #
@@ -32,7 +32,7 @@ services:
       - "3306:3306"
     environment:
       # Credenciais fixas, iguais aos defaults de application-dev.properties.
-      # Assim o backend sobe sem precisar de nenhuma variavel de ambiente.
+      # Assim o Core e o Backend sobem sem variaveis adicionais.
       MYSQL_ROOT_PASSWORD: bilzao90
       MYSQL_DATABASE: geopetro_io
     command:
@@ -42,9 +42,8 @@ services:
     volumes:
       - mysql-dev-data:/var/lib/mysql
     # Sem mysql-init: quem cria e evolui o schema e o Flyway, no startup do
-    # backend, e em TODOS os perfis — dev incluido, onde ddl-auto passou de
-    # update para validate em 2026-09-06. Base vazia sobe e o baseline
-    # V2026.09.04 monta tudo. Ver DT-002.
+    # Core e Backend, em TODOS os perfis. O start-dev.cmd tambem prepara a
+    # separacao dos schemas antes de iniciar as aplicacoes.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pbilzao90"]
       interval: 10s

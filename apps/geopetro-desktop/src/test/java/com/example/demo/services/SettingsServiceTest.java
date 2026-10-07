@@ -52,6 +52,7 @@ class SettingsServiceTest {
             System.setProperty("user.dir", tempDir.toString());
             SettingsService service = new SettingsService();
             AppSettings settings = new AppSettings();
+            settings.setCoreUrl("http://10.0.0.30:8082");
             settings.setTelemetriaUrl("tcp://10.0.0.20:1883");
             settings.setTelemetriaUsuario("telemetria");
             // Senha com caracteres que exigem escape no JSON: o gerador de senhas
@@ -61,6 +62,7 @@ class SettingsServiceTest {
             service.saveSettings(settings);
 
             AppSettings loaded = service.loadSettings();
+            assertEquals("http://10.0.0.30:8082", loaded.getCoreUrl());
             assertEquals("tcp://10.0.0.20:1883", loaded.getTelemetriaUrl());
             assertEquals("telemetria", loaded.getTelemetriaUsuario());
             assertEquals("s3nh@/com+esc\"ape\\barra", loaded.getTelemetriaSenha());

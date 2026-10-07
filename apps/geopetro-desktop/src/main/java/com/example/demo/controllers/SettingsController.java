@@ -92,6 +92,7 @@ public class SettingsController {
 
     @FXML private CheckBox chkTempoReal;
 
+    @FXML private TextField txtCoreUrl;
     @FXML private TextField txtBackendUrl;
     @FXML private TextField txtBackendUsuario;
     @FXML private PasswordField txtBackendSenha;
@@ -152,6 +153,7 @@ public class SettingsController {
         txtTelemetriaUrl.setText(settings.getTelemetriaUrl());
         txtTelemetriaUsuario.setText(settings.getTelemetriaUsuario());
         txtTelemetriaSenha.setText(settings.getTelemetriaSenha());
+        txtCoreUrl.setText(settings.getCoreUrl());
         txtBackendUrl.setText(settings.getBackendUrl());
         txtBackendUsuario.setText(settings.getBackendUsuario());
         txtBackendSenha.setText(settings.getBackendSenha());
@@ -176,7 +178,7 @@ public class SettingsController {
     }
 
     /**
-     * No app instalado, backend e broker sao os de producao, definidos no build ({@code Ambiente}):
+     * No app instalado, Core, Backend e broker sao definidos no build ({@code Ambiente}):
      * a tela os mostra, mas nao deixa editar. Digitar ali nao teria efeito — o carregamento das
      * configuracoes os substitui — e um campo editavel que nao vale e pior que um travado.
      */
@@ -185,7 +187,7 @@ public class SettingsController {
             return;
         }
         var aviso = new javafx.scene.control.Tooltip("Endereço de produção, definido na instalação.");
-        for (TextField campo : List.of(txtBackendUrl, txtTelemetriaUrl)) {
+        for (TextField campo : List.of(txtCoreUrl, txtBackendUrl, txtTelemetriaUrl)) {
             campo.setEditable(false);
             campo.setFocusTraversable(false);
             campo.setTooltip(aviso);
@@ -342,18 +344,19 @@ public class SettingsController {
     }
 
     private void carregarUnidades() {
-        String url = texto(txtBackendUrl);
+        String coreUrl = texto(txtCoreUrl);
+        String backendUrl = texto(txtBackendUrl);
         String usuario = texto(txtBackendUsuario);
         String senha = txtBackendSenha.getText();
 
         btnRecarregar.setDisable(true);
-        lblUnidadeStatus.setText("Consultando o Backend...");
+        lblUnidadeStatus.setText("Autenticando no Core e consultando o Backend...");
 
         // Chamada de rede fora da thread de UI: 10s de timeout congelariam a janela.
         Task<List<UnidadeSondaOpcao>> tarefa = new Task<>() {
             @Override
             protected List<UnidadeSondaOpcao> call() {
-                return catalogoService.listar(url, usuario, senha);
+                return catalogoService.listar(coreUrl, backendUrl, usuario, senha);
             }
         };
 
@@ -492,6 +495,7 @@ public class SettingsController {
 
         settingsService.updateTempoReal(
                 unidade == null ? null : unidade.id(),
+                txtCoreUrl.getText(),
                 txtBackendUrl.getText(),
                 txtBackendUsuario.getText(),
                 txtBackendSenha.getText());

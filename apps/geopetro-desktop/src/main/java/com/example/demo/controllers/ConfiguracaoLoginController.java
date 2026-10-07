@@ -93,7 +93,7 @@ public class ConfiguracaoLoginController {
 		// Ja gravado: o campo existe para a PRIMEIRA vez e para trocar de servidor, nao para ser
 		// redigitado a cada login.
 		var configuracoes = settingsService.loadSettings();
-		txtServidor.setText(configuracoes == null ? "" : configuracoes.getBackendUrl());
+		txtServidor.setText(configuracoes == null ? "" : configuracoes.getCoreUrl());
 		// No app instalado o servidor e o de producao, definido no build: aparece, mas nao se edita.
 		if (com.example.demo.config.Ambiente.producao()) {
 			txtServidor.setEditable(false);
@@ -113,7 +113,7 @@ public class ConfiguracaoLoginController {
 	}
 
 	/**
-	 * O login vai para uma thread de fora: ele fala com o backend, e um backend lento congelaria a
+	 * O login vai para uma thread de fora: ele fala com o Core, e um Core lento congelaria a
 	 * janela inteira se rodasse na thread da interface.
 	 */
 	private void entrar() {
@@ -157,12 +157,12 @@ public class ConfiguracaoLoginController {
 			case SessaoConfiguracao.Resultado.PerfilSemPermissao perfil ->
 				mostrarErro("O usuário " + perfil.usuario()
 						+ " não tem perfil de configuração. Só ADMIN ou SUPORTE alteram a configuração.");
-			case SessaoConfiguracao.Resultado.BackendIndisponivel indisponivel ->
-				mostrarErro("Sem conexão com o Backend, e não há validação local: não é possível "
+			case SessaoConfiguracao.Resultado.CoreIndisponivel indisponivel ->
+				mostrarErro("Sem conexão com o Braserv-Core, e não há validação local: não é possível "
 						+ "configurar agora. (" + indisponivel.motivo() + ")");
 			// ⚠️ Nao mandar para Configuracoes: ela exige esta sessao desde 2026-09-10, e o conselho
 			// levaria a uma porta trancada. O campo esta nesta janela.
-			case SessaoConfiguracao.Resultado.BackendNaoConfigurado ignorado ->
+			case SessaoConfiguracao.Resultado.CoreNaoConfigurado ignorado ->
 				mostrarErro("Informe o endereço do servidor no campo acima.");
 		}
 	}

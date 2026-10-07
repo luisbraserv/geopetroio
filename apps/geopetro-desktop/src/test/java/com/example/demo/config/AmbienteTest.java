@@ -40,6 +40,7 @@ class AmbienteTest {
 
     private static AppSettings digitadoNaEstacao() {
         var settings = new AppSettings();
+        settings.setCoreUrl("http://localhost:8082");
         settings.setBackendUrl("http://localhost:8080");
         settings.setTelemetriaUrl("tcp://localhost:1883");
         settings.setBackendUsuario("operador");
@@ -55,7 +56,9 @@ class AmbienteTest {
 
         assertFalse(Ambiente.producao());
         assertTrue(Ambiente.backendUrl().isEmpty());
+        assertTrue(Ambiente.coreUrl().isEmpty());
         var lido = service.loadSettings();
+        assertEquals("http://localhost:8082", lido.getCoreUrl());
         assertEquals("http://localhost:8080", lido.getBackendUrl());
         assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
     }
@@ -68,8 +71,9 @@ class AmbienteTest {
         System.setProperty("geopetro.ambiente", "producao");
 
         var lido = service.loadSettings();
-        assertEquals("http://2.25.227.207", lido.getBackendUrl());
-        assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
+        assertEquals("http://localhost:8082", lido.getCoreUrl());
+        assertEquals("http://localhost:8080", lido.getBackendUrl());
+        assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
         assertEquals("operador", lido.getBackendUsuario(), "o resto da configuracao continua o da estacao");
         assertEquals(5L, lido.getUnidadeId());
     }
@@ -79,8 +83,9 @@ class AmbienteTest {
     void instalacaoNovaNasceEmProducao() {
         System.setProperty("geopetro.ambiente", "producao");
         var lido = new SettingsService().loadSettings();
-        assertEquals("http://2.25.227.207", lido.getBackendUrl());
-        assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
+        assertEquals("http://localhost:8082", lido.getCoreUrl());
+        assertEquals("http://localhost:8080", lido.getBackendUrl());
+        assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
     }
 
     @Test
@@ -88,11 +93,13 @@ class AmbienteTest {
     void gravarOutroServidorNaoValeEmProducao() {
         System.setProperty("geopetro.ambiente", "producao");
         var service = new SettingsService();
+        service.updateCoreUrl("http://core-digitado:8082");
         service.updateBackendUrl("http://servidor-digitado:8080");
         service.updateTelemetriaUrl("tcp://servidor-digitado:1883");
 
         var lido = service.loadSettings();
-        assertEquals("http://2.25.227.207", lido.getBackendUrl());
-        assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
+        assertEquals("http://localhost:8082", lido.getCoreUrl());
+        assertEquals("http://localhost:8080", lido.getBackendUrl());
+        assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
     }
 }

@@ -51,7 +51,10 @@ public class UnidadeSondaCatalogoService {
      * @throws CatalogoIndisponivelException quando o backend nao responde ou recusa o login; a tela
      *         mostra a mensagem e mantem o que ja estava configurado.
      */
-    public List<UnidadeSondaOpcao> listar(String backendUrl, String usuario, String senha) {
+    public List<UnidadeSondaOpcao> listar(String coreUrl, String backendUrl, String usuario, String senha) {
+        if (coreUrl == null || coreUrl.isBlank()) {
+            throw new CatalogoIndisponivelException("Informe a URL do Braserv-Core.");
+        }
         if (backendUrl == null || backendUrl.isBlank()) {
             throw new CatalogoIndisponivelException("Informe a URL do Backend.");
         }
@@ -59,10 +62,11 @@ public class UnidadeSondaCatalogoService {
             throw new CatalogoIndisponivelException("Informe usuário e senha do Backend.");
         }
 
-        String base = normalizarBase(backendUrl);
+        String core = normalizarBase(coreUrl);
+        String backend = normalizarBase(backendUrl);
         try {
-            String token = autenticar(base, usuario, senha);
-            return buscarSondas(base, token);
+            String token = autenticar(core, usuario, senha);
+            return buscarSondas(backend, token);
         } catch (CatalogoIndisponivelException e) {
             throw e;
         } catch (InterruptedException e) {

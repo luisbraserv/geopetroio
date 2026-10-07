@@ -30,6 +30,7 @@ public class SettingsService {
     private static final Pattern PUMP_CONSTANT_PATTERN = Pattern.compile("\"pumpConstant\"\\s*:\\s*([-+]?\\d+(?:\\.\\d+)?)");
     // Canal de tempo real (WebSocket) com o Geopetro-Backend
     private static final Pattern BACKEND_URL_PATTERN   = Pattern.compile("\"backendUrl\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+    private static final Pattern CORE_URL_PATTERN      = Pattern.compile("\"coreUrl\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_USER_PATTERN  = Pattern.compile("\"backendUsuario\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern BACKEND_PASS_PATTERN  = Pattern.compile("\"backendSenha\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
     private static final Pattern UNIDADE_SONDA_ID_PATTERN = Pattern.compile("\"unidadeId\"\\s*:\\s*(\\d+)");
@@ -48,7 +49,7 @@ public class SettingsService {
     }
 
     /**
-     * Le o arquivo de configuracoes. No app instalado, backend e broker sao os de producao, definidos
+     * Le o arquivo de configuracoes. No app instalado, Core, Backend e broker sao definidos
      * no build ({@link Ambiente}), qualquer que seja o valor gravado.
      */
     public AppSettings loadSettings() {
@@ -78,6 +79,9 @@ public class SettingsService {
 
             m = BACKEND_URL_PATTERN.matcher(content);
             if (m.find()) settings.setBackendUrl(unescapeJson(m.group(1)));
+
+            m = CORE_URL_PATTERN.matcher(content);
+            if (m.find()) settings.setCoreUrl(unescapeJson(m.group(1)));
 
             m = BACKEND_USER_PATTERN.matcher(content);
             if (m.find()) settings.setBackendUsuario(unescapeJson(m.group(1)));
@@ -194,6 +198,7 @@ public class SettingsService {
                     + "  \"telemetriaSenha\" : \"" + escapeJson(telemetriaSenha) + "\",\n"
                     + "  \"unidadeId\" : " + (settings.getUnidadeId() == null ? 0 : settings.getUnidadeId()) + ",\n"
                     + "  \"backendUrl\" : \"" + escapeJson(settings.getBackendUrl() == null ? "" : settings.getBackendUrl()) + "\",\n"
+                    + "  \"coreUrl\" : \"" + escapeJson(settings.getCoreUrl() == null ? "" : settings.getCoreUrl()) + "\",\n"
                     + "  \"backendUsuario\" : \"" + escapeJson(settings.getBackendUsuario() == null ? "" : settings.getBackendUsuario()) + "\",\n"
                     + "  \"backendSenha\" : \"" + escapeJson(settings.getBackendSenha() == null ? "" : settings.getBackendSenha()) + "\",\n"
                     + "  \"pumpConstant\" : " + settings.getPumpConstant() + ",\n"
@@ -349,13 +354,14 @@ public class SettingsService {
     /**
      * Grava a configuracao do canal de tempo real.
      *
-     * <p>Os quatro valores sao gravados juntos porque so fazem sentido em conjunto: apontar para
+     * <p>Os cinco valores sao gravados juntos porque so fazem sentido em conjunto: apontar para
      * outro backend sem trocar as credenciais, ou trocar a unidade sem o resto, deixaria a conexao
      * num estado invalido ate a proxima edicao.
      */
-    public void updateTempoReal(Long unidadeId, String backendUrl, String usuario, String senha) {
+    public void updateTempoReal(Long unidadeId, String coreUrl, String backendUrl, String usuario, String senha) {
         AppSettings settings = loadSettings();
         settings.setUnidadeId(unidadeId);
+        settings.setCoreUrl(coreUrl == null ? "" : coreUrl.trim());
         settings.setBackendUrl(backendUrl == null ? "" : backendUrl.trim());
         settings.setBackendUsuario(usuario == null ? "" : usuario.trim());
         settings.setBackendSenha(senha == null ? "" : senha);
@@ -363,13 +369,19 @@ public class SettingsService {
     }
 
     /**
-     * Grava só o endereço do Backend.
+     * Grava só o endereço do Braserv-Core.
      *
      * <p>⚠️ Existe para o login de configuração, que aceita o servidor digitado na hora quando a
      * estação ainda não tem um ({@link SessaoConfiguracao}). Diferente de
      * {@link #updateTempoReal}, não toca em unidade nem em credenciais: nesse momento a estação
      * pode não ter nenhuma das duas, e zerá-las seria pior que não gravar nada.
      */
+    public void updateCoreUrl(String coreUrl) {
+        AppSettings settings = loadSettings();
+        settings.setCoreUrl(coreUrl == null ? "" : coreUrl.trim());
+        saveSettings(settings);
+    }
+
     public void updateBackendUrl(String backendUrl) {
         AppSettings settings = loadSettings();
         settings.setBackendUrl(backendUrl == null ? "" : backendUrl.trim());

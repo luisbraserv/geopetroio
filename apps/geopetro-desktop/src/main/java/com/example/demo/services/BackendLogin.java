@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Login no Geopetro-Backend, em um lugar so.
+ * Login no Braserv-Core, em um lugar so.
  *
  * <p>Dois caminhos do Desktop precisam autenticar, e sao <b>coisas diferentes</b>:
  *
@@ -42,13 +42,13 @@ public class BackendLogin {
 		this.httpClient = httpClient;
 	}
 
-	/** O que o backend devolve no login. As roles vem sem o prefixo {@code ROLE_}. */
+	/** O que o Core devolve no login. As roles vem sem o prefixo {@code ROLE_}. */
 	public record Identidade(String token, Set<String> roles) {
 	}
 
 	/**
 	 * @param baseUrl já normalizada, sem barra final
-	 * @throws IllegalStateException credencial recusada, servidor fora ou resposta sem token
+	 * @throws IllegalStateException credencial recusada, Core fora ou resposta sem token
 	 */
 	public Identidade autenticar(String baseUrl, String usuario, String senha) throws Exception {
 		String corpo = "{\"username\":\"" + escapar(usuario) + "\",\"password\":\"" + escapar(senha) + "\"}";
@@ -62,7 +62,7 @@ public class BackendLogin {
 
 		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		if (response.statusCode() != 200) {
-			throw new IllegalStateException("login recusado pelo backend (HTTP " + response.statusCode() + ")");
+			throw new IllegalStateException("login recusado pelo Braserv-Core (HTTP " + response.statusCode() + ")");
 		}
 
 		Matcher token = TOKEN.matcher(response.body());
@@ -78,7 +78,7 @@ public class BackendLogin {
 		if (bloco.find()) {
 			Matcher role = ROLE.matcher(bloco.group(1));
 			while (role.find()) {
-				// O backend pode devolver com ou sem o prefixo do Spring Security.
+				// O Core pode devolver com ou sem o prefixo do Spring Security.
 				roles.add(role.group(1).replaceFirst("^ROLE_", ""));
 			}
 		}

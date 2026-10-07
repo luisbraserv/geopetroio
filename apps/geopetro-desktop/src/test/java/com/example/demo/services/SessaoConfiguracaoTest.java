@@ -58,7 +58,7 @@ class SessaoConfiguracaoTest {
 
 	private SessaoConfiguracao sessao(String backendUrl) {
 		AppSettings settings = new AppSettings();
-		settings.setBackendUrl(backendUrl);
+		settings.setCoreUrl(backendUrl);
 		SettingsService service = mock(SettingsService.class);
 		when(service.loadSettings()).thenReturn(settings);
 		return new SessaoConfiguracao(service, new BackendLogin(java.net.http.HttpClient.newHttpClient()));
@@ -123,7 +123,7 @@ class SessaoConfiguracaoTest {
 
 		var resultado = sessao.abrir("ana", "senha");
 
-		assertInstanceOf(SessaoConfiguracao.Resultado.BackendIndisponivel.class, resultado);
+		assertInstanceOf(SessaoConfiguracao.Resultado.CoreIndisponivel.class, resultado);
 		assertFalse(sessao.liberada(), "nao ha validacao local de credencial");
 	}
 
@@ -132,7 +132,7 @@ class SessaoConfiguracaoTest {
 	void semBackendConfigurado() {
 		var sessao = sessao("   ");
 
-		assertInstanceOf(SessaoConfiguracao.Resultado.BackendNaoConfigurado.class, sessao.abrir("ana", "senha"));
+		assertInstanceOf(SessaoConfiguracao.Resultado.CoreNaoConfigurado.class, sessao.abrir("ana", "senha"));
 		assertTrue(chamadas.isEmpty(), "nao chega a chamar o backend");
 	}
 

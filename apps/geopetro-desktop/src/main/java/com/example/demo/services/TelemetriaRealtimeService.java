@@ -127,7 +127,7 @@ public class TelemetriaRealtimeService {
     private final BackendLogin backendLogin = new BackendLogin(httpClient);
     private Alvo alvoConectado;
     private long ultimaSolicitacao;
-    private record Alvo(String backend, Long unidade, String usuario, String senha) {
+    private record Alvo(String core, String backend, Long unidade, String usuario, String senha) {
         @Override public String toString() { return "Alvo[redacted]"; }
     }
     /**
@@ -151,10 +151,13 @@ public class TelemetriaRealtimeService {
         return settings != null && settings.getUnidadeId() != null
                 && java.util.Objects.equals(unidadeIndisponivel.get(), settings.getUnidadeId());
     }
+    // Mantem o formato historico: trocar apenas o servidor de identidade nao invalida os cards
+    // ja salvos na estacao, que pertencem ao Backend, usuario e unidade.
     private String chaveCache(Alvo alvo) { return alvo == null ? null : alvo.backend() + "\n" + alvo.usuario(); }
     private Alvo alvo(AppSettings settings) {
         return settings == null || !settings.temConfiguracaoTempoReal() ? null :
-            new Alvo(normalizarBase(settings.getBackendUrl()), settings.getUnidadeId(), settings.getBackendUsuario(), settings.getBackendSenha());
+            new Alvo(normalizarBase(settings.getCoreUrl()), normalizarBase(settings.getBackendUrl()),
+                    settings.getUnidadeId(), settings.getBackendUsuario(), settings.getBackendSenha());
     }
 
 	/**
@@ -178,7 +181,7 @@ public class TelemetriaRealtimeService {
         if (novo == null) { configuracao.set(null); return; }
         // Snapshot das credenciais evita mutacao de AppSettings durante login/reconexao.
         AppSettings snapshot = new AppSettings();
-        snapshot.setBackendUrl(novo.backend()); snapshot.setUnidadeId(novo.unidade());
+        snapshot.setCoreUrl(novo.core()); snapshot.setBackendUrl(novo.backend()); snapshot.setUnidadeId(novo.unidade());
         snapshot.setBackendUsuario(novo.usuario()); snapshot.setBackendSenha(novo.senha());
         // O interruptor viaja no snapshot porque quem o consulta e o worker, e ele so enxerga
         // daqui — §6.
@@ -325,14 +328,14 @@ public class TelemetriaRealtimeService {
 	}
 
 	/**
-	 * Obtem um JWT no Geopetro-Backend, reutilizando o mesmo {@code /api/auth/login} da aplicacao web.
+	 * Obtem um JWT no Braserv-Core, reutilizando o mesmo {@code /api/auth/login} da aplicacao web.
 	 *
 	 * <p>Deliberado: o Desktop e um usuario do sistema como outro qualquer, sujeito as mesmas
 	 * regras de autorizacao. Um token estatico separado criaria um segundo mecanismo de
 	 * autenticacao para manter.
 	 */
 	private String autenticar(AppSettings settings) throws Exception {
-		return backendLogin.autenticar(normalizarBase(settings.getBackendUrl()),
+		return backendLogin.autenticar(normalizarBase(settings.getCoreUrl()),
 				settings.getBackendUsuario(), settings.getBackendSenha()).token();
 	}
 

@@ -6,7 +6,8 @@ REM ======================================================================
 REM  GeopetroIO - sobe o ambiente completo de DESENVOLVIMENTO
 REM
 REM  Infraestrutura (Docker): MySQL, InfluxDB, Mosquitto
-REM  Aplicacoes (nativas)    : Geopetro-Backend, Telemetria, Frontend
+REM  Aplicacoes (nativas)    : Braserv-Core, Geopetro-Backend,
+REM                            Telemetria, Frontend
 REM
 REM  As aplicacoes rodam nativamente, e nao em container, para permitir
 REM  hot reload e debug pela IDE. Cada uma abre numa janela propria, com
@@ -28,7 +29,11 @@ set "MQTT_BROKER_URL=tcp://localhost:1883"
 set "SPRING_PROFILES_ACTIVE=dev"
 set "TELEMETRIA_SEED_HABILITADO=true"
 set "TELEMETRIA_SEED_PONTOS_POR_VARIAVEL=28800"
-set "PORTAS_APLICACOES=8080 8081 4200"
+if not defined DB_USERNAME set "DB_USERNAME=root"
+if not defined DB_PASSWORD set "DB_PASSWORD=bilzao90"
+if not defined CORE_CLIENTE_SEGREDO set "CORE_CLIENTE_SEGREDO=geopetro-dev-core-secret-2026-local-only"
+if not defined CORE_SEGREDO_INICIAL_BACKEND set "CORE_SEGREDO_INICIAL_BACKEND=%CORE_CLIENTE_SEGREDO%"
+set "PORTAS_APLICACOES=8082 8080 8081 4200"
 
 set "FALHAS=0"
 
@@ -38,8 +43,8 @@ echo   GeopetroIO - Ambiente de Desenvolvimento
 echo ======================================================================
 echo.
 
-REM ---------------------------------------------------------------- 1/6
-echo [1/6] Verificando pre-requisitos...
+REM ---------------------------------------------------------------- 1/7
+echo [1/7] Verificando pre-requisitos...
 
 where docker >nul 2>&1
 if errorlevel 1 (
@@ -71,8 +76,8 @@ if errorlevel 1 (
 echo   Node .................. OK
 echo.
 
-REM ---------------------------------------------------------------- 2/6
-echo [2/6] Subindo infraestrutura...
+REM ---------------------------------------------------------------- 2/7
+echo [2/7] Subindo infraestrutura...
 echo.
 
 REM O MySQL costuma ja estar instalado como servico do Windows nesta maquina.
@@ -100,8 +105,8 @@ if errorlevel 1 (
 )
 echo.
 
-REM ---------------------------------------------------------------- 3/6
-echo [3/6] Aguardando os servicos ficarem prontos...
+REM ---------------------------------------------------------------- 3/7
+echo [3/7] Aguardando os servicos ficarem prontos...
 echo.
 
 if defined PERFIL_MYSQL (
@@ -120,8 +125,24 @@ if "!FALHAS!" NEQ "0" (
 )
 echo.
 
-REM ---------------------------------------------------------------- 4/6
-echo [4/6] Verificando dependencias do frontend...
+REM ---------------------------------------------------------------- 4/7
+echo [4/7] Preparando os bancos MySQL...
+echo.
+
+set "MYSQL_CONTAINER_ARG="
+if defined PERFIL_MYSQL set "MYSQL_CONTAINER_ARG=-Container geopetro-dev-mysql"
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%RAIZ%\deploy\dev\preparar-mysql.ps1" %MYSQL_CONTAINER_ARG%
+if errorlevel 1 (
+    echo.
+    echo   [ERRO] Nao foi possivel preparar a separacao entre geopetro_io e braserv_core.
+    echo          Os servicos nao serao iniciados para evitar alterar um banco inconsistente.
+    goto :erro_fatal
+)
+echo   Bancos MySQL ............ OK
+echo.
+
+REM ---------------------------------------------------------------- 5/7
+echo [5/7] Verificando dependencias do frontend...
 
 if not exist "%RAIZ%\apps\geopetro-frontend\node_modules" (
     echo   node_modules ausente. Executando npm install...
@@ -140,8 +161,8 @@ if not exist "%RAIZ%\apps\geopetro-frontend\node_modules" (
 )
 echo.
 
-REM ---------------------------------------------------------------- 5/6
-echo [5/6] Liberando portas e iniciando as aplicacoes...
+REM ---------------------------------------------------------------- 6/7
+echo [6/7] Liberando portas e iniciando as aplicacoes...
 echo.
 
 REM Uma execucao anterior ainda ativa ocuparia as portas e, pior, manteria os
@@ -166,13 +187,30 @@ REM Projeto multi-modulo: 'spring-boot:run' com '-am' seria executado em TODOS o
 REM modulos do reactor, comecando pelo pom raiz, que nao tem main class e falha com
 REM "Unable to find a suitable main class". Por isso sao dois passos: primeiro
 REM instala as dependencias no repositorio local, depois roda SOMENTE o modulo app.
+start "GeopetroIO :: Braserv-Core (8082)" cmd /k ^
+    "cd /d ""%RAIZ%\apps\core"" && echo Perfil: dev ^(MySQL local^) && echo. && echo [1/2] Compilando os modulos... && mvnw.cmd -q -pl app -am -DskipTests clean install && echo [2/2] Iniciando a aplicacao... && mvnw.cmd -pl app spring-boot:run"
+echo   Braserv-Core ............. iniciando  (porta 8082)
+
+REM O Backend precisa do JWKS e do cliente de servico criados pelo Core.
+echo   Aguardando o Braserv-Core antes de iniciar o Backend...
+call :aguardar_http "http://localhost:8082/actuator/health" "Braserv-Core" 240
+if "!FALHAS!" NEQ "0" goto :erro_fatal
+echo.
+
 start "GeopetroIO :: Geopetro-Backend (8080)" cmd /k ^
-    "cd /d ""%RAIZ%\apps\geopetro-backend"" && echo Perfil: dev ^(MySQL local^) && echo. && echo [1/2] Compilando os modulos... && mvnw.cmd -q -pl app -am -DskipTests install && echo [2/2] Iniciando a aplicacao... && mvnw.cmd -pl app spring-boot:run"
+    "cd /d ""%RAIZ%\apps\geopetro-backend"" && echo Perfil: dev ^(MySQL local^) && echo. && echo [1/2] Compilando os modulos... && mvnw.cmd -q -pl app -am -DskipTests clean install && echo [2/2] Iniciando a aplicacao... && mvnw.cmd -pl app spring-boot:run"
 echo   Geopetro-Backend ......... iniciando  (porta 8080)
 
-REM Aguarda o backend adiantar a inicializacao antes de subir os demais:
-REM as tres aplicacoes compilando ao mesmo tempo saturam a maquina.
-call :dormir 20
+call :aguardar_http "http://localhost:8080/actuator/health" "Geopetro-Backend" 180
+if "!FALHAS!" NEQ "0" goto :erro_fatal
+
+REM Uma base nova passa primeiro pelo baseline historico do Backend. Limpa as
+REM tabelas organizacionais vazias que ele cria, depois que as migrations acabam.
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%RAIZ%\deploy\dev\preparar-mysql.ps1" %MYSQL_CONTAINER_ARG%
+if errorlevel 1 goto :erro_fatal
+echo.
+
+REM Evita compilar todas as aplicacoes ao mesmo tempo e saturar a maquina.
 
 start "GeopetroIO :: Telemetria (8081)" cmd /k ^
     "cd /d ""%RAIZ%\apps\geopetro-telemetria"" && echo INFLUX_URL=%INFLUX_URL%  MQTT=%MQTT_BROKER_URL% && echo. && mvnw.cmd spring-boot:run"
@@ -185,12 +223,13 @@ start "GeopetroIO :: Frontend (4200)" cmd /k ^
 echo   Frontend .............. iniciando  (porta 4200)
 echo.
 
-REM ---------------------------------------------------------------- 6/6
-echo [6/6] Aguardando as aplicacoes responderem...
+REM ---------------------------------------------------------------- 7/7
+echo [7/7] Aguardando as aplicacoes responderem...
 echo       ^(a primeira compilacao pode levar varios minutos^)
 echo.
 
-call :aguardar_http "http://localhost:8080/actuator/health" "Geopetro-Backend" 180
+call :aguardar_http "http://localhost:8082/actuator/health" "Braserv-Core"     30
+call :aguardar_http "http://localhost:8080/actuator/health" "Geopetro-Backend" 30
 call :aguardar_http "http://localhost:8081/actuator/health" "Telemetria"    180
 call :aguardar_http "http://localhost:4200"                 "Frontend"      180
 
@@ -204,7 +243,7 @@ if "!FALHAS!" NEQ "0" (
     echo   As janelas permanecem abertas mesmo se o servico cair.
     echo.
     echo   Diagnostico rapido:
-    echo     - Porta ocupada:  netstat -ano ^| findstr "8080 8081 4200"
+    echo     - Porta ocupada:  netstat -ano ^| findstr "8082 8080 8081 4200"
     echo     - Infra Docker :  docker compose -f "%COMPOSE%" ps
     echo     - Logs da infra:  docker compose -f "%COMPOSE%" logs --tail=50
     echo.
@@ -213,6 +252,8 @@ if "!FALHAS!" NEQ "0" (
     echo ======================================================================
     echo.
     echo     Frontend .......... http://localhost:4200
+    echo     Braserv-Core ...... http://localhost:8082
+    echo       Swagger ......... http://localhost:8082/swagger-ui.html
     echo     Geopetro-Backend ..... http://localhost:8080
     echo       Swagger ......... http://localhost:8080/swagger-ui.html
     echo     Telemetria ........ http://localhost:8081

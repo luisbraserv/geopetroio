@@ -14,7 +14,7 @@ import com.example.demo.models.AppSettings;
  *
  * <h2>Produção é o app instalado</h2>
  * Mesma regra de {@link AppPaths}: o jpackage define {@code jpackage.app-version}, e ela só existe
- * no app instalado. Em produção, backend e broker vêm de {@code ambiente-producao.properties},
+ * no app instalado. Em produção, Core, Backend e broker vêm de {@code ambiente-producao.properties},
  * empacotado no build, e valem sobre o {@code app-settings.json}. Antes de 2026-10-02 cada estação
  * digitava o servidor nas Configurações, e uma instalação nova nascia apontando para
  * {@code localhost} — sem servidor não havia login, e sem login não se definia o servidor.
@@ -43,6 +43,11 @@ public final class Ambiente {
 		return valor("backend.url");
 	}
 
+	/** URL do Braserv-Core definida pelo build; vazio fora de producao. */
+	public static Optional<String> coreUrl() {
+		return valor("core.url");
+	}
+
 	/** URL do broker MQTT definida pelo build; vazio fora de produção. */
 	public static Optional<String> telemetriaUrl() {
 		return valor("telemetria.url");
@@ -54,6 +59,7 @@ public final class Ambiente {
 			return null;
 		}
 		backendUrl().ifPresent(settings::setBackendUrl);
+		coreUrl().ifPresent(settings::setCoreUrl);
 		telemetriaUrl().ifPresent(settings::setTelemetriaUrl);
 		return settings;
 	}

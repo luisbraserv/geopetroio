@@ -5,14 +5,23 @@ $AppName = "Geopetro Desktop"
 $BaseVersion = "0.1.0"
 
 # Auto-incrementa o build number para permitir reinstalar sem desinstalar
-# (WiX bloqueia reinstalacao de versao identica). Arquivo mantido fora do repo.
-$BuildFile = Join-Path $ProjectRoot "target\build-number.txt"
+# (WiX bloqueia reinstalacao de versao identica). O contador fica fora de target para sobreviver
+# ao `mvn clean`; se ele nao existir, recupera a maior versao dos instaladores ainda presentes.
+$BuildFile = Join-Path $ProjectRoot ".installer-build-number.txt"
 $BuildNumber = 0
 if (Test-Path $BuildFile) {
     $BuildNumber = [int](Get-Content $BuildFile -Raw).Trim()
 }
+$ExistingInstallerDir = Join-Path $ProjectRoot "target\dist\installer"
+if (Test-Path $ExistingInstallerDir) {
+    Get-ChildItem -LiteralPath $ExistingInstallerDir -Filter "$AppName-$BaseVersion.*.exe" -File |
+        ForEach-Object {
+            if ($_.BaseName -match ('^' + [regex]::Escape("$AppName-$BaseVersion.") + '(\d+)$')) {
+                $BuildNumber = [Math]::Max($BuildNumber, [int]$Matches[1])
+            }
+        }
+}
 $BuildNumber++
-New-Item -ItemType Directory -Force -Path (Split-Path $BuildFile) | Out-Null
 Set-Content -Path $BuildFile -Value $BuildNumber
 
 $AppVersion = "$BaseVersion.$BuildNumber"
