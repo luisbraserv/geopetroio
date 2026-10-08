@@ -1,6 +1,6 @@
 # VM única — produção
 
-> Toda a pilha do GeopetroIO numa máquina, atrás de `geopetro.braservpetroleo.com.br` · Docker · 2026-10-02
+> Toda a pilha do GeopetroIO numa máquina, atrás de `geopetro.braservpetroleo.com.br` · Docker · 2026-10-08
 
 O ambiente de desenvolvimento (`start-dev.cmd`, `stop-dev.cmd`, `deploy/dev/`) não muda e não deve ser
 usado aqui. As pastas `deploy/vm1-transacional` e `deploy/vm2-telemetria` continuam valendo para a
@@ -205,7 +205,7 @@ Deve começar com `{"token":`. Entre pela tela e cadastre os demais usuários po
 
 ```bash
 docker compose up -d --build          # a primeira vez compila core, backend, telemetria e front
-docker compose ps                     # todos "running"/"healthy" em alguns minutos
+docker compose ps                     # oito serviços; os que têm healthcheck ficam "healthy"
 docker compose logs -f core backend   # Flyway e "Started"
 ```
 
@@ -282,8 +282,17 @@ exige o firewall da nuvem/rede ou a cadeia `DOCKER-USER`.
 ## Atualizar
 
 ```bash
-cd ~/projeto/geopetroio && git pull
-cd deploy/vm-unica && ./backup.sh && docker compose up -d --build
+cd ~/projeto/geopetroio
+git status --porcelain                # se houver saída, não sobrescreva: revise antes
+cd deploy/vm-unica && ./backup.sh     # backup antes de baixar código/migrations novos
+cd ../..
+git fetch origin
+git switch feat/simulador-poco-geometria
+git pull --ff-only origin feat/simulador-poco-geometria
+cd deploy/vm-unica
+docker compose config --quiet
+docker compose up -d --build --remove-orphans
+docker compose ps
 ```
 
 As migrations rodam sozinhas. Nunca edite uma migration já aplicada (o startup recusa).

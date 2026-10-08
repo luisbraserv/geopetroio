@@ -5,8 +5,8 @@ máquina**, com Docker, servindo o front em `https://geopetro.braservpetroleo.co
 
 ## Repositório
 
-O repositório **já está clonado na VM em `~/projeto/geopetroio`**. Trabalhe nessa pasta; não clone de
-novo em outro lugar.
+Use `~/projeto/geopetroio` como pasta única do projeto. Se o repositório já existir, atualize-o sem
+apagar arquivos; se ainda não existir, clone-o nessa pasta.
 
 | | |
 |---|---|
@@ -14,14 +14,19 @@ novo em outro lugar.
 | URL | `https://github.com/luisbraserv/geopetroio.git` (público, sem credencial) |
 | Branch | `feat/simulador-poco-geometria` (use outra só se o usuário indicar) |
 
-Primeiro, garanta a branch certa. Um clone sem `--branch` fica na `main`, que ainda não tem esta pasta:
+Primeiro, garanta a branch certa. Não sobrescreva mudanças locais de uma instalação existente:
 
 ```bash
+mkdir -p ~/projeto
+if [ ! -d ~/projeto/geopetroio/.git ]; then
+  git clone --branch feat/simulador-poco-geometria \
+    https://github.com/luisbraserv/geopetroio.git ~/projeto/geopetroio
+fi
 cd ~/projeto/geopetroio
-git status                      # com alterações locais, pare e pergunte
+git status --porcelain          # se houver saída, pare e pergunte antes de alterar qualquer coisa
 git fetch origin
-git checkout feat/simulador-poco-geometria
-git pull --ff-only
+git switch feat/simulador-poco-geometria
+git pull --ff-only origin feat/simulador-poco-geometria
 git log --oneline -1            # anote o commit implantado
 cd deploy/vm-unica
 ```
@@ -32,8 +37,9 @@ instrução diz o que é seu trabalho, o que não pode ser tocado e quando parar
 
 ## O que entregar
 
-1. Os sete serviços do `docker-compose.yml` rodando e saudáveis: `caddy`, `front`, `backend`,
-   `telemetria`, `mysql`, `influxdb`, `mosquitto`.
+1. Os oito serviços do `docker-compose.yml` rodando: `caddy`, `front`, `core`, `backend`,
+   `telemetria`, `mysql`, `influxdb`, `mosquitto`. Os serviços que possuem healthcheck devem ficar
+   `healthy`.
 2. `https://geopetro.braservpetroleo.com.br` abrindo a tela de login com certificado válido, e `http://`
    redirecionando para `https://`.
 3. Login funcionando com um usuário real (passo 5 do README).
@@ -79,6 +85,8 @@ instrução diz o que é seu trabalho, o que não pode ser tocado e quando parar
 
 - Siga os passos 1 a 10 do README na ordem. Rode as verificações de cada passo e confira o resultado
   esperado antes de seguir.
+- Depois de preencher `.env`, criar a chave RS256 e o arquivo `mosquitto/passwd`, rode
+  `docker compose config --quiet`. Não inicie os containers se a validação falhar.
 - O passo 1 do README é o clone da seção "Repositório" acima.
 - A primeira subida (`docker compose up -d --build`) compila Maven e Angular dentro da VM e leva vários
   minutos. Acompanhe com `docker compose logs -f backend`.
