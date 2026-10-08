@@ -75,6 +75,13 @@
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Regras da estrutura de pacotes — specs/estrutura-de-pacotes.md §4 -->
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>1.5.1</version>
+			<scope>test</scope>
+		</dependency>
 		<!-- JavaFX Dependencies -->
 		<dependency>
 			<groupId>org.openjfx</groupId>
