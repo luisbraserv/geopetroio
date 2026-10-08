@@ -1,7 +1,7 @@
 package com.geopetro.desktop.config;
 
 import com.geopetro.desktop.controllers.MainViewFxmlController;
-import com.geopetro.desktop.services.PlcConnectionService;
+import com.geopetro.desktop.aquisicao.PlcConnectionService;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;

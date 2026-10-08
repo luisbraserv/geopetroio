@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.aquisicao;
 
 import com.geopetro.desktop.alarmes.AlarmesLocais;
 import com.geopetro.desktop.calculos.FlowRateCalculatorService;

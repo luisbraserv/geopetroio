@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.aquisicao;
 
 import java.util.List;
 import org.springframework.stereotype.Service;

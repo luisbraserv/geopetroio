@@ -3,9 +3,11 @@ package com.geopetro.desktop.services;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.aquisicao.LeituraDeCards.Grandeza;
+import com.geopetro.desktop.aquisicao.LeituraDeCards;
+import com.geopetro.desktop.aquisicao.SondaService;
 import com.geopetro.desktop.cards.CardsDaUnidade.*;
-import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
+import com.geopetro.desktop.cards.CardsDaUnidade;
 
 class CardsDoMonitoramentoTest {
     private Card card(String id, Tipo tipo, boolean ativo, boolean visivel, int ordem) {

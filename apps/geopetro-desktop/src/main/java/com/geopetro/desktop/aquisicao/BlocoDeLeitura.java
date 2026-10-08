@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.aquisicao;
 
 import com.sourceforge.snap7.moka7.S7;
 

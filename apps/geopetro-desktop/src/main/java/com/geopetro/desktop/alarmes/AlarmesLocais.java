@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Estado;
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Severidade;
-import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
+import com.geopetro.desktop.aquisicao.LeituraDeCards.Grandeza;
 
 /**
  * O alarme da estação — passo 3 de {@code specs/SDD/negocio/requisitos/alarmes.md}.

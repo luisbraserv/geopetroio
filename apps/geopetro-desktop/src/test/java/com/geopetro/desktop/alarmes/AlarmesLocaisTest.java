@@ -15,7 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
 import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Severidade;
-import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
+import com.geopetro.desktop.aquisicao.LeituraDeCards.Grandeza;
 
 /**
  * O alarme da estacao ligando leitura e faixa —

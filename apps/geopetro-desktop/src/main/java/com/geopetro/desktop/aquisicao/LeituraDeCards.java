@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.aquisicao;
 
 import java.util.ArrayList;
 import java.util.List;

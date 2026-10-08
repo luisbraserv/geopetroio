@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.aquisicao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,7 +24,7 @@ import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
 import com.geopetro.desktop.conversao.ConversaoSinalAnalogico;
 import com.geopetro.desktop.conversao.ConversaoTanque;
-import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
+import com.geopetro.desktop.aquisicao.LeituraDeCards.Grandeza;
 import com.sourceforge.snap7.moka7.S7;
 
 /**
