@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.alarmes;
 
 import java.awt.Toolkit;
 

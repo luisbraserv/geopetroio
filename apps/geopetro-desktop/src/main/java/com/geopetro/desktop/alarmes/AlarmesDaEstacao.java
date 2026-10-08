@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.alarmes;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -12,8 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Faixa;
 import com.geopetro.desktop.config.AppPaths;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Faixa;
+import com.geopetro.desktop.services.CalibracaoDeCards;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;

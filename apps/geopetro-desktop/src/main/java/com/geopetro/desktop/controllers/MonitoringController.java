@@ -1,8 +1,18 @@
 package com.geopetro.desktop.controllers;
 
+import com.geopetro.desktop.alarmes.AlarmeLocalDialog;
+import com.geopetro.desktop.alarmes.AlarmesLocais;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme;
+import com.geopetro.desktop.conversao.ConversaoTanque;
+import com.geopetro.desktop.conversao.ConversaoTemperatura;
 import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.services.CardsDoMonitoramento;
+import com.geopetro.desktop.services.LeituraDeCards;
+import com.geopetro.desktop.services.PlcConnectionService;
 import com.geopetro.desktop.services.SettingsService;
 import com.geopetro.desktop.services.SondaService;
+import com.geopetro.desktop.services.TelemetriaRealtimeService;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
@@ -20,16 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.context.annotation.Scope;
-import com.geopetro.desktop.services.CardsDoMonitoramento;
-import com.geopetro.desktop.services.PlcConnectionService;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.services.AlarmesLocais;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme;
-import com.geopetro.desktop.conversao.ConversaoTanque;
-import com.geopetro.desktop.conversao.ConversaoTemperatura;
-import com.geopetro.desktop.services.LeituraDeCards;
-import com.geopetro.desktop.services.TelemetriaRealtimeService;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class MonitoringController {
     @Autowired private TelemetriaRealtimeService telemetriaRealtimeService;
     @Autowired private AlarmesLocais alarmesLocais;
     @Autowired private PlcConnectionService plcConnectionService;
-    @Autowired private com.geopetro.desktop.services.AlarmesDaEstacao alarmesDaEstacao;
+    @Autowired private com.geopetro.desktop.alarmes.AlarmesDaEstacao alarmesDaEstacao;
 
     @FXML private DashboardGrid cardsPane;
     @FXML private Label estadoMonitoramento;
@@ -231,7 +232,7 @@ public class MonitoringController {
                 "Alarme desta estação: " + faixaLegivel(alarme, g.unidade())));
     }
 
-    private static String faixaLegivel(com.geopetro.desktop.services.AlarmesDaEstacao.AlarmeLocal alarme,
+    private static String faixaLegivel(com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal alarme,
                                        String unidade) {
         StringBuilder texto = new StringBuilder();
         if (alarme.minimo() != null) {

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.alarmes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -13,8 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.services.AlarmesDaEstacao.AlarmeLocal;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Severidade;
+import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Severidade;
 import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
 
 /**

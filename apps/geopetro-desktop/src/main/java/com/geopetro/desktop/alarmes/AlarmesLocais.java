@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.alarmes;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -11,9 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.services.AlarmesDaEstacao.AlarmeLocal;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Estado;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Severidade;
+import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Estado;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Severidade;
 import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
 
 /**

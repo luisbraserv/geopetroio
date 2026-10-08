@@ -1,9 +1,8 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.alarmes;
 
 import java.util.Optional;
 
-import com.geopetro.desktop.services.AlarmesDaEstacao;
-import com.geopetro.desktop.services.AlarmesDaEstacao.AlarmeLocal;
+import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.ButtonBar;

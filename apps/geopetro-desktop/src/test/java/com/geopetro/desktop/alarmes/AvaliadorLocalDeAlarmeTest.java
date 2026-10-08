@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.alarmes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -11,9 +11,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Faixa;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Estado;
-import com.geopetro.desktop.services.AvaliadorLocalDeAlarme.Severidade;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Faixa;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Estado;
+import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Severidade;
 
 /**
  * A regra do alarme na borda — RN-068, RN-071.

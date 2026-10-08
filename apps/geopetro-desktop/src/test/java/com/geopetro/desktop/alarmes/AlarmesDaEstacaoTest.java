@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.alarmes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,7 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.geopetro.desktop.services.AlarmesDaEstacao.AlarmeLocal;
+import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
 
 /**
  * A configuracao de alarme desta estacao — {@code specs/SDD/negocio/requisitos/configuracao-da-estacao.md §3}.
