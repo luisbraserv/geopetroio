@@ -1,9 +1,14 @@
 package com.example.demo.services;
 
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +38,8 @@ import com.example.demo.models.AppSettings;
 public class SessaoConfiguracao {
 
 	private static final Logger logger = LoggerFactory.getLogger(SessaoConfiguracao.class);
+	private static final Pattern EXPIRACAO_JWT = Pattern.compile("\"exp\"\\s*:\\s*(\\d+)");
+	private static final Duration MARGEM_EXPIRACAO = Duration.ofSeconds(5);
 
 	/** Perfis que configuram — espelha {@code ConfiguracaoCardsAccess} no backend. */
 	private static final Set<String> CONFIGURADORES = Set.of("ADMIN", "SUPORTE");
@@ -56,7 +63,7 @@ public class SessaoConfiguracao {
 		this.login = login;
 	}
 
-	private record Sessao(String usuario, String token) {
+	private record Sessao(String usuario, String token, Instant expiraEm) {
 	}
 
 	/** O que a tela precisa mostrar quando o login não passa. */
@@ -136,7 +143,7 @@ public class SessaoConfiguracao {
 			return new Resultado.PerfilSemPermissao(usuario.trim());
 		}
 
-		atual = new Sessao(usuario.trim(), identidade.token());
+		atual = new Sessao(usuario.trim(), identidade.token(), expiracao(identidade.token()).orElse(null));
 
 		// O endereco so e gravado depois de o servidor ACEITAR a credencial: um endereco digitado
 		// errado nao substitui o que estava funcionando.
@@ -151,15 +158,18 @@ public class SessaoConfiguracao {
 	}
 
 	public synchronized boolean liberada() {
+		descartarSeExpirada();
 		return atual != null;
 	}
 
 	public synchronized Optional<String> usuario() {
+		descartarSeExpirada();
 		return Optional.ofNullable(atual).map(Sessao::usuario);
 	}
 
 	/** Token para chamar o backend em nome de quem abriu a sessão. */
 	public synchronized Optional<String> token() {
+		descartarSeExpirada();
 		return Optional.ofNullable(atual).map(Sessao::token);
 	}
 
@@ -169,6 +179,32 @@ public class SessaoConfiguracao {
 			logger.info("Sessao de configuracao de {} encerrada.", atual.usuario());
 		}
 		atual = null;
+	}
+
+	private void descartarSeExpirada() {
+		if (atual == null || atual.expiraEm() == null) {
+			return;
+		}
+		if (!Instant.now().plus(MARGEM_EXPIRACAO).isBefore(atual.expiraEm())) {
+			logger.info("Sessao de configuracao de {} expirou; um novo login sera solicitado.", atual.usuario());
+			atual = null;
+		}
+	}
+
+	private static Optional<Instant> expiracao(String token) {
+		try {
+			String[] partes = token == null ? new String[0] : token.split("\\.");
+			if (partes.length < 2) {
+				return Optional.empty();
+			}
+			String payload = new String(Base64.getUrlDecoder().decode(partes[1]), StandardCharsets.UTF_8);
+			Matcher matcher = EXPIRACAO_JWT.matcher(payload);
+			return matcher.find()
+					? Optional.of(Instant.ofEpochSecond(Long.parseLong(matcher.group(1))))
+					: Optional.empty();
+		} catch (IllegalArgumentException invalido) {
+			return Optional.empty();
+		}
 	}
 
 	private static String normalizarBase(String url) {

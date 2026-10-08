@@ -36,9 +36,7 @@
          <Label text="Ajustes desta estação. As alterações passam a valer ao salvar."
                 styleClass="cabecalho-subtitulo" />
 
-         <!-- Portao de configuracao: o que altera o que a unidade LE e PUBLICA exige ADMIN ou
-              SUPORTE. Os enderecos de servidor ficam fora dele de proposito — sem eles nao ha
-              como logar, e uma estacao nova nao teria por onde comecar. -->
+         <!-- O que altera o que a unidade le e publica exige ADMIN ou SUPORTE. -->
          <HBox fx:id="faixaPortao" spacing="10.0" alignment="CENTER_LEFT" visible="false" managed="false">
             <padding><Insets top="10.0" /></padding>
             <Label fx:id="lblPortao" styleClass="aviso-configuracao" wrapText="true"
@@ -144,11 +142,6 @@
                       text="Desmarcado, esta estação para de publicar no broker e não alimenta o histórico no InfluxDB. Continuam funcionando a leitura do CLP, a tela, o histórico local e o alarme desta estação." />
 
                <VBox spacing="5.0">
-                  <Label text="Endereço do broker" styleClass="rotulo" />
-                  <TextField fx:id="txtTelemetriaUrl" promptText="Ex.: tcp://192.168.0.10:1883" maxWidth="Infinity" />
-               </VBox>
-
-               <VBox spacing="5.0">
                   <Label text="Usuário" styleClass="rotulo" />
                   <TextField fx:id="txtTelemetriaUsuario" promptText="Vazio se o broker não exigir autenticação" maxWidth="Infinity" />
                </VBox>
@@ -171,17 +164,6 @@
                       text="Desmarcado, esta unidade some da tela remota e o servidor deixa de avaliar alarmes dela. O alarme desta estação continua funcionando, e os cards já baixados continuam desenhando." />
 
                <VBox spacing="5.0">
-                  <Label text="URL do Braserv-Core" styleClass="rotulo" />
-                  <TextField fx:id="txtCoreUrl" promptText="Ex.: http://localhost:8082" maxWidth="Infinity" />
-                  <Label styleClass="ajuda" text="Login e usuários pertencem ao Core." />
-               </VBox>
-
-               <VBox spacing="5.0">
-                  <Label text="URL do Backend" styleClass="rotulo" />
-                  <TextField fx:id="txtBackendUrl" promptText="Ex.: http://localhost:8080" maxWidth="Infinity" />
-               </VBox>
-
-               <VBox spacing="5.0">
                   <Label text="Usuário de serviço" styleClass="rotulo" />
                   <TextField fx:id="txtBackendUsuario" promptText="Usuário desta sonda no backend" maxWidth="Infinity" />
                </VBox>
@@ -192,7 +174,7 @@
                </VBox>
 
                <Label styleClass="ajuda"
-                      text="O login é feito no Braserv-Core; o token resultante autoriza o WebSocket e a lista de Unidades no Backend. As mesmas credenciais carregam a lista acima." />
+                      text="Estas credenciais são exclusivas da transmissão automática em tempo real. Buscar e configurar Unidades reutiliza a sessão ADMIN ou SUPORTE já autenticada." />
             </VBox>
 
             <!--

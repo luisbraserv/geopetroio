@@ -53,6 +53,16 @@ public final class Ambiente {
 		return valor("telemetria.url");
 	}
 
+	/** Usuario do broker MQTT definido pelo build; vazio fora de producao. */
+	public static Optional<String> telemetriaUsuario() {
+		return valor("telemetria.usuario");
+	}
+
+	/** Senha do broker MQTT definida pelo build; vazia fora de producao. */
+	public static Optional<String> telemetriaSenha() {
+		return valor("telemetria.senha");
+	}
+
 	/** Em produção, troca os endereços pelos do build. Fora dela, devolve como veio. */
 	public static AppSettings aplicar(AppSettings settings) {
 		if (settings == null) {
@@ -61,6 +71,8 @@ public final class Ambiente {
 		backendUrl().ifPresent(settings::setBackendUrl);
 		coreUrl().ifPresent(settings::setCoreUrl);
 		telemetriaUrl().ifPresent(settings::setTelemetriaUrl);
+		telemetriaUsuario().ifPresent(settings::setTelemetriaUsuario);
+		telemetriaSenha().ifPresent(settings::setTelemetriaSenha);
 		return settings;
 	}
 

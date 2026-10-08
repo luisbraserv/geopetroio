@@ -142,6 +142,9 @@ public class UnidadeSondaCatalogoService {
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 401) {
+            throw new SessaoExpiradaException();
+        }
         if (response.statusCode() == 403) {
             throw new CatalogoIndisponivelException("Este usuário não tem acesso a nenhuma Unidade.");
         }
@@ -191,6 +194,13 @@ public class UnidadeSondaCatalogoService {
     public static class CatalogoIndisponivelException extends RuntimeException {
         public CatalogoIndisponivelException(String mensagem) {
             super(mensagem);
+        }
+    }
+
+    /** O token de ADMIN/SUPORTE venceu e a interface deve pedir login novamente. */
+    public static class SessaoExpiradaException extends CatalogoIndisponivelException {
+        public SessaoExpiradaException() {
+            super("A sessão de configuração expirou. Entre novamente.");
         }
     }
 }

@@ -62,6 +62,9 @@ class SettingsViewTest {
         assertNotNull(raiz.lookup("#cmbUnidadeSonda"), "seletor de Unidade ausente");
         assertNotNull(raiz.lookup("#btnSave"), "botao Salvar ausente");
         assertNotNull(raiz.lookup("#txtPlcIp"), "campo de IP do PLC ausente");
+        assertNull(raiz.lookup("#txtTelemetriaUrl"), "URL do broker ficou exposta na tela");
+        assertNull(raiz.lookup("#txtCoreUrl"), "URL do Core ficou exposta na tela");
+        assertNull(raiz.lookup("#txtBackendUrl"), "URL do Backend ficou exposta na tela");
     }
 
     /**
@@ -110,8 +113,7 @@ class SettingsViewTest {
      * <p><b>[DECIDIDO 2026-09-10]</b> Sem excecao: os cartoes ficam trancados sem sessao,
      * enderecos e credenciais inclusive.
      *
-     * <p>O que impede a porta de fechar sobre si mesma e o campo <b>Servidor na tela de login</b>:
-     * sem ele, uma estacao nova nao teria como logar para definir o endereco contra o qual se loga.
+     * <p>Os enderecos internos vem da configuracao de producao e nao aparecem na interface.
      */
     @Test
     void semSessaoAEngrenagemInteiraFicaTrancada() throws Exception {
@@ -123,9 +125,9 @@ class SettingsViewTest {
                 "IP do CLP e Unidade exigem ADMIN ou SUPORTE");
         // ⚠️ cartaoCards saiu da tela em 2026-09-10 — ver oCartaoDeCardsVisiveisSumiu().
         assertTrue(raiz.lookup("#cartaoTempoReal").isDisabled(),
-                "URL do Backend e credenciais entraram no portao");
+                "credenciais do Backend entraram no portao");
         assertTrue(raiz.lookup("#cartaoMqtt").isDisabled(),
-                "endereco e credenciais do broker entraram junto");
+                "credenciais do broker entraram junto");
     }
 
     /**

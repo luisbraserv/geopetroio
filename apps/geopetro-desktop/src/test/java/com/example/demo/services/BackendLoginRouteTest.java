@@ -13,6 +13,7 @@ class BackendLoginRouteTest {
     private HttpServer server;
     private String base;
     private final ConcurrentLinkedQueue<String> requests = new ConcurrentLinkedQueue<>();
+    private volatile boolean unauthorizedUnits;
     @BeforeEach void start() throws Exception {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", exchange -> {
@@ -26,7 +27,8 @@ class BackendLoginRouteTest {
                     status = 400; body = "{}";
                 } else { status = 200; body = "{\"token\":\"test-token\"}"; }
             } else if (path.equals("/api/monitoramento/unidades/minhas") && "Bearer test-token".equals(exchange.getRequestHeaders().getFirst("Authorization"))) {
-				status = 200; body = "[{\"id\":1,\"nome\":\"TEST-1\",\"apelido\":\"Teste\",\"tipo\":\"SONDA\"}]";
+				status = unauthorizedUnits ? 401 : 200;
+                body = unauthorizedUnits ? "{}" : "[{\"id\":1,\"nome\":\"TEST-1\",\"apelido\":\"Teste\",\"tipo\":\"SONDA\"}]";
             } else { status = 404; body = "{}"; }
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
@@ -42,6 +44,21 @@ class BackendLoginRouteTest {
         var units = new UnidadeSondaCatalogoService().listar(base, base, "test-user", "test-only");
         assertEquals(1, units.size());
         assertEquals(java.util.List.of("POST /api/auth/login", "GET /api/monitoramento/unidades/minhas"), java.util.List.copyOf(requests));
+    }
+
+    @Test void catalogReusesTheExistingConfigurationSessionWithoutLoggingInAgain() {
+        var units = new UnidadeSondaCatalogoService().listarComToken(base, "test-token");
+
+        assertEquals(1, units.size());
+        assertEquals(java.util.List.of("GET /api/monitoramento/unidades/minhas"),
+                java.util.List.copyOf(requests));
+    }
+
+    @Test void expiredConfigurationTokenIsReportedAsAnExpiredSession() {
+        unauthorizedUnits = true;
+
+        assertThrows(UnidadeSondaCatalogoService.SessaoExpiradaException.class,
+                () -> new UnidadeSondaCatalogoService().listarComToken(base, "test-token"));
     }
 
     @Test void catalogAuthenticatesInCoreAndListsUnitsInBackend() throws Exception {

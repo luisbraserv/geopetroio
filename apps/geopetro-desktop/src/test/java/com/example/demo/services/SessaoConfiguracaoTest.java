@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.net.InetSocketAddress;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.junit.jupiter.api.AfterEach;
@@ -68,6 +70,15 @@ class SessaoConfiguracaoTest {
 		return sessao(base);
 	}
 
+	private String tokenComExpiracao(Instant expiracao) {
+		String cabecalho = Base64.getUrlEncoder().withoutPadding()
+				.encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+		String payload = Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(("{\"exp\":" + expiracao.getEpochSecond() + "}")
+						.getBytes(StandardCharsets.UTF_8));
+		return cabecalho + "." + payload + ".assinatura";
+	}
+
 	@Test
 	@DisplayName("ADMIN abre a sessao")
 	void adminAbre() {
@@ -80,6 +91,31 @@ class SessaoConfiguracaoTest {
 		assertTrue(sessao.liberada());
 		assertEquals("ana", sessao.usuario().orElseThrow());
 		assertEquals("t", sessao.token().orElseThrow());
+	}
+
+	@Test
+	@DisplayName("token expirado encerra a sessao local e permite novo login")
+	void tokenExpiradoEncerraSessao() {
+		String token = tokenComExpiracao(Instant.now().minusSeconds(60));
+		corpo = "{\"token\":\"" + token + "\",\"roles\":[\"ADMIN\"]}";
+		var sessao = sessao();
+
+		assertInstanceOf(SessaoConfiguracao.Resultado.Liberada.class, sessao.abrir("ana", "senha"));
+		assertFalse(sessao.liberada(), "token vencido nao pode manter o portao aberto");
+		assertTrue(sessao.token().isEmpty());
+	}
+
+	@Test
+	@DisplayName("token ainda valido mantem a mesma sessao para as demais chamadas")
+	void tokenValidoPermaneceNaSessao() {
+		String token = tokenComExpiracao(Instant.now().plusSeconds(3600));
+		corpo = "{\"token\":\"" + token + "\",\"roles\":[\"SUPORTE\"]}";
+		var sessao = sessao();
+
+		sessao.abrir("sup", "senha");
+
+		assertTrue(sessao.liberada());
+		assertEquals(token, sessao.token().orElseThrow());
 	}
 
 	@Test
