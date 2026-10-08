@@ -17,10 +17,10 @@ import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.models.ChaveHidraulicaConfig;
-import com.geopetro.desktop.models.PesoColunaConfig;
-import com.geopetro.desktop.models.SensorPressaoConfig;
-import com.geopetro.desktop.models.TipoMovimento;
+import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
+import com.geopetro.desktop.calculos.PesoColunaConfig;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
+import com.geopetro.desktop.calculos.TipoMovimento;
 
 /**
  * A calibração por {@code dispositivoId} — o que substitui os slots posicionais.

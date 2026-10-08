@@ -1,6 +1,5 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.conversao;
 
-import com.geopetro.desktop.models.SensorPressaoConfig;
 
 /**
  * Ponto unico de conversao de pressao.

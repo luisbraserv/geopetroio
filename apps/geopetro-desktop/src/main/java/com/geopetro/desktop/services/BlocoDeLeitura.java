@@ -2,6 +2,8 @@ package com.geopetro.desktop.services;
 
 import com.sourceforge.snap7.moka7.S7;
 
+import com.geopetro.desktop.conversao.ConversaoSinalAnalogico;
+
 /**
  * Uma faixa contigua do Data Block, lida de uma vez e fatiada em memoria — RN-095.
  *

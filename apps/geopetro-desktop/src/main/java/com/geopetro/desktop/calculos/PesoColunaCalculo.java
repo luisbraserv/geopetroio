@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.calculos;
 
 /**
  * Resultado do calculo do peso da coluna, com todos os passos intermediarios preservados.

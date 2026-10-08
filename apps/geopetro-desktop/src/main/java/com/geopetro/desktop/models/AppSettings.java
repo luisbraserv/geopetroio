@@ -1,5 +1,9 @@
 package com.geopetro.desktop.models;
 
+import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
+import com.geopetro.desktop.calculos.PesoColunaConfig;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
+
 public class AppSettings {
 
     // ⚠️ plcIp saiu daqui em 2026-09-10: ele era lido, exibido e salvo — e ignorado. Quem conecta

@@ -7,11 +7,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.geopetro.desktop.calculos.FlowRateCalculatorService;
+import com.geopetro.desktop.calculos.HydraulicTorqueCalculator;
+import com.geopetro.desktop.calculos.PesoColunaCalculator;
+import com.geopetro.desktop.calculos.StrokeCalculatorService;
+import com.geopetro.desktop.conversao.ConversaoPressao;
+import com.geopetro.desktop.conversao.ConversaoSinalAnalogico;
+import com.geopetro.desktop.conversao.ConversaoTanque;
+import com.geopetro.desktop.conversao.ConversaoTemperatura;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
 import com.geopetro.desktop.models.LeituraPublicada;
-import com.geopetro.desktop.models.SensorPressaoConfig;
 
 /**
  * Converte um ciclo de leitura do CLP nas grandezas que os cards declaram.

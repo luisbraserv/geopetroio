@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.calculos;
 
 import java.util.HashMap;
 import java.util.Map;

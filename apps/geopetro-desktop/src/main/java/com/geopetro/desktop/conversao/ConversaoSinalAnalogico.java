@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.conversao;
 
 /**
  * Nucleo de conversao dos sinais analogicos recebidos do LOGO!.

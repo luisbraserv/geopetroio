@@ -1,9 +1,9 @@
 package com.geopetro.desktop.services;
 
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.ChaveHidraulicaConfig;
-import com.geopetro.desktop.models.SensorPressaoConfig;
-import com.geopetro.desktop.models.TipoMovimento;
+import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
+import com.geopetro.desktop.calculos.TipoMovimento;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -133,8 +133,8 @@ public class SettingsService {
         return sensor;
     }
 
-    private com.geopetro.desktop.models.PesoColunaConfig parsePesoColuna(String content) {
-        com.geopetro.desktop.models.PesoColunaConfig cfg = new com.geopetro.desktop.models.PesoColunaConfig();
+    private com.geopetro.desktop.calculos.PesoColunaConfig parsePesoColuna(String content) {
+        com.geopetro.desktop.calculos.PesoColunaConfig cfg = new com.geopetro.desktop.calculos.PesoColunaConfig();
         Pattern blockPattern = Pattern.compile("\"pesoColuna\"\\s*:\\s*\\{([^}]*)\\}");
         Matcher block = blockPattern.matcher(content);
         if (!block.find()) return cfg;
@@ -237,8 +237,8 @@ public class SettingsService {
                 + " }";
     }
 
-    private String pesoColunaJson(com.geopetro.desktop.models.PesoColunaConfig c) {
-        if (c == null) c = new com.geopetro.desktop.models.PesoColunaConfig();
+    private String pesoColunaJson(com.geopetro.desktop.calculos.PesoColunaConfig c) {
+        if (c == null) c = new com.geopetro.desktop.calculos.PesoColunaConfig();
         return "{ \"pressaoZeroPsi\" : " + c.getPressaoZeroPsi()
                 + ", \"areaEfetivaSensorPol2\" : " + c.getAreaEfetivaSensorPol2()
                 + ", \"bracoSensorPol\" : " + c.getBracoSensorPol()
@@ -250,11 +250,11 @@ public class SettingsService {
                 + " }";
     }
 
-    public com.geopetro.desktop.models.PesoColunaConfig getPesoColuna() {
+    public com.geopetro.desktop.calculos.PesoColunaConfig getPesoColuna() {
         return loadSettings().getPesoColuna();
     }
 
-    public void updatePesoColuna(com.geopetro.desktop.models.PesoColunaConfig cfg) {
+    public void updatePesoColuna(com.geopetro.desktop.calculos.PesoColunaConfig cfg) {
         AppSettings settings = loadSettings();
         settings.setPesoColuna(cfg);
         saveSettings(settings);

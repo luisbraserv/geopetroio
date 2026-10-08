@@ -1,11 +1,13 @@
 package com.geopetro.desktop.services;
 
+import com.geopetro.desktop.calculos.FlowRateCalculatorService;
+import com.geopetro.desktop.calculos.StrokeCalculatorService;
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
+import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.models.EstadoAtual;
 import com.geopetro.desktop.models.LeituraLocal;
 import com.geopetro.desktop.models.LeituraPublicada;
-import com.geopetro.desktop.models.EstadoAtual;
 import com.geopetro.desktop.repositories.LeituraLocalRepository;
 import com.sourceforge.snap7.moka7.S7;
 import com.sourceforge.snap7.moka7.S7Client;

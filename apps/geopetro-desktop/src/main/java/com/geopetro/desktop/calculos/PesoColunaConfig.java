@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.calculos;
 
 /**
  * Geometria do sargento (deadline anchor) usada para deduzir o peso da coluna.

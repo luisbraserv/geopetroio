@@ -1,9 +1,8 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.conversao;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.SensorPressaoConfig;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

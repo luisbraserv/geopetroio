@@ -1,7 +1,5 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.calculos;
 
-import com.geopetro.desktop.models.PesoColunaCalculo;
-import com.geopetro.desktop.models.PesoColunaConfig;
 
 /**
  * Deduz o peso da coluna a partir da pressao no sargento (deadline anchor).

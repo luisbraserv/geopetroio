@@ -1,8 +1,8 @@
 package com.geopetro.desktop.services;
 
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.ChaveHidraulicaConfig;
-import com.geopetro.desktop.models.TipoMovimento;
+import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
+import com.geopetro.desktop.calculos.TipoMovimento;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

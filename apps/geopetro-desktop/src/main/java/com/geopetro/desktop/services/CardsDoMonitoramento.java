@@ -5,8 +5,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.conversao.ConversaoTemperatura;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
+import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
 
 /** A configuração define a tela; a leitura apenas preenche os valores. */

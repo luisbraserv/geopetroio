@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.conversao;
 
 import com.geopetro.desktop.models.CardsDaUnidade.FormaTanque;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;

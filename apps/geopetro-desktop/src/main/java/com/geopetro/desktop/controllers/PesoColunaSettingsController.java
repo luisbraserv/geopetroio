@@ -8,13 +8,13 @@ import org.springframework.stereotype.Controller;
 
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.PesoColunaCalculo;
-import com.geopetro.desktop.models.PesoColunaConfig;
-import com.geopetro.desktop.models.SensorPressaoConfig;
+import com.geopetro.desktop.calculos.PesoColunaCalculo;
+import com.geopetro.desktop.calculos.PesoColunaConfig;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
 import com.geopetro.desktop.services.CalibracaoCardService;
 import com.geopetro.desktop.services.CalibracaoDeCards;
-import com.geopetro.desktop.services.ConversaoPressao;
-import com.geopetro.desktop.services.PesoColunaCalculator;
+import com.geopetro.desktop.conversao.ConversaoPressao;
+import com.geopetro.desktop.calculos.PesoColunaCalculator;
 
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;

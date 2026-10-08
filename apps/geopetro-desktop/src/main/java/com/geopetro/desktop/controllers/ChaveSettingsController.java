@@ -2,11 +2,11 @@ package com.geopetro.desktop.controllers;
 
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.ChaveHidraulicaConfig;
-import com.geopetro.desktop.models.TipoMovimento;
+import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
+import com.geopetro.desktop.calculos.TipoMovimento;
 import com.geopetro.desktop.services.CalibracaoCardService;
 import com.geopetro.desktop.services.CalibracaoDeCards;
-import com.geopetro.desktop.services.HydraulicTorqueCalculator;
+import com.geopetro.desktop.calculos.HydraulicTorqueCalculator;
 import javafx.concurrent.Task;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;

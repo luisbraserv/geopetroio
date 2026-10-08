@@ -1,6 +1,5 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.calculos;
 
-import com.geopetro.desktop.models.TipoMovimento;
 
 public final class HydraulicTorqueCalculator {
 

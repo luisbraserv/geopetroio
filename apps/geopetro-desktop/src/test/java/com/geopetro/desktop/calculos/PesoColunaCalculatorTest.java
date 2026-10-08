@@ -1,10 +1,8 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.calculos;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.PesoColunaCalculo;
-import com.geopetro.desktop.models.PesoColunaConfig;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

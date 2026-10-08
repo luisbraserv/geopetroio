@@ -11,10 +11,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.geopetro.desktop.calculos.FlowRateCalculatorService;
+import com.geopetro.desktop.calculos.PesoColunaConfig;
+import com.geopetro.desktop.calculos.StrokeCalculatorService;
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.*;
-import com.geopetro.desktop.models.PesoColunaConfig;
+import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.repositories.LeituraLocalRepository;
 import com.sourceforge.snap7.moka7.S7;
 import com.sourceforge.snap7.moka7.S7Client;
