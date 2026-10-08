@@ -74,7 +74,7 @@ diferencial nos tubulares abaixo de ruptura e colapso. Por isso um motor só ser
 | Dispositivos | Plugues de fundo e de topo, colar e sapata | Nenhum | Nenhum (Bradenhead), packer recuperável ou retentor perfurável |
 | Retorno | Pelo anular até a superfície | Pelo anular até a superfície | No posicionamento, pelo anular; na compressão, **retorno fechado**: o que entra vai para a formação |
 | Como termina | Plugue superior assenta no colar | Deslocamento levemente abaixo do equilíbrio (2–3 bbl, R3 §14-3.1) e drenagem até o equilíbrio; coluna retirada devagar; o cimento que sobra acima do topo é revertido (R2 F-18) | Posiciona a pasta nos canhoneados, isola e comprime, contínuo ou com hesitação (R3 §14-9.3–§14-9.4) |
-| Volume de pasta | Anular do intervalo + shoe track | Intervalo pelo diâmetro da fase, **sem excesso**; altura com a coluna imersa Htci = Vp / (Can + Ctp) (R2 F-19) | Volume que cobre o intervalo + volume a injetar na formação |
+| Volume de pasta | Anular do intervalo + shoe track | Intervalo pelo diâmetro da fase, **sem excesso**; altura com a coluna imersa Htci = Vp / (Can + Ctp) (R2 F-19) | **[ALTERADO 2026-10-08]** Volume do intervalo (o tampão); o volume a injetar sai de dentro dele (§2.1). Com retentor, conta própria (§6.6) |
 
 **A diferença que o motor precisa representar.** No tampão a pasta só é posicionada e
 equilibrada. No squeeze, **uma parte do volume de pasta é forçada para dentro da
@@ -89,6 +89,34 @@ pressão de quebra, entra a pasta inteira (squeeze de alta pressão, R3 §14-9.2
 retira o volume injetado **como pasta inteira na profundidade dos canhoneados**. Não
 simula desidratação, reboco nem nodes (Eq. 14-2 a 14-11), e o relatório diz isso. Um
 modelo de reboco pode vir depois, com o filtrado API da pasta.
+
+### 2.1 Volume de pasta do squeeze: o injetado sai do tampão
+
+**[DECIDIDO 2026-10-08, pelo usuário]** Vale para Bradenhead e packer. Substitui a regra de
+2026-09-25 (§12.12), em que o injetado vinha **a mais** do intervalo.
+
+| Grandeza | Regra |
+|---|---|
+| Tampão | Volume do intervalo da operação pela capacidade interna cheia (sem a coluna), trecho a trecho |
+| Pasta bombeada | **O tampão.** Com "Volume de pasta", o valor informado é o bombeado |
+| Injetado na formação | Soma dos blocos de injeção. **Sai de dentro da pasta bombeada** |
+| Pasta que fica no poço | Bombeada − injetado |
+| Injetado ≥ bombeado | **Erro, bloqueia o cálculo**: não sobraria cimento no poço |
+
+Exemplo: tampão de 10 bbl e 2 bbl a injetar. Bombeiam-se 10 bbl, 2 vão para a formação e
+ficam 8 bbl; o topo final fica abaixo do topo do intervalo.
+
+**Desenhos.** Os esquemáticos com e sem tubing mostram o **tampão inteiro, antes da
+injeção**: topo e volumes da pasta bombeada. O estado depois da injeção (pasta que fica)
+continua como informação no 3D ("depois"), no topo após o squeeze e no relatório.
+
+**Retentor:** não muda. A pasta é o injetado mais o revestimento entre o retentor e a base dos
+canhoneados (§6.6); com retentor não há tampão calculado.
+
+**Divergência conhecida.** O programa 109/2026 do 7-PIR-259D-AL (squeeze 1, intervalo de
+1470 a 1542 m, 9,30 bbl, 2 bbl a injetar) pede 11,0 bbl de pasta e "topo esperado 1470 m após
+injeção de 2 bbl", o que corresponde à regra antiga. Pela regra vigente, o simulador bombeia
+9,30 bbl e o topo depois da injeção fica em cerca de 1485,5 m.
 
 ## 3. O que existe hoje
 
@@ -313,8 +341,8 @@ traduz esses volumes e as vazões por fluido em passos do motor, todos com quant
 |---|---|
 | Água à frente (volume físico, vazão da frente) | `pump` do fluido de frente |
 | Pausa 1, 2, 3 | `pause` |
-| Pasta (volume bombeado, com o injetável no squeeze) | `pump` da pasta |
-| Deslocamento do squeeze Bradenhead e packer | **[ALTERADO NA S7]** o que equilibra a pasta inteira (a do intervalo e a que vai para a formação), e não o de hoje; ver abaixo |
+| Pasta (volume bombeado; no squeeze, o injetado sai dela, §2.1) | `pump` da pasta |
+| Deslocamento do squeeze Bradenhead e packer | **[ALTERADO NA S7]** o que equilibra a pasta inteira bombeada, e não o de hoje; ver abaixo |
 | Água atrás | `pump` do fluido de atrás |
 | Deslocamento (`operationalDisplacementVolumeBbl`) | `pump` do deslocamento |
 | Fim do deslocamento no tampão | drenagem até o equilíbrio (§6.4) |
@@ -746,7 +774,7 @@ Tampão primeiro; cada página sai pronta, com relatório, antes da outra.
 
 - Envelope: duas hidrostáticas mínimas (por profundidade e do poço); poro e fratura só em formação exposta; compressão como série própria nos canhoneados.
 - Squeeze: eixo de ECD por tempo, delta ECD apenas do atrito, pressão aplicada separada e marcador do estado depois da retirada. Tampão e primária mantêm eixo por volume.
-- Pasta do squeeze: volume bombeado inclui pasta do intervalo mais o volume a injetar. O volume informado é o total bombeado; o topo após injeção usa apenas a pasta que fica no intervalo.
+- Pasta do squeeze (Bradenhead e packer): o bombeado é o tampão e o injetado sai de dentro dele (§2.1). Os esquemáticos mostram o tampão antes da injeção; o topo após injeção usa a pasta que fica.
 - Janela operacional: faixa poro-fratura no envelope e gráfico de risco de fratura no squeeze, com limite de pressão de superfície e pressão aplicada. Detalhes atuais em [janela operacional](janela-operacional.md).
 - Relatório: seleção individual de gráficos, tópicos e figuras compactados em A4; a pressão máxima de injeção controla os blocos sem apagar degraus menores.
 
@@ -807,3 +835,7 @@ Tampão primeiro; cada página sai pronta, com relatório, antes da outra.
 ### 12.14 Módulo de janela operacional: especificação recebida (2026-09-25)
 
 [Registro datado](history/squeeze-tampao-implementacao-2026-09.md).
+
+### 12.15 Injetado sai do tampão (2026-10-08)
+
+Regra em §2.1. [Registro datado](history/squeeze-tampao-implementacao-2026-09.md).
