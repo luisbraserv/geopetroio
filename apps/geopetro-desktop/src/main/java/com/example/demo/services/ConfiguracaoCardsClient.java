@@ -233,8 +233,9 @@ public class ConfiguracaoCardsClient {
 			return;
 		}
 		if (status == 401) {
+			sessao.encerrar();
 			throw new CardsIndisponiveisException(
-					"A sessao de configuracao expirou. Feche e abra o app para entrar de novo.");
+					"A sessao de configuracao expirou. Abra a configuracao novamente para entrar.");
 		}
 		if (status == 403) {
 			throw new CardsIndisponiveisException("Apenas ADMIN ou SUPORTE configuram os cards.");

@@ -3,6 +3,7 @@ package com.example.demo.controllers;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -211,10 +212,6 @@ class CarregamentoDasTelasTest {
 	@Test
 	@DisplayName("configuracao-login.fxml carrega e casa com o ConfiguracaoLoginController")
 	void telaDeLogin() {
-		// O initialize() passou a ler o endereco gravado para preencher o campo Servidor, e sem
-		// container o SettingsService e nulo. Anular so o initialize() mantem de pe o que este teste
-		// existe para conferir: se cada fx:id do FXML — txtServidor incluido — acha campo no
-		// controller.
 		var semInicializacao = new ConfiguracaoLoginController() {
 			@Override
 			public void initialize() {
@@ -222,7 +219,11 @@ class CarregamentoDasTelasTest {
 			}
 		};
 
-		assertDoesNotThrow(() -> assertNotNull(carregar("/views/configuracao-login.fxml", semInicializacao)));
+		assertDoesNotThrow(() -> {
+			var raiz = carregar("/views/configuracao-login.fxml", semInicializacao);
+			assertNotNull(raiz);
+			assertNull(raiz.lookup("#txtServidor"), "URL do Core ficou exposta no login");
+		});
 	}
 
 	@Test

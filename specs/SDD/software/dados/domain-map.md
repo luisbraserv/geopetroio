@@ -226,7 +226,7 @@ autorizada → tela.
 
 ## 7. Modelo de autorização
 
-**[FATO 2026-10-06]** São **9 roles**, em duas famílias, e o acesso é a **combinação** delas —
+**[FATO 2026-10-07]** São **9 roles**, em duas famílias, e o acesso é a **combinação** delas —
 ver [RN-099](../../negocio/regras/business-rules.md#rn-099--acesso-por-combinação-tipo-de-conta--permissão-de-módulo).
 Frontend e backend estão alinhados (`RegrasDeAcesso` ↔ `user.model.ts`).
 
@@ -247,6 +247,11 @@ não abre tela alguma. Era isso que uma lista de roles não conseguia expressar.
 
 **Removidas em 2026-09-17:** `SONDA`, `GERENCIA`, `DIRETORIA` — existiam só dentro de listas de
 permissão, sem regra própria.
+
+**[FATO 2026-10-07]** O domínio é validado pelo enum da aplicação, sem `CHECK` na coluna
+`usuario_roles.role`. A migration Core V2026.10.06.4 elimina dados legados ou desconhecidos —
+inclusive `DEPARTAMENTO_PESSOAL` e `SISTEMA_GESTAO_INTEGRADA` — antes da materialização dos usuários
+pelo Hibernate.
 
 ### A distinção que define o modelo
 

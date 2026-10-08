@@ -149,10 +149,13 @@
     cursor: pointer; transition: opacity 0.15s, box-shadow 0.15s, border-color 0.15s;
   }
   .card:hover { border-color: var(--primary); }
+  .card.moving { z-index: 4; border-color: var(--primary); box-shadow: 0 8px 24px rgba(0, 12, 75, 0.18); transition: none; }
   .card-h {
     height: 33px; display: flex; align-items: center; gap: 8px; padding: 0 10px;
     background: var(--subtle); border-bottom: 1px solid var(--border); border-radius: 4px 4px 0 0;
+    cursor: grab; touch-action: none; user-select: none;
   }
+  .card.moving .card-h { cursor: grabbing; }
   .card-name { font: 600 13px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
   .card-kind { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
   .card ul { list-style: none; margin: 0; padding: 0 0 5px; }
@@ -227,12 +230,13 @@
       <button class="btn" type="button" id="zoomMais" aria-label="Aumentar zoom">+</button>
       <button class="btn" type="button" id="zoomAjustar">Ajustar à tela</button>
       <button class="btn" type="button" id="zoom100">100%</button>
+      <button class="btn" type="button" id="layoutReset">Restaurar organização</button>
     </div>
   </div>
 
   <div class="legend" id="legenda" aria-label="Legenda"></div>
 
-  <div class="viewport" id="viewport" aria-label="Diagrama entidade-relacionamento. Arraste para mover; clique numa tabela para ver as relações.">
+  <div class="viewport" id="viewport" aria-label="Diagrama entidade-relacionamento. Arraste o fundo para navegar ou o cabeçalho de uma tabela para reposicioná-la; clique numa tabela para ver as relações.">
     <div class="stage" id="stage">
       <div class="canvas" id="canvas">
         <svg id="svg" aria-hidden="true"></svg>
@@ -242,7 +246,7 @@
   </div>
 
   <div class="inspector" id="inspector" aria-live="polite">
-    <span class="hint">Clique numa tabela para destacar as relações dela. Esc limpa a seleção.</span>
+    <span class="hint">Clique numa tabela para destacar as relações. Arraste pelo cabeçalho para reorganizar; as posições ficam salvas neste navegador. Esc limpa a seleção.</span>
   </div>
 
   <section aria-labelledby="h-dic">
@@ -260,6 +264,7 @@
       <li><span class="tag">[FATO 2026-10-06]</span> As colunas <code>unidade_id</code> do Geopetro-Backend referenciam <code>braserv_core.unidades.id</code>, mas não possuem FK entre databases. A exclusão é protegida pela consulta <code>/internal/v1/unidades/{id}/vinculos</code>.</li>
       <li><span class="tag">[FATO]</span> <code>evento_alarme.episodio_id</code> e <code>episodio_alarme_extremo.episodio_id</code> identificam o mesmo episódio. Não há FK entre as duas tabelas; o extremo é semeado a partir do log em V2026.09.09.2 e depois atualizado pelo serviço.</li>
       <li><span class="tag">[FATO]</span> <code>criado_por</code> e <code>atualizado_por</code> guardam o <code>username</code> de quem gravou, como texto e sem FK para <code>usuarios</code>. Conferido nos serviços de cenários, cards e limites.</li>
+      <li><span class="tag">[FATO 2026-10-07]</span> <code>usuario_roles.role</code> usa o enum da aplicação como domínio permitido, sem FK ou <code>CHECK</code> no banco. A migration Core V2026.10.06.4 remove registros legados ou desconhecidos antes da leitura pelo Hibernate.</li>
       <li><span class="tag">[FATO]</span> As colunas de <code>leitura_local</code> no Geopetro-Desktop coincidem com as tags e fields do ponto gravado no InfluxDB. As leituras chegam ao servidor pelo tópico <code>telemetria/{idUnidade}/batch</code>.</li>
       <li><span class="tag">[FATO]</span> <code>usuarios.empresa</code> (texto) convive com <code>usuarios.empresa_id</code> (FK para <code>empresas</code>). <span class="tag">[INFERÊNCIA]</span> O texto é resquício de antes do cadastro de empresas.</li>
     </ul>
@@ -287,8 +292,8 @@
 (() => {
   'use strict';
 
-  const CONFERIDO_EM = '2026-10-06';
-  const ULTIMA_MIGRATION = 'Core V2026.10.06.3 · Backend V2026.10.06.1';
+  const CONFERIDO_EM = '2026-10-07';
+  const ULTIMA_MIGRATION = 'Core V2026.10.06.4 · Backend V2026.10.06.1';
 
   const DOMINIOS = {
     org:    { nome: 'Organização',               cor: '--d-org' },
@@ -300,11 +305,11 @@
   };
 
   const ARMAZENS = {
-    core:   { nome: 'MySQL · Braserv-Core', sub: 'database braserv_core · Flyway', zona: { x: 20, y: 20, w: 610, h: 1140 } },
-    mysql:  { nome: 'MySQL · Geopetro-Backend', sub: 'database geopetro_io · Flyway', zona: { x: 650, y: 20, w: 600, h: 1140 } },
-    influx: { nome: 'InfluxDB · Geopetro-Telemetria', sub: 'Sem migrations: esquema nasce na escrita', zona: { x: 1270, y: 20, w: 340, h: 320 } },
-    h2:     { nome: 'H2 local · Geopetro-Desktop', sub: '~/.geopetro-io/data/sonda_geopetro', zona: { x: 1270, y: 370, w: 340, h: 330 } },
-    jsonl:  { nome: 'Arquivo local · Horus-Desktop', sub: 'data/registros_operacao.jsonl', zona: { x: 1270, y: 730, w: 340, h: 300 } }
+    core:   { nome: 'MySQL · Braserv-Core', sub: 'database braserv_core · Flyway', zona: { x: 20, y: 20, w: 880, h: 1140 } },
+    mysql:  { nome: 'MySQL · Geopetro-Backend', sub: 'database geopetro_io · Flyway', zona: { x: 920, y: 20, w: 600, h: 1140 } },
+    influx: { nome: 'InfluxDB · Geopetro-Telemetria', sub: 'Sem migrations: esquema nasce na escrita', zona: { x: 1540, y: 20, w: 400, h: 320 } },
+    h2:     { nome: 'H2 local · Geopetro-Desktop', sub: '~/.geopetro-io/data/sonda_geopetro', zona: { x: 1540, y: 370, w: 400, h: 330 } },
+    jsonl:  { nome: 'Arquivo local · Horus-Desktop', sub: 'data/registros_operacao.jsonl', zona: { x: 1540, y: 730, w: 400, h: 300 } }
   };
 
   const ENDERECO = 'logradouro, numero, complemento, bairro, cidade, estado, cep';
@@ -318,7 +323,7 @@
         ['nome', 'varchar(255)', 'varchar', ['UK'], false, ''],
         ['centro_custo', 'varchar(255)', 'varchar', [], true, '']
       ] },
-    { id: 'setores', armazem: 'core', dom: 'org', x: 350, y: 100, origem: 'Core V2026.10.06.1',
+    { id: 'setores', armazem: 'core', dom: 'org', x: 330, y: 100, origem: 'Core V2026.10.06.1',
       desc: 'Setor dentro de uma regional.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -326,7 +331,7 @@
         ['nome', 'varchar(255)', 'varchar', [], false, ''],
         ['centro_custo', 'varchar(255)', 'varchar', [], true, '']
       ] },
-    { id: 'unidades', armazem: 'core', dom: 'org', x: 350, y: 240, origem: 'Core V2026.10.06.2 (status)',
+    { id: 'unidades', armazem: 'core', dom: 'org', x: 620, y: 100, origem: 'Core V2026.10.06.2 (status)',
       desc: 'Unidade ou sonda monitorada. É o centro do modelo: limites, cards, alarmes, concessões de cliente e telemetria apontam para ela.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -336,13 +341,13 @@
         ['tipo', 'varchar(32)', 'varchar(32)', [], false, 'SONDA, UNIDADE_BOMBEIO, SLICKLINE_WIRELINE, CIMENTACAO, UCAQ (RN-065). Classificação apenas (RN-074).'],
         ['status', 'varchar(16)', 'varchar(16)', [], false, 'ATIVA ou INATIVA (RN-116).']
       ] },
-    { id: 'usuario_roles', armazem: 'core', dom: 'acesso', x: 40, y: 240, origem: 'Core V2026.10.06.1',
-      desc: 'Roles de cada usuário. Desde V2026.09.17.1 o acesso é tipo de conta (CLIENTE ou INTERNO) somado a uma permissão de módulo.',
+    { id: 'usuario_roles', armazem: 'core', dom: 'acesso', x: 620, y: 350, origem: 'Core V2026.10.06.1 · saneamento V2026.10.06.4',
+      desc: 'Roles de cada usuário. Desde V2026.09.17.1 o acesso é tipo de conta (CLIENTE ou INTERNO) somado a uma permissão de módulo; V2026.10.06.4 remove valores legados ou desconhecidos.',
       c: [
         ['username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username'],
-        ['role', 'varchar(255)', 'varchar', ['PK'], false, 'CLIENTE, INTERNO, ADMIN, SUPORTE, UNIDADE, MONITORAMENTO, MONITORAMENTO_REAL, SIMULADOR, CIMENTACAO.']
+        ['role', 'varchar(255)', 'varchar', ['PK'], false, 'Enum da aplicação, sem CHECK no banco: ADMIN, CLIENTE, INTERNO, MONITORAMENTO, MONITORAMENTO_REAL, SIMULADOR, CIMENTACAO, UNIDADE ou SUPORTE.']
       ] },
-    { id: 'recuperacao_senha', armazem: 'core', dom: 'acesso', x: 40, y: 370, origem: 'Core V2026.10.06.1',
+    { id: 'recuperacao_senha', armazem: 'core', dom: 'acesso', x: 620, y: 470, origem: 'Core V2026.10.06.1',
       desc: 'No máximo uma recuperação de senha por usuário (OQ-021). O token nunca é gravado, só o hash. É a única FK com cascata: some junto com o usuário.',
       c: [
         ['username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username, ON DELETE CASCADE'],
@@ -351,7 +356,7 @@
         ['issued_at', 'datetime(6)', 'datetime', [], false, ''],
         ['expires_at', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'empresas', armazem: 'core', dom: 'acesso', x: 40, y: 550, origem: 'Core V2026.10.06.1',
+    { id: 'empresas', armazem: 'core', dom: 'acesso', x: 40, y: 350, origem: 'Core V2026.10.06.1',
       desc: 'Empresa cliente, referenciada pelos usuários do tipo CLIENTE.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -361,7 +366,7 @@
         ['telefone', 'varchar(255)', 'varchar', [], true, ''],
         ['endereço (7)', '7 × varchar(255)', '7 × varchar', [], true, 'Colunas ' + ENDERECO + '.']
       ] },
-    { id: 'usuarios', armazem: 'core', dom: 'acesso', x: 350, y: 440, origem: 'Core V2026.10.06.1',
+    { id: 'usuarios', armazem: 'core', dom: 'acesso', x: 330, y: 350, origem: 'Core V2026.10.06.1',
       desc: 'Conta de acesso. Uma tabela para as duas subclasses JPA, separadas por tipo_usuario: CLIENTE usa cliente_id, empresa e empresa_id; INTERNO usa matricula. O vínculo com regional e setor saiu em V2026.09.06.2 (RN-064).',
       c: [
         ['username', 'varchar(255)', 'varchar', ['PK'], false, ''],
@@ -377,7 +382,7 @@
         ['matricula', 'int', 'int', [], true, 'Só INTERNO.'],
         ['endereço (7)', '7 × varchar(255)', '7 × varchar', [], true, 'Colunas ' + ENDERECO + '.']
       ] },
-    { id: 'configuracao_smtp', armazem: 'core', dom: 'sist', x: 350, y: 780, origem: 'Core V2026.10.06.1',
+    { id: 'configuracao_smtp', armazem: 'core', dom: 'sist', x: 40, y: 780, origem: 'Core V2026.10.06.1',
       desc: 'Configuração de envio de e-mail. Linha única, garantida por CHECK (id = 1). A senha fica cifrada.',
       c: [
         ['id', 'bigint', 'bigint', ['PK'], false, 'Sempre 1.'],
@@ -392,13 +397,13 @@
         ['sender_address', 'varchar(255)', 'varchar', [], false, ''],
         ['frontend_url', 'varchar(2048)', 'varchar', [], false, '']
       ] },
-    { id: 'usuario_cliente_unidades', armazem: 'core', dom: 'acesso', x: 40, y: 780, origem: 'Core V2026.10.06.1',
+    { id: 'usuario_cliente_unidades', armazem: 'core', dom: 'acesso', x: 620, y: 670, origem: 'Core V2026.10.06.1',
       desc: 'Concessão explícita: quais unidades cada usuário CLIENTE enxerga (RN-048). Junção N:N entre usuarios e unidades.',
       c: [
         ['unidade_id', 'bigint', 'bigint', ['PK', 'FK'], false, '→ unidades.id'],
         ['usuario_username', 'varchar(255)', 'varchar', ['PK', 'FK'], false, '→ usuarios.username. Charset e collation copiados de usuarios.username.']
       ] },
-    { id: 'servicos_clientes', armazem: 'core', dom: 'sist', x: 40, y: 900, origem: 'Core V2026.10.06.3',
+    { id: 'servicos_clientes', armazem: 'core', dom: 'sist', x: 330, y: 800, origem: 'Core V2026.10.06.3',
       desc: 'Credenciais dos sistemas autorizados a pedir token de serviço ao Braserv-Core. O segredo é armazenado apenas como hash.',
       c: [
         ['id', 'varchar(64)', 'varchar(64)', ['PK'], false, 'Identificador do sistema.'],
@@ -410,7 +415,7 @@
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, ''],
         ['ultimo_uso_em', 'datetime(6)', 'datetime', [], true, '']
       ] },
-    { id: 'evento_alarme', armazem: 'mysql', dom: 'monit', x: 670, y: 330, origem: 'V2026.09.09.1',
+    { id: 'evento_alarme', armazem: 'mysql', dom: 'monit', x: 940, y: 330, origem: 'V2026.09.09.1',
       desc: 'Log append-only das transições de alarme do servidor (RN-056, RN-076). Um registro por mudança de estado, não por leitura. Ainda sem política de retenção.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -424,7 +429,7 @@
         ['valor', 'double', 'double', [], false, ''],
         ['limite_violado', 'varchar(8)', 'varchar(8)', [], false, 'MIN ou MAX.']
       ] },
-    { id: 'configuracao_sonda', armazem: 'mysql', dom: 'monit', x: 670, y: 100, origem: 'Backend V2026.10.06.1',
+    { id: 'configuracao_sonda', armazem: 'mysql', dom: 'monit', x: 940, y: 100, origem: 'Backend V2026.10.06.1',
       desc: 'Limites de alarme da unidade, um documento JSON por unidade. Quem enxerga a sonda pode ajustar, inclusive CLIENTE (RN-069).',
       c: [
         ['unidade_id', 'bigint', 'bigint', ['PK'], false, 'Referência lógica a braserv_core.unidades.id.'],
@@ -433,7 +438,7 @@
         ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'configuracao_cards', armazem: 'mysql', dom: 'monit', x: 970, y: 100, origem: 'Backend V2026.10.06.1',
+    { id: 'configuracao_cards', armazem: 'mysql', dom: 'monit', x: 1240, y: 100, origem: 'Backend V2026.10.06.1',
       desc: 'Cards e conexão da unidade (RN-080, RN-089). Fica separado dos limites porque só ADMIN ou SUPORTE gravam. Impede excluir a unidade (RN-063).',
       c: [
         ['unidade_id', 'bigint', 'bigint', ['PK'], false, 'Referência lógica a braserv_core.unidades.id.'],
@@ -443,7 +448,7 @@
         ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'episodio_alarme_extremo', armazem: 'mysql', dom: 'monit', x: 970, y: 360, origem: 'Backend V2026.10.06.1',
+    { id: 'episodio_alarme_extremo', armazem: 'mysql', dom: 'monit', x: 1240, y: 360, origem: 'Backend V2026.10.06.1',
       desc: 'Pior valor de cada episódio de alarme (RN-076). Uma linha por episódio, atualizada enquanto ele dura e mantida depois do FECHOU.',
       c: [
         ['episodio_id', 'char(36)', 'char(36)', ['PK'], false, 'Mesmo UUID de evento_alarme.episodio_id.'],
@@ -452,7 +457,7 @@
         ['limite_violado', 'varchar(8)', 'varchar(8)', [], false, 'MIN ou MAX, vindo da abertura do episódio.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'simulador_pastas', armazem: 'mysql', dom: 'simul', x: 670, y: 650, origem: 'V2026.09.04 (baseline)',
+    { id: 'simulador_pastas', armazem: 'mysql', dom: 'simul', x: 940, y: 650, origem: 'V2026.09.04 (baseline)',
       desc: 'Pasta que agrupa cenários de uma mesma operação do simulador.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -462,7 +467,7 @@
         ['criado_em', 'datetime(6)', 'datetime', [], true, ''],
         ['atualizado_em', 'datetime(6)', 'datetime', [], true, '']
       ] },
-    { id: 'simulador_cenarios', armazem: 'mysql', dom: 'simul', x: 970, y: 650, origem: 'V2026.09.05 (poco_id)',
+    { id: 'simulador_cenarios', armazem: 'mysql', dom: 'simul', x: 1240, y: 650, origem: 'V2026.09.05 (poco_id)',
       desc: 'Cenário salvo do simulador de cimentação. A pasta precisa ser da mesma operação, o que é validado no serviço. O poço é opcional: cenários antigos seguem sem poço (RN-059, RN-067).',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -476,7 +481,7 @@
         ['criado_em', 'datetime(6)', 'datetime', [], true, ''],
         ['atualizado_em', 'datetime(6)', 'datetime', [], true, '']
       ] },
-    { id: 'simulador_pocos', armazem: 'mysql', dom: 'simul', x: 670, y: 900, origem: 'V2026.09.05',
+    { id: 'simulador_pocos', armazem: 'mysql', dom: 'simul', x: 940, y: 900, origem: 'V2026.09.05',
       desc: 'Poço como entidade própria, com a geometria versionada. Excluir um poço que tem cenários é recusado no banco.',
       c: [
         ['id', 'bigint auto_increment', 'bigint', ['PK'], false, ''],
@@ -486,7 +491,7 @@
         ['atualizado_por', 'varchar(255)', 'varchar', [], false, 'username, sem FK.'],
         ['atualizado_em', 'datetime(6)', 'datetime', [], false, '']
       ] },
-    { id: 'telemetria', tipo: 'measurement', armazem: 'influx', dom: 'campo', x: 1310, y: 80, origem: 'InfluxTelemetriaRepository',
+    { id: 'telemetria', tipo: 'measurement', armazem: 'influx', dom: 'campo', x: 1610, y: 80, origem: 'InfluxTelemetriaRepository',
       desc: 'Série histórica gravada pelo Geopetro-Telemetria a partir do MQTT. Pontos com as mesmas tags no mesmo instante se sobrescrevem, o que torna o reenvio idempotente.',
       c: [
         ['_time', 'timestamp', 'time', [], false, 'Instante da leitura.'],
@@ -499,7 +504,7 @@
         ['valor', 'field double', 'field', ['FLD'], false, ''],
         ['valorBruto', 'field double', 'field', ['FLD'], true, 'Gravado só quando a leitura traz o valor bruto.']
       ] },
-    { id: 'leitura_local', armazem: 'h2', dom: 'campo', x: 1310, y: 430, origem: 'LeituraLocal (JPA)',
+    { id: 'leitura_local', armazem: 'h2', dom: 'campo', x: 1610, y: 430, origem: 'LeituraLocal (JPA)',
       desc: 'Leituras do PLC gravadas localmente pelo Geopetro-Desktop, com os mesmos campos do ponto que vai para o InfluxDB.',
       c: [
         ['id', 'bigint identity', 'bigint', ['PK'], false, ''],
@@ -512,7 +517,7 @@
         ['valor', 'double', 'double', [], true, ''],
         ['valor_bruto', 'double', 'double', [], true, '']
       ] },
-    { id: 'registros_operacao', tipo: 'arquivo', armazem: 'jsonl', dom: 'campo', x: 1310, y: 790, origem: 'JsonRegistroService',
+    { id: 'registros_operacao', tipo: 'arquivo', armazem: 'jsonl', dom: 'campo', x: 1610, y: 790, origem: 'JsonRegistroService',
       desc: 'Registro de operação do Braserv-Horus-Desktop, uma linha JSON por registro. O registros_operacao.json é o formato legado.',
       c: [
         ['timestamp', 'string ISO-8601', 'string', [], false, 'ISO_LOCAL_DATE_TIME, sem fuso.'],
@@ -530,26 +535,28 @@
   const RELACOES = [
     { de: ['setores', 'regional_id', 'L'], para: ['regionais', 'id', 'R'], card: ['n0', 'um'] },
     { de: ['unidades', 'setor_id', 'L'], para: ['setores', 'id', 'R'], card: ['n0', 'um'] },
-    { de: ['usuario_roles', 'username', 'R'], para: ['usuarios', 'username', 'L'], card: ['n0', 'um'], pista: 310, desvio: -4 },
-    { de: ['recuperacao_senha', 'username', 'R'], para: ['usuarios', 'username', 'L'], card: ['z1', 'um'], pista: 320, desvio: 4 },
-    { de: ['usuarios', 'empresa_id', 'L'], para: ['empresas', 'id', 'R'], card: ['n0', 'z1'], pista: 335 },
-    { de: ['usuario_cliente_unidades', 'usuario_username', 'L'], para: ['usuarios', 'username', 'R'], card: ['n0', 'um'] },
-    { de: ['usuario_cliente_unidades', 'unidade_id', 'R'], para: ['unidades', 'id', 'L'], card: ['n0', 'um'] },
-    { de: ['evento_alarme', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], logico: true },
-    { de: ['episodio_alarme_extremo', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], logico: true },
-    { de: ['configuracao_cards', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['z1', 'um'], logico: true },
+    { de: ['usuario_roles', 'username', 'L'], para: ['usuarios', 'username', 'R'], card: ['n0', 'um'], desvio: -4 },
+    { de: ['recuperacao_senha', 'username', 'L'], para: ['usuarios', 'username', 'R'], card: ['z1', 'um'], pista: 605, desvio: 4 },
+    { de: ['usuarios', 'empresa_id', 'L'], para: ['empresas', 'id', 'R'], card: ['n0', 'z1'], pista: 315 },
+    { de: ['usuario_cliente_unidades', 'usuario_username', 'L'], para: ['usuarios', 'username', 'R'], card: ['n0', 'um'], pista: 605 },
+    { de: ['usuario_cliente_unidades', 'unidade_id', 'R'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], pista: 900 },
+    { de: ['evento_alarme', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], logico: true, pista: 910 },
+    { de: ['episodio_alarme_extremo', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['n0', 'um'], logico: true,
+      via: [[1220, null], [1220, 610], [910, 610], [910, 'fim']] },
+    { de: ['configuracao_cards', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['z1', 'um'], logico: true,
+      via: [[1220, null], [1220, 72], [900, 72], [900, 'fim']] },
     { de: ['configuracao_sonda', 'unidade_id', 'L'], para: ['unidades', 'id', 'R'], card: ['z1', 'um'], logico: true },
     { de: ['simulador_cenarios', 'pasta_id', 'L'], para: ['simulador_pastas', 'id', 'R'], card: ['n0', 'z1'] },
-    { de: ['simulador_cenarios', 'poco_id', 'L'], para: ['simulador_pocos', 'id', 'R'], card: ['n0', 'z1'], pista: 945 },
+    { de: ['simulador_cenarios', 'poco_id', 'L'], para: ['simulador_pocos', 'id', 'R'], card: ['n0', 'z1'], pista: 1220 },
     { de: ['evento_alarme', 'episodio_id', 'R'], para: ['episodio_alarme_extremo', 'episodio_id', 'L'], card: ['n1', 'um'], logico: true },
     { de: ['telemetria', 'idUnidade', 'L'], para: ['unidades', 'nome', 'R'], card: ['n0', 'um'], logico: true,
-      via: [[1290, null], [1290, 62], [625, 62], [625, 'fim']], rotulo: { x: 960, y: 56, texto: 'nome = idUnidade (RN-018)' } },
+      via: [[1590, null], [1590, 62], [900, 62], [900, 'fim']], rotulo: { x: 1245, y: 56, texto: 'nome = idUnidade (RN-018)' } },
     { de: ['leitura_local', 'dispositivo_id', 'R'], para: ['telemetria', 'dispositivoId', 'R'], card: [null, 'seta'], logico: true,
-      pista: 1590, rotulo: { x: 1584, y: 360, texto: 'MQTT', ancora: 'end' } }
+      pista: 1910, rotulo: { x: 1904, y: 360, texto: 'MQTT', ancora: 'end' } }
   ];
 
   const LARGURA = 260, CAB = 34, LINHA = 22, RODAPE = 6;
-  const CANVAS_W = 1640, CANVAS_H = 1180;
+  const CANVAS_W = 1960, CANVAS_H = 1180;
   const SVGNS = 'http://www.w3.org/2000/svg';
 
   const porId = Object.fromEntries(TABELAS.map(t => [t.id, t]));
@@ -561,6 +568,32 @@
     return t.y + CAB + i * LINHA + LINHA / 2;
   };
   const xLado = (t, lado) => lado === 'L' ? t.x : t.x + LARGURA;
+  const POSICOES_PADRAO = Object.fromEntries(TABELAS.map(t => [t.id, { x: t.x, y: t.y }]));
+  const LAYOUT_KEY = 'geopetro-er-layout-v1';
+  const limitarPosicao = (t, x, y) => {
+    const z = ARMAZENS[t.armazem].zona;
+    return {
+      x: Math.round(Math.min(z.x + z.w - LARGURA - 20, Math.max(z.x + 20, x))),
+      y: Math.round(Math.min(z.y + z.h - altura(t) - 20, Math.max(z.y + 60, y)))
+    };
+  };
+  const salvarLayout = () => {
+    try {
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(Object.fromEntries(TABELAS.map(t => [t.id, { x: t.x, y: t.y }]))));
+    } catch (_) { /* O arquivo continua funcional se o navegador bloquear storage em file://. */ }
+  };
+  const removerLayoutSalvo = () => {
+    try { localStorage.removeItem(LAYOUT_KEY); } catch (_) { /* Mesmo fallback de file://. */ }
+  };
+  try {
+    const salvo = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null');
+    if (salvo && typeof salvo === 'object') {
+      for (const t of TABELAS) {
+        const p = salvo[t.id];
+        if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) Object.assign(t, limitarPosicao(t, p.x, p.y));
+      }
+    }
+  } catch (_) { /* Layout inválido ou storage indisponível: usa a organização padrão. */ }
   const tipoTabela = t => t.tipo === 'measurement' ? 'measurement' : t.tipo === 'arquivo' ? 'arquivo' : 'tabela';
   const el = (tag, attrs) => {
     const n = document.createElementNS(SVGNS, tag);
@@ -573,7 +606,8 @@
   document.getElementById('facts').innerHTML =
     `<span>Conferido em <b>${CONFERIDO_EM}</b></span>` +
     `<span>Última migration <b class="mono">${ULTIMA_MIGRATION}</b></span>` +
-    `<span><b>${qtd('mysql')}</b> tabelas MySQL</span>` +
+    `<span><b>${qtd('core')}</b> tabelas no Braserv-Core</span>` +
+    `<span><b>${qtd('mysql')}</b> tabelas no Geopetro-Backend</span>` +
     `<span><b>${qtd('influx')}</b> measurement InfluxDB</span>` +
     `<span><b>${qtd('h2')}</b> tabela H2</span>` +
     `<span><b>${qtd('jsonl')}</b> arquivo JSONL</span>` +
@@ -635,11 +669,11 @@
     return [ini, [r.pista, ini[1]], [r.pista, fim[1]], fim];
   }
 
+  const caminho = r => pontos(r).map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
   const linhas = RELACOES.map(r => {
-    const d = pontos(r).map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ');
     const g = el('g', { class: 'ln-g' });
-    const halo = el('path', { d, class: 'halo' });
-    const linha = el('path', { d, class: 'ln' + (r.logico ? ' logico' : '') });
+    const halo = el('path', { d: caminho(r), class: 'halo' });
+    const linha = el('path', { d: caminho(r), class: 'ln' + (r.logico ? ' logico' : '') });
     g.append(halo, linha);
     if (r.rotulo) {
       const t = el('text', { x: r.rotulo.x, y: r.rotulo.y, class: 'ln-label', 'text-anchor': r.rotulo.ancora || 'middle' });
@@ -647,10 +681,18 @@
       g.append(t);
     }
     gLinhas.append(g);
-    const obj = { r, g, linha };
+    const obj = { r, g, halo, linha };
     marcar(obj, false);
     return obj;
   });
+
+  function atualizarLinhas() {
+    for (const obj of linhas) {
+      const d = caminho(obj.r);
+      obj.halo.setAttribute('d', d);
+      obj.linha.setAttribute('d', d);
+    }
+  }
 
   function marcar(obj, alto) {
     const s = alto ? 'h' : 'n';
@@ -676,7 +718,7 @@
     div.dataset.id = t.id;
     const dom = DOMINIOS[t.dom];
     div.innerHTML =
-      `<div class="card-h"><span class="dot" style="background:var(${dom.cor})" title="${esc(dom.nome)}"></span>` +
+      `<div class="card-h" title="Arraste para reposicionar"><span class="dot" style="background:var(${dom.cor})" title="${esc(dom.nome)}"></span>` +
       `<span class="card-name">${esc(t.id)}</span><span class="card-kind">${tipoTabela(t)}</span></div>` +
       '<ul>' + t.c.map(c =>
         `<li data-col="${esc(c[0])}"><span class="keys">${c[3].map(k => `<span class="k k-${k}">${k}</span>`).join('')}</span>` +
@@ -685,6 +727,20 @@
     host.append(div);
     cartoes[t.id] = div;
   }
+
+  function posicionarCartoes() {
+    for (const t of TABELAS) {
+      cartoes[t.id].style.left = t.x + 'px';
+      cartoes[t.id].style.top = t.y + 'px';
+    }
+    atualizarLinhas();
+  }
+
+  document.getElementById('layoutReset').addEventListener('click', () => {
+    for (const t of TABELAS) Object.assign(t, POSICOES_PADRAO[t.id]);
+    removerLayoutSalvo();
+    posicionarCartoes();
+  });
 
   // ---------- Legenda ----------
   const pict = (ini, fim, logico) =>
@@ -725,7 +781,7 @@
 
   function descrever(id) {
     if (!id) {
-      inspector.innerHTML = '<span class="hint">Clique numa tabela para destacar as relações dela. Esc limpa a seleção.</span>';
+      inspector.innerHTML = '<span class="hint">Clique numa tabela para destacar as relações. Arraste pelo cabeçalho para reorganizar; as posições ficam salvas neste navegador. Esc limpa a seleção.</span>';
       return;
     }
     const t = porId[id];
@@ -746,6 +802,28 @@
       (rels.length ? `<ul>${rels.join('')}</ul>` : '<p class="hint">Sem relações com outras estruturas.</p>');
   }
 
+  let arraste = null, arrasteCartao = null, moveu = false;
+
+  host.addEventListener('pointerdown', e => {
+    const cabecalho = e.target.closest('.card-h');
+    if (!cabecalho || e.button !== 0) return;
+    const card = cabecalho.closest('.card');
+    const tabela = porId[card.dataset.id];
+    e.stopPropagation();
+    card.focus({ preventScroll: true });
+    cabecalho.setPointerCapture?.(e.pointerId);
+    arrasteCartao = {
+      pointerId: e.pointerId,
+      card,
+      tabela,
+      x: e.clientX,
+      y: e.clientY,
+      tx: tabela.x,
+      ty: tabela.y,
+      moveu: false
+    };
+    moveu = false;
+  });
   host.addEventListener('click', e => {
     const c = e.target.closest('.card');
     if (!c || moveu) return;
@@ -797,13 +875,26 @@
     aplicarEscala(escala * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
 
-  let arraste = null, moveu = false;
   viewport.addEventListener('pointerdown', e => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('.card')) return;
     arraste = { x: e.clientX, y: e.clientY, sl: viewport.scrollLeft, st: viewport.scrollTop };
     moveu = false;
   });
   window.addEventListener('pointermove', e => {
+    if (arrasteCartao && e.pointerId === arrasteCartao.pointerId) {
+      const dx = (e.clientX - arrasteCartao.x) / escala;
+      const dy = (e.clientY - arrasteCartao.y) / escala;
+      if (!arrasteCartao.moveu && Math.hypot(dx, dy) < 4) return;
+      arrasteCartao.moveu = true;
+      moveu = true;
+      arrasteCartao.card.classList.add('moving');
+      const p = limitarPosicao(arrasteCartao.tabela, arrasteCartao.tx + dx, arrasteCartao.ty + dy);
+      Object.assign(arrasteCartao.tabela, p);
+      arrasteCartao.card.style.left = p.x + 'px';
+      arrasteCartao.card.style.top = p.y + 'px';
+      atualizarLinhas();
+      return;
+    }
     if (!arraste) return;
     const dx = e.clientX - arraste.x, dy = e.clientY - arraste.y;
     if (!moveu && Math.hypot(dx, dy) < 4) return;
@@ -812,13 +903,23 @@
     viewport.scrollLeft = arraste.sl - dx;
     viewport.scrollTop = arraste.st - dy;
   });
-  window.addEventListener('pointerup', () => {
+  const encerrarArraste = e => {
+    if (arrasteCartao && (!e || e.pointerId === arrasteCartao.pointerId)) {
+      const foiMovido = arrasteCartao.moveu;
+      arrasteCartao.card.classList.remove('moving');
+      arrasteCartao = null;
+      if (foiMovido) salvarLayout();
+      setTimeout(() => { moveu = false; }, 0);
+      return;
+    }
     if (!arraste) return;
     arraste = null;
     viewport.classList.remove('dragging');
     // O click que vem logo depois de um arraste não deve selecionar a tabela.
     setTimeout(() => { moveu = false; }, 0);
-  });
+  };
+  window.addEventListener('pointerup', encerrarArraste);
+  window.addEventListener('pointercancel', encerrarArraste);
   viewport.addEventListener('click', e => { if (!e.target.closest('.card') && !moveu && selecionada) selecionar(null); });
 
   // ---------- Dicionário ----------

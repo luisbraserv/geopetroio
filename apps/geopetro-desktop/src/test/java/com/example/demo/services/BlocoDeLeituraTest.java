@@ -51,15 +51,15 @@ class BlocoDeLeituraTest {
 	@DisplayName("as words saem nos mesmos valores que cinco leituras separadas dariam")
 	void fatiaAsWordsNasPosicoesCertas() {
 		byte[] bytes = new byte[12];
-		escreverWord(bytes, 4, 350);   // meio da faixa do amplificador
-		escreverWord(bytes, 6, -50);   // 4 mA, inicio da faixa
+		escreverWord(bytes, 4, 250);   // meio da faixa do amplificador
+		escreverWord(bytes, 6, -250);  // 4 mA, inicio da faixa
 		escreverWord(bytes, 8, 750);   // 20 mA, fundo de escala
 		escreverWord(bytes, 10, 123);
 
 		var bloco = BlocoDeLeitura.de(bytes, 0);
 
-		assertEquals(350, bloco.word(4));
-		assertEquals(-50, bloco.word(6));
+		assertEquals(250, bloco.word(4));
+		assertEquals(-250, bloco.word(6));
 		assertEquals(750, bloco.word(8));
 		assertEquals(123, bloco.word(10));
 	}
@@ -68,10 +68,10 @@ class BlocoDeLeituraTest {
 	@DisplayName("o Ax negativo continua sendo lido com sinal")
 	void axNegativoTemSinal() {
 		byte[] bytes = new byte[12];
-		escreverWord(bytes, 4, -50);
+		escreverWord(bytes, 4, -250);
 
-		// Lido como Word sem sinal, -50 viraria 65486 e a pressao sairia no fundo da escala.
-		assertEquals(-50, BlocoDeLeitura.de(bytes, 0).word(4));
+		// Lido como Word sem sinal, -250 viraria 65286 e a pressao sairia no fundo da escala.
+		assertEquals(-250, BlocoDeLeitura.de(bytes, 0).word(4));
 	}
 
 	@Test

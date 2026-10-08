@@ -12,7 +12,7 @@ import com.example.demo.models.CardsDaUnidade.Parametros;
  * esvazia</b> — e o número seria plausível o tempo todo.
  *
  * <pre>
- * fracao    = (Ax − (−50)) / 800          posição no laço 4-20 mA
+ * fracao    = (Ax − (−250)) / 1000        posição no laço 4-20 mA
  * distancia = distanciaMinima + fracao × (distanciaMaxima − distanciaMinima)
  * altura    = distanciaMaxima − distancia
  * volume    = f(forma, dimensões, altura)
@@ -65,7 +65,7 @@ public final class ConversaoTanque {
 			return null;
 		}
 
-		double distancia = minima + ConversaoPressao.axParaFracao(ax) * (maxima - minima);
+		double distancia = ConversaoSinalAnalogico.axParaValorLinear(ax, minima, maxima);
 		double altura = maxima - distancia;
 
 		// Fora da faixa do transmissor a fracao passa de 0..1 e a altura sairia negativa ou acima

@@ -74,11 +74,11 @@ final class BlocoDeLeitura {
 	/**
 	 * Word com sinal, no endereco absoluto do DB.
 	 *
-	 * <p>Com sinal de proposito: a escala do amplificador comeca em -50, e lida como Word sem sinal
-	 * {@code -50} viraria {@code 65486}.
+	 * <p>Com sinal de proposito: a escala do amplificador comeca em -250, e lida como Word sem sinal
+	 * {@code -250} viraria {@code 65286}.
 	 */
 	short word(int endereco) {
-		return ConversaoPressao.axComoSigned(S7.GetWordAt(bytes, deslocamento(endereco, TAMANHO_WORD)));
+		return ConversaoSinalAnalogico.axComoSigned(S7.GetWordAt(bytes, deslocamento(endereco, TAMANHO_WORD)));
 	}
 
 	/** DWord com sinal, no endereco absoluto do DB. */

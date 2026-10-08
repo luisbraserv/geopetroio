@@ -43,6 +43,8 @@ class AmbienteTest {
         settings.setCoreUrl("http://localhost:8082");
         settings.setBackendUrl("http://localhost:8080");
         settings.setTelemetriaUrl("tcp://localhost:1883");
+        settings.setTelemetriaUsuario("usuario-local");
+        settings.setTelemetriaSenha("senha-local");
         settings.setBackendUsuario("operador");
         settings.setUnidadeId(5L);
         return settings;
@@ -61,6 +63,8 @@ class AmbienteTest {
         assertEquals("http://localhost:8082", lido.getCoreUrl());
         assertEquals("http://localhost:8080", lido.getBackendUrl());
         assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
+        assertEquals("usuario-local", lido.getTelemetriaUsuario());
+        assertEquals("senha-local", lido.getTelemetriaSenha());
     }
 
     @Test
@@ -71,9 +75,12 @@ class AmbienteTest {
         System.setProperty("geopetro.ambiente", "producao");
 
         var lido = service.loadSettings();
-        assertEquals("http://localhost:8082", lido.getCoreUrl());
-        assertEquals("http://localhost:8080", lido.getBackendUrl());
-        assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
+        assertEquals("http://2.25.227.207", lido.getCoreUrl());
+        assertEquals("http://2.25.227.207", lido.getBackendUrl());
+        assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
+        assertEquals("telemetria", lido.getTelemetriaUsuario());
+        assertEquals(Ambiente.telemetriaSenha().orElse("senha-local"), lido.getTelemetriaSenha(),
+                "a senha do broker vem do build quando ele a define");
         assertEquals("operador", lido.getBackendUsuario(), "o resto da configuracao continua o da estacao");
         assertEquals(5L, lido.getUnidadeId());
     }
@@ -83,9 +90,10 @@ class AmbienteTest {
     void instalacaoNovaNasceEmProducao() {
         System.setProperty("geopetro.ambiente", "producao");
         var lido = new SettingsService().loadSettings();
-        assertEquals("http://localhost:8082", lido.getCoreUrl());
-        assertEquals("http://localhost:8080", lido.getBackendUrl());
-        assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
+        assertEquals("http://2.25.227.207", lido.getCoreUrl());
+        assertEquals("http://2.25.227.207", lido.getBackendUrl());
+        assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
+        assertEquals("telemetria", lido.getTelemetriaUsuario());
     }
 
     @Test
@@ -98,8 +106,9 @@ class AmbienteTest {
         service.updateTelemetriaUrl("tcp://servidor-digitado:1883");
 
         var lido = service.loadSettings();
-        assertEquals("http://localhost:8082", lido.getCoreUrl());
-        assertEquals("http://localhost:8080", lido.getBackendUrl());
-        assertEquals("tcp://localhost:1883", lido.getTelemetriaUrl());
+        assertEquals("http://2.25.227.207", lido.getCoreUrl());
+        assertEquals("http://2.25.227.207", lido.getBackendUrl());
+        assertEquals("tcp://2.25.227.207:1883", lido.getTelemetriaUrl());
+        assertEquals("telemetria", lido.getTelemetriaUsuario());
     }
 }

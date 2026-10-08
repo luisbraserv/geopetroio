@@ -30,14 +30,6 @@
              text="Só ADMIN ou SUPORTE alteram a configuração. O restante do app continua funcionando normalmente." />
    </VBox>
 
-   <!-- ⚠️ O servidor entra AQUI porque a engrenagem inteira passou a exigir sessao, e o endereco
-        mora nela: sem ele nao ha login, e sem login nao se define ele. Uma estacao nova nao teria
-        por onde comecar. Vem preenchido com o que ja estiver gravado. -->
-   <VBox spacing="5.0">
-      <Label text="Braserv-Core" styleClass="rotulo" />
-      <TextField fx:id="txtServidor" promptText="Ex.: http://localhost:8082" maxWidth="Infinity" />
-   </VBox>
-
    <VBox spacing="5.0">
       <Label text="Usuário" styleClass="rotulo" />
       <TextField fx:id="txtUsuario" promptText="Usuário do Braserv-Core" maxWidth="Infinity" />

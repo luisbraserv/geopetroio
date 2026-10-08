@@ -64,8 +64,8 @@ desenvolvimento.
 | `CONTADOR_STROKE` | Digital | [RN-090](../regras/business-rules.md#rn-090--um-contador-de-stroke-produz-três-séries) — três séries | ✅ Existe, amplia |
 
 **[FATO]** Todos os sensores analógicos são **4-20 mA**. O bloco *Analog Amplifier* do LOGO! entrega o
-laço já reescalonado para `Ax` na faixa −50..750, e `ConversaoPressao.axComoSigned` já lê com sinal —
-a base negativa faria `-50` virar `65486` se lido como Word sem sinal.
+laço já reescalonado para `Ax` na faixa −250..750, e `ConversaoSinalAnalogico.axComoSigned` já lê com sinal —
+a base negativa faria `-250` virar `65286` se lido como Word sem sinal.
 
 ⚠️ **Conversão não é endereço.** Tornar o endereço configurável **não** torna a grandeza
 configurável. Peso e torque têm fórmulas próprias com geometria e calibração; um card de peso carrega
@@ -205,7 +205,7 @@ compor um ciclo que nunca existiu.
 configurada. A diferença é que a escala tem **mínimo e máximo**, não só fundo.
 
 ```
-fracao = (Ax − (−50)) / 800
+fracao = (Ax − (−250)) / 1000
 valor  = minimoEscala + fracao × (maximoEscala − minimoEscala)
 ```
 
@@ -453,7 +453,7 @@ calibrado" em vez de converter com a de outro ([RN-099](../regras/business-rules
 
 | # | Questão | Referência |
 |---|---|---|
-| 1 | ⚠️ **A configuração `−50..750` é assumida igual em todo canal.** A escala em si foi confirmada em 2026-08-31 e o código reescrito; o que segue sem conferência de campo, com calibrador de laço, é se **cada amplificador** está assim. Com cards configuráveis isso deixa de valer para 4 canais e passa a valer para todos os que a frota declarar | [OQ-016](open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
+| 1 | ⚠️ **A configuração `−250..750` é assumida igual em todo canal.** O padrão de conversão foi definido em 2026-10-08; o que segue sem conferência de campo, com calibrador de laço, é se **cada amplificador** está assim. Com cards configuráveis isso deixa de valer para 4 canais e passa a valer para todos os que a frota declarar | [OQ-016](open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada) |
 | 2 | Validação do alcance do DB ao configurar | [OQ-048](open-questions.md#oq-048--validação-de-endereço) |
 | ~~2b~~ | ✅ **Resolvido 2026-09-08** — a calibração de peso/torque passou a ser guardada por `dispositivoId`, com migração por endereço dos três slots antigos | §10b, acima |
 | ~~3~~ | ✅ **Resolvido 2026-09-08** — a mensagem se descreve e o `CatalogoDispositivos` deixa de existir ([RN-097](../regras/business-rules.md#rn-097--a-mensagem-de-telemetria-se-descreve)) | [mqtt-telemetria §4](../../software/mqtt/mqtt-telemetria.md#4-o-conjunto-de-dispositivos-é-por-unidade) |

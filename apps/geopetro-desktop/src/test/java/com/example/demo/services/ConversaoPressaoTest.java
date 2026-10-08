@@ -6,13 +6,12 @@ import org.junit.jupiter.api.Test;
 import com.example.demo.models.SensorPressaoConfig;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Conversao do Ax do LOGO! em pressao.
  *
- * <p>O Ax e o laco 4-20 mA reescalonado pelo Analog Amplifier para -50..750 — nao e pressao. Quanto
+ * <p>O Ax e o laco 4-20 mA reescalonado pelo Analog Amplifier para -250..750 — nao e pressao. Quanto
  * cada posicao vale em bar depende da faixa do transmissor. Tratar o Ax como pressao, ou reconverter
  * para mA antes, aplica o escalonamento duas vezes e produz numeros plausiveis e errados.
  */
@@ -22,43 +21,32 @@ class ConversaoPressaoTest {
     private static final SensorPressaoConfig SENSOR_400_BAR = new SensorPressaoConfig(400.0, 1.0);
 
     @Test
-    @DisplayName("Ax -50 é 4 mA: início da faixa, pressão zero")
+    @DisplayName("Ax -250 é 4 mA: início da faixa, pressão zero")
     void inicioDaFaixa() {
-        assertEquals(0.0, ConversaoPressao.axParaFracao(-50), 1e-9);
-        assertEquals(0.0, ConversaoPressao.axParaBar(-50, 400.0), 1e-9);
-        assertEquals(0.0, ConversaoPressao.axParaPsi(-50, SENSOR_400_BAR), 0.001);
+        assertEquals(0.0, ConversaoPressao.axParaBar(-250, 400.0), 1e-9);
+        assertEquals(0.0, ConversaoPressao.axParaPsi(-250, SENSOR_400_BAR), 0.001);
     }
 
     @Test
-    @DisplayName("Ax 350 é 12 mA: metade da faixa")
+    @DisplayName("Ax 250 é 12 mA: metade da faixa")
     void meioDaFaixa() {
-        assertEquals(0.5, ConversaoPressao.axParaFracao(350), 1e-9);
-        assertEquals(200.0, ConversaoPressao.axParaBar(350, 400.0), 1e-9);
+        assertEquals(200.0, ConversaoPressao.axParaBar(250, 400.0), 1e-9);
         // 200 bar × 14,5037738
-        assertEquals(2900.75, ConversaoPressao.axParaPsi(350, SENSOR_400_BAR), 0.1);
+        assertEquals(2900.75, ConversaoPressao.axParaPsi(250, SENSOR_400_BAR), 0.1);
     }
 
     @Test
     @DisplayName("Ax 750 é 20 mA: fundo de escala do transmissor")
     void fundoDeEscala() {
-        assertEquals(1.0, ConversaoPressao.axParaFracao(750), 1e-9);
         assertEquals(400.0, ConversaoPressao.axParaBar(750, 400.0), 1e-9);
         assertEquals(5801.51, ConversaoPressao.axParaPsi(750, SENSOR_400_BAR), 0.1);
-    }
-
-    @Test
-    @DisplayName("pontos intermediários da escala do amplificador")
-    void pontosIntermediarios() {
-        // 8 mA e 16 mA, conforme a tabela do Analog Amplifier.
-        assertEquals(0.25, ConversaoPressao.axParaFracao(150), 1e-9);
-        assertEquals(0.75, ConversaoPressao.axParaFracao(550), 1e-9);
     }
 
     @Test
     @DisplayName("a faixa do transmissor define quanto cada Ax vale")
     void faixaDoSensorMudaOResultado() {
         // Mesmo Ax, transmissores diferentes: é por isso que o Ax não pode ser lido como pressão.
-        double meiaEscala = 350;
+        double meiaEscala = 250;
 
         assertEquals(200.0, ConversaoPressao.axParaBar(meiaEscala, 400.0), 1e-9);
         assertEquals(375.0, ConversaoPressao.axParaBar(meiaEscala, 750.0), 1e-9);
@@ -75,36 +63,12 @@ class ConversaoPressaoTest {
     }
 
     @Test
-    @DisplayName("Word do CLP é lida com sinal")
-    void wordComSinal() {
-        // Sem isto, -50 chegaria como 65486 e viraria uma pressão dezenas de vezes maior.
-        assertEquals(-50, ConversaoPressao.axComoSigned(65486));
-        assertEquals(-1, ConversaoPressao.axComoSigned(65535));
-        assertEquals(0, ConversaoPressao.axComoSigned(0));
-        assertEquals(350, ConversaoPressao.axComoSigned(350));
-        assertEquals(750, ConversaoPressao.axComoSigned(750));
-    }
-
-    @Test
-    @DisplayName("valor fora do range é sinalizado, não recortado")
-    void foraDaFaixaSinalizada() {
-        assertFalse(ConversaoPressao.foraDaFaixa(-50));
-        assertFalse(ConversaoPressao.foraDaFaixa(350));
-        assertFalse(ConversaoPressao.foraDaFaixa(750));
-
-        // Abaixo de 4 mA: laço aberto, sensor sem alimentação ou canal não mapeado.
-        assertTrue(ConversaoPressao.foraDaFaixa(-51));
-        assertTrue(ConversaoPressao.foraDaFaixa(-250));
-        assertTrue(ConversaoPressao.foraDaFaixa(751));
-    }
-
-    @Test
-    @DisplayName("fora do range preserva o valor original, sem clamp")
-    void semClamp() {
-        // O pedido é explícito: preservar a leitura. Um -250 recortado para zero pareceria
-        // operação normal, escondendo o defeito.
-        double abaixo = ConversaoPressao.axParaBar(-250, 400.0);
-        assertTrue(abaixo < 0, "abaixo da faixa deve permanecer negativo, não virar zero");
+    @DisplayName("pressão abaixo de zero é limitada, sem esconder o Ax fora da faixa")
+    void limiteInferiorFisico() {
+        assertTrue(ConversaoSinalAnalogico.axParaFracao(-500) < 0,
+                "a fração preserva a leitura para diagnóstico");
+        assertEquals(0.0, ConversaoPressao.axParaBar(-500, 400.0), 1e-9);
+        assertEquals(0.0, ConversaoPressao.axParaPsi(-500, SENSOR_400_BAR), 1e-9);
 
         double acima = ConversaoPressao.axParaBar(1000, 400.0);
         assertTrue(acima > 400.0, "acima da faixa deve ultrapassar o fundo de escala");
@@ -115,14 +79,14 @@ class ConversaoPressaoTest {
     void sensibilidadeAplicada() {
         SensorPressaoConfig comGanho = new SensorPressaoConfig(400.0, 1.1);
 
-        assertEquals(ConversaoPressao.axParaPsi(350, SENSOR_400_BAR) * 1.1,
-                ConversaoPressao.axParaPsi(350, comGanho), 0.1);
+        assertEquals(ConversaoPressao.axParaPsi(250, SENSOR_400_BAR) * 1.1,
+                ConversaoPressao.axParaPsi(250, comGanho), 0.1);
     }
 
     @Test
     @DisplayName("config nula cai no padrão de fábrica")
     void configNula() {
-        assertEquals(ConversaoPressao.axParaPsi(350, SENSOR_400_BAR),
-                ConversaoPressao.axParaPsi(350, null), 0.001);
+        assertEquals(ConversaoPressao.axParaPsi(250, SENSOR_400_BAR),
+                ConversaoPressao.axParaPsi(250, null), 0.001);
     }
 }

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
@@ -47,6 +48,7 @@ class ConfiguracaoCardsClientTest {
 
 	private volatile int status = 200;
 	private volatile String corpo = "{}";
+	private SessaoConfiguracao sessaoMock;
 
 	@BeforeEach
 	void subir() throws Exception {
@@ -83,10 +85,10 @@ class ConfiguracaoCardsClientTest {
 		SettingsService service = mock(SettingsService.class);
 		when(service.loadSettings()).thenReturn(settings);
 
-		SessaoConfiguracao sessao = mock(SessaoConfiguracao.class);
-		when(sessao.token()).thenReturn(Optional.ofNullable(token));
+		sessaoMock = mock(SessaoConfiguracao.class);
+		when(sessaoMock.token()).thenReturn(Optional.ofNullable(token));
 
-		return new ConfiguracaoCardsClient(service, sessao, HttpClient.newHttpClient());
+		return new ConfiguracaoCardsClient(service, sessaoMock, HttpClient.newHttpClient());
 	}
 
 	@Test
@@ -220,6 +222,7 @@ class ConfiguracaoCardsClientTest {
 		// A sessao ja autenticou uma vez: mandar conferir a senha mandaria conferir o que estava
 		// certo.
 		assertTrue(erro.getMessage().contains("expirou"), erro.getMessage());
+		verify(sessaoMock).encerrar();
 	}
 
 	@Test

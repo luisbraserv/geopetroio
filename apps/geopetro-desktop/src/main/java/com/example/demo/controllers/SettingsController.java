@@ -10,6 +10,7 @@ import com.example.demo.models.UnidadeSondaOpcao;
 import com.example.demo.services.SettingsService;
 import com.example.demo.services.UnidadeSondaCatalogoService;
 import com.example.demo.services.UnidadeSondaCatalogoService.CatalogoIndisponivelException;
+import com.example.demo.services.UnidadeSondaCatalogoService.SessaoExpiradaException;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -86,14 +87,11 @@ public class SettingsController {
     @FXML private Label lblUnidadeStatus;
 
     @FXML private CheckBox chkTelemetriaMqtt;
-    @FXML private TextField txtTelemetriaUrl;
     @FXML private TextField txtTelemetriaUsuario;
     @FXML private PasswordField txtTelemetriaSenha;
 
     @FXML private CheckBox chkTempoReal;
 
-    @FXML private TextField txtCoreUrl;
-    @FXML private TextField txtBackendUrl;
     @FXML private TextField txtBackendUsuario;
     @FXML private PasswordField txtBackendSenha;
 
@@ -107,22 +105,7 @@ public class SettingsController {
     /** Duas colunas hoje? Guardado para so remontar a grade quando o estado realmente muda. */
     private boolean duasColunas = true;
 
-    /**
-     * A engrenagem inteira exige {@code ADMIN} ou {@code SUPORTE} —
-     * {@code configuracao-da-estacao.md §5}.
-     *
-     * <p><b>[DECIDIDO 2026-09-10]</b> Sem exceção: endereços e credenciais do Backend e do broker
-     * entraram no portão junto com o resto.
-     *
-     * <h2>⚠️ E o endereço do servidor mudou de lugar por causa disso</h2>
-     * O login acontece <b>contra</b> o Backend, cujo endereço mora nesta tela. Trancá-lo aqui
-     * fecharia a porta sobre si mesma — sem URL não há login, e sem login não se define a URL, e uma
-     * estação recém-instalada não teria por onde começar.
-     *
-     * <p>A saída foi levar o campo para a <b>janela de login</b>
-     * ({@link ConfiguracaoLoginController}), que é exatamente onde ele é necessário e por quem tem
-     * credencial. Aqui ele continua visível e editável <b>depois</b> da sessão aberta.
-     */
+    /** A engrenagem inteira exige {@code ADMIN} ou {@code SUPORTE}. */
     private void aplicarPortao() {
         boolean liberado = sessao.liberada();
 
@@ -132,8 +115,7 @@ public class SettingsController {
 
         faixaPortao.setVisible(!liberado);
         faixaPortao.setManaged(!liberado);
-        lblPortao.setText("Estas configurações exigem ADMIN ou SUPORTE. "
-                + "O endereço do servidor é pedido na própria tela de login.");
+        lblPortao.setText("Estas configurações exigem ADMIN ou SUPORTE.");
     }
 
     private void desbloquear() {
@@ -150,14 +132,10 @@ public class SettingsController {
 
         chkTelemetriaMqtt.setSelected(settings.isTelemetriaMqttAtiva());
         chkTempoReal.setSelected(settings.isTempoRealAtivo());
-        txtTelemetriaUrl.setText(settings.getTelemetriaUrl());
         txtTelemetriaUsuario.setText(settings.getTelemetriaUsuario());
         txtTelemetriaSenha.setText(settings.getTelemetriaSenha());
-        txtCoreUrl.setText(settings.getCoreUrl());
-        txtBackendUrl.setText(settings.getBackendUrl());
         txtBackendUsuario.setText(settings.getBackendUsuario());
         txtBackendSenha.setText(settings.getBackendSenha());
-        travarEnderecosDeProducao();
 
         mostrarSelecaoSalva(settings);
 
@@ -175,23 +153,6 @@ public class SettingsController {
 
         carregarConexao();
         observarLargura();
-    }
-
-    /**
-     * No app instalado, Core, Backend e broker sao definidos no build ({@code Ambiente}):
-     * a tela os mostra, mas nao deixa editar. Digitar ali nao teria efeito — o carregamento das
-     * configuracoes os substitui — e um campo editavel que nao vale e pior que um travado.
-     */
-    private void travarEnderecosDeProducao() {
-        if (!com.example.demo.config.Ambiente.producao()) {
-            return;
-        }
-        var aviso = new javafx.scene.control.Tooltip("Endereço de produção, definido na instalação.");
-        for (TextField campo : List.of(txtCoreUrl, txtBackendUrl, txtTelemetriaUrl)) {
-            campo.setEditable(false);
-            campo.setFocusTraversable(false);
-            campo.setTooltip(aviso);
-        }
     }
 
     // ------------------------------------------------------------------
@@ -214,6 +175,7 @@ public class SettingsController {
         UnidadeSondaOpcao unidade = cmbUnidadeSonda.getSelectionModel().getSelectedItem();
 
         if (!sessao.liberada()) {
+            aplicarPortao();
             desligarConexao("Entre com ADMIN ou SUPORTE para ver a conexão do CLP.");
             return;
         }
@@ -244,6 +206,9 @@ public class SettingsController {
         });
         tarefa.setOnFailed(e -> {
             Throwable causa = tarefa.getException();
+            if (!sessao.liberada()) {
+                aplicarPortao();
+            }
             desligarConexao("Não foi possível ler a conexão do CLP: "
                     + (causa == null ? "falha ao falar com o Backend." : causa.getMessage()));
         });
@@ -344,19 +309,23 @@ public class SettingsController {
     }
 
     private void carregarUnidades() {
-        String coreUrl = texto(txtCoreUrl);
-        String backendUrl = texto(txtBackendUrl);
-        String usuario = texto(txtBackendUsuario);
-        String senha = txtBackendSenha.getText();
+        AppSettings settings = settingsService.loadSettings();
+        String backendUrl = settings.getBackendUrl();
+        String token = sessao.token().orElse(null);
+        if (token == null) {
+            aplicarPortao();
+            lblUnidadeStatus.setText("A sessão de configuração expirou. Entre novamente.");
+            return;
+        }
 
         btnRecarregar.setDisable(true);
-        lblUnidadeStatus.setText("Autenticando no Core e consultando o Backend...");
+        lblUnidadeStatus.setText("Consultando as Unidades disponíveis...");
 
         // Chamada de rede fora da thread de UI: 10s de timeout congelariam a janela.
         Task<List<UnidadeSondaOpcao>> tarefa = new Task<>() {
             @Override
             protected List<UnidadeSondaOpcao> call() {
-                return catalogoService.listar(coreUrl, backendUrl, usuario, senha);
+                return catalogoService.listarComToken(backendUrl, token);
             }
         };
 
@@ -368,6 +337,10 @@ public class SettingsController {
         tarefa.setOnFailed(e -> {
             btnRecarregar.setDisable(false);
             Throwable causa = tarefa.getException();
+            if (causa instanceof SessaoExpiradaException) {
+                sessao.encerrar();
+                aplicarPortao();
+            }
             String mensagem = causa instanceof CatalogoIndisponivelException
                     ? causa.getMessage()
                     : "Falha ao consultar o Backend.";
@@ -481,9 +454,9 @@ public class SettingsController {
         }
 
         UnidadeSondaOpcao unidade = cmbUnidadeSonda.getSelectionModel().getSelectedItem();
+        AppSettings settings = settingsService.loadSettings();
 
         settingsService.updateTelemetria(chkTelemetriaMqtt.isSelected(), chkTempoReal.isSelected());
-        settingsService.updateTelemetriaUrl(texto(txtTelemetriaUrl));
         settingsService.updateTelemetriaCredenciais(
                 txtTelemetriaUsuario.getText(), txtTelemetriaSenha.getText());
 
@@ -495,8 +468,8 @@ public class SettingsController {
 
         settingsService.updateTempoReal(
                 unidade == null ? null : unidade.id(),
-                txtCoreUrl.getText(),
-                txtBackendUrl.getText(),
+                settings.getCoreUrl(),
+                settings.getBackendUrl(),
                 txtBackendUsuario.getText(),
                 txtBackendSenha.getText());
 
@@ -511,8 +484,8 @@ public class SettingsController {
      * junto com as outras faria uma gravacao recusada — {@code 409}, Backend fora, sessao expirada —
      * desaparecer sem que ninguem visse.
      *
-     * <p>⚠️ As configuracoes locais ja foram gravadas quando este metodo roda, e e de proposito: o
-     * cliente le a URL do Backend do arquivo, entao a URL nova precisa estar la antes da chamada.
+     * <p>As configuracoes locais ja foram gravadas quando este metodo roda. Os enderecos internos
+     * continuam preservados no arquivo e nao sao expostos nesta tela.
      */
     private void gravarConexao(UnidadeSondaOpcao unidade) {
         if (documentoCarregado == null || unidade == null || unidade.id() == null) {
