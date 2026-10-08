@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox prefWidth="540.0" prefHeight="470.0" spacing="14.0" style="-fx-background-color: #ffffff; -fx-padding: 22;"
+      stylesheets="@../geopetro-design-system.css"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.geopetro.desktop.cartaoperacao.GenerateOperationChartController">
+
+   <Label text="Gerar nova carta"><font><Font name="System Bold" size="20.0" /></font></Label>
+
+   <GridPane hgap="12.0" vgap="12.0">
+      <children>
+         <Label text="Data inicio:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+         <DatePicker fx:id="dateStart" prefWidth="160.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+         <Label text="Data fim:" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+         <DatePicker fx:id="dateEnd" prefWidth="160.0" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+         <Label text="Hora inicio:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+         <TextField fx:id="timeStart" prefWidth="160.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+         <Label text="Hora fim:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+         <TextField fx:id="timeEnd" prefWidth="160.0" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+         <Label text="Titulo da Carta:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+         <TextField fx:id="txtTitle" prefWidth="360.0" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="2" />
+         <Label text="Nome do Poco:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+         <TextField fx:id="txtWellName" prefWidth="360.0" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="3" />
+      </children>
+   </GridPane>
+
+   <Separator />
+
+   <Label text="Variaveis" style="-fx-font-weight: bold; -fx-font-size: 13;" />
+   <Label text="Selecione as variaveis a incluir nos graficos:" style="-fx-font-size: 11; -fx-text-fill: #5a667a;" />
+
+   <VBox spacing="8.0" style="-fx-background-color: #f7f9fc; -fx-padding: 12; -fx-background-radius: 8;">
+      <!--
+         As variaveis deixaram de ser cinco fixas: sao as series que a unidade gravou no periodo
+         escolhido. O controller preenche este painel ao abrir e quando o periodo muda.
+      -->
+      <VBox fx:id="painelSeries" spacing="6.0" />
+   </VBox>
+
+   <HBox alignment="CENTER_RIGHT" spacing="10.0">
+      <Button fx:id="btnCancel" text="Cancelar"
+              style="-fx-background-color: #e5e7eb; -fx-background-radius: 6; -fx-text-fill: #111827; -fx-padding: 9 16;" />
+      <Button fx:id="btnPreview" text="Visualizar"
+              style="-fx-background-color: #059669; -fx-background-radius: 6; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 9 16;" />
+      <Button fx:id="btnGenerate" text="Gerar PDF"
+              style="-fx-background-color: #051833; -fx-background-radius: 5; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 9 16;" />
+      <VBox.margin><Insets top="6.0" /></VBox.margin>
+   </HBox>
+
+</VBox>

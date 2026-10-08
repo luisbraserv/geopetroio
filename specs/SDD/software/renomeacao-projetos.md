@@ -65,7 +65,7 @@ duas linhas (fora as citações intencionais aqui e em [DT-004](technical-debt.m
 | Item | Por quê |
 |---|---|
 | Pacotes Java (`com.geopetro.*`, `com.braservpetroleo.telemetria.geopetroio.*`) | Refatoração de pacote é mudança em centenas de arquivos, com risco desproporcional ao ganho |
-| `com.example.demo.*` no Desktop | Já era nome de scaffold; trocar agora misturaria duas mudanças |
+| `com.example.demo.*` no Desktop | Já era nome de scaffold; trocar agora misturaria duas mudanças. **Trocado depois**, em commit próprio, por `com.geopetro.desktop` ([estrutura de pacotes](../../../apps/geopetro-desktop/specs/estrutura-de-pacotes.md), 2026-10-08) |
 | Nomes de tabela, coluna e `dispositivoId` | Não foram alterados por esta renomeação de projetos; a extração posterior para o Core teve migration própria |
 | Módulo Maven `unidade` no Braserv-Core | Mantém o nome técnico porque representa o domínio vigente |
 | Nome do banco (`geopetro_io`) | idem |

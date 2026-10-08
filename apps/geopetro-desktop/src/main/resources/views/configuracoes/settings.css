@@ -1,0 +1,138 @@
+@import "../geopetro-design-system.css";
+
+/*
+ * Estilo da tela de Configuracoes.
+ *
+ * Primeiro CSS do projeto: os demais FXML usam estilo inline. Aqui compensa porque sao quatro
+ * cartoes com a mesma aparencia — inline significaria repetir a mesma dezena de propriedades
+ * quatro vezes e deixar as quatro copias divergirem na primeira alteracao.
+ */
+
+.root {
+    -fx-background-color: #f7f9fc;
+    -fx-font-family: "Coco Gothic", "Century Gothic", "Trebuchet MS", sans-serif;
+}
+
+/* --- Cabecalho e rodape fixos --- */
+
+.cabecalho {
+    -fx-background-color: #ffffff;
+    -fx-padding: 18 24 18 24;
+    -fx-border-color: transparent transparent #d6deeb transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.cabecalho-titulo {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #000c4b;
+}
+
+.cabecalho-subtitulo {
+    -fx-font-size: 12px;
+    -fx-text-fill: #5a667a;
+}
+
+.rodape {
+    -fx-background-color: #ffffff;
+    -fx-padding: 14 24 14 24;
+    -fx-border-color: #d6deeb transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* --- Area rolavel --- */
+
+.area-rolagem {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.area-rolagem > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* --- Cartao de secao --- */
+
+.cartao {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 7;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 7;
+    -fx-padding: 18;
+}
+
+.cartao-titulo {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #000c4b;
+}
+
+.cartao-nota {
+    -fx-font-size: 11px;
+    -fx-text-fill: #5a667a;
+    -fx-wrap-text: true;
+}
+
+/* --- Campos --- */
+
+.rotulo {
+    -fx-font-size: 12px;
+    -fx-text-fill: #000c4b;
+}
+
+/* Explicacao sob um campo: menor e mais clara que o rotulo, para nao competir com ele. */
+.ajuda {
+    -fx-font-size: 11px;
+    -fx-text-fill: #5a667a;
+    -fx-wrap-text: true;
+}
+
+.text-field, .password-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 7 10 7 10;
+    -fx-font-size: 13px;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #1e5a96;
+    -fx-border-width: 1.5;
+}
+
+.check-box {
+    -fx-font-size: 13px;
+    -fx-text-fill: #000c4b;
+}
+
+/* --- Botoes --- */
+
+.botao-primario {
+    -fx-background-color: #c50d15;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 5;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+}
+
+.botao-primario:hover {
+    -fx-background-color: #be0d13;
+}
+
+.botao-secundario {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #000c4b;
+    -fx-font-size: 13px;
+    -fx-border-color: #d6deeb;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+}
+
+.botao-secundario:hover {
+    -fx-background-color: #edf1f8;
+}

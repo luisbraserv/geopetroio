@@ -32,15 +32,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-h2console</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
 		<dependency>
@@ -78,19 +70,16 @@
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
-		<!-- Cliente STOMP/WebSocket para o canal de tempo real com o Geopetro-Backend -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-websocket</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Regras da estrutura de pacotes — specs/estrutura-de-pacotes.md §4 -->
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>1.5.1</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- JavaFX Dependencies -->
@@ -141,7 +130,7 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
-					<mainClass>com.example.demo.DesktopSondaGeopetroIoApplication</mainClass>
+					<mainClass>com.geopetro.desktop.GeopetroDesktopApplication</mainClass>
 				</configuration>
 			</plugin>
 			<!-- JavaFX Maven Plugin -->
@@ -150,7 +139,7 @@
 				<artifactId>javafx-maven-plugin</artifactId>
 				<version>0.0.8</version>
 				<configuration>
-					<mainClass>com.example.demo.DesktopSondaGeopetroIoApplication</mainClass>
+					<mainClass>com.geopetro.desktop.GeopetroDesktopApplication</mainClass>
 				</configuration>
 			</plugin>
 			<plugin>

@@ -11,6 +11,7 @@ O Desktop roda na unidade, lê o CLP, mostra o dashboard e publica telemetria po
 | Mensagem histórica | [MQTT](../../../specs/SDD/software/mqtt/mqtt-telemetria.md) |
 | Estado ao vivo | [WebSocket](../../../specs/SDD/software/apis/websocket-realtime.md) |
 | Regras RN e pendências | [Regras de negócio](../../../specs/SDD/negocio/regras/business-rules.md) · [Perguntas OQ](../../../specs/SDD/negocio/requisitos/open-questions.md) |
+| Organização do código | [Estrutura de pacotes](estrutura-de-pacotes.md) |
 
 ## Leitura e configuração
 
