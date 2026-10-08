@@ -11,11 +11,11 @@ import com.example.demo.models.SensorPressaoConfig;
  *
  * <pre>
  *   Sensor:  4...20 mA
- *   Minimum: -50      Maximum: 750
+ *   Minimum: -250     Maximum: 750
  *   Gain:    1,00     Offset:  -250
  *
- *    4 mA -> Ax = -50     (inicio da faixa do transmissor)
- *   12 mA -> Ax = 350     (meio da faixa)
+ *    4 mA -> Ax = -250    (inicio da faixa do transmissor)
+ *   12 mA -> Ax = 250     (meio da faixa)
  *   20 mA -> Ax = 750     (fundo de escala do transmissor)
  * </pre>
  *
@@ -24,31 +24,20 @@ import com.example.demo.models.SensorPressaoConfig;
  * transmissor, informado em <em>Range do sensor (bar)</em> nas configuracoes:
  *
  * <pre>
- *   fracao   = (Ax + 50) / 800
+ *   fracao   = (Ax + 250) / 1000
  *   pressao  = fracao × range_do_sensor_em_bar
  *   psi      = pressao × 14,5037738
  * </pre>
  *
- * <p>Com um transmissor de 400 bar: Ax -50 = 0 bar, Ax 350 = 200 bar, Ax 750 = 400 bar.
+ * <p>Com um transmissor de 400 bar: Ax -250 = 0 bar, Ax 250 = 200 bar, Ax 750 = 400 bar.
  *
- * <h2>Por que uma classe so</h2>
- * O fator bar->PSI e a escala do CLP estavam repetidos nos pontos de leitura. Quando a escala mudou,
- * foi preciso caçar as copias — e uma ficou para tras, convertendo com a regra antiga. Aqui ha um
- * lugar unico.
+ * <p>A conversao eletrica do Ax fica em {@link ConversaoSinalAnalogico}; esta classe contem somente
+ * as regras especificas de pressao.
  */
 public final class ConversaoPressao {
 
     /** 1 bar = 14,5037738 PSI. */
     public static final double BAR_PARA_PSI = 14.5037738;
-
-    /** Ax correspondente a 4 mA — inicio da faixa (Measurement Range mínimo). */
-    public static final int AX_MIN = -50;
-
-    /** Ax correspondente a 20 mA — fundo de escala (Measurement Range máximo). */
-    public static final int AX_MAX = 750;
-
-    /** Amplitude da escala do amplificador: 800 passos entre 4 e 20 mA. */
-    private static final double AX_AMPLITUDE = AX_MAX - AX_MIN;
 
     private ConversaoPressao() {
     }
@@ -59,48 +48,24 @@ public final class ConversaoPressao {
     }
 
     /**
-     * Reinterpreta uma Word lida do CLP como inteiro de 16 bits com sinal.
+     * Converte o Ax do LOGO! em pressao, conforme a faixa do transmissor.
      *
-     * <p>Necessario porque a faixa comeca em -50: lido como unsigned, {@code -50} chegaria como
-     * {@code 65486} e produziria uma pressao absurda.
+     * <p>Pressao fisica nao pode ser negativa. Leituras abaixo de 4 mA continuam disponiveis no Ax
+     * bruto e sao sinalizadas pelo chamador, mas a grandeza convertida fica em zero.
      */
-    public static short axComoSigned(int rawWord) {
-        return (short) (rawWord & 0xFFFF);
-    }
-
-    /**
-     * Posicao do Ax dentro da faixa do transmissor, de 0,0 (4 mA) a 1,0 (20 mA).
-     *
-     * <p>Pode sair desse intervalo: valores fora da faixa nao sao recortados, para que uma leitura
-     * suspeita continue visivel em vez de virar um zero convincente.
-     */
-    public static double axParaFracao(double ax) {
-        return (ax - AX_MIN) / AX_AMPLITUDE;
-    }
-
-    /** Converte o Ax do LOGO! em pressao, conforme a faixa do transmissor. */
     public static double axParaBar(double ax, double rangeSensorBar) {
-        return axParaFracao(ax) * rangeSensorBar;
+        return Math.max(0.0, ConversaoSinalAnalogico.axParaValorLinear(ax, 0.0, rangeSensorBar));
     }
 
     /**
      * Converte o Ax em PSI, aplicando a faixa e o ajuste de calibracao do sensor.
      *
-     * <p>Sem recorte: um valor fora da faixa continua sendo exibido como veio. O aviso de leitura
-     * suspeita vem do log e do valor cru no card, nao de um numero corrigido em silencio.
+     * <p>O limite fisico inferior e zero. O Ax bruto nao e recortado: continua visivel no card e
+     * permite diagnosticar uma leitura abaixo de 4 mA.
      */
     public static double axParaPsi(double ax, SensorPressaoConfig config) {
         SensorPressaoConfig sensor = config == null ? new SensorPressaoConfig() : config;
-        return barToPsi(axParaBar(ax, sensor.getRangeBar())) * sensor.getSensibilidade();
+        return Math.max(0.0, barToPsi(axParaBar(ax, sensor.getRangeBar())) * sensor.getSensibilidade());
     }
 
-    /**
-     * Indica leitura fora do Measurement Range configurado no LOGO!.
-     *
-     * <p>Serve para sinalizar, nao para corrigir: abaixo de -50 significa corrente menor que 4 mA —
-     * laco aberto, sensor sem alimentacao ou canal nao mapeado.
-     */
-    public static boolean foraDaFaixa(double ax) {
-        return ax < AX_MIN || ax > AX_MAX;
-    }
 }

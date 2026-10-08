@@ -52,14 +52,14 @@ a aplicação de subir.
 
 ### OQ-016 · A escala analógica do CLP foi confirmada?
 
-✅ **RESOLVIDA 2026-08-31**
+✅ **RESOLVIDA 2026-08-31 · PADRÃO ATUALIZADO 2026-10-08**
 
 **Era [FATO]:** comentário no próprio código dizia *"A escala 0..1000 é preservada até sua confirmação
 no PLC"* — a conversão inteira dependia de uma premissa que os desenvolvedores marcavam como não
 validada.
 
-**Resposta:** a escala **não era** 0–1000. O bloco *Analog Amplifier* está configurado com
-*Measurement Range* −50..750 e `Offset -250`, então o Ax publicado vai de −50 (4 mA) a 750 (20 mA).
+**Resposta:** a escala **não era** 0–1000. O padrão vigente para todas as conversões é Ax de
+−250 (4 mA) a 750 (20 mA), com 250 representando 12 mA.
 A conversão foi reescrita conforme [RN-030](../regras/business-rules.md#rn-030--conversão-do-ax-do-logo--psi)
 e a escala antiga removida do código.
 
@@ -67,7 +67,7 @@ e a escala antiga removida do código.
 e leitura *unsigned* de um Ax que pode ser negativo. Ambas corrigidas.
 
 ⚠️ **Permanece em aberto:** confirmar em campo, com calibrador de laço, que o amplificador de **cada
-canal** está com essa mesma configuração. A conversão hoje assume −50..750 para os quatro. Um canal
+canal** está com essa mesma configuração. A conversão hoje assume −250..750 para todos. Um canal
 configurado diferente produz leitura proporcionalmente errada, e o Ax cru no rodapé do card é o que
 denuncia.
 ---

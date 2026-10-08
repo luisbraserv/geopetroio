@@ -13,7 +13,8 @@ import com.example.demo.models.SensorPressaoConfig;
 class ConversaoTemperaturaTest {
 
 	private static double ax(double fracao) {
-		return ConversaoPressao.AX_MIN + fracao * (ConversaoPressao.AX_MAX - ConversaoPressao.AX_MIN);
+		return ConversaoSinalAnalogico.AX_MIN
+				+ fracao * (ConversaoSinalAnalogico.AX_MAX - ConversaoSinalAnalogico.AX_MIN);
 	}
 
 	private static Parametros escala(Double minimo, Double maximo, String unidade) {
@@ -87,8 +88,8 @@ class ConversaoTemperaturaTest {
 	void foraDaFaixa() {
 		var p = escala(0.0, 100.0, "°C");
 
-		// Nao limita: abaixo de -50 significa laco aberto, e um valor claramente fora da escala
+		// Nao limita: abaixo de -250 significa laco aberto, e um valor claramente fora da escala
 		// denuncia isso melhor que um zero limitado, que pareceria medicao real.
-		assertEquals(-12.5, ConversaoTemperatura.valor(-150, p), 0.0001);
+		assertEquals(-12.5, ConversaoTemperatura.valor(-375, p), 0.0001);
 	}
 }

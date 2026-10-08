@@ -19,9 +19,10 @@ import com.example.demo.models.CardsDaUnidade.Parametros;
  */
 class ConversaoTanqueTest {
 
-	/** Ax que corresponde a uma fração da faixa −50..750 do amplificador. */
+	/** Ax que corresponde a uma fração da faixa −250..750 do amplificador. */
 	private static double ax(double fracao) {
-		return ConversaoPressao.AX_MIN + fracao * (ConversaoPressao.AX_MAX - ConversaoPressao.AX_MIN);
+		return ConversaoSinalAnalogico.AX_MIN
+				+ fracao * (ConversaoSinalAnalogico.AX_MAX - ConversaoSinalAnalogico.AX_MIN);
 	}
 
 	private static Parametros vertical(double raio, double altura, double dMin, double dMax) {
@@ -64,9 +65,9 @@ class ConversaoTanqueTest {
 		@Test
 		@DisplayName("fora da faixa do transmissor a altura é limitada, não negativa")
 		void foraDaFaixa() {
-			// Abaixo de -50 significa laco aberto ou sensor sem alimentacao. Um volume negativo
+			// Abaixo de -250 significa laco aberto ou sensor sem alimentacao. Um volume negativo
 			// nao existe; propagar seria pior que limitar.
-			assertEquals(3.0, ConversaoTanque.alturaDoLiquidoM(-200, p), 0.0001);
+			assertEquals(3.0, ConversaoTanque.alturaDoLiquidoM(-300, p), 0.0001);
 			assertEquals(0.0, ConversaoTanque.alturaDoLiquidoM(2000, p), 0.0001);
 		}
 

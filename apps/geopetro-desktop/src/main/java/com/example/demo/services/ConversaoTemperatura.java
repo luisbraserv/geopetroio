@@ -6,7 +6,7 @@ import com.example.demo.models.CardsDaUnidade.Parametros;
  * Temperatura a partir do laço 4-20 mA — RN-083.
  *
  * <pre>
- * fracao = (Ax − (−50)) / 800
+ * fracao = (Ax − (−250)) / 1000
  * valor  = minimoEscala + fracao × (maximoEscala − minimoEscala)
  * </pre>
  *
@@ -50,7 +50,7 @@ public final class ConversaoTemperatura {
 			// Escala invertida ou de amplitude zero: converter daria um numero sem significado.
 			return null;
 		}
-		return minimo + ConversaoPressao.axParaFracao(ax) * (maximo - minimo);
+		return ConversaoSinalAnalogico.axParaValorLinear(ax, minimo, maximo);
 	}
 
 	public static String unidade(Parametros p) {

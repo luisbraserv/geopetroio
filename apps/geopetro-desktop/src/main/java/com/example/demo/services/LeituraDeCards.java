@@ -168,16 +168,16 @@ public class LeituraDeCards {
 	/**
 	 * Posição no laço 4-20 mA convertida em psi.
 	 *
-	 * <p>O valor publicado pelo LOGO! é o laço reescalonado para −50..750 pelo Analog Amplifier —
+	 * <p>O valor publicado pelo LOGO! é o laço reescalonado para −250..750 pelo Analog Amplifier —
 	 * não é pressão. O range do transmissor traduz essa posição; a sensibilidade é o trim da estação.
 	 */
 	private double psi(Card card, BlocoDeLeitura bloco) {
 		short ax = bloco.word(card.byteInicial());
-		if (ConversaoPressao.foraDaFaixa(ax)) {
-			// Abaixo de -50 e corrente menor que 4 mA: laco aberto, sensor sem alimentacao ou canal
+		if (ConversaoSinalAnalogico.foraDaFaixa(ax)) {
+			// Abaixo de -250 e corrente menor que 4 mA: laco aberto, sensor sem alimentacao ou canal
 			// nao mapeado. Sinalizar, nao corrigir.
 			logger.warn("[PLC] Ax fora de {}..{} no card {} (DBW{}): {}",
-					ConversaoPressao.AX_MIN, ConversaoPressao.AX_MAX,
+					ConversaoSinalAnalogico.AX_MIN, ConversaoSinalAnalogico.AX_MAX,
 					card.dispositivoId(), card.byteInicial(), ax);
 		}
 		SensorPressaoConfig sensor = new SensorPressaoConfig();
@@ -261,9 +261,9 @@ public class LeituraDeCards {
 	}
 
 	private void avisarSeForaDaFaixa(Card card, short ax) {
-		if (ConversaoPressao.foraDaFaixa(ax)) {
+		if (ConversaoSinalAnalogico.foraDaFaixa(ax)) {
 			logger.warn("[PLC] Ax fora de {}..{} no card {} (DBW{}): {}",
-					ConversaoPressao.AX_MIN, ConversaoPressao.AX_MAX,
+					ConversaoSinalAnalogico.AX_MIN, ConversaoSinalAnalogico.AX_MAX,
 					card.dispositivoId(), card.byteInicial(), ax);
 		}
 	}

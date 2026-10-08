@@ -163,6 +163,17 @@ class LeituraDeCardsTest {
 		assertEquals(350.0, g.bruto(), "o bruto continua visivel");
 	}
 
+	@Test
+	@DisplayName("pressao abaixo de zero aparece como zero, mantendo o Ax bruto para diagnostico")
+	void pressaoNegativaViraZero() {
+		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, -500));
+
+		var g = leitura().converter(List.of(card("PRESSAO_01", Tipo.PRESSAO, 0, range(400))), bloco).get(0);
+
+		assertEquals(0.0, g.valor(), 0.0001);
+		assertEquals(-500.0, g.bruto(), "o valor recebido do CLP continua visivel");
+	}
+
 	// ============================================================ peso e torque
 
 	@Test
@@ -317,8 +328,8 @@ class LeituraDeCardsTest {
 				raio, altura, null, null, dMin, dMax, null);
 	}
 
-	/** Ax no meio da faixa −50..750 do amplificador. */
-	private static final int AX_MEIO = 350;
+	/** Ax no meio da faixa −250..750 do amplificador. */
+	private static final int AX_MEIO = 250;
 
 	@Test
 	@DisplayName("temperatura converte pela escala do card, e a unidade vem dele")
@@ -355,7 +366,7 @@ class LeituraDeCardsTest {
 	@DisplayName("o tanque publica VOLUME em bbl, nao nivel nem distancia")
 	void tanquePublicaVolume() {
 		// Cheio: o sensor no topo le a distancia MINIMA, que corresponde a 4 mA.
-		var bloco = bloco(14, 2, bytes -> S7.SetWordAt(bytes, 0, ConversaoPressao.AX_MIN));
+		var bloco = bloco(14, 2, bytes -> S7.SetWordAt(bytes, 0, ConversaoSinalAnalogico.AX_MIN));
 
 		var g = leitura().converter(
 				List.of(card("NIVEL_TANQUE_01", Tipo.NIVEL_TANQUE, 14, tanqueVertical(1.0, 3.0, 0.0, 3.0))),
@@ -376,9 +387,9 @@ class LeituraDeCardsTest {
 		var card = card("NIVEL_TANQUE_01", Tipo.NIVEL_TANQUE, 14, p);
 
 		double cheio = leitura.converter(List.of(card),
-				bloco(14, 2, b -> S7.SetWordAt(b, 0, ConversaoPressao.AX_MIN))).get(0).valor();
+				bloco(14, 2, b -> S7.SetWordAt(b, 0, ConversaoSinalAnalogico.AX_MIN))).get(0).valor();
 		double vazio = leitura.converter(List.of(card),
-				bloco(14, 2, b -> S7.SetWordAt(b, 0, ConversaoPressao.AX_MAX))).get(0).valor();
+				bloco(14, 2, b -> S7.SetWordAt(b, 0, ConversaoSinalAnalogico.AX_MAX))).get(0).valor();
 
 		assertTrue(cheio > vazio, "4 mA e cheio; 20 mA e vazio");
 		assertEquals(0.0, vazio, 0.0001);
@@ -417,14 +428,14 @@ class LeituraDeCardsTest {
 	}
 
 	@Test
-	@DisplayName("o bruto vem com sinal: a escala do amplificador comeca em -50")
+	@DisplayName("o bruto vem com sinal: a escala do amplificador comeca em -250")
 	void brutoComSinal() {
-		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, 0xFFCE)); // -50
+		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, 0xFF06)); // -250
 
 		var g = leitura().converter(List.of(card("PRESSAO_01", Tipo.PRESSAO, 0, range(400))), bloco).get(0);
 
-		// Lido como Word sem sinal, -50 viraria 65486 e a pressao sairia enorme e plausivel.
-		assertEquals(-50.0, g.bruto());
-		assertEquals(0.0, g.valor(), 0.0001, "-50 e o zero da escala");
+		// Lido como Word sem sinal, -250 viraria 65286 e a pressao sairia enorme e plausivel.
+		assertEquals(-250.0, g.bruto());
+		assertEquals(0.0, g.valor(), 0.0001, "-250 e o zero da escala");
 	}
 }
