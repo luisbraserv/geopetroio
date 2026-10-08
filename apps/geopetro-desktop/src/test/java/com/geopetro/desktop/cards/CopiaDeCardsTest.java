@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -12,11 +12,10 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Conexao;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Conexao;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
 
 /**
  * A cópia de configuração entre unidades — {@code cards-configuraveis.md §10}.

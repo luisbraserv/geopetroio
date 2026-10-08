@@ -16,10 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.geopetro.desktop.configuracoes.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.geopetro.desktop.sessao.UnidadeSondaOpcao;
-import com.geopetro.desktop.services.CardsState;
-import com.geopetro.desktop.services.CardsStore;
+import com.geopetro.desktop.cards.CardsState;
+import com.geopetro.desktop.cards.CardsStore;
 import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
 
 /**

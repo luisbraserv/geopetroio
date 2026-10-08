@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Faixa;
 import com.geopetro.desktop.comum.AppPaths;
-import com.geopetro.desktop.services.CalibracaoDeCards;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;

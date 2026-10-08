@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -11,7 +11,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.geopetro.desktop.models.DocumentoDaUnidade;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**

@@ -14,9 +14,9 @@
 
 <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
             style="-fx-background-color: #f7f9fc; -fx-background: #f7f9fc;"
-            stylesheets="@geopetro-design-system.css"
+            stylesheets="@../geopetro-design-system.css"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.geopetro.desktop.controllers.ChaveSettingsController">
+            fx:controller="com.geopetro.desktop.cards.calibracao.ChaveSettingsController">
 
    <content>
       <VBox spacing="16.0" style="-fx-background-color: #f7f9fc; -fx-padding: 24;">

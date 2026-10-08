@@ -3,8 +3,8 @@ package com.geopetro.desktop.services;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.*;
+import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.cards.CardsDaUnidade.*;
 import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
 
 class CardsDoMonitoramentoTest {

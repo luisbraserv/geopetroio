@@ -17,12 +17,13 @@ import com.geopetro.desktop.calculos.FlowRateCalculatorService;
 import com.geopetro.desktop.calculos.PesoColunaConfig;
 import com.geopetro.desktop.calculos.StrokeCalculatorService;
 import com.geopetro.desktop.calculos.TipoMovimento;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
 import com.geopetro.desktop.conversao.ConversaoSinalAnalogico;
 import com.geopetro.desktop.conversao.ConversaoTanque;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.services.LeituraDeCards.Grandeza;
 import com.sourceforge.snap7.moka7.S7;
 

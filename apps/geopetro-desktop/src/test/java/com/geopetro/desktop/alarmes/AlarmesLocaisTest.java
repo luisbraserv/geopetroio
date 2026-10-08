@@ -12,7 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
 import com.geopetro.desktop.alarmes.AlarmesDaEstacao.AlarmeLocal;
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Severidade;
 import com.geopetro.desktop.services.LeituraDeCards.Grandeza;

@@ -8,8 +8,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.CardsDaUnidade.FormaTanque;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.FormaTanque;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
 
 /**
  * Volume do tanque a partir da distância medida no topo — RN-084, RN-085.

@@ -1,9 +1,8 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import java.util.Objects;
 import java.util.Optional;
 
-import com.geopetro.desktop.models.DocumentoDaUnidade;
 
 /**
  * O último snapshot válido de um documento, isolado por backend/unidade e geração de conexão.

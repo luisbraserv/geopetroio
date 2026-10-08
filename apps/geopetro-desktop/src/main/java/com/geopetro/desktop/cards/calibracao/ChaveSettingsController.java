@@ -1,12 +1,10 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.cards.calibracao;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
-import com.geopetro.desktop.calculos.TipoMovimento;
-import com.geopetro.desktop.services.CalibracaoCardService;
-import com.geopetro.desktop.services.CalibracaoDeCards;
 import com.geopetro.desktop.calculos.HydraulicTorqueCalculator;
+import com.geopetro.desktop.calculos.TipoMovimento;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade;
 import javafx.concurrent.Task;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;

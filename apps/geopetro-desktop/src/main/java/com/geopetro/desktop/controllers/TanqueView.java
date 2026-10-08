@@ -1,6 +1,6 @@
 package com.geopetro.desktop.controllers;
 
-import com.geopetro.desktop.models.CardsDaUnidade.FormaTanque;
+import com.geopetro.desktop.cards.CardsDaUnidade.FormaTanque;
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;

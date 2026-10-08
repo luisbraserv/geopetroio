@@ -11,14 +11,15 @@ import com.geopetro.desktop.calculos.FlowRateCalculatorService;
 import com.geopetro.desktop.calculos.HydraulicTorqueCalculator;
 import com.geopetro.desktop.calculos.PesoColunaCalculator;
 import com.geopetro.desktop.calculos.StrokeCalculatorService;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
 import com.geopetro.desktop.conversao.ConversaoPressao;
 import com.geopetro.desktop.conversao.ConversaoSinalAnalogico;
 import com.geopetro.desktop.conversao.ConversaoTanque;
 import com.geopetro.desktop.conversao.ConversaoTemperatura;
 import com.geopetro.desktop.conversao.SensorPressaoConfig;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
 import com.geopetro.desktop.telemetria.LeituraPublicada;
 
 /**

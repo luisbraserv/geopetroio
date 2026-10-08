@@ -31,9 +31,9 @@
    no dashboard, onde o valor bruto de cada card revela canal mudo ou escala inesperada.
 -->
 <VBox fx:id="raiz" prefWidth="1040.0" prefHeight="700.0"
-      stylesheets="@geopetro-design-system.css"
+      stylesheets="@../geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.geopetro.desktop.controllers.CardsConfigController">
+      fx:controller="com.geopetro.desktop.cards.CardsConfigController">
 
    <!-- ===================== Cabecalho ===================== -->
    <VBox spacing="2.0" styleClass="cabecalho">

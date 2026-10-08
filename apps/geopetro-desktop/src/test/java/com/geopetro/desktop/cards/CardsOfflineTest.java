@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.Path;
@@ -6,7 +6,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.geopetro.desktop.configuracoes.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 
 class CardsOfflineTest {

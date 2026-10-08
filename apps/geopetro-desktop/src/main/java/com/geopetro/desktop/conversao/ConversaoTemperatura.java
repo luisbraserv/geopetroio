@@ -1,6 +1,6 @@
 package com.geopetro.desktop.conversao;
 
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
 
 /**
  * Temperatura a partir do laço 4-20 mA — RN-083.

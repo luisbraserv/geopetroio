@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.cards;
 
 /**
  * O que os documentos de configuração de uma Unidade têm em comum.

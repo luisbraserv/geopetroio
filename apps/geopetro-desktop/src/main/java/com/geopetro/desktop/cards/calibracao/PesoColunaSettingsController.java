@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.cards.calibracao;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,15 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
+import com.geopetro.desktop.calculos.PesoColunaCalculator;
 import com.geopetro.desktop.calculos.PesoColunaCalculo;
 import com.geopetro.desktop.calculos.PesoColunaConfig;
-import com.geopetro.desktop.conversao.SensorPressaoConfig;
-import com.geopetro.desktop.services.CalibracaoCardService;
-import com.geopetro.desktop.services.CalibracaoDeCards;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.geopetro.desktop.conversao.ConversaoPressao;
-import com.geopetro.desktop.calculos.PesoColunaCalculator;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
 
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;

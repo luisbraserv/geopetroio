@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.function.Consumer;
 

@@ -19,9 +19,9 @@
    diagnostico, e com os botoes dentro da area rolavel "Salvar" sairia de vista.
 -->
 <BorderPane prefWidth="560.0" prefHeight="640.0"
-            stylesheets="@geopetro-design-system.css"
+            stylesheets="@../geopetro-design-system.css"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.geopetro.desktop.controllers.PesoColunaSettingsController">
+            fx:controller="com.geopetro.desktop.cards.calibracao.PesoColunaSettingsController">
 
    <top>
       <VBox spacing="3.0" styleClass="cabecalho">

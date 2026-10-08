@@ -1,6 +1,5 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
 
 /**
  * Último documento de cards da unidade — o que o ciclo de leitura consulta a cada volta.

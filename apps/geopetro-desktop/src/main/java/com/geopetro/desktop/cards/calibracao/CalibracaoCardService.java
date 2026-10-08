@@ -1,14 +1,15 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards.calibracao;
 
 import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.services.CalibracaoDeCards.Calibracao;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.cards.ConfiguracaoCardsClient;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards.Calibracao;
 
 /** Salva a escala do transmissor no documento e a calibracao local pelo id do card. */
 @Service

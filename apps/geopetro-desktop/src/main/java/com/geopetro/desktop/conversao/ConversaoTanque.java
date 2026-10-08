@@ -1,7 +1,7 @@
 package com.geopetro.desktop.conversao;
 
-import com.geopetro.desktop.models.CardsDaUnidade.FormaTanque;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.FormaTanque;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
 
 /**
  * Volume de um tanque a partir do sensor de distância no topo — RN-084.

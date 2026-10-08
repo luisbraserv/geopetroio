@@ -21,8 +21,8 @@ import org.springframework.stereotype.Service;
 import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.sessao.UnidadeSondaOpcao;
 import com.geopetro.desktop.sessao.BackendLogin;
-import com.geopetro.desktop.services.CardsState;
-import com.geopetro.desktop.services.EstadoDeDocumento;
+import com.geopetro.desktop.cards.CardsState;
+import com.geopetro.desktop.cards.EstadoDeDocumento;
 import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
 
 import jakarta.annotation.PreDestroy;
@@ -140,7 +140,7 @@ public class TelemetriaRealtimeService {
      *
      * <p>Vazio significa unidade nao configurada — estado normal (RN-092), e nao erro.
      */
-    public java.util.Optional<com.geopetro.desktop.models.CardsDaUnidade> cardsAtuais(AppSettings settings) {
+    public java.util.Optional<com.geopetro.desktop.cards.CardsDaUnidade> cardsAtuais(AppSettings settings) {
         if (settings == null || settings.getUnidadeId() == null) {
             return java.util.Optional.empty();
         }

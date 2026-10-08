@@ -15,16 +15,16 @@ public class SondaService {
      * <p>Lista imutável trocada por referência: a thread de leitura do CLP escreve, a da interface
      * lê, e nenhuma das duas vê um estado pela metade.
      */
-    private record Ciclo(com.geopetro.desktop.models.CardsDaUnidade documento,
+    private record Ciclo(com.geopetro.desktop.cards.CardsDaUnidade documento,
                          List<LeituraDeCards.Grandeza> grandezas) {}
     private volatile Ciclo ciclo = new Ciclo(null, List.of());
 
-    public void atualizarGrandezas(com.geopetro.desktop.models.CardsDaUnidade documento,
+    public void atualizarGrandezas(com.geopetro.desktop.cards.CardsDaUnidade documento,
                                   List<LeituraDeCards.Grandeza> novas) {
         ciclo = new Ciclo(documento, novas == null ? List.of() : List.copyOf(novas));
     }
 
-    public List<LeituraDeCards.Grandeza> grandezas(com.geopetro.desktop.models.CardsDaUnidade documento) {
+    public List<LeituraDeCards.Grandeza> grandezas(com.geopetro.desktop.cards.CardsDaUnidade documento) {
         Ciclo atual = ciclo;
         return documento != null && documento.equals(atual.documento()) ? atual.grandezas() : List.of();
     }

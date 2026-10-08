@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.cards;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,17 +12,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Conexao;
+import com.geopetro.desktop.cards.CardsDaUnidade.FormaTanque;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.calibracao.CalibracaoCardDialog;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
 import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.configuracoes.SettingsService;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Conexao;
-import com.geopetro.desktop.models.CardsDaUnidade.FormaTanque;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.services.CalibracaoDeCards;
-import com.geopetro.desktop.services.ConfiguracaoCardsClient;
-import com.geopetro.desktop.services.CopiaDeCards;
 import com.geopetro.desktop.sessao.ConfiguracaoLoginController;
 import com.geopetro.desktop.sessao.SessaoConfiguracao;
 import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
@@ -192,7 +190,7 @@ public class CardsConfigController {
 		}
 		try {
 			FXMLLoader loader = new FXMLLoader(
-					CardsConfigController.class.getResource("/views/cards-config.fxml"));
+					CardsConfigController.class.getResource("/views/cards/cards-config.fxml"));
 			loader.setControllerFactory(contexto::getBean);
 			Parent conteudo = loader.load();
 

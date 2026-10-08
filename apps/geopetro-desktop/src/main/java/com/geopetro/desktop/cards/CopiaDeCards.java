@@ -1,11 +1,10 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Conexao;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Conexao;
 
 /**
  * Copia a configuração de cards de uma unidade para outra — a mitigação decidida em

@@ -1,5 +1,6 @@
 package com.geopetro.desktop.controllers;
 
+import com.geopetro.desktop.cards.CardsConfigController;
 import com.geopetro.desktop.services.PlcConnectionService;
 import javafx.application.Platform;
 import javafx.concurrent.Task;

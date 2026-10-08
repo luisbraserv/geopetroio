@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards.calibracao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -13,11 +13,12 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.services.CalibracaoDeCards.Calibracao;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.cards.ConfiguracaoCardsClient;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards.Calibracao;
 
 class CalibracaoCardServiceTest {
 

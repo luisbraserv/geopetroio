@@ -51,7 +51,7 @@ public class SettingsController {
     private org.springframework.context.ApplicationContext contexto;
 
     @Autowired
-    private com.geopetro.desktop.services.ConfiguracaoCardsClient cardsClient;
+    private com.geopetro.desktop.cards.ConfiguracaoCardsClient cardsClient;
 
     /**
      * O documento como esta tela o leu — a base da conferência de conflito ao gravar.
@@ -60,7 +60,7 @@ public class SettingsController {
      * também serve de trava: sem base lida não se grava conexão nenhuma, porque não haveria como
      * saber se alguém a mudou no intervalo.
      */
-    private com.geopetro.desktop.models.CardsDaUnidade documentoCarregado;
+    private com.geopetro.desktop.cards.CardsDaUnidade documentoCarregado;
 
     @FXML private BorderPane raiz;
     @FXML private ScrollPane rolagem;
@@ -186,9 +186,9 @@ public class SettingsController {
         long unidadeId = unidade.id();
         desligarConexao("Lendo a conexão do CLP…");
 
-        Task<com.geopetro.desktop.models.CardsDaUnidade> tarefa = new Task<>() {
+        Task<com.geopetro.desktop.cards.CardsDaUnidade> tarefa = new Task<>() {
             @Override
-            protected com.geopetro.desktop.models.CardsDaUnidade call() {
+            protected com.geopetro.desktop.cards.CardsDaUnidade call() {
                 return cardsClient.ler(unidadeId);
             }
         };
@@ -217,9 +217,9 @@ public class SettingsController {
         thread.start();
     }
 
-    private void preencherConexao(com.geopetro.desktop.models.CardsDaUnidade.Conexao conexao) {
+    private void preencherConexao(com.geopetro.desktop.cards.CardsDaUnidade.Conexao conexao) {
         var valores = conexao == null
-                ? com.geopetro.desktop.models.CardsDaUnidade.Conexao.padrao()
+                ? com.geopetro.desktop.cards.CardsDaUnidade.Conexao.padrao()
                 : conexao;
         txtPlcIp.setText(valores.ip() == null ? "" : valores.ip());
         txtPlcRack.setText(String.valueOf(valores.rack()));
@@ -262,8 +262,8 @@ public class SettingsController {
         txtPlcTsapRemoto.setDisable(!disponivel || !chkPlcTsap.isSelected());
     }
 
-    private com.geopetro.desktop.models.CardsDaUnidade.Conexao conexaoDigitada() {
-        return new com.geopetro.desktop.models.CardsDaUnidade.Conexao(
+    private com.geopetro.desktop.cards.CardsDaUnidade.Conexao conexaoDigitada() {
+        return new com.geopetro.desktop.cards.CardsDaUnidade.Conexao(
                 texto(txtPlcIp),
                 inteiro(txtPlcRack, 0),
                 inteiro(txtPlcSlot, 1),
@@ -496,7 +496,7 @@ public class SettingsController {
 
         long unidadeId = unidade.id();
         var base = documentoCarregado;
-        com.geopetro.desktop.models.CardsDaUnidade.Conexao nova;
+        com.geopetro.desktop.cards.CardsDaUnidade.Conexao nova;
         try {
             nova = conexaoDigitada();
         } catch (IllegalArgumentException invalido) {
@@ -512,9 +512,9 @@ public class SettingsController {
         btnSave.setDisable(true);
         lblConexaoStatus.setText("Gravando a conexão do CLP…");
 
-        Task<com.geopetro.desktop.models.CardsDaUnidade> tarefa = new Task<>() {
+        Task<com.geopetro.desktop.cards.CardsDaUnidade> tarefa = new Task<>() {
             @Override
-            protected com.geopetro.desktop.models.CardsDaUnidade call() {
+            protected com.geopetro.desktop.cards.CardsDaUnidade call() {
                 return cardsClient.salvarConexao(unidadeId, base, nova);
             }
         };

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.cards.calibracao;
 
 import java.io.IOException;
 
@@ -6,9 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -31,7 +31,7 @@ public final class CalibracaoCardDialog {
 			throw new IllegalArgumentException("A calibracao requer um card de peso ou torque.");
 		}
 		String caminho = card.tipo() == Tipo.PESO
-				? "/views/peso-coluna-settings.fxml" : "/views/chave-settings.fxml";
+				? "/views/cards/peso-coluna-settings.fxml" : "/views/cards/chave-settings.fxml";
 		try {
 			FXMLLoader loader = new FXMLLoader(CalibracaoCardDialog.class.getResource(caminho));
 			loader.setControllerFactory(contexto::getBean);

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.configuracoes.SettingsService;
-import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.sessao.SessaoConfiguracao;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

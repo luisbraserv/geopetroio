@@ -1,9 +1,8 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards;
 
 import java.nio.file.Path;
 
 import com.geopetro.desktop.comum.AppPaths;
-import com.geopetro.desktop.models.CardsDaUnidade;
 
 /**
  * Cache em disco do documento de cards da unidade.

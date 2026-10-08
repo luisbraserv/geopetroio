@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cards.calibracao;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -14,8 +14,8 @@ import org.springframework.stereotype.Service;
 
 import com.geopetro.desktop.comum.AppPaths;
 import com.geopetro.desktop.configuracoes.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
 import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
 import com.geopetro.desktop.calculos.PesoColunaConfig;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -93,7 +93,8 @@ public class CalibracaoDeCards {
 		this(AppPaths.configDir().resolve("calibracao-cards.json"));
 	}
 
-	CalibracaoDeCards(Path arquivo) {
+	/** Arquivo explícito — usado pelos testes de calibração e de leitura, em pacotes diferentes. */
+	public CalibracaoDeCards(Path arquivo) {
 		this.arquivo = arquivo;
 	}
 

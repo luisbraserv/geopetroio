@@ -18,11 +18,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
-import com.geopetro.desktop.models.CardsDaUnidade.Card;
-import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
-import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.services.CalibracaoDeCards.Calibracao;
-import com.geopetro.desktop.services.CalibracaoDeCards;
+import com.geopetro.desktop.cards.CardsConfigController;
+import com.geopetro.desktop.cards.CardsDaUnidade.Card;
+import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
+import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards.Calibracao;
+import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
+import com.geopetro.desktop.cards.calibracao.ChaveSettingsController;
+import com.geopetro.desktop.cards.calibracao.PesoColunaSettingsController;
 import com.geopetro.desktop.sessao.ConfiguracaoLoginController;
 
 import javafx.application.Platform;
@@ -116,7 +119,7 @@ class CarregamentoDasTelasTest {
 	@Test
 	@DisplayName("cards-config.fxml carrega e casa com o CardsConfigController")
 	void telaDeCards() {
-		assertDoesNotThrow(() -> assertNotNull(carregar("/views/cards-config.fxml")));
+		assertDoesNotThrow(() -> assertNotNull(carregar("/views/cards/cards-config.fxml")));
 	}
 
 	@Test
@@ -126,7 +129,7 @@ class CarregamentoDasTelasTest {
 		CountDownLatch pronto = new CountDownLatch(1);
 		Platform.runLater(() -> {
 			try {
-				FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/cards-config.fxml"));
+				FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/cards/cards-config.fxml"));
 				loader.load();
 				Field dependencia = CardsConfigController.class.getDeclaredField("calibracoes");
 				dependencia.setAccessible(true);
@@ -180,10 +183,10 @@ class CarregamentoDasTelasTest {
 				for (Tipo tipo : List.of(Tipo.PESO, Tipo.TORQUE)) {
 					Card card = new Card(tipo.name() + "_02", tipo.rotulo(), tipo, 4, true, true, 0,
 							new Parametros(175.5, null, null, null, null, null, null, null, null, null, null, null));
-					var documento = new com.geopetro.desktop.models.CardsDaUnidade(
+					var documento = new com.geopetro.desktop.cards.CardsDaUnidade(
 							1, 7, 1, null, List.of(card), null, null);
 					FXMLLoader loader = new FXMLLoader(getClass().getResource(tipo == Tipo.PESO
-							? "/views/peso-coluna-settings.fxml" : "/views/chave-settings.fxml"));
+							? "/views/cards/peso-coluna-settings.fxml" : "/views/cards/chave-settings.fxml"));
 					loader.load();
 					Class<?> classe = tipo == Tipo.PESO
 							? PesoColunaSettingsController.class : ChaveSettingsController.class;
