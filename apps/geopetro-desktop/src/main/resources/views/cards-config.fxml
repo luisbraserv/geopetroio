@@ -33,7 +33,7 @@
 <VBox fx:id="raiz" prefWidth="1040.0" prefHeight="700.0"
       stylesheets="@geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.demo.controllers.CardsConfigController">
+      fx:controller="com.geopetro.desktop.controllers.CardsConfigController">
 
    <!-- ===================== Cabecalho ===================== -->
    <VBox spacing="2.0" styleClass="cabecalho">

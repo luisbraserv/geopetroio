@@ -16,7 +16,7 @@
             style="-fx-background-color: #f7f9fc; -fx-background: #f7f9fc;"
             stylesheets="@geopetro-design-system.css"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.demo.controllers.ChaveSettingsController">
+            fx:controller="com.geopetro.desktop.controllers.ChaveSettingsController">
 
    <content>
       <VBox spacing="16.0" style="-fx-background-color: #f7f9fc; -fx-padding: 24;">

@@ -21,7 +21,7 @@
 <BorderPane prefWidth="560.0" prefHeight="640.0"
             stylesheets="@geopetro-design-system.css"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.demo.controllers.PesoColunaSettingsController">
+            fx:controller="com.geopetro.desktop.controllers.PesoColunaSettingsController">
 
    <top>
       <VBox spacing="3.0" styleClass="cabecalho">

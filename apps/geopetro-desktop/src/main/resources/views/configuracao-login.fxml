@@ -21,7 +21,7 @@
 <VBox prefWidth="440.0" spacing="16.0" styleClass="cartao"
       stylesheets="@geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.demo.controllers.ConfiguracaoLoginController">
+      fx:controller="com.geopetro.desktop.controllers.ConfiguracaoLoginController">
    <padding><Insets top="22.0" right="24.0" bottom="22.0" left="24.0" /></padding>
 
    <VBox spacing="3.0">

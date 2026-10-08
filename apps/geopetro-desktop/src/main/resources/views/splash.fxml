@@ -11,7 +11,7 @@
       style="-fx-background-color: #010e22; -fx-border-color: #d4852f transparent transparent transparent; -fx-border-width: 4 0 0 0;"
       stylesheets="@geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.demo.controllers.SplashController">
+      fx:controller="com.geopetro.desktop.controllers.SplashController">
    <children>
 
       <ImageView fx:id="logoImage" fitWidth="140.0" preserveRatio="true" smooth="true">

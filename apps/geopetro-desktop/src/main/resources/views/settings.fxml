@@ -28,7 +28,7 @@
 <BorderPane fx:id="raiz" prefWidth="920.0" prefHeight="660.0"
             stylesheets="@settings.css"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.demo.controllers.SettingsController">
+            fx:controller="com.geopetro.desktop.controllers.SettingsController">
 
    <top>
       <VBox spacing="2.0" styleClass="cabecalho">
