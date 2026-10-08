@@ -273,12 +273,14 @@ export class SqueezeSchematicsComponent implements AfterViewInit, OnChanges, OnD
     const base          = g.base || g.cementPhysicalBaseMD;
 
     // Rateio da pasta entre tubing e anular pela capacidade de cada coluna
-    // (mesma regra do desenho "com tubing") — a soma dos dois é o volume físico.
+    // (mesma regra do desenho "com tubing") — a soma dos dois é o tampão bombeado, antes da
+    // injeção (SPEC squeeze-tampao §2.1).
     const tubeCap = Math.max(g.tubingID_m || 0, 0.0001);
     const annCap  = Math.max(g.annulusCasing_m || 0, 0.0001);
     const capWithTubing = tubeCap + annCap;
-    const cementVolTubing = (g.slurryPhysicalVolumeBbl || 0) * (tubeCap / capWithTubing);
-    const cementVolAnn    = (g.slurryPhysicalVolumeBbl || 0) * (annCap / capWithTubing);
+    const slurryPumped = g.slurryTotal || g.slurryPhysicalVolumeBbl || 0;
+    const cementVolTubing = slurryPumped * (tubeCap / capWithTubing);
+    const cementVolAnn    = slurryPumped * (annCap / capWithTubing);
 
     const annulusSegments: WellboreSchematicConfig['segments'] = [
       { key: 'completionFluid', zone: 'annulus', label: 'Fl. Completação', sub: '',                                        topM: 0,            bottomM: annSegs.find(s => s.key === 'frontWater')?.top ?? cementAnnTop, color: '#bae6fd' },

@@ -81,15 +81,16 @@ describe('squeeze da tela no motor da primária (S7)', () => {
     expect((today.resolution.hydraulics?.diagnostics ?? []).map(d => d.code)).toContain('PRIMARY_WORKSTRING_BACKFLOW');
   });
 
-  it('Bradenhead: retira até a extremidade do relatório, comprime e deixa a pasta do intervalo', () => {
+  it('Bradenhead: retira até a extremidade do relatório, comprime e deixa o tampão menos o injetado', () => {
     const result = run('bradenhead');
     const g = geom();
     const expectedEnd = retiradaTubos({ baseDepthMD: 1500, cementTopMD: 1500 - g.slurryTotal / casingCap }).openEndDepthM;
     expect(result.summary.toolMD).toBeCloseTo(expectedEnd, 9);
     expect(result.summary.cementTopBeforeSqueezeMD!).toBeGreaterThan(result.summary.toolMD!);
     expect(result.summary.injectedSlurryBbl).toBeCloseTo(2, 6);
-    // Sai a pasta a mais: fica a do intervalo, do topo de 1400 m à base.
-    expect(result.summary.cementTopAfterSqueezeMD!).toBeCloseTo(1400, 1);
+    // O tampão enche o intervalo (1400 m); os 2 bbl injetados saem dele e o topo desce
+    // 2 / Ccasing = 27,5 m (SPEC squeeze-tampao §2.1).
+    expect(result.summary.cementTopAfterSqueezeMD!).toBeCloseTo(1400 + 2 / casingCap, 1);
     expect(result.summary.maxCasingHeadPsi!).toBeGreaterThan(1100);
     expect(result.summary.highPressure).toBe(false);
   });
@@ -98,7 +99,7 @@ describe('squeeze da tela no motor da primária (S7)', () => {
     const result = run('packer', { annulusPressurePsi: 300 });
     expect(result.summary.maxCasingHeadPsi).toBe(300);
     expect(result.summary.maxToolDifferentialPsi!).toBeGreaterThan(800);
-    expect(result.summary.cementTopAfterSqueezeMD!).toBeCloseTo(1400, 1);
+    expect(result.summary.cementTopAfterSqueezeMD!).toBeCloseTo(1400 + 2 / casingCap, 1);
   });
 
   it('retentor: os blocos são a pasta que entra na formação; antes dela, só o fluido abaixo do retentor', () => {

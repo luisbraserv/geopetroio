@@ -94,18 +94,19 @@ describe('cenários de exemplo do tampão e do squeeze (S8)', () => {
     expect(page.perforationIssues).toEqual([]);
     expect(page.slurry!.density).toBeCloseTo(15.8, 6);
     expect(page.legacyScenarioNotice).toBeNull();
-    // A pasta cobre o intervalo de 100 m em 7" e soma os 3 bbl dos blocos de injeção.
+    // A pasta bombeada é o tampão de 100 m em 7"; os 3 bbl dos blocos de injeção saem dele
+    // (SPEC squeeze-tampao §2.1).
     const casing = BBL_M * 6.276 ** 2;
-    expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(100 * casing, 6);
-    expect(page.programVolumes!.slurry).toBeCloseTo(100 * casing + 3, 6);
-    // A opção "Altura do tampão" mostra a pasta bombeada, não só a do intervalo.
-    expect(page.simuladorVolumeBbl).toBeCloseTo(100 * casing + 3, 6);
-    expect(page.pastaBombeioVolumeBbl()).toBeCloseTo(100 * casing + 3, 6);
+    expect(page.geom!.slurryTotal).toBeCloseTo(100 * casing, 6);
+    expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(100 * casing - 3, 6);
+    expect(page.programVolumes!.slurry).toBeCloseTo(100 * casing, 6);
+    expect(page.simuladorVolumeBbl).toBeCloseTo(100 * casing, 6);
+    expect(page.pastaBombeioVolumeBbl()).toBeCloseTo(100 * casing, 6);
     const s = page.squeezeResult!.summary;
     expect(s.technique).toBe('bradenhead');
     expect(s.injectedSlurryBbl).toBeCloseTo(3, 6);
-    // Sai o injetado; fica a pasta do intervalo, do topo de 1780 m à base.
-    expect(s.cementTopAfterSqueezeMD!).toBeCloseTo(1780, 1);
+    // Sai o injetado do tampão: o topo desce de 1780 m para 1780 + 3 / Ccasing.
+    expect(s.cementTopAfterSqueezeMD!).toBeCloseTo(1780 + 3 / casing, 1);
     expect(s.toolMD!).toBeLessThan(s.cementTopBeforeSqueezeMD!);
     expect(s.highPressure).toBe(false);
     expect(s.lowPressureLimitPsi!).toBeGreaterThan(1200);
@@ -128,12 +129,14 @@ describe('cenários de exemplo do tampão e do squeeze (S8)', () => {
     expect(positioning.find(p => p.md === 1850)!.fracturePsi).toBeCloseTo(0.1706036745 * 15.5 * 1850, 1);
 
     // Os volumes de frente, pasta e água atrás são os da geometria da tela, e o deslocamento
-    // também: ela equilibra a pasta inteira (com os 3 bbl a injetar), como o motor (§6.3).
+    // também: ela equilibra a pasta inteira bombeada (o tampão), como o motor (§6.3).
     const g = page.geom!;
     expect(page.programVolumes!.front).toBe(g.frontPhysicalVolumeBbl);
     expect(page.programVolumes!.back).toBe(g.backPhysicalVolumeBbl);
     expect(page.programVolumes!.displacement).toBeCloseTo(g.operationalDisplacementVolumeBbl, 6);
-    expect(g.topCementAfterInjectionMD).toBeCloseTo(1780, 6);
+    expect(g.topCementAfterInjectionMD).toBeCloseTo(1780 + 3 / casing, 6);
+    // Sem coluna e antes da injeção, o tampão inteiro enche o intervalo.
+    expect(g.topCementAfterPullMD).toBeCloseTo(1780, 6);
     expect(g.topCementAfterPullMD).toBeCloseTo(s.cementTopBeforeSqueezeMD!, 6);
 
     const payload = saved(page);
@@ -144,6 +147,24 @@ describe('cenários de exemplo do tampão e do squeeze (S8)', () => {
     expect(reopened.hydraulicSim!.summary.bhpMaxPsi).toBeCloseTo(page.hydraulicSim!.summary.bhpMaxPsi, 9);
     expect(reopened.dadosRelatorio.poco).toBe('EX-SQUEEZE-01');
     dumps['squeeze'] = { nome: SQUEEZE_EXAMPLE.nome, operacao: 'squeeze', formValue: payload.formValue };
+  });
+
+  it('squeeze: injetar o bombeado inteiro ou mais bloqueia o cálculo (SPEC squeeze-tampao §2.1)', () => {
+    const page = open(SimuladorSqueezeComponent);
+    load(page, SQUEEZE_EXAMPLE);
+    expect(page.form.getRawValue().volMaxInjetadoBbl).toBeCloseTo(3, 9);
+    page.cementVolumeSource = 'receita';
+    page.manualVolumeBbl = 3;
+    page.simulate();
+    expect(page.operationIssues.map(i => i.code)).toEqual(['SQUEEZE_INJECTION_EXCEEDS_SLURRY']);
+    expect(page.geom).toBeNull();
+    expect(page.squeezeResult).toBeNull();
+    // Com 1 bbl a mais, sobra cimento no poço e o cálculo volta.
+    page.manualVolumeBbl = 4;
+    page.simulate();
+    expect(page.operationIssues).toEqual([]);
+    expect(page.schematicGeom!.slurryPhysicalVolumeBbl).toBeCloseTo(1, 9);
+    expect(page.squeezeResult).not.toBeNull();
   });
 
   it('grava os dois cenários no formato do banco quando pedido', async () => {
