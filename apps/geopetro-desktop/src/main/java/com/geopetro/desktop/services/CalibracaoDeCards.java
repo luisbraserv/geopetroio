@@ -12,8 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.config.AppPaths;
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.comum.AppPaths;
+import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;

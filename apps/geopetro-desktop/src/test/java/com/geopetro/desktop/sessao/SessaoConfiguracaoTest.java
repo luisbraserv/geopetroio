@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.sessao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,7 +18,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.configuracoes.AppSettings;
+import com.geopetro.desktop.configuracoes.SettingsService;
 import com.sun.net.httpserver.HttpServer;
 
 /**

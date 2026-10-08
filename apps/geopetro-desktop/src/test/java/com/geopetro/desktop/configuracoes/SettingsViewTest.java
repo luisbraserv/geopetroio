@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.configuracoes;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
@@ -8,8 +8,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.services.SettingsService;
-import com.geopetro.desktop.services.UnidadeSondaCatalogoService;
+import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
 
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -268,13 +267,13 @@ class SettingsViewTest {
      * lento e o faria falhar por motivos que nada tem a ver com o FXML.
      */
     private FXMLLoader novoLoader() {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/settings.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/configuracoes/settings.fxml"));
         loader.setControllerFactory(tipo -> {
             SettingsController controller = new SettingsController();
             injetar(controller, "settingsService", new SettingsService());
             injetar(controller, "catalogoService", new UnidadeSondaCatalogoService());
             // Sessao fechada: e o estado com que a tela abre, e o que o portao precisa ver.
-            injetar(controller, "sessao", new com.geopetro.desktop.services.SessaoConfiguracao(new SettingsService()));
+            injetar(controller, "sessao", new com.geopetro.desktop.sessao.SessaoConfiguracao(new SettingsService()));
             return controller;
         });
         return loader;

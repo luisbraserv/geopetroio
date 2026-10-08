@@ -1,6 +1,5 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.configuracoes;
 
-import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
 import com.geopetro.desktop.calculos.TipoMovimento;
 import org.junit.jupiter.api.Test;

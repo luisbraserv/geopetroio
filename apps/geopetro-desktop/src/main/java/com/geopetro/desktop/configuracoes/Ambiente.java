@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.configuracoes;
 
 import java.io.InputStream;
 import java.util.Optional;
@@ -7,7 +7,8 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.comum.AppPaths;
+
 
 /**
  * Em que ambiente o Desktop está rodando, e os endereços que valem nele.

@@ -1,5 +1,6 @@
 package com.geopetro.desktop.config;
 
+import com.geopetro.desktop.comum.AppPaths;
 import com.geopetro.desktop.services.PlcConnectionService;
 import javafx.application.Application;
 import javafx.application.Platform;

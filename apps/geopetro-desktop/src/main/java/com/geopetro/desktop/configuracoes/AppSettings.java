@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.configuracoes;
 
 import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
 import com.geopetro.desktop.calculos.PesoColunaConfig;

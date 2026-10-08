@@ -12,20 +12,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 
-import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.configuracoes.AppSettings;
+import com.geopetro.desktop.configuracoes.SettingsService;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Conexao;
 import com.geopetro.desktop.models.CardsDaUnidade.FormaTanque;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.models.UnidadeSondaOpcao;
-import com.geopetro.desktop.services.ConfiguracaoCardsClient;
+import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.services.CalibracaoDeCards;
+import com.geopetro.desktop.services.ConfiguracaoCardsClient;
 import com.geopetro.desktop.services.CopiaDeCards;
-import com.geopetro.desktop.services.SessaoConfiguracao;
-import com.geopetro.desktop.services.SettingsService;
-import com.geopetro.desktop.services.UnidadeSondaCatalogoService;
+import com.geopetro.desktop.sessao.ConfiguracaoLoginController;
+import com.geopetro.desktop.sessao.SessaoConfiguracao;
+import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
+import com.geopetro.desktop.sessao.UnidadeSondaOpcao;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;

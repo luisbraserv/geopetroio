@@ -526,7 +526,7 @@ public class OperationChartPdfService {
     }
 
     private Path getIndexPath() { return getArchiveDirectory().resolve("index.tsv"); }
-    private Path getArchiveDirectory() { return com.geopetro.desktop.config.AppPaths.archiveDir(); }
+    private Path getArchiveDirectory() { return com.geopetro.desktop.comum.AppPaths.archiveDir(); }
     private String cleanIndex(String value) { return Optional.ofNullable(value).orElse("").replace("\t", " ").replace("\n", " ").replace("\r", " "); }
     private String slug(String value) { String sanitized = Optional.ofNullable(value).orElse("carta-operacao").toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", ""); return sanitized.isBlank() ? "carta-operacao" : sanitized; }
     private record Point(double x, double y) {}

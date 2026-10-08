@@ -1,16 +1,15 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.configuracoes;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
-import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.UnidadeSondaOpcao;
-import com.geopetro.desktop.services.SettingsService;
-import com.geopetro.desktop.services.UnidadeSondaCatalogoService;
-import com.geopetro.desktop.services.UnidadeSondaCatalogoService.CatalogoIndisponivelException;
-import com.geopetro.desktop.services.UnidadeSondaCatalogoService.SessaoExpiradaException;
+import com.geopetro.desktop.sessao.ConfiguracaoLoginController;
+import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService.CatalogoIndisponivelException;
+import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService.SessaoExpiradaException;
+import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
+import com.geopetro.desktop.sessao.UnidadeSondaOpcao;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -46,7 +45,7 @@ public class SettingsController {
     private UnidadeSondaCatalogoService catalogoService;
 
     @Autowired
-    private com.geopetro.desktop.services.SessaoConfiguracao sessao;
+    private com.geopetro.desktop.sessao.SessaoConfiguracao sessao;
 
     @Autowired
     private org.springframework.context.ApplicationContext contexto;

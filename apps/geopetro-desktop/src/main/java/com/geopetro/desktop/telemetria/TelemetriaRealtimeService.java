@@ -18,12 +18,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.UnidadeSondaOpcao;
-import com.geopetro.desktop.services.BackendLogin;
+import com.geopetro.desktop.configuracoes.AppSettings;
+import com.geopetro.desktop.sessao.UnidadeSondaOpcao;
+import com.geopetro.desktop.sessao.BackendLogin;
 import com.geopetro.desktop.services.CardsState;
 import com.geopetro.desktop.services.EstadoDeDocumento;
-import com.geopetro.desktop.services.UnidadeSondaCatalogoService;
+import com.geopetro.desktop.sessao.UnidadeSondaCatalogoService;
 
 import jakarta.annotation.PreDestroy;
 

@@ -1,6 +1,6 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.sessao;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.*;

@@ -62,7 +62,7 @@ class EngrenagemAbreDeVerdadeTest {
 		Platform.runLater(() -> {
 			try {
 				// A MESMA montagem de openSettingsWindow().
-				FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/settings.fxml"));
+				FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/configuracoes/settings.fxml"));
 				loader.setControllerFactory(applicationContext::getBean);
 				Parent conteudo = loader.load();
 				new Scene(conteudo, 900, 700);

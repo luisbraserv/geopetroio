@@ -263,7 +263,7 @@ public class MainViewFxmlController {
 
     private void openSettingsWindow() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/settings.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/configuracoes/settings.fxml"));
             loader.setControllerFactory(applicationContext::getBean);
             Parent root = loader.load();
 

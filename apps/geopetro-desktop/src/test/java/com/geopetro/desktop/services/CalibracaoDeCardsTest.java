@@ -12,7 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;

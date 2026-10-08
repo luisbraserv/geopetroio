@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.sessao;
 
 import java.io.IOException;
 
@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 
-import com.geopetro.desktop.services.SessaoConfiguracao;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -60,7 +59,7 @@ public class ConfiguracaoLoginController {
 		}
 		try {
 			FXMLLoader loader = new FXMLLoader(
-					ConfiguracaoLoginController.class.getResource("/views/configuracao-login.fxml"));
+					ConfiguracaoLoginController.class.getResource("/views/sessao/configuracao-login.fxml"));
 			loader.setControllerFactory(contexto::getBean);
 			Parent raiz = loader.load();
 

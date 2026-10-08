@@ -18,11 +18,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.services.CardsState;
 import com.geopetro.desktop.services.CardsStore;
-import com.geopetro.desktop.services.SettingsService;
+import com.geopetro.desktop.configuracoes.SettingsService;
 
 /**
  * O canal de configuracao do Desktop, agora com <b>um</b> documento: os cards.

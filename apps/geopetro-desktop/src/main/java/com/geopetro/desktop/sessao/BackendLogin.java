@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.sessao;
 
 import java.net.URI;
 import java.net.http.HttpClient;

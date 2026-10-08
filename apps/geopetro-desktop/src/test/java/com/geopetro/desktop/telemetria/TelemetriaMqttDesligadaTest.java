@@ -8,7 +8,7 @@ import java.util.concurrent.BlockingQueue;
 
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.configuracoes.AppSettings;
 
 /**
  * O interruptor da telemetria MQTT — {@code configuracao-da-estacao.md §6}.

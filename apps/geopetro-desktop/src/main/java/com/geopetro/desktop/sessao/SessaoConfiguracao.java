@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.sessao;
 
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.configuracoes.AppSettings;
+import com.geopetro.desktop.configuracoes.SettingsService;
 
 /**
  * Sessão que libera as janelas de configuração — RN-086, RN-087.
@@ -116,7 +117,7 @@ public class SessaoConfiguracao {
 	public synchronized Resultado abrir(String usuario, String senha, String servidor) {
 		AppSettings configuracoes = settings.loadSettings();
 		// No app instalado o servidor e o de producao, definido no build: o digitado nao vale.
-		String informado = com.geopetro.desktop.config.Ambiente.coreUrl().isPresent() ? null : normalizarBase(servidor);
+		String informado = com.geopetro.desktop.configuracoes.Ambiente.coreUrl().isPresent() ? null : normalizarBase(servidor);
 		String base = informado != null ? informado
 				: normalizarBase(configuracoes == null ? null : configuracoes.getCoreUrl());
 		if (base == null) {

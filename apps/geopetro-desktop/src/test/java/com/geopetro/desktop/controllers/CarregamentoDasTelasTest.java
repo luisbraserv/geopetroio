@@ -21,8 +21,9 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.services.CalibracaoDeCards;
 import com.geopetro.desktop.services.CalibracaoDeCards.Calibracao;
+import com.geopetro.desktop.services.CalibracaoDeCards;
+import com.geopetro.desktop.sessao.ConfiguracaoLoginController;
 
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -220,7 +221,7 @@ class CarregamentoDasTelasTest {
 		};
 
 		assertDoesNotThrow(() -> {
-			var raiz = carregar("/views/configuracao-login.fxml", semInicializacao);
+			var raiz = carregar("/views/sessao/configuracao-login.fxml", semInicializacao);
 			assertNotNull(raiz);
 			assertNull(raiz.lookup("#txtServidor"), "URL do Core ficou exposta no login");
 		});

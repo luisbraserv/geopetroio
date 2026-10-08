@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.sessao;
 
 /**
  * Uma Unidade do cadastro do Geopetro-Backend, como oferecida na tela de Configuracoes.

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.configuracoes;
 
 /** Formato hexadecimal usado pelo LOGO!Soft Comfort. Nunca interpretar 0300 como decimal. */
 final class TsapPlc {

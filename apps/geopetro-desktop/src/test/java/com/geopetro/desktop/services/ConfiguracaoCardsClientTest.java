@@ -20,12 +20,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.configuracoes.AppSettings;
+import com.geopetro.desktop.configuracoes.SettingsService;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Conexao;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
+import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.sessao.SessaoConfiguracao;
 import com.sun.net.httpserver.HttpServer;
 
 /**

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.configuracoes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -12,8 +12,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.services.SettingsService;
+import com.geopetro.desktop.comum.AppPaths;
+
 
 /**
  * As URLs de produção vêm do build, não do que a estação digitou.

@@ -2,7 +2,7 @@ package com.geopetro.desktop.services;
 
 import java.nio.file.Path;
 
-import com.geopetro.desktop.config.AppPaths;
+import com.geopetro.desktop.comum.AppPaths;
 import com.geopetro.desktop.models.CardsDaUnidade;
 
 /**

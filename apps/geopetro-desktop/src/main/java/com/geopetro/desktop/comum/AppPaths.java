@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.comum;
 
 import java.nio.file.Path;
 

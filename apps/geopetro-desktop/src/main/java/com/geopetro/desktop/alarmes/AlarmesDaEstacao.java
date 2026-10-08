@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme.Faixa;
-import com.geopetro.desktop.config.AppPaths;
+import com.geopetro.desktop.comum.AppPaths;
 import com.geopetro.desktop.services.CalibracaoDeCards;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;

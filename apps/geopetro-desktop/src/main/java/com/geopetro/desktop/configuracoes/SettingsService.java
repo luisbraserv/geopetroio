@@ -1,15 +1,14 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.configuracoes;
 
-import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
-import com.geopetro.desktop.conversao.SensorPressaoConfig;
 import com.geopetro.desktop.calculos.TipoMovimento;
+import com.geopetro.desktop.comum.AppPaths;
+import com.geopetro.desktop.conversao.SensorPressaoConfig;
+import com.geopetro.desktop.sessao.SessaoConfiguracao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.config.Ambiente;
-import com.geopetro.desktop.config.AppPaths;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

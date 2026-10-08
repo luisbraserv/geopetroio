@@ -41,7 +41,7 @@ public class DashboardGrid extends Pane {
     private final boolean persist;
     public DashboardGrid() { this(true); }
     DashboardGrid(boolean persist) {
-        this(com.geopetro.desktop.config.AppPaths.configDir().resolve("dashboard-layout.properties"), persist);
+        this(com.geopetro.desktop.comum.AppPaths.configDir().resolve("dashboard-layout.properties"), persist);
     }
     DashboardGrid(java.nio.file.Path file, boolean persist) {
         this.FILE = file; this.persist = persist; setMinSize(0, 0); loadLayout();
