@@ -19,7 +19,7 @@ import com.geopetro.desktop.conversao.SensorPressaoConfig;
 import com.geopetro.desktop.models.CardsDaUnidade.Card;
 import com.geopetro.desktop.models.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.models.CardsDaUnidade.Tipo;
-import com.geopetro.desktop.models.LeituraPublicada;
+import com.geopetro.desktop.telemetria.LeituraPublicada;
 
 /**
  * Converte um ciclo de leitura do CLP nas grandezas que os cards declaram.

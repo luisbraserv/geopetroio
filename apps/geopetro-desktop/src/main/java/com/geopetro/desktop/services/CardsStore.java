@@ -18,7 +18,8 @@ public class CardsStore extends SnapshotStore<CardsDaUnidade> {
 		this(AppPaths.configDir().resolve("cards-da-unidade.json"));
 	}
 
-	CardsStore(Path arquivo) {
+	/** Arquivo explícito — usado pelos testes de cards e de telemetria, em pacotes diferentes. */
+	public CardsStore(Path arquivo) {
 		super(arquivo, CardsDaUnidade.class, "cards");
 	}
 }

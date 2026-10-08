@@ -12,7 +12,7 @@ import com.geopetro.desktop.services.LeituraDeCards;
 import com.geopetro.desktop.services.PlcConnectionService;
 import com.geopetro.desktop.services.SettingsService;
 import com.geopetro.desktop.services.SondaService;
-import com.geopetro.desktop.services.TelemetriaRealtimeService;
+import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;

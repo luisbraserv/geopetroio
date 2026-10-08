@@ -19,6 +19,7 @@ import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade.*;
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.services.*;
+import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 import javafx.animation.Animation;
 import javafx.animation.Timeline;
 import javafx.application.Platform;

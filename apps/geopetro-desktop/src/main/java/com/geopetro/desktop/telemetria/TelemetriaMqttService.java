@@ -1,7 +1,6 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.LeituraPublicada;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;

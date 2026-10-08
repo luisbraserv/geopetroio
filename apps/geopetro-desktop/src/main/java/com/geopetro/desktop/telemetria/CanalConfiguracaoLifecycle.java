@@ -1,8 +1,10 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
+import com.geopetro.desktop.services.SettingsService;
 
 /** O canal precisa funcionar mesmo antes de conectar o CLP. */
 @Component

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,7 +9,6 @@ import java.util.concurrent.BlockingQueue;
 import org.junit.jupiter.api.Test;
 
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.LeituraPublicada;
 
 /**
  * O interruptor da telemetria MQTT — {@code configuracao-da-estacao.md §6}.

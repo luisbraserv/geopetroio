@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.telemetria;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.telemetria;
 
 import java.time.Instant;
 import java.util.List;

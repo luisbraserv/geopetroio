@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -19,8 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.geopetro.desktop.models.AppSettings;
-import com.geopetro.desktop.models.EstadoAtual;
 import com.geopetro.desktop.models.UnidadeSondaOpcao;
+import com.geopetro.desktop.services.BackendLogin;
+import com.geopetro.desktop.services.CardsState;
+import com.geopetro.desktop.services.EstadoDeDocumento;
+import com.geopetro.desktop.services.UnidadeSondaCatalogoService;
 
 import jakarta.annotation.PreDestroy;
 
@@ -115,7 +118,8 @@ public class TelemetriaRealtimeService {
         this(new CardsState());
     }
 
-    TelemetriaRealtimeService(CardsState cards) {
+    /** Estado de cards explícito — usado pelos testes de cards, que ficam em outro pacote. */
+    public TelemetriaRealtimeService(CardsState cards) {
         this(cards, new UnidadeSondaCatalogoService());
     }
 

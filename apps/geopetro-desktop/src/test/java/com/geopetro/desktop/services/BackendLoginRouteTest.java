@@ -1,6 +1,7 @@
 package com.geopetro.desktop.services;
 
 import com.geopetro.desktop.models.AppSettings;
+import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.*;
 import org.springframework.test.util.ReflectionTestUtils;

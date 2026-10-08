@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -18,6 +18,9 @@ import org.junit.jupiter.api.io.TempDir;
 import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade;
 import com.geopetro.desktop.models.UnidadeSondaOpcao;
+import com.geopetro.desktop.services.CardsState;
+import com.geopetro.desktop.services.CardsStore;
+import com.geopetro.desktop.services.UnidadeSondaCatalogoService;
 
 /**
  * O cache em disco segura a estação sem rede (RN-088), mas não pode vencer o servidor.

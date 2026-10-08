@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 
 class CardsOfflineTest {
     @TempDir Path pasta;

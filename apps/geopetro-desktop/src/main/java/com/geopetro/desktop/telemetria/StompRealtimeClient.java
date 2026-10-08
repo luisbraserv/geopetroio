@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.models.EstadoAtual;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.function.Consumer;
 
@@ -140,7 +139,7 @@ class StompRealtimeClient {
 	}
 
 	/** {@code serie} sai do JSON quando ausente: so o card de stroke tem mais de uma grandeza. */
-	private static String leituraJson(com.geopetro.desktop.models.LeituraPublicada leitura) {
+	private static String leituraJson(com.geopetro.desktop.telemetria.LeituraPublicada leitura) {
 		String serie = leitura.serie() == null || leitura.serie().isBlank()
 				? ""
 				: String.format("\"serie\":\"%s\",", leitura.serie());

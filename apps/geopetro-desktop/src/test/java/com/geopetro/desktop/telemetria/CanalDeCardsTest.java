@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.telemetria;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,6 +20,9 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade;
+import com.geopetro.desktop.services.CardsState;
+import com.geopetro.desktop.services.CardsStore;
+import com.geopetro.desktop.services.SettingsService;
 
 /**
  * O canal de configuracao do Desktop, agora com <b>um</b> documento: os cards.
