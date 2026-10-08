@@ -143,12 +143,12 @@ As regras 2 a 4 são verificadas por testes ArchUnit ([D7](#7-decisões)); a 1 e
 |---|---|---|
 | `services/ApplicationService.java` | Sem nenhum uso | [FATO] |
 | READMEs de `controllers/`, `services/`, `models/`, `repositories/`, `utils/`, `views/` | Descrevem classes inexistentes ([DT-009](../../../specs/SDD/software/technical-debt.md#dt-009--documentação-divergente-do-código)) | [FATO] |
-| `resources/generated-operation-charts/` (5 PDFs + `index.tsv`) | Saída de teste de 2026-04. O app grava em `AppPaths`, não no classpath | [FATO] |
-| `resources/static/WhatsApp Image ….jpeg` | Nenhuma referência | [FATO] |
+| `resources/generated-operation-charts/` (5 PDFs + `index.tsv`) | Saída de teste de 2026-04. O app grava em `AppPaths`, não no classpath | [FATO 2026-10-08] **Não versionado** (`.gitignore`); existe só na máquina de quem builda e entra no JAR, porque o `pom.xml` inclui `*.pdf` e `*.tsv`. Apagar localmente fica a critério do dono |
+| `resources/static/WhatsApp Image ….jpeg` | Nenhuma referência | [FATO 2026-10-08] **Não versionado**; mesma situação |
 | `spring-boot-starter-webmvc`, `-webmvc-test`, `spring-boot-h2console` e as propriedades `spring.h2.console.*` | Inertes com `web-application-type=none` ([DT-015](../../../specs/SDD/software/technical-debt.md#dt-015--código-morto-inventário)) | [FATO] |
 | `spring-boot-starter-websocket` | O STOMP usa `java.net.http.WebSocket`; nenhum import Spring de messaging/web | [DECIDIDO 2026-10-08] Remover se `mvnw test` e o teste manual de tempo real passarem; senão, volta (D6) |
 | `PumpSettingsController`, `SensorSettingsController`, `pump-settings.fxml`, `sensor-settings.fxml` | Nenhum código carrega esses FXML | [DECIDIDO 2026-10-08] Remover (D3) |
-| `SondaData` e os getters sem chamador de `SondaService` | Código morto ([DT-015](../../../specs/SDD/software/technical-debt.md#dt-015--código-morto-inventário)) | [FATO] |
+| `SondaData` e os getters sem chamador de `SondaService` | Código morto ([DT-015](../../../specs/SDD/software/technical-debt.md#dt-015--código-morto-inventário)) | [FATO 2026-10-08] Foi além dos getters: peso, torques, status, `atualizarDados`, `atualizarValoresConvertidos` e `updateFlowRate` também não tinham chamador. `SondaService` ficou só com grandezas do ciclo e valores brutos |
 
 ## 6. O que **não** pode mudar
 
