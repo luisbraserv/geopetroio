@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.app;
 
 import com.geopetro.desktop.cards.CardsConfigController;
 import com.geopetro.desktop.aquisicao.PlcConnectionService;

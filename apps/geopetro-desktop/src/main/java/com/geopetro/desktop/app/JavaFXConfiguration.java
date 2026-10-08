@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.app;
 
 import com.geopetro.desktop.comum.AppPaths;
 import com.geopetro.desktop.aquisicao.PlcConnectionService;
@@ -64,7 +64,7 @@ public class JavaFXConfiguration extends Application {
 
     private void showSplash() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/splash.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/app/splash.fxml"));
             Parent root = loader.load();
 
             splashStage = new Stage(StageStyle.UNDECORATED);

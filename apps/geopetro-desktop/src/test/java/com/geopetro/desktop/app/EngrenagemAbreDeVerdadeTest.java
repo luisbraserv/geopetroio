@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.app;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

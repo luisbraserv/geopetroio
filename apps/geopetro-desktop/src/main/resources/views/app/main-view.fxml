@@ -16,7 +16,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane minHeight="0.0" minWidth="0.0" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: #f7f9fc;" stylesheets="@geopetro-design-system.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.geopetro.desktop.controllers.MainViewFxmlController">
+<BorderPane minHeight="0.0" minWidth="0.0" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: #f7f9fc;" stylesheets="@../geopetro-design-system.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.geopetro.desktop.app.MainViewFxmlController">
    <top>
       <VBox>
          <children>
@@ -24,7 +24,7 @@
                <children>
                   <!-- Barra clara: o logo tem texto azul-marinho e a identidade nao traz versao invertida. -->
                   <ImageView fitHeight="32.0" preserveRatio="true" smooth="true">
-                     <image><Image url="@../icon/logo2-inverso.png" /></image>
+                     <image><Image url="@../../icon/logo2-inverso.png" /></image>
                   </ImageView>
                   <Separator orientation="VERTICAL" style="-fx-opacity: 0.35;" />
 

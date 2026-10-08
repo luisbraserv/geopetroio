@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.app;
 
 import javafx.geometry.Rectangle2D;
 

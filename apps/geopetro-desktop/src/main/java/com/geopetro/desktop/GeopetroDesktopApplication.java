@@ -1,7 +1,7 @@
 package com.geopetro.desktop;
 
-import com.geopetro.desktop.config.InstanciaUnica;
-import com.geopetro.desktop.config.JavaFXConfiguration;
+import com.geopetro.desktop.app.InstanciaUnica;
+import com.geopetro.desktop.app.JavaFXConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 

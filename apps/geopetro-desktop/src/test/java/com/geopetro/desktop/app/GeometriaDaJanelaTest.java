@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.app;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

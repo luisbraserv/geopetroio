@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.app;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +80,7 @@ class MenuEmTelaPequenaTest {
 
 		Platform.runLater(() -> {
 			try {
-				FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/main-view.fxml"));
+				FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/app/main-view.fxml"));
 				loader.setControllerFactory(tipo -> new MainViewFxmlController() {
 					@Override
 					public void initialize() {

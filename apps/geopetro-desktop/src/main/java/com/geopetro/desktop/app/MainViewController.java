@@ -1,6 +1,5 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.app;
 
-import com.geopetro.desktop.controllers.MainViewFxmlController;
 import com.geopetro.desktop.aquisicao.PlcConnectionService;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -49,11 +48,11 @@ public class MainViewController {
     public void show() {
         try {
             FXMLLoader loader = new FXMLLoader();
-            java.net.URL fxmlLocation = MainViewController.class.getResource("/views/main-view.fxml");
+            java.net.URL fxmlLocation = MainViewController.class.getResource("/views/app/main-view.fxml");
 
             if (fxmlLocation == null) {
-                logger.error("FXML nao encontrado em: /views/main-view.fxml");
-                fxmlLocation = Thread.currentThread().getContextClassLoader().getResource("views/main-view.fxml");
+                logger.error("FXML nao encontrado em: /views/app/main-view.fxml");
+                fxmlLocation = Thread.currentThread().getContextClassLoader().getResource("views/app/main-view.fxml");
                 if (fxmlLocation == null) {
                     logger.error("FXML ainda nao encontrado!");
                     return;

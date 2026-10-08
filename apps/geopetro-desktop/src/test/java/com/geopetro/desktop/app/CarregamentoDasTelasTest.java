@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.app;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -243,6 +243,6 @@ class CarregamentoDasTelasTest {
 			}
 		};
 
-		assertDoesNotThrow(() -> assertNotNull(carregar("/views/main-view.fxml", semInicializacao)));
+		assertDoesNotThrow(() -> assertNotNull(carregar("/views/app/main-view.fxml", semInicializacao)));
 	}
 }

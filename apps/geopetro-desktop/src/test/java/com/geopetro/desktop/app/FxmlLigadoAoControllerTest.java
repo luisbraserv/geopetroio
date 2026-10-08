@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.app;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

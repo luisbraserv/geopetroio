@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.app;
 
 import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;

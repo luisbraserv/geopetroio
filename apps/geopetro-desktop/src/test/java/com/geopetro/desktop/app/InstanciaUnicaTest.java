@@ -1,4 +1,4 @@
-package com.geopetro.desktop.config;
+package com.geopetro.desktop.app;
 
 import java.io.IOException;
 import java.io.OutputStream;
