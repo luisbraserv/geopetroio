@@ -123,7 +123,7 @@ public class MainViewFxmlController {
             setActiveMenu(btnGraficos);
         });
         btnOperationChart.setOnAction(event -> {
-            loadPage("/views/operation-chart.fxml");
+            loadPage("/views/cartaoperacao/operation-chart.fxml");
             setActiveMenu(btnOperationChart);
         });
         btnPlcConnection.setOnAction(event -> togglePlcConnection());

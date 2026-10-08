@@ -9,9 +9,9 @@
 <?import javafx.scene.text.Font?>
 
 <BorderPane style="-fx-background-color: #f7f9fc;"
-            stylesheets="@geopetro-design-system.css"
+            stylesheets="@../geopetro-design-system.css"
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.geopetro.desktop.controllers.ChartPreviewController">
+            fx:controller="com.geopetro.desktop.cartaoperacao.ChartPreviewController">
 
    <top>
       <VBox style="-fx-background-color: #051833; -fx-padding: 12 20;">

@@ -1,7 +1,5 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.cartaoperacao;
 
-import com.geopetro.desktop.models.GeneratedOperationChart;
-import com.geopetro.desktop.services.OperationChartPdfService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -58,7 +56,7 @@ public class OperationChartController {
 
     private void openNewChartWindow() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/generate-operation-chart.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/cartaoperacao/generate-operation-chart.fxml"));
             loader.setControllerFactory(applicationContext::getBean);
             Parent root = loader.load();
             GenerateOperationChartController controller = loader.getController();

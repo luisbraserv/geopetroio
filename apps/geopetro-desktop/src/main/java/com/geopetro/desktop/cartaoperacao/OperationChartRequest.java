@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.cartaoperacao;
 
 import java.time.LocalDateTime;
 import java.util.List;

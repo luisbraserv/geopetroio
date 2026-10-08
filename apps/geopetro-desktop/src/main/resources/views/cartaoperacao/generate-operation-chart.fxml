@@ -13,9 +13,9 @@
 <?import javafx.scene.text.Font?>
 
 <VBox prefWidth="540.0" prefHeight="470.0" spacing="14.0" style="-fx-background-color: #ffffff; -fx-padding: 22;"
-      stylesheets="@geopetro-design-system.css"
+      stylesheets="@../geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.geopetro.desktop.controllers.GenerateOperationChartController">
+      fx:controller="com.geopetro.desktop.cartaoperacao.GenerateOperationChartController">
 
    <Label text="Gerar nova carta"><font><Font name="System Bold" size="20.0" /></font></Label>
 

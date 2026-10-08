@@ -1,8 +1,6 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.cartaoperacao;
 
 import com.geopetro.desktop.historico.SeriesLocais;
-import com.geopetro.desktop.models.GeneratedOperationChart;
-import com.geopetro.desktop.models.OperationChartRequest;
 import org.springframework.stereotype.Service;
 
 import java.awt.Graphics2D;

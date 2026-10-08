@@ -1,6 +1,5 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.cartaoperacao;
 
-import com.geopetro.desktop.models.OperationChartRequest;
 import com.geopetro.desktop.historico.SeriesLocais;
 
 import javafx.fxml.FXML;
