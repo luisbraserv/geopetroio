@@ -22,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import com.geopetro.desktop.monitoramento.MonitoringController;
+
 /**
  * O bug de campo: <i>"em telas pequenas o menu ta sumindo"</i>.
  *
@@ -146,7 +148,7 @@ class MenuEmTelaPequenaTest {
 			try {
 				// ⚠️ Recortar sem rolagem trocaria um defeito por outro: a barra voltaria, e a
 				// segunda fileira de cards ficaria invisivel e inalcancavel.
-				Node raiz = new FXMLLoader(getClass().getResource("/views/monitoring.fxml")) {
+				Node raiz = new FXMLLoader(getClass().getResource("/views/monitoramento/monitoring.fxml")) {
 					{
 						setControllerFactory(tipo -> new MonitoringController() { @Override public void initialize() {} });
 					}

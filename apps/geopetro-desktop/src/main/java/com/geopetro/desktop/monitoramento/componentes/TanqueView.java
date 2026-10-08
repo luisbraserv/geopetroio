@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.monitoramento.componentes;
 
 import com.geopetro.desktop.cards.CardsDaUnidade.FormaTanque;
 

@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.monitoramento;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -21,7 +21,8 @@ import com.geopetro.desktop.cards.CardsDaUnidade.*;
 import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.configuracoes.SettingsService;
-import com.geopetro.desktop.services.*;
+import com.geopetro.desktop.monitoramento.componentes.TanqueView;
+import com.geopetro.desktop.monitoramento.componentes.TermometroView;
 import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 import javafx.animation.Animation;
 import javafx.animation.Timeline;
@@ -138,7 +139,7 @@ class MonitoringControllerTest {
 
     private record Tela(Parent root, MonitoringController controller) {}
     private Tela load(AnnotationConfigApplicationContext context) throws Exception {
-        var loader = new FXMLLoader(getClass().getResource("/views/monitoring.fxml"));
+        var loader = new FXMLLoader(getClass().getResource("/views/monitoramento/monitoring.fxml"));
         loader.setControllerFactory(context::getBean);
         return new Tela(loader.load(), loader.getController());
     }

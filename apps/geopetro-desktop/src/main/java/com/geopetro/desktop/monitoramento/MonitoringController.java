@@ -1,8 +1,11 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.monitoramento;
 
 import com.geopetro.desktop.alarmes.AlarmeLocalDialog;
 import com.geopetro.desktop.alarmes.AlarmesLocais;
 import com.geopetro.desktop.alarmes.AvaliadorLocalDeAlarme;
+import com.geopetro.desktop.aquisicao.LeituraDeCards;
+import com.geopetro.desktop.aquisicao.PlcConnectionService;
+import com.geopetro.desktop.aquisicao.SondaService;
 import com.geopetro.desktop.cards.CardsConfigController;
 import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.geopetro.desktop.cards.calibracao.CalibracaoCardDialog;
@@ -10,10 +13,8 @@ import com.geopetro.desktop.configuracoes.AppSettings;
 import com.geopetro.desktop.configuracoes.SettingsService;
 import com.geopetro.desktop.conversao.ConversaoTanque;
 import com.geopetro.desktop.conversao.ConversaoTemperatura;
-import com.geopetro.desktop.services.CardsDoMonitoramento;
-import com.geopetro.desktop.aquisicao.LeituraDeCards;
-import com.geopetro.desktop.aquisicao.PlcConnectionService;
-import com.geopetro.desktop.aquisicao.SondaService;
+import com.geopetro.desktop.monitoramento.componentes.TanqueView;
+import com.geopetro.desktop.monitoramento.componentes.TermometroView;
 import com.geopetro.desktop.sessao.ConfiguracaoLoginController;
 import com.geopetro.desktop.telemetria.TelemetriaRealtimeService;
 import javafx.animation.KeyFrame;

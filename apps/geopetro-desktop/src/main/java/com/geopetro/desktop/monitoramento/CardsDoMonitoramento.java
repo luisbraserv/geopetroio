@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.monitoramento;
 
 import java.util.ArrayList;
 import java.util.Comparator;

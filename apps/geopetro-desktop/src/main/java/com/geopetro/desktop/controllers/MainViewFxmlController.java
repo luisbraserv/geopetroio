@@ -59,7 +59,7 @@ public class MainViewFxmlController {
     private PlcConnectionService plcConnectionService;
 
     private Stage stage;
-    private String currentPage = "/views/monitoring.fxml";
+    private String currentPage = "/views/monitoramento/monitoring.fxml";
 
     @FXML
     private StackPane contentPane;
@@ -104,7 +104,7 @@ public class MainViewFxmlController {
         plcConnectionService.setStatusListener(connected -> Platform.runLater(this::updatePlcStatus));
         updatePlcStatus();
         startInternetChecker();
-        loadPage("/views/monitoring.fxml");
+        loadPage("/views/monitoramento/monitoring.fxml");
         setActiveMenu(btnMonitoring);
     }
 
@@ -116,7 +116,7 @@ public class MainViewFxmlController {
         btnSettings.setOnAction(event -> openSettingsWindow());
         btnCards.setOnAction(event -> openCardsWindow());
         btnMonitoring.setOnAction(event -> {
-            loadPage("/views/monitoring.fxml");
+            loadPage("/views/monitoramento/monitoring.fxml");
             setActiveMenu(btnMonitoring);
         });
         btnGraficos.setOnAction(event -> {

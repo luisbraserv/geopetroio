@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.monitoramento;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;

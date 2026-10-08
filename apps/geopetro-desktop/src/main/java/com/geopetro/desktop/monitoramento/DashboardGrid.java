@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.monitoramento;
 
 import javafx.scene.Node;
 import javafx.scene.Group;

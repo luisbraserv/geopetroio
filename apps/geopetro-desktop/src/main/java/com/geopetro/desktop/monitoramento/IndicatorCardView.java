@@ -1,4 +1,4 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.monitoramento;
 
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -7,6 +7,9 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Scale;
+
+import com.geopetro.desktop.monitoramento.componentes.TanqueView;
+import com.geopetro.desktop.monitoramento.componentes.TermometroView;
 
 /** Reflows the contents in the actual tile dimensions, without shrinking a fixed-size card. */
 class IndicatorCardView extends Pane {
