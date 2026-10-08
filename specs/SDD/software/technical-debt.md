@@ -199,8 +199,8 @@ fluxo do CLP) é **correto e valioso** — foi usado e validado neste levantamen
 `StrokePorMinutoService` tem javadoc, comentários e nomes de método afirmando *"últimos 10 segundos"*,
 mas `JANELA_TEMPO_MS = 60000` (**60 segundos**).
 
-**[FATO]** Os READMEs de pacote do Geopetro-Desktop descrevem uma arquitetura CRUD genérica que **não
-corresponde a nenhuma classe real**, e referenciam três arquivos que **não existem**.
+✅ **Resolvido 2026-10-08:** os READMEs de pacote do Geopetro-Desktop, que descreviam uma arquitetura
+CRUD inexistente, foram removidos na [reorganização por assunto](../../../apps/geopetro-desktop/specs/estrutura-de-pacotes.md).
 
 ---
 
@@ -284,11 +284,11 @@ ao relatório se não for capturado por uma relação entre campos.
 - ⏳ Checkbox "Lembrar acesso" sem binding; link "Esqueci minha senha" apontando para `/`
 
 ### Geopetro-Desktop [FATO]
-- `SondaData.calcularVazao()` — com TODO explícito, nunca usado
-- Getters de `SondaService` (`getPeso`, `getPressao01..03`, `getStatus`, `obterDadosAtuais`) — sem chamador
-- Comentários de campo em `SondaData.java:17-20` **incorretos** quanto ao mapeamento de sensores
-- `writeSinglePagePdf`, `buildChartSlots`, `drawTimeLabels` — definidos, nunca chamados
-- `spring-boot-starter-webmvc`, `-webmvc-test`, `spring-boot-h2console` com `web-application-type=none`
+- ✅ **Resolvido 2026-10-08:** `SondaData` (com `calcularVazao()` e os comentários de campo incorretos),
+  os getters e métodos de atualização sem chamador de `SondaService`, `ApplicationService`, as telas de
+  bomba e de sensor, e as dependências `spring-boot-starter-webmvc`, `-webmvc-test`, `-websocket` e
+  `spring-boot-h2console` — ver [reorganização por assunto](../../../apps/geopetro-desktop/specs/history/estrutura-de-pacotes-2026-10.md)
+- ⏳ `writeSinglePagePdf`, `buildChartSlots`, `drawTimeLabels` em `OperationChartPdfService` — definidos, nunca chamados
 
 ### Horus [FATO]
 - `H2DatabaseService` — nunca instanciada; dependência H2 inerte

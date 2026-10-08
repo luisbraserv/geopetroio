@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.SVGPath?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane minHeight="0.0" minWidth="0.0" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-color: #f7f9fc;" stylesheets="@../geopetro-design-system.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.geopetro.desktop.app.MainViewFxmlController">
+   <top>
+      <VBox>
+         <children>
+            <HBox alignment="CENTER_LEFT" minHeight="60.0" prefHeight="60.0" spacing="14.0" styleClass="barra-marca-nav">
+               <children>
+                  <!-- Barra clara: o logo tem texto azul-marinho e a identidade nao traz versao invertida. -->
+                  <ImageView fitHeight="32.0" preserveRatio="true" smooth="true">
+                     <image><Image url="@../../icon/logo2-inverso.png" /></image>
+                  </ImageView>
+                  <Separator orientation="VERTICAL" style="-fx-opacity: 0.35;" />
+
+                  <Button fx:id="btnMonitoring" mnemonicParsing="false" text="Monitoramento" />
+                  <Button fx:id="btnGraficos" mnemonicParsing="false" text="Graficos" />
+                  <Button fx:id="btnOperationChart" mnemonicParsing="false" text="Carta Operacao" />
+
+                  <Region HBox.hgrow="ALWAYS" />
+                  <!--
+                     Cards fica ao lado da engrenagem, e nao dentro dela: as duas exigem ADMIN ou
+                     SUPORTE (RN-086, RN-086b), mas alcancam coisas diferentes — Configuracoes
+                     ajusta ESTA estacao, Cards altera o que a UNIDADE le.
+
+                     Icone em vez de texto: emparelha com a engrenagem ao lado, e o rotulo textual
+                     desequilibrava a barra.
+
+                     SVG, e nao emoji nem glifo de fonte. Emoji colorido renderiza diferente por
+                     plataforma e vira tofu quando a fonte nao o tem; o glifo "quadrado dividido"
+                     existe em toda fonte, mas sai bem menor que a engrenagem ao lado e fica
+                     apagado. O SVG desenha nitido no tamanho que se pedir, e e o mesmo conjunto
+                     (Material Design) que os icones dos cards ja usam.
+                  -->
+                  <Button fx:id="btnCards" mnemonicParsing="false" prefHeight="34.0" prefWidth="42.0" styleClass="botao-icone-inverso">
+                     <graphic>
+                        <!--
+                           O traco do desenho ocupa 18 dos 24 do viewbox, entao escala 1.0 sai MENOR
+                           que a engrenagem ao lado (~20px). 0.95 leva a marca a ~17px, proximo da engrenagem sem dominar a barra; a
+                           largura do botao acompanha para o icone nao encostar na borda.
+                        -->
+                        <SVGPath content="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3"
+                                 fill="rgba(255,255,255,0.92)" scaleX="0.95" scaleY="0.95" />
+                     </graphic>
+                     <tooltip><Tooltip text="Cards da unidade" /></tooltip>
+                  </Button>
+                  <Button fx:id="btnSettings" mnemonicParsing="false" prefHeight="34.0" prefWidth="38.0" styleClass="botao-icone-inverso" text="⚙" />
+                  <HBox alignment="CENTER" spacing="8.0">
+                     <children>
+                        <Label visible="false" managed="false" fx:id="plcStatusLabel" text="PLC Desconectado" styleClass="texto-inverso">
+                           <font>
+                              <Font name="System Bold" size="13.0" />
+                           </font>
+                        </Label>
+                        <Circle fx:id="plcStatusCircle" fill="#d92d20" radius="6.0" />
+                     </children>
+                  </HBox>
+                  <HBox alignment="CENTER" spacing="8.0" style="-fx-padding: 0 0 0 16;">
+                     <children>
+                        <Label fx:id="internetStatusLabel" text="Sem internet" styleClass="texto-inverso">
+                           <font>
+                              <Font name="System Bold" size="13.0" />
+                           </font>
+                        </Label>
+                        <Circle fx:id="internetStatusCircle" fill="#d92d20" radius="6.0" />
+                     </children>
+                  </HBox>
+               </children>
+            </HBox>
+         </children>
+      </VBox>
+   </top>
+   <center>
+      <!--
+         minHeight/minWidth 0 e alignment TOP_CENTER nao sao enfeite: sao o conserto do menu que
+         sumia em tela pequena.
+
+         Sem eles, o StackPane herda o minimo da pagina que carrega. Quando esse minimo passa do
+         espaco que sobra — 6 cards numa tela de 720px, por exemplo —, o BorderPane entrega ao
+         centro a altura MINIMA que ele pediu, maior que o disponivel, e centraliza o excedente:
+         layoutY vira NEGATIVO (-104 medido em cena de 600px). Como o StackPane tem fundo opaco, ele
+         sobe e PINTA POR CIMA da barra de marca. A barra continuava la, com 60px, em y=0 — apenas
+         coberta. Por isso o sintoma so aparecia em tela pequena, e por isso o "Conectar" (bottom,
+         desenhado depois do centro) sobrevivia enquanto o menu sumia.
+
+         Com minimo 0 o centro aceita a altura que sobrar e nunca sobe. O recorte que o
+         MainViewFxmlController instala fecha a porta para qualquer pagina futura.
+      -->
+      <StackPane minHeight="0" minWidth="0"><StackPane fx:id="contentPane" minHeight="0.0" minWidth="0.0" style="-fx-background-color: #f7f9fc;" BorderPane.alignment="CENTER" alignment="TOP_CENTER">
+         <padding>
+            <Insets bottom="8.0" left="12.0" right="12.0" top="8.0" />
+         </padding>
+      </StackPane>
+      <Button fx:id="btnPlcConnection" mnemonicParsing="false" prefHeight="40" maxWidth="150" maxHeight="40" text="Conectar" StackPane.alignment="BOTTOM_RIGHT">
+        <StackPane.margin><Insets right="18" bottom="12" /></StackPane.margin>
+      </Button></StackPane>
+   </center>
+</BorderPane>
