@@ -1,6 +1,6 @@
 # Estrutura de pacotes — Geopetro-Desktop
 
-> **Estado: VIGENTE** desde 2026-10-08 · teste manual com o app empacotado **[PENDENTE]** (§6)
+> **Estado: VIGENTE** desde 2026-10-08
 >
 > Convenção de marcação: [SDD](../../../specs/SDD/README.md#convenção-de-marcação) ·
 > [Histórico da reorganização](history/estrutura-de-pacotes-2026-10.md)
@@ -144,8 +144,8 @@ antigo.
 2. **[FATO 2026-10-08]** Nenhuma ocorrência de `com.example` no Desktop e nenhum pacote vazio.
 3. **[FATO 2026-10-08]** Todo `@caminho` em FXML/CSS, todo `"/views/..."` e `"/icon/..."` no Java e todo
    `fx:controller` aponta para algo que existe (58 referências).
-4. **[PENDENTE]** Teste manual com o app **empacotado** sobre uma instalação existente
-   (`.geopetro-io` com dados):
+4. **[FATO 2026-10-08]** Teste manual com o app **empacotado** (instalador 0.1.0.13) sobre uma
+   instalação existente (`.geopetro-io` com dados), aprovado pela equipe:
    - splash → janela principal → dashboard com os cards da Unidade;
    - menu Gráficos mostra o histórico já gravado;
    - Carta de Operação gera PDF com logo;

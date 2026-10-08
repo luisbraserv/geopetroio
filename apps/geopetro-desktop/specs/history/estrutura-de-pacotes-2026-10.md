@@ -59,6 +59,10 @@ Linha de base: **284 testes**, 13 pulados. Cada passo terminou com a suíte verd
 Pausas 1 e 2: a equipe seguiu para o bloco seguinte sem relatar problema. O roteiro manual não foi
 registrado aqui.
 
+Pausa 3: instalador **0.1.0.13** gerado do branch e conferido por dentro (nenhuma classe de
+`com.example`, nenhum PDF de teste, os 13 FXML nas pastas novas, sem WebMVC/WebSocket/H2 Console).
+Instalado sobre a versão anterior, com dados, e aprovado pela equipe no roteiro completo da spec.
+
 ## O que apareceu no caminho
 
 - **`SondaService` maior que o previsto como morto.** Além dos getters apontados em DT-015, peso,
