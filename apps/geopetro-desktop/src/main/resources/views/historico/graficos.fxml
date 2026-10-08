@@ -14,9 +14,9 @@
 <?import javafx.scene.text.Font?>
 
 <VBox spacing="0" style="-fx-background-color: #f7f9fc;"
-      stylesheets="@geopetro-design-system.css"
+      stylesheets="@../geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.geopetro.desktop.controllers.GraficosController">
+      fx:controller="com.geopetro.desktop.historico.GraficosController">
 
    <!-- Filtros -->
    <VBox spacing="12.0" style="-fx-background-color: white; -fx-padding: 16 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 2);">

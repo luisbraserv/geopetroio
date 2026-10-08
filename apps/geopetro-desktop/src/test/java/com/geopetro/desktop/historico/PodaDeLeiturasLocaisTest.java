@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.historico;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -12,7 +12,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.geopetro.desktop.repositories.LeituraLocalRepository;
 
 /**
  * A poda do histórico local.

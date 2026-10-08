@@ -17,7 +17,7 @@ import com.geopetro.desktop.calculos.StrokeCalculatorService;
 import com.geopetro.desktop.models.AppSettings;
 import com.geopetro.desktop.models.CardsDaUnidade.*;
 import com.geopetro.desktop.models.CardsDaUnidade;
-import com.geopetro.desktop.repositories.LeituraLocalRepository;
+import com.geopetro.desktop.historico.LeituraLocalRepository;
 import com.sourceforge.snap7.moka7.S7;
 import com.sourceforge.snap7.moka7.S7Client;
 

@@ -119,7 +119,7 @@ public class MainViewFxmlController {
             setActiveMenu(btnMonitoring);
         });
         btnGraficos.setOnAction(event -> {
-            loadPage("/views/graficos.fxml");
+            loadPage("/views/historico/graficos.fxml");
             setActiveMenu(btnGraficos);
         });
         btnOperationChart.setOnAction(event -> {

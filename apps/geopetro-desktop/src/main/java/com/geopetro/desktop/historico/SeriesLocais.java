@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.historico;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -9,8 +9,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.models.LeituraLocal;
-import com.geopetro.desktop.repositories.LeituraLocalRepository;
 
 /**
  * Lê o H2 local e agrupa por série — a fonte da tela de gráficos e da carta de operação.

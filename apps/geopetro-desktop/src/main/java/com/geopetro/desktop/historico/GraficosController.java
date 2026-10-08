@@ -1,6 +1,5 @@
-package com.geopetro.desktop.controllers;
+package com.geopetro.desktop.historico;
 
-import com.geopetro.desktop.services.SeriesLocais;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;

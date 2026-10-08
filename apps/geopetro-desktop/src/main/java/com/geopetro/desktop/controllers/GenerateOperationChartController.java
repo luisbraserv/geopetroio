@@ -43,7 +43,7 @@ public class GenerateOperationChartController {
     @FXML private TextField  timeEnd;
     @FXML private TextField  txtTitle;
     @FXML private TextField  txtWellName;
-    @Autowired private com.geopetro.desktop.services.SeriesLocais seriesLocais;
+    @Autowired private com.geopetro.desktop.historico.SeriesLocais seriesLocais;
 
     @FXML private VBox       painelSeries;
     @FXML private Button     btnGenerate;

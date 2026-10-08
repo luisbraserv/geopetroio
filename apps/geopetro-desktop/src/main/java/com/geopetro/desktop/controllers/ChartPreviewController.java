@@ -1,7 +1,7 @@
 package com.geopetro.desktop.controllers;
 
 import com.geopetro.desktop.models.OperationChartRequest;
-import com.geopetro.desktop.services.SeriesLocais;
+import com.geopetro.desktop.historico.SeriesLocais;
 
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;

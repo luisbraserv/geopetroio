@@ -1,4 +1,4 @@
-package com.geopetro.desktop.services;
+package com.geopetro.desktop.historico;
 
 import java.time.LocalDateTime;
 
@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.geopetro.desktop.repositories.LeituraLocalRepository;
 
 /**
  * Apaga do H2 local o que passou do prazo de retenção.

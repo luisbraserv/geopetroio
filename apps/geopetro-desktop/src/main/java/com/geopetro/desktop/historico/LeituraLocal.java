@@ -1,4 +1,4 @@
-package com.geopetro.desktop.models;
+package com.geopetro.desktop.historico;
 
 import java.time.LocalDateTime;
 
