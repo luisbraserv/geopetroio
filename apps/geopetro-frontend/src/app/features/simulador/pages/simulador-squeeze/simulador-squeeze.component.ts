@@ -590,12 +590,23 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
       this.squeezeInputsSnapshot = inputs;
       // Geometria base (volume do simulador) — sempre alimenta "1. Receita da Simulação" e a hidráulica
       this.geom = this.squeezeCalc.calcVolumes(inputs, perfs, null, well);
-      // A opção "Altura do tampão" mostra a pasta bombeada: a do intervalo e a que vai para a formação.
+      // A opção "Altura do tampão" mostra a pasta bombeada: o tampão, de onde sai o injetado.
       this.simuladorVolumeBbl = this.geom.slurryTotal;
       // Geometria SÓ do esquemático/relatório: segue a escolha do seletor, de forma independente
       this.schematicGeom = (this.cementVolumeSource === 'receita' && this.manualVolumeBbl > 0)
         ? this.squeezeCalc.calcVolumes(inputs, perfs, this.manualVolumeBbl, well)
         : this.geom;
+      // O injetado sai da pasta bombeada; se não sobrar cimento no poço, não há o que simular
+      // (SPEC squeeze-tampao §2.1). O retentor tem conta própria e fica fora.
+      const semCimento = this.technique === 'retainer' ? undefined
+        : [this.geom, this.schematicGeom].find(g => g.expectedLoss > 0 && g.expectedLoss >= g.slurryTotal);
+      if (semCimento) {
+        this.operationIssues.push({ level: 'error', code: 'SQUEEZE_INJECTION_EXCEEDS_SLURRY',
+          message: `O volume a injetar (${this.fmt(semCimento.expectedLoss)} bbl) é maior ou igual à pasta bombeada `
+            + `(${this.fmt(semCimento.slurryTotal)} bbl): não sobraria cimento no poço. Aumente o tampão ou reduza a injeção.` });
+        this.invalidateSimulation();
+        return;
+      }
       this.wellOverlays = this.buildWellOverlays(this.schematicGeom);
       this.wellWorkString = workString3d(v.tubingOD, v.tubingID);
       this.reverseCirculation = this.buildReverseCirculationResult(v);
@@ -831,9 +842,8 @@ export class SimuladorSqueezeComponent extends SimuladorBaseComponent implements
   }
 
   /**
-   * Pasta bombeada, com a que vai para a formação, pelo volume do seletor. Com o volume do
-   * simulador, a do programa: no retentor, a do trecho isolado (§6.6). Antes era a do
-   * intervalo só, e a receita do relatório saía sem o volume a injetar.
+   * Pasta bombeada pelo volume do seletor; o volume injetado sai dela (§2.1). Com o volume
+   * do simulador, a do programa: no retentor, a do trecho isolado (§6.6).
    */
   pastaBombeioVolumeBbl(): number {
     if (this.cementVolumeSource !== 'receita' && this.programVolumes) return this.programVolumes.slurry;

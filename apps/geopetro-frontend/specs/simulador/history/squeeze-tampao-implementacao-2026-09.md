@@ -556,3 +556,33 @@ degraus menores (hesitação) ficam como estão. Logo abaixo, a maior pressão d
 fraturar calculada, com "usar", em vermelho quando a pressão digitada passa dela. Os 2000 psi que
 o PIR-259D (id 8) mostrava eram o padrão dos blocos da tela nova, não um valor do programa
 (que pede no máximo 1500 psi).
+
+### 12.15 Injetado sai do tampão (2026-10-08)
+
+**[DECIDIDO 2026-10-08, pelo usuário]** Na Bradenhead e no packer, a pasta bombeada passa a ser
+o tampão do intervalo, e o volume a injetar sai de dentro dela. Substitui a regra de §12.12, em que
+o injetado vinha a mais. Os esquemáticos com e sem tubing mostram o tampão antes da injeção; o
+estado depois da injeção continua no 3D, no topo após o squeeze e no relatório. Injetar o bombeado
+inteiro ou mais é erro que bloqueia o cálculo (`SQUEEZE_INJECTION_EXCEEDS_SLURRY`). O retentor não
+muda.
+
+| Arquivo | Mudança |
+|---|---|
+| `squeeze-calculo.service.ts` | `slurryTotal` = volume do intervalo (ou o informado); `slurryPhysicalVolumeBbl` = bombeado − injetado. O cimento físico assenta na base também sem contexto de poço (antes ficava preso ao topo do intervalo, o que só coincidia com a base pela regra antiga) |
+| `squeeze-schematics.component.ts` | Rateio tubing/anular do desenho de poço pela pasta bombeada, como os demais segmentos |
+| `simulador-squeeze.component.*` | Erro de bloqueio; dica "X bbl vão para a formação; ficam Y bbl no poço"; métrica "Pasta após injeção" |
+| `squeeze-engine.ts` | Só comentários: o motor já bombeia `geom.slurryTotal` e retira o injetado nos canhoneados |
+
+**Conferência independente.** O motor simula o transporte por conta própria e chegou ao topo
+previsto pela regra: no cenário de 5½" (ID 4,778", 0,07276 bbl/m), 1400 + 2 / 0,07276 =
+1427,49 m. No SMC-29, o deslocamento voltou aos 26,2 bbl que o teste já registrava para
+"equilibrar só a pasta do intervalo".
+
+**Testes alterados** (expectativas recalculadas pela regra, não copiadas da saída):
+`squeeze-calculo.service.spec` (7-PIR-259D-AL, SMC-29, + caso de injetado maior que o tampão),
+`squeeze-multiphase.spec`, `squeeze-engine.spec`, `squeeze-tampao-examples.spec` (+ bloqueio na
+tela), `squeeze-field-mina02.spec` (caso hipotético; topo depois da injeção a 419,7 m, acima dos
+canhoneados de 430 m) e `geometry-validation.spec`.
+
+Verificação: **893 testes aprovados em 95 arquivos** (linha de base: 891, com 1 timeout
+intermitente em `primary-field-mina02.spec`, que passou na execução final) e `tsc` do app sem erros.

@@ -21,8 +21,8 @@ import { wellWallSections, WORK_STRING_ASSEMBLY_ID } from './work-string-config'
  * de hoje (`SqueezeCalculoService.calcVolumes`) continua dono dos volumes; a técnica
  * escolhe a sequência:
  *
- * - **Bradenhead** e **packer**: posiciona como o tampão, com a pasta inteira (a que cobre
- *   o intervalo e a que vai para a formação) equilibrada; drena até o equilíbrio, retira
+ * - **Bradenhead** e **packer**: posiciona como o tampão, com a pasta inteira bombeada (o
+ *   tampão, de onde sai o volume injetado) equilibrada; drena até o equilíbrio, retira
  *   a coluna até a extremidade do relatório de retirada e comprime com o retorno fechado
  *   na BOP (Bradenhead) ou no packer.
  * - **Retentor**: `runRetainerSqueeze`, com o stinger desencaixado até a pasta chegar à
@@ -89,9 +89,7 @@ const wellGeo = new WellGeometryService();
 
 /**
  * Deslocamento que equilibra a pasta inteira bombeada com a coluna imersa, com a água
- * atrás apoiada sobre ela (R3 §14-9.5: tampão balanceado nos canhoneados). O de hoje
- * equilibra só a pasta do intervalo: o volume a injetar ficava a mais no anular, para
- * ser injetado com a coluna imersa, técnica que saiu (§1).
+ * atrás apoiada sobre ela (R3 §14-9.5: tampão balanceado nos canhoneados).
  */
 export function balancedSqueezeDisplacement(geometry: WellGeometry, geom: SqueezeGeometry): {
   displacementBbl: number; topWithStringMD: number; topWithoutStringMD: number } {

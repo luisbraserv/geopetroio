@@ -5,7 +5,7 @@ import { BBL_M } from '../models/constantes';
 import { scenarioForm, scenarioPayload } from '../models/poco.model';
 import { MINA02_PROGRAM } from './primary-field-mina02.fixture';
 import { SimuladorSqueezeComponent } from './simulador-squeeze/simulador-squeeze.component';
-import { MINA02_SQUEEZE, MINA02_SQUEEZE_INJECT_BBL, MINA02_SQUEEZE_INTERVAL } from './squeeze-field-mina02.fixture';
+import { MINA02_SQUEEZE, MINA02_SQUEEZE_INJECT_BBL, MINA02_SQUEEZE_PERFS, MINA02_SQUEEZE_INTERVAL } from './squeeze-field-mina02.fixture';
 
 /**
  * Squeeze de teste no 9⅝" do MINA-02 (packer, canhoneados de 430 a 432 m): carregado na
@@ -44,11 +44,12 @@ describe('caso de teste MINA-02: squeeze com packer no 9⅝"', () => {
     const surface = page.wellGeometry!.phases.find(p => p.id === 'surface')!;
     expect(Math.abs(surface.shoe!.tvd - MINA02_PROGRAM.shoeTVD)).toBeLessThan(0.05);
 
-    // Pasta = intervalo de 40 m no 9⅝" + os 5 bbl dos blocos de injeção.
+    // Pasta = tampão de 40 m no 9⅝"; os 5 bbl dos blocos de injeção saem dele
+    // (SPEC squeeze-tampao §2.1).
     const casing = BBL_M * 8.921 ** 2;
     const interval = MINA02_SQUEEZE_INTERVAL.base - MINA02_SQUEEZE_INTERVAL.top;
-    expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(interval * casing, 6);
-    expect(page.programVolumes!.slurry).toBeCloseTo(interval * casing + MINA02_SQUEEZE_INJECT_BBL, 6);
+    expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(interval * casing - MINA02_SQUEEZE_INJECT_BBL, 6);
+    expect(page.programVolumes!.slurry).toBeCloseTo(interval * casing, 6);
     expect(page.form.getRawValue().volMaxInjetadoBbl).toBeCloseTo(MINA02_SQUEEZE_INJECT_BBL, 9);
     expect(page.compressionRows()).toHaveLength(6);
 
@@ -56,8 +57,10 @@ describe('caso de teste MINA-02: squeeze com packer no 9⅝"', () => {
     expect(s.technique).toBe('packer');
     expect(s.injectedSlurryBbl).toBeCloseTo(MINA02_SQUEEZE_INJECT_BBL, 6);
     expect(s.fluidAheadBbl).toBeCloseTo(0, 6);
-    // Sai o injetado; fica a pasta do intervalo, com o topo no alvo.
-    expect(s.cementTopAfterSqueezeMD!).toBeCloseTo(MINA02_SQUEEZE_INTERVAL.top, 1);
+    // Sai o injetado do tampão: o topo desce 5 / Ccasing (≈ 19,7 m) e os canhoneados
+    // continuam cobertos.
+    expect(s.cementTopAfterSqueezeMD!).toBeCloseTo(MINA02_SQUEEZE_INTERVAL.top + MINA02_SQUEEZE_INJECT_BBL / casing, 1);
+    expect(s.cementTopAfterSqueezeMD!).toBeLessThan(MINA02_SQUEEZE_PERFS.top);
     // O packer fica acima do topo do cimento depois da retirada.
     expect(s.toolMD!).toBeLessThan(s.cementTopBeforeSqueezeMD!);
     // Compressão de baixa pressão: 300 psi na superfície, abaixo do limite.

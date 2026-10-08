@@ -365,10 +365,12 @@ describe('Squeeze — integração da geometria', () => {
       page.manualVolumeBbl = 5;
       page.simulate();
       expect(page.wellIssues).toEqual([]);
-      expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(BBL_M * 100 * 8.5 ** 2, 9);
-      // O intervalo é o cimento depois da injeção; antes dela, a pasta inteira está no poço.
-      expect(page.geom!.topCementAfterInjectionMD).toBeCloseTo(1000, 9);
-      expect(page.geom!.topCementAfterPullMD).toBeCloseTo(1000 - 2 / (BBL_M * 8.835 ** 2), 9);
+      // O tampão do intervalo é o bombeado; os 2 bbl a injetar saem dele (SPEC squeeze-tampao §2.1).
+      expect(page.geom!.slurryTotal).toBeCloseTo(BBL_M * 100 * 8.5 ** 2, 9);
+      expect(page.geom!.slurryPhysicalVolumeBbl).toBeCloseTo(BBL_M * 100 * 8.5 ** 2 - 2, 9);
+      // Antes da injeção o tampão enche o intervalo; depois, o topo desce os 2 bbl injetados.
+      expect(page.geom!.topCementAfterPullMD).toBeCloseTo(1000, 9);
+      expect(page.geom!.topCementAfterInjectionMD).toBeCloseTo(1000 + 2 / (BBL_M * 8.5 ** 2), 9);
       // "Volume de pasta" é o bombeado: os 5 bbl já contam os 2 bbl a injetar.
       const manualTop = 1100 - 5 / (BBL_M * 8.5 ** 2);
       expect(page.schematicGeom!.topCementAfterPullMD).toBeCloseTo(manualTop, 9);
@@ -377,8 +379,8 @@ describe('Squeeze — integração da geometria', () => {
       const reverse = vi.spyOn(TestBed.inject(RetiradaTubosReportService), 'abrirCirculacaoReversa').mockImplementation(() => {});
       page.gerarCalculoRetiradaTubos();
       page.gerarCalculoCirculacaoReversa();
-      // A retirada conta a pasta inteira no poço, com os 2 bbl que ainda vão para a formação
-      // (SPEC squeeze-tampao S7): com "Volume de pasta", eles já estão nos 5 bbl informados.
+      // A retirada conta a pasta inteira no poço, antes de os 2 bbl irem para a formação
+      // (SPEC squeeze-tampao S7): com "Volume de pasta", eles saem dos 5 bbl informados.
       expect(withdrawal.mock.calls[0][0].topoCimentoRetiradaM).toBeCloseTo(manualTop, 9);
       expect(reverse.mock.calls[0][0].topoCimentoRetiradaM).toBeCloseTo(manualTop, 9);
     } finally {
