@@ -84,20 +84,20 @@ import { EmpresaService } from '../../services/empresa.service';
     h1 { margin: 0; font-size: 1.65rem; } .eyebrow { margin: 0; color: var(--color-text-body); font-size: .8rem; }
     .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .85rem; padding: 1rem; background: #fff; border: 1px solid var(--color-card-border); border-radius: 8px; }
     label { display: grid; gap: .35rem; font-size: .82rem; color: var(--color-text-body); }
-    input, select, textarea { width: 100%; min-height: 38px; padding: .55rem .65rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: var(--color-text-strong); }
+    input, select, textarea { width: 100%; min-height: 38px; padding: .55rem .65rem; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; color: var(--color-text-strong); }
     .span-2 { grid-column: span 2; } .actions { display: flex; gap: .5rem; align-items: end; }
     button { min-height: 36px; padding: 0 .85rem; border: 0; border-radius: 6px; background: var(--color-primary); color: #fff; cursor: pointer; }
-    button.ghost { background: var(--color-surface-muted); color: #263040; } button.danger { background: #d92d20; }
+    button.ghost { background: var(--color-surface-muted); color: var(--text-primary); } button.danger { background: var(--danger-600); }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--color-card-border); border-radius: 8px; overflow: hidden; }
     th, td { padding: .75rem; border-bottom: 1px solid var(--color-surface-muted); text-align: left; font-size: .9rem; color: var(--color-text-strong); }
     th { background: var(--color-surface-muted); color: var(--color-text-body); } .row-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
     .input-cep { position: relative; display: flex; align-items: center; } .input-cep input { width: 100%; }
     .input-cep--loading input { padding-right: 2.2rem; }
-    .cep-spinner { position: absolute; right: .65rem; width: 16px; height: 16px; border: 2px solid #cbd5e1; border-top-color: var(--color-primary); border-radius: 50%; animation: cep-spin .7s linear infinite; pointer-events: none; }
+    .cep-spinner { position: absolute; right: .65rem; width: 16px; height: 16px; border: 2px solid var(--border-strong); border-top-color: var(--color-primary); border-radius: 50%; animation: cep-spin .7s linear infinite; pointer-events: none; }
     .cep-feedback { color: var(--color-primary); font-size: .76rem; font-weight: 700; }
-    input:disabled { background: #f1f5f9; color: #64748b; cursor: wait; }
+    input:disabled { background: var(--surface-subtle); color: var(--text-secondary); cursor: wait; }
     @keyframes cep-spin { to { transform: rotate(360deg); } }
-    .feedback { color: #027a48; } .error { color: #b42318; } @media (max-width: 640px) { .span-2 { grid-column: auto; } }
+    .feedback { color: var(--success-700); } .error { color: var(--danger-700); } @media (max-width: 640px) { .span-2 { grid-column: auto; } }
   `],
 })
 export class EmpresasPageComponent {

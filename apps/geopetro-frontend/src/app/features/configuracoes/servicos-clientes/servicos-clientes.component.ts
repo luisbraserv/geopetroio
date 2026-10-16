@@ -95,14 +95,14 @@ const ESCOPOS = [
     h2 { margin:0; font-size:1.45rem; color:var(--color-text-primary); }
     .eyebrow { margin:0 0 4px; color:var(--color-secondary); font-size:.72rem; font-weight:800; text-transform:uppercase; }
     .subtitle,.feedback { margin:6px 0 0; color:var(--color-text-secondary); }
-    .feedback--erro { color:#b42318; }
+    .feedback--erro { color:var(--danger-700); }
     .table-wrap { overflow:auto; border:1px solid var(--color-border); border-radius:8px; }
     table { width:100%; border-collapse:collapse; background:#fff; }
     th,td { padding:12px; text-align:left; border-bottom:1px solid var(--color-border); vertical-align:middle; }
     th { background:var(--color-surface-muted); color:var(--color-text-secondary); font-size:.75rem; text-transform:uppercase; }
     .chips,.actions { display:flex; flex-wrap:wrap; gap:6px; }
     .chips code { padding:3px 6px; border-radius:4px; background:var(--color-surface-muted); }
-    .status { color:#067647; font-weight:800; } .status--inativo { color:#b42318; }
+    .status { color:#067647; font-weight:800; } .status--inativo { color:var(--danger-700); }
     .empty { text-align:center; color:var(--color-text-secondary); }
     .form { display:grid; gap:14px; padding:4px; }
     .form>label { display:grid; gap:6px; }

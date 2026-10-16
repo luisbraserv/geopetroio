@@ -245,13 +245,45 @@ testes removidos cobriam exatamente os módulos removidos.
 ## Design system
 
 **[FATO]** A fonte normativa é [`specs/SDD/software/frontend/index.html`](frontend/index.html) — tokens, componentes e princípios.
-Os dois desktops JavaFX transcrevem esses tokens em `geopetro-design-system.css`, arquivo idêntico
-em Geopetro-Desktop e Horus. Detalhes e lista de classes em
-[`apps/horus-desktop/specs/README.md`](../../../apps/horus-desktop/specs/README.md#design-system-revisão-2026-08-31).
+Os desktops JavaFX transcrevem esses tokens em `geopetro-design-system.css`. Detalhes e lista de
+classes em [`apps/horus-desktop/specs/README.md`](../../../apps/horus-desktop/specs/README.md#design-system-revisão-2026-08-31).
 
-⚠️ **[DECIDIDO 2026-08-31]** Ação primária é **azul-marinho** `#051833`. Vermelho ficou reservado a
-ação destrutiva e estado de erro; o acento de destaque é o **laranja** `#d4852f`. Antes o vermelho
-era a cor de toda ação comum, o que anulava seu valor como alerta numa tela de operação.
+⚠️ **[DECIDIDO 2026-10-14] Braserv Design System 1.1**, alinhado ao Manual de Identidade
+Corporativa. Aplicado ao Geopetro-Front, ao Geopetro-Desktop e ao Horus:
+
+| Papel | 1.0 (2026-08-31) | 1.1 (2026-10-14) |
+|---|---|---|
+| Ação primária, navegação, títulos | azul-marinho `#051833` | **azul corporativo** `#293684` · hover `#1f2a6b` |
+| Acento (seleção, contexto ativo — nunca ação) | laranja `#d4852f` | **amarelo corporativo** `#e8aa21` |
+| Interação, foco, informação | `#154a7a` | azul médio `#3e7ac2` / `#2f64a6` (texto) |
+| Atenção | âmbar `#e5bd02` | laranja `#f7873b` · texto `#a1501a` |
+| Sucesso | `#2e8b3a` | verde lima `#a8b937` · texto `#5f6d17` |
+| Erro e ação destrutiva | `#d92d20` / `#b42318` | sem mudança — exceção funcional fora da paleta |
+| Títulos | Coco Gothic | **Exo Soft** → Exo 2 → Arial |
+| Textos | Coco Gothic | **Montserrat** → Arial |
+
+Continua valendo a regra de 2026-08-31: vermelho só para erro e ação destrutiva — antes ele era a
+cor de toda ação comum, o que anulava seu valor como alerta numa tela de operação.
+
+**[FATO]** No Front, `styles.css` define os tokens 1.1 com os mesmos nomes da fonte normativa; os
+aliases `--color-*` e `--tui-*` apontam para eles. As fontes vêm do Google Fonts (`index.html`).
+Cores de esquemático de poço, fluidos, séries de gráfico e relatórios exportados **não** foram
+trocadas: lá a cor representa dado, não identidade.
+
+⚠️ **[FATO] Desktop: as fontes vão embutidas** em `views/fonts` (OFL 1.1) e são registradas por
+`FontesDaMarca` na inicialização. Duas armadilhas silenciosas, ambas cobertas por `FontesDaMarcaTest`
+(nos dois desktops):
+
+1. o `pom.xml` do Geopetro-Desktop só copia os tipos de recurso listados em `<includes>` — `.ttf` ficava fora do pacote;
+2. `@font-face` no CSS do JavaFX **não carrega** fonte de URL com espaço (`%20`), o que acontece no
+   OneDrive e em `C:\Program Files\`. Por isso o carregamento é em Java, por stream.
+
+Nos dois casos a tela abria normal, só que em Segoe UI.
+
+**[FATO]** Os dois desktops voltaram a ter `geopetro-design-system.css` **idêntico** (o do
+Geopetro-Desktop, que já continha todas as classes do Horus). Antes desta revisão eles tinham
+divergido sem ninguém notar. O Horus guarda as fontes em `fonts/`; o Geopetro-Desktop, em
+`views/fonts/` — `FontesDaMarca` existe nos dois, cada um com seu caminho.
 
 **[FATO]** JavaFX CSS não tem custom properties: os tokens vivem como valores literais num único
 arquivo, e o `rem` da fonte normativa é convertido para `px` na base 16.

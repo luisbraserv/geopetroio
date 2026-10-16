@@ -74,19 +74,19 @@ export function setPressurePoints(form: FormGroup, fb: FormBuilder, points: unkn
     .g2, .g3 { display: grid; gap: 8px; }
     .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    label { display: block; margin-bottom: 4px; color: var(--color-text-body, #475569); font-size: .7rem; font-weight: 750; line-height: 1.25; }
+    label { display: block; margin-bottom: 4px; color: var(--color-text-body); font-size: .7rem; font-weight: 750; line-height: 1.25; }
     input[type="number"], select { width: 100%; min-height: 32px; box-sizing: border-box; padding: 6px 8px;
-      border: 1px solid rgba(77, 87, 97, .22); border-radius: 8px; background: rgba(255, 255, 255, .86);
-      color: var(--color-text-strong, #0f172a); font: inherit; font-size: .8rem; line-height: 1.25; }
-    input:focus, select:focus { outline: none; border-color: var(--color-focus, #4291e1); background: #fff; box-shadow: 0 0 0 3px rgba(66, 145, 225, .15); }
+      border: 1px solid rgba(30, 36, 82, .22); border-radius: 8px; background: rgba(255, 255, 255, .86);
+      color: var(--color-text-strong); font: inherit; font-size: .8rem; line-height: 1.25; }
+    input:focus, select:focus { outline: none; border-color: var(--color-focus); background: #fff; box-shadow: 0 0 0 3px rgba(62, 122, 194, .15); }
     .pw-points { display: grid; gap: 6px; margin-top: 8px; }
     .pw-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 28px; gap: 6px; align-items: center; }
-    .pw-row--head span { color: var(--color-text-body, #475569); font-size: .66rem; font-weight: 750; }
-    .pw-remove { width: 28px; height: 28px; padding: 0; border: 1px solid #fecaca; border-radius: 6px; background: #fff; color: #b91c1c; font-size: 16px; line-height: 1; cursor: pointer; }
-    .pw-remove:disabled { border-color: #e2e8f0; color: #cbd5e1; cursor: default; }
-    .pw-add { justify-self: start; padding: 4px 10px; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; color: #1d4ed8; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
+    .pw-row--head span { color: var(--color-text-body); font-size: .66rem; font-weight: 750; }
+    .pw-remove { width: 28px; height: 28px; padding: 0; border: 1px solid var(--danger-200); border-radius: 6px; background: #fff; color: var(--danger-700); font-size: 16px; line-height: 1; cursor: pointer; }
+    .pw-remove:disabled { border-color: var(--border-default); color: var(--border-strong); cursor: default; }
+    .pw-add { justify-self: start; padding: 4px 10px; border: 1px solid var(--brand-midblue-200); border-radius: 6px; background: var(--brand-midblue-200); color: var(--brand-midblue-700); font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
     .pw-sub { margin-top: 10px; }
-    .pw-hint { margin: 6px 0 0; color: #64748b; font-size: .66rem; line-height: 1.35; }
+    .pw-hint { margin: 6px 0 0; color: var(--text-secondary); font-size: .66rem; line-height: 1.35; }
   `],
 })
 export class PressureWindowInputsComponent {

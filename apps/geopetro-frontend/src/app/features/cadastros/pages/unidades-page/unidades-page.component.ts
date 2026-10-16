@@ -107,14 +107,14 @@ import { AuthState } from '../../../auth/state/auth.state';
     h1 { margin: 0; font-size: 1.65rem; } p { margin: 0; color: var(--color-text-body); font-size: .8rem; }
     .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .85rem; padding: 1rem; background: #fff; border: 1px solid var(--color-card-border); border-radius: 8px; }
     label { display: grid; gap: .35rem; font-size: .82rem; color: var(--color-text-body); }
-    input, select { min-height: 38px; padding: .55rem .65rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: var(--color-text-strong); }
+    input, select { min-height: 38px; padding: .55rem .65rem; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; color: var(--color-text-strong); }
     button { min-height: 36px; padding: 0 .85rem; border: 0; border-radius: 6px; background: var(--color-primary); color: #fff; cursor: pointer; font-size: .82rem; font-weight: 600; }
-    .ghost { background: var(--color-surface-muted); color: #263040; } .warning { background: #b54708; } .danger { background: #d92d20; }
+    .ghost { background: var(--color-surface-muted); color: var(--text-primary); } .warning { background: #b54708; } .danger { background: var(--danger-600); }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--color-card-border); border-radius: 8px; overflow: hidden; }
     th, td { padding: .75rem; border-bottom: 1px solid var(--color-surface-muted); text-align: left; color: var(--color-text-strong); }
     th { background: var(--color-surface-muted); color: var(--color-text-body); font-size: .78rem; font-weight: 700; text-transform: uppercase; }
     .row-actions, .actions { display: flex; gap: .4rem; flex-wrap: wrap; align-items: end; }
-    .error { color: #b42318; font-size: .82rem; }
+    .error { color: var(--danger-700); font-size: .82rem; }
     .empty { text-align: center; color: var(--color-text-secondary); }
     .status-inativa { color: #b54708; font-weight: 700; }
     .somente-leitura { color: var(--color-text-secondary); font-size: .78rem; }

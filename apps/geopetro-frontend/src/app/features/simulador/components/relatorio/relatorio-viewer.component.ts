@@ -33,12 +33,12 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
     }
     .relatorio-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
+      padding: 16px 20px; border-bottom: 1px solid var(--border-default); flex-shrink: 0;
     }
-    .relatorio-header h2 { margin: 0; font-size: 16px; font-weight: 700; color: #1e293b; }
+    .relatorio-header h2 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-primary); }
     .relatorio-header-actions { display: flex; gap: 8px; }
-    .btn-print { background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
-    .btn-close { background: #f1f5f9; color: #374151; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+    .btn-print { background: var(--brand-midblue-500); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+    .btn-close { background: var(--surface-subtle); color: #374151; border: 1px solid var(--border-default); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
     .relatorio-frame { flex: 1; border: none; border-radius: 0 0 12px 12px; }
   `],
 })

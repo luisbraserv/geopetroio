@@ -44,7 +44,7 @@
 
 .sim-index__card:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 8px 24px rgba(66, 145, 225, 0.14);
+  box-shadow: 0 8px 24px rgba(62, 122, 194, 0.14);
   transform: translateY(-2px);
 }
 

@@ -36,13 +36,13 @@ import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnChanges, O
     </div>
   `,
   styles: [`
-    .editor { display: grid; gap: 0; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff; }
+    .editor { display: grid; gap: 0; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; background: #fff; }
     .toolbar { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center; padding: .45rem; border-bottom: 1px solid var(--color-card-border); background: var(--color-surface-muted); }
     button, label { min-height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: 0 .55rem; border: 1px solid var(--color-border); border-radius: 6px; background: #fff; color: var(--color-text-strong); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; }
     label input { width: 22px; height: 22px; padding: 0; border: 0; background: transparent; cursor: pointer; }
     .mark { padding: 0 .2rem; background: #fff2a8; border-radius: 3px; }
     .editable { min-height: 150px; max-height: 340px; overflow: auto; padding: .75rem; color: var(--color-text-strong); line-height: 1.5; outline: 0; }
-    .editable:focus { box-shadow: inset 0 0 0 2px rgba(82, 140, 156, .22); }
+    .editable:focus { box-shadow: inset 0 0 0 2px rgba(62, 122, 194, .22); }
     .editable:empty::before { content: attr(data-placeholder); color: var(--color-text-body); pointer-events: none; }
     .editable ul { margin: .35rem 0 .35rem 1.2rem; padding: 0; }
   `],

@@ -24,10 +24,10 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-str
   flex-wrap: wrap;
   gap: 0.35rem 0.65rem;
   margin-bottom: 1rem;
-  border: 1px solid #f4c96b;
+  border: 1px solid #fbc39d;
   border-radius: 6px;
-  background: #fff8e6;
-  color: #7a4b00;
+  background: var(--brand-orange-200);
+  color: var(--warning-700);
   padding: 0.7rem 0.85rem;
   font-size: 0.82rem;
 }
@@ -59,18 +59,18 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-str
 
 select, input[type="datetime-local"] {
   height: 2.45rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: #fff;
-  color: #1f2937;
+  color: var(--text-primary);
   padding: 0 0.7rem;
   font: inherit;
   cursor: pointer;
 }
 
 select:focus, input:focus {
-  border-color: rgba(82, 140, 156, 0.72);
-  outline: 3px solid rgba(82, 140, 156, 0.16);
+  border-color: rgba(62, 122, 194, 0.72);
+  outline: 3px solid rgba(62, 122, 194, 0.16);
 }
 
 .variaveis-panel {
@@ -85,7 +85,7 @@ select:focus, input:focus {
   flex-basis: 100%;
   font-size: 0.85rem;
   line-height: 1.45;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .toggle-chip {
@@ -93,7 +93,7 @@ select:focus, input:focus {
   align-items: center;
   gap: 0.45rem;
   min-height: 2rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 0.2rem 0.7rem;
   color: var(--color-text-primary);
@@ -106,7 +106,7 @@ select:focus, input:focus {
 .toggle-chip input {
   width: 0.95rem;
   height: 0.95rem;
-  accent-color: #2563eb;
+  accent-color: var(--brand-midblue-500);
 }
 
 .grafico-section {
@@ -134,7 +134,7 @@ select:focus, input:focus {
 
 .estado-vazio__icon { font-size: 2.5rem; opacity: 0.4; }
 .estado-vazio p { margin: 0; font-size: 0.9rem; }
-.estado-vazio--erro { color: #b42318; }
+.estado-vazio--erro { color: var(--danger-700); }
 .estado-vazio--erro .estado-vazio__icon { opacity: 0.7; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

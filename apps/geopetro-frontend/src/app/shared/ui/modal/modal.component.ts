@@ -38,7 +38,7 @@ import { Component, booleanAttribute, input, output } from '@angular/core';
   styles: [`
     .modal-backdrop {
       position: fixed; inset: 0; z-index: 1000;
-      background: rgba(15, 23, 42, .55); backdrop-filter: blur(2px);
+      background: rgba(20, 27, 69, .55); backdrop-filter: blur(2px);
       display: flex; align-items: flex-start; justify-content: center;
       padding: 5vh 16px; overflow-y: auto;
       animation: fade .15s ease;
@@ -46,26 +46,26 @@ import { Component, booleanAttribute, input, output } from '@angular/core';
     .modal {
       width: min(var(--modal-width, 640px), 100%);
       background: #fff; border-radius: 16px;
-      box-shadow: 0 24px 60px rgba(15, 23, 42, .28);
+      box-shadow: 0 24px 60px rgba(20, 27, 69, .28);
       display: flex; flex-direction: column; overflow: hidden;
       animation: pop .18s cubic-bezier(.2, .8, .25, 1);
     }
     .modal__header {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-      padding: 20px 24px; border-bottom: 1px solid #eef2f7;
+      padding: 20px 24px; border-bottom: 1px solid var(--surface-subtle);
     }
-    .modal__titles h2 { margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; }
-    .modal__titles p { margin: 4px 0 0; font-size: .82rem; color: #64748b; }
+    .modal__titles h2 { margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary); }
+    .modal__titles p { margin: 4px 0 0; font-size: .82rem; color: var(--text-secondary); }
     .modal__close {
       flex: none; width: 36px; height: 36px; display: grid; place-items: center;
-      border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; color: #475569; cursor: pointer;
+      border: 1px solid var(--border-default); border-radius: 10px; background: #fff; color: var(--text-secondary); cursor: pointer;
       transition: background .15s, color .15s;
     }
-    .modal__close:hover { background: #f1f5f9; color: #0f172a; }
+    .modal__close:hover { background: var(--surface-subtle); color: var(--text-primary); }
     .modal__body { padding: 24px; overflow-y: auto; max-height: 70vh; }
     .modal__footer {
       display: flex; justify-content: flex-end; gap: 10px;
-      padding: 16px 24px; border-top: 1px solid #eef2f7; background: #f8fafc;
+      padding: 16px 24px; border-top: 1px solid var(--surface-subtle); background: var(--surface-canvas);
     }
     .modal__footer:empty { display: none; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }

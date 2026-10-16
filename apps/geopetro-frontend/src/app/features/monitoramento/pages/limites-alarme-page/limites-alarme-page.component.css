@@ -45,18 +45,18 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-str
 
 select {
   height: 2.45rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: #fff;
-  color: #1f2937;
+  color: var(--text-primary);
   padding: 0 0.7rem;
   font: inherit;
   cursor: pointer;
 }
 
 select:focus, input:focus {
-  border-color: rgba(82, 140, 156, 0.72);
-  outline: 3px solid rgba(82, 140, 156, 0.16);
+  border-color: rgba(62, 122, 194, 0.72);
+  outline: 3px solid rgba(62, 122, 194, 0.16);
 }
 
 .alerta {
@@ -70,9 +70,9 @@ select:focus, input:focus {
   line-height: 1.5;
 }
 
-.alerta--erro { border: 1px solid #f2b8b5; background: #fdf2f2; color: #b42318; }
-.alerta--aviso { border: 1px solid #f4c96b; background: #fff8e6; color: #7a4b00; }
-.alerta--ok { border: 1px solid #a7d8b4; background: #f0faf3; color: #1c6b3c; }
+.alerta--erro { border: 1px solid var(--danger-200); background: var(--color-error-soft); color: var(--danger-700); }
+.alerta--aviso { border: 1px solid #fbc39d; background: var(--brand-orange-200); color: var(--warning-700); }
+.alerta--ok { border: 1px solid #d4dca0; background: var(--brand-green-200); color: var(--success-700); }
 
 .legenda {
   margin: 0 0 0.9rem;
@@ -124,19 +124,19 @@ select:focus, input:focus {
   max-width: 40ch;
 }
 
-.marca--hibernando { color: #64748b; }
+.marca--hibernando { color: var(--text-secondary); }
 /* Amarelo, e nao cinza: o limite parece configurado e nao dispara. Ver OQ-050. */
-.marca--nao-avaliada { color: #7a4b00; }
+.marca--nao-avaliada { color: var(--warning-700); }
 
-.linha--inerte { background: #f8fafc; }
+.linha--inerte { background: var(--surface-canvas); }
 
 .tabela input[type="number"] {
   width: 6.5rem;
   height: 2.2rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: #fff;
-  color: #1f2937;
+  color: var(--text-primary);
   padding: 0 0.5rem;
   font: inherit;
   text-align: right;
@@ -145,14 +145,14 @@ select:focus, input:focus {
 .tabela input[type="checkbox"] {
   width: 1.05rem;
   height: 1.05rem;
-  accent-color: #2563eb;
+  accent-color: var(--brand-midblue-500);
 }
 
 .linha-erro td {
   border-bottom: 1px solid var(--color-border);
   padding: 0.35rem 0.45rem 0.6rem;
   text-align: left;
-  color: #b42318;
+  color: var(--danger-700);
   font-size: 0.78rem;
 }
 
@@ -162,7 +162,7 @@ select:focus, input:focus {
 .orfaos > div { display: flex; flex-direction: column; gap: 0.3rem; }
 .orfaos__lista { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .orfaos code {
-  background: rgba(122, 75, 0, 0.1);
+  background: rgba(161, 80, 26, 0.1);
   border-radius: 4px;
   padding: 0.05rem 0.35rem;
   font-size: 0.78rem;
