@@ -64,7 +64,7 @@ public class DashboardGrid extends Pane {
         content.setMinSize(0, 0);
         content.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         var grip = new Label("◢");
-        grip.setStyle("-fx-text-fill: #8393aa; -fx-padding: 2;");
+        grip.setStyle("-fx-text-fill: #7a8199; -fx-padding: 2;");
         grip.setCursor(Cursor.SE_RESIZE);
         Tooltip.install(grip, new Tooltip("Arraste para redimensionar"));
         StackPane frame = new StackPane() {

@@ -421,7 +421,7 @@ public class MonitoringController {
         if (visual == null) {
             var icon = new javafx.scene.shape.SVGPath();
             icon.setContent(iconSvg);
-            icon.setFill(javafx.scene.paint.Color.web("#5a667a"));
+            icon.setFill(javafx.scene.paint.Color.web("#5f6b85"));
             visual = icon;
         }
         return new IndicatorCardView(titulo, unidade, visual, instrument, valor, bruto, alarme, estado, sininho, engrenagem);

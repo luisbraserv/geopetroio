@@ -124,7 +124,7 @@ public class GraficosController {
 
         if (series.isEmpty()) {
             Label lbl = new Label("Nenhum dado encontrado. Ajuste o periodo e clique em Atualizar.");
-            lbl.setStyle("-fx-font-size: 13; -fx-text-fill: #5a667a;");
+            lbl.setStyle("-fx-font-size: 13; -fx-text-fill: #5f6b85;");
             chartsContainer.getChildren().add(lbl);
             return;
         }
@@ -156,8 +156,8 @@ public class GraficosController {
         Canvas canvas = new Canvas(w, h);
         CheckBox chkOriginal = new CheckBox("Original");
         CheckBox chkSmooth = new CheckBox("Suavizada");
-        chkOriginal.setStyle("-fx-font-size: 12; -fx-text-fill: #061c39;");
-        chkSmooth.setStyle("-fx-font-size: 12; -fx-text-fill: #061c39;");
+        chkOriginal.setStyle("-fx-font-size: 12; -fx-text-fill: #1e2452;");
+        chkSmooth.setStyle("-fx-font-size: 12; -fx-text-fill: #1e2452;");
         drawChart(canvas.getGraphicsContext2D(), w, h, values, instantes, unit, lineColor, smoothColor,
                 chkOriginal.isSelected(), chkSmooth.isSelected());
 
@@ -172,7 +172,7 @@ public class GraficosController {
 
         Label titleLabel = new Label(title);
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
-        titleLabel.setTextFill(Color.web("#000c4b"));
+        titleLabel.setTextFill(Color.web("#293684"));
 
         HBox header = new HBox(14, titleLabel, chkOriginal, chkSmooth);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -203,7 +203,7 @@ public class GraficosController {
         gc.fillRect(0, 0, w, h);
 
         if (values.isEmpty() || values.stream().allMatch(v -> v == 0.0)) {
-            gc.setFill(Color.web("#9ca3af"));
+            gc.setFill(Color.web("#7a8199"));
             gc.setFont(Font.font("System", 13 * zoom));
             gc.fillText("Sem dados", chartX + 10, chartY + chartH / 2);
             return;
@@ -214,20 +214,20 @@ public class GraficosController {
         if (Math.abs(max - min) < 0.0001) { max = min + 1; }
 
         // grade horizontal
-        gc.setStroke(Color.web("#e5e7eb"));
+        gc.setStroke(Color.web("#dadce8"));
         gc.setLineWidth(0.5 * zoom);
         int gridLines = 5;
         for (int i = 0; i <= gridLines; i++) {
             double gy  = chartY + chartH - chartH * i / gridLines;
             double val = min + (max - min) * i / gridLines;
             gc.strokeLine(chartX, gy, chartX + chartW, gy);
-            gc.setFill(Color.web("#9ca3af"));
+            gc.setFill(Color.web("#7a8199"));
             gc.setFont(Font.font("System", 9 * zoom));
             gc.fillText(String.format("%.1f", val), 2, gy + 4 * zoom);
         }
 
         // borda
-        gc.setStroke(Color.web("#d1d5db"));
+        gc.setStroke(Color.web("#dadce8"));
         gc.setLineWidth(1.0 * zoom);
         gc.strokeRect(chartX, chartY, chartW, chartH);
 
@@ -246,7 +246,7 @@ public class GraficosController {
         }
 
         // labels de tempo
-        gc.setFill(Color.web("#5a667a"));
+        gc.setFill(Color.web("#5f6b85"));
         gc.setFont(Font.font("System", 9 * zoom));
         int labelCount = Math.min(6, instantes.size());
         for (int i = 0; i < labelCount; i++) {
@@ -255,7 +255,7 @@ public class GraficosController {
             double[] pt  = pts.get(idx);
             String   lbl = instantes.get(idx) != null ? instantes.get(idx).format(TIME_FMT) : "";
             gc.fillText(lbl, pt[0] - 12 * zoom, chartY + chartH + 14 * zoom);
-            gc.setStroke(Color.web("#d1d5db"));
+            gc.setStroke(Color.web("#dadce8"));
             gc.setLineWidth(0.5 * zoom);
             gc.strokeLine(pt[0], chartY + chartH, pt[0], chartY + chartH + 4 * zoom);
         }
@@ -263,17 +263,17 @@ public class GraficosController {
         // legenda
         gc.setFill(lineColor);
         gc.fillRect(chartX, chartY + chartH + 20 * zoom, 12 * zoom, 4 * zoom);
-        gc.setFill(Color.web("#061c39"));
+        gc.setFill(Color.web("#1e2452"));
         gc.setFont(Font.font("System", 10 * zoom));
         gc.fillText("Original", chartX + 16 * zoom, chartY + chartH + 25 * zoom);
 
         gc.setFill(smoothColor);
         gc.fillRect(chartX + 80 * zoom, chartY + chartH + 20 * zoom, 12 * zoom, 4 * zoom);
-        gc.setFill(Color.web("#061c39"));
+        gc.setFill(Color.web("#1e2452"));
         gc.fillText("Suavizada", chartX + 96 * zoom, chartY + chartH + 25 * zoom);
 
         // unidade no canto
-        gc.setFill(Color.web("#9ca3af"));
+        gc.setFill(Color.web("#7a8199"));
         gc.setFont(Font.font("System", 9 * zoom));
         gc.fillText(unit, chartX + chartW - 32 * zoom, chartY - 2 * zoom);
     }

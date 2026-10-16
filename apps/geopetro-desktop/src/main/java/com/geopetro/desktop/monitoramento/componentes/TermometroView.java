@@ -62,7 +62,7 @@ public class TermometroView extends Canvas {
 		double alturaTubo = baseBulbo - topoTubo;
 
 		// Corpo: tubo com cantos arredondados e bulbo, em cinza claro.
-		g.setFill(Color.web("#e8edf5"));
+		g.setFill(Color.web("#eef0f6"));
 		g.fillRoundRect(centroX - LARGURA_TUBO / 2, topoTubo, LARGURA_TUBO, alturaTubo,
 				LARGURA_TUBO, LARGURA_TUBO);
 		g.fillOval(centroX - RAIO_BULBO, baseBulbo - RAIO_BULBO, RAIO_BULBO * 2, RAIO_BULBO * 2);
@@ -82,12 +82,12 @@ public class TermometroView extends Canvas {
 		}
 
 		// Marcas de minimo e maximo: sem elas o desenho nao diz de que escala se trata.
-		g.setStroke(Color.web("#94a3b8"));
+		g.setStroke(Color.web("#7a8199"));
 		g.setLineWidth(1);
 		g.strokeLine(centroX + LARGURA_TUBO / 2 + 2, topoTubo, centroX + LARGURA_TUBO / 2 + 8, topoTubo);
 		g.strokeLine(centroX + LARGURA_TUBO / 2 + 2, baseBulbo, centroX + LARGURA_TUBO / 2 + 8, baseBulbo);
 
-		g.setFill(Color.web("#64748b"));
+		g.setFill(Color.web("#5f6b85"));
 		g.setFont(Font.font(Math.min(13, Math.max(9, getWidth() * .10))));
 		g.setTextAlign(TextAlignment.LEFT);
 		g.fillText(formatar(maximo), centroX + LARGURA_TUBO / 2 + 10, topoTubo + 3);
