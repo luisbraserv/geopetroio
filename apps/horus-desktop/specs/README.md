@@ -128,7 +128,7 @@ o `logo.ico` do Geopetro-Desktop foi exatamente isso até 2026-08-31 (assinatura
 produzia um instalador com ícone quebrado. Hoje os dois são ICO legítimos (`00000100`) — confira a
 assinatura antes de confiar na extensão.
 
-⚠️ **[FATO]** `.label` do design system pinta `#051833` (text-primary). Em fundo escuro o texto some — use
+⚠️ **[FATO]** `.label` do design system pinta `#1e2452` (text-primary). Em fundo escuro o texto some — use
 `texto-inverso`. Foi o que aconteceu no cabeçalho do Geopetro-Desktop; o Horus não tem fundo escuro
 hoje, mas a armadilha vale para telas futuras.
 
@@ -173,24 +173,32 @@ falha propagada, ouvinte opcional).
 ## Design system (revisão 2026-08-31)
 
 **[FATO]** `specs/SDD/software/frontend/index.html` é a **fonte normativa**. O `geopetro-design-system.css` (Geopetro-Desktop
-e Horus, arquivo idêntico nos dois) transcreve aqueles tokens para JavaFX CSS — rem convertido para
-px na base 16, já que JavaFX não tem custom properties nem unidades relativas.
+e Horus, arquivo idêntico nos dois desde 2026-10-14) transcreve aqueles tokens para JavaFX CSS — rem
+convertido para px na base 16, já que JavaFX não tem custom properties nem unidades relativas.
 
-### Tokens
+**[DECIDIDO 2026-10-14]** Tokens atualizados para o **Braserv DS 1.1** (Manual de Identidade
+Corporativa). O título desta seção ficou com a data original para não quebrar links.
+
+### Tokens (DS 1.1)
 
 | Papel | Valor |
 |---|---|
-| Marca (primário) | `#051833` navy-900 · hover `#0b2b52` |
-| Azul de interação | `#154a7a` blue-600 — foco, borda de campo, seleção |
-| **Acento** | `#d4852f` orange-600 — destaque e seleção, **não** é cor de ação |
-| Superfícies | canvas `#f7f9fc` · subtle `#edf1f8` · soft `#eaf1f8` · raised `#ffffff` |
-| Bordas | default `#d6deeb` · strong `#b7c3d5` (campos) |
-| Texto | primary `#051833` · secondary `#5a667a` · tertiary `#757b86` |
-| Semântico | ok `#2e8b3a` · atenção `#e5bd02` · erro `#d92d20` / `#b42318` |
+| Marca (primário) | azul corporativo `#293684` · hover `#1f2a6b` |
+| Azul de interação | azul médio `#3e7ac2` — foco, borda de campo, seleção · texto `#2f64a6` |
+| **Acento** | amarelo corporativo `#e8aa21` — destaque e seleção, **não** é cor de ação |
+| Superfícies | canvas `#f6f7fb` · subtle `#eef0f6` · soft `#eaebf3` · raised `#ffffff` |
+| Bordas | default `#dadce8` · strong `#b9bdd3` (campos) |
+| Texto | heading `#293684` · primary `#1e2452` · secondary `#5f6b85` · tertiary `#7a8199` |
+| Semântico | ok `#a8b937` / `#5f6d17` · atenção `#f7873b` / `#a1501a` · erro `#d92d20` / `#b42318` |
 | Raio | sm 3 · md 5 · lg 7 · xl 9 (px) |
-| Tipografia | Coco Gothic → Century Gothic → Trebuchet MS · mono: Cascadia Code |
+| Tipografia | títulos Exo 2 (no lugar da Exo Soft) · textos Montserrat · alternativa Arial · mono: Cascadia Code |
 
-⚠️ **[DECIDIDO] O botão primário é azul-marinho, não vermelho.** A versão anterior usava `#c50d15`
+⚠️ **[FATO] As fontes vão embutidas** em `src/main/resources/fonts/` (OFL 1.1, licenças junto) e são
+registradas por `FontesDaMarca.carregar()` no início de `JavaFxApp.start`. Não use `@font-face`: o
+JavaFX não carrega fonte de URL com espaço (`%20`), e o caminho de instalação tem. `FontesDaMarcaTest`
+confere que corpo sai em Montserrat e título em Exo 2.
+
+⚠️ **[DECIDIDO] O botão primário é azul, não vermelho.** A versão anterior usava `#c50d15`
 em toda ação comum — Conectar, Salvar, Gerar PDF. Vermelho passou a ser exclusivo de **ação
 destrutiva** (`.botao-perigo`) e de **estado de erro**. Usá-lo como cor de ação gasta o único sinal
 que faz o operador parar antes de clicar, e numa tela de sonda isso importa.
@@ -199,10 +207,10 @@ Consequências aplicadas:
 
 - `Conectar` é `.botao-primario`; `Desconectar` é `.botao-perigo` — antes os dois eram vermelhos e
   só o texto distinguia um do outro
-- Aba ativa passou de preenchimento vermelho para **sublinhado laranja**: a cor de "você está aqui"
-  não pode ser a mesma de "algo está errado"
-- Faixa divisória do cabeçalho e do splash: vermelho → laranja de acento
-- Círculos de status usam `#d92d20`/`#2e8b3a` do sistema
+- Aba ativa passou de preenchimento vermelho para **sublinhado no acento** (laranja no 1.0, amarelo
+  no 1.1): a cor de "você está aqui" não pode ser a mesma de "algo está errado"
+- Faixa divisória do cabeçalho e do splash: vermelho → acento da marca
+- Círculo de status do CLP usa `#a8b937`/`#d92d20` do sistema (antes `LIMEGREEN`/`RED` do JavaFX)
 
 ### Classes disponíveis
 
@@ -212,7 +220,7 @@ Consequências aplicadas:
 `.estado-ok` `.estado-atencao` `.estado-erro` · `.card-grandeza*` `.valor-bruto` `.tool-bar`
 `.titulo-tela` `.area-rolagem`
 
-⚠️ **[FATO]** `.label` pinta `#051833`. Em fundo escuro o texto some — use `.texto-inverso`.
+⚠️ **[FATO]** `.label` pinta `#1e2452`. Em fundo escuro o texto some — use `.texto-inverso`.
 O atributo `textFill="WHITE"` do FXML **não resolve**: em JavaFX o stylesheet vence valores vindos
 do FXML.
 
