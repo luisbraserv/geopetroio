@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Conversao do Ax do LOGO! em pressao.
  *
- * <p>O Ax e o laco 4-20 mA reescalonado pelo Analog Amplifier para -250..750 — nao e pressao. Quanto
+ * <p>O Ax e o laco 4-20 mA reescalonado pelo Analog Amplifier para -50..750 — nao e pressao. Quanto
  * cada posicao vale em bar depende da faixa do transmissor. Tratar o Ax como pressao, ou reconverter
  * para mA antes, aplica o escalonamento duas vezes e produz numeros plausiveis e errados.
  */
@@ -20,18 +20,18 @@ class ConversaoPressaoTest {
     private static final SensorPressaoConfig SENSOR_400_BAR = new SensorPressaoConfig(400.0, 1.0);
 
     @Test
-    @DisplayName("Ax -250 é 4 mA: início da faixa, pressão zero")
+    @DisplayName("Ax -50 é 4 mA: início da faixa, pressão zero")
     void inicioDaFaixa() {
-        assertEquals(0.0, ConversaoPressao.axParaBar(-250, 400.0), 1e-9);
-        assertEquals(0.0, ConversaoPressao.axParaPsi(-250, SENSOR_400_BAR), 0.001);
+        assertEquals(0.0, ConversaoPressao.axParaBar(-50, 400.0), 1e-9);
+        assertEquals(0.0, ConversaoPressao.axParaPsi(-50, SENSOR_400_BAR), 0.001);
     }
 
     @Test
-    @DisplayName("Ax 250 é 12 mA: metade da faixa")
+    @DisplayName("Ax 350 é 12 mA: metade da faixa")
     void meioDaFaixa() {
-        assertEquals(200.0, ConversaoPressao.axParaBar(250, 400.0), 1e-9);
+        assertEquals(200.0, ConversaoPressao.axParaBar(350, 400.0), 1e-9);
         // 200 bar × 14,5037738
-        assertEquals(2900.75, ConversaoPressao.axParaPsi(250, SENSOR_400_BAR), 0.1);
+        assertEquals(2900.75, ConversaoPressao.axParaPsi(350, SENSOR_400_BAR), 0.1);
     }
 
     @Test
@@ -45,7 +45,7 @@ class ConversaoPressaoTest {
     @DisplayName("a faixa do transmissor define quanto cada Ax vale")
     void faixaDoSensorMudaOResultado() {
         // Mesmo Ax, transmissores diferentes: é por isso que o Ax não pode ser lido como pressão.
-        double meiaEscala = 250;
+        double meiaEscala = 350;
 
         assertEquals(200.0, ConversaoPressao.axParaBar(meiaEscala, 400.0), 1e-9);
         assertEquals(375.0, ConversaoPressao.axParaBar(meiaEscala, 750.0), 1e-9);
@@ -78,14 +78,14 @@ class ConversaoPressaoTest {
     void sensibilidadeAplicada() {
         SensorPressaoConfig comGanho = new SensorPressaoConfig(400.0, 1.1);
 
-        assertEquals(ConversaoPressao.axParaPsi(250, SENSOR_400_BAR) * 1.1,
-                ConversaoPressao.axParaPsi(250, comGanho), 0.1);
+        assertEquals(ConversaoPressao.axParaPsi(350, SENSOR_400_BAR) * 1.1,
+                ConversaoPressao.axParaPsi(350, comGanho), 0.1);
     }
 
     @Test
     @DisplayName("config nula cai no padrão de fábrica")
     void configNula() {
-        assertEquals(ConversaoPressao.axParaPsi(250, SENSOR_400_BAR),
-                ConversaoPressao.axParaPsi(250, null), 0.001);
+        assertEquals(ConversaoPressao.axParaPsi(350, SENSOR_400_BAR),
+                ConversaoPressao.axParaPsi(350, null), 0.001);
     }
 }

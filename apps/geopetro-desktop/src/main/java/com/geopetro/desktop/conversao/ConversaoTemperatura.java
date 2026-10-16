@@ -6,7 +6,7 @@ import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
  * Temperatura a partir do laço 4-20 mA — RN-083.
  *
  * <pre>
- * fracao = (Ax − (−250)) / 1000
+ * fracao = (Ax − (−50)) / 800
  * valor  = minimoEscala + fracao × (maximoEscala − minimoEscala)
  * </pre>
  *

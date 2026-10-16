@@ -10,11 +10,11 @@ package com.geopetro.desktop.conversao;
  *
  * <pre>
  *   Sensor:  4...20 mA
- *   Minimum: -250     Maximum: 750
+ *   Minimum: -50      Maximum: 750
  *   Gain:    1,00     Offset:  -250
  *
- *    4 mA -> Ax = -250    (inicio da faixa do transmissor)
- *   12 mA -> Ax = 250     (meio da faixa)
+ *    4 mA -> Ax = -50     (inicio da faixa do transmissor)
+ *   12 mA -> Ax = 350     (meio da faixa)
  *   20 mA -> Ax = 750     (fundo de escala do transmissor)
  * </pre>
  *
@@ -23,12 +23,12 @@ package com.geopetro.desktop.conversao;
  * transmissor, informado em <em>Range do sensor (bar)</em> nas configuracoes:
  *
  * <pre>
- *   fracao   = (Ax + 250) / 1000
+ *   fracao   = (Ax + 50) / 800
  *   pressao  = fracao × range_do_sensor_em_bar
  *   psi      = pressao × 14,5037738
  * </pre>
  *
- * <p>Com um transmissor de 400 bar: Ax -250 = 0 bar, Ax 250 = 200 bar, Ax 750 = 400 bar.
+ * <p>Com um transmissor de 400 bar: Ax -50 = 0 bar, Ax 350 = 200 bar, Ax 750 = 400 bar.
  *
  * <p>A conversao eletrica do Ax fica em {@link ConversaoSinalAnalogico}; esta classe contem somente
  * as regras especificas de pressao.

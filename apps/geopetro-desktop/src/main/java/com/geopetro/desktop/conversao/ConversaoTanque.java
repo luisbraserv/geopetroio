@@ -12,7 +12,7 @@ import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
  * esvazia</b> — e o número seria plausível o tempo todo.
  *
  * <pre>
- * fracao    = (Ax − (−250)) / 1000        posição no laço 4-20 mA
+ * fracao    = (Ax − (−50)) / 800          posição no laço 4-20 mA
  * distancia = distanciaMinima + fracao × (distanciaMaxima − distanciaMinima)
  * altura    = distanciaMaxima − distancia
  * volume    = f(forma, dimensões, altura)

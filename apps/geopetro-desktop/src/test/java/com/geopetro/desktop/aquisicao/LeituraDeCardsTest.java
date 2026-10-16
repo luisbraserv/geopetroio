@@ -334,7 +334,7 @@ class LeituraDeCardsTest {
 	}
 
 	/** Ax no meio da faixa −250..750 do amplificador. */
-	private static final int AX_MEIO = 250;
+	private static final int AX_MEIO = 350;
 
 	@Test
 	@DisplayName("temperatura converte pela escala do card, e a unidade vem dele")
@@ -433,14 +433,14 @@ class LeituraDeCardsTest {
 	}
 
 	@Test
-	@DisplayName("o bruto vem com sinal: a escala do amplificador comeca em -250")
+	@DisplayName("o bruto vem com sinal: a escala do amplificador comeca em -50")
 	void brutoComSinal() {
-		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, 0xFF06)); // -250
+		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, 0xFFCE)); // -50
 
 		var g = leitura().converter(List.of(card("PRESSAO_01", Tipo.PRESSAO, 0, range(400))), bloco).get(0);
 
-		// Lido como Word sem sinal, -250 viraria 65286 e a pressao sairia enorme e plausivel.
-		assertEquals(-250.0, g.bruto());
-		assertEquals(0.0, g.valor(), 0.0001, "-250 e o zero da escala");
+		// Lido como Word sem sinal, -50 viraria 65486 e a pressao sairia enorme e plausivel.
+		assertEquals(-50.0, g.bruto());
+		assertEquals(0.0, g.valor(), 0.0001, "-50 e o zero da escala");
 	}
 }

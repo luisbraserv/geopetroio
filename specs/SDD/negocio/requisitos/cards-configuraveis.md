@@ -64,8 +64,8 @@ desenvolvimento.
 | `CONTADOR_STROKE` | Digital | [RN-090](../regras/business-rules.md#rn-090--um-contador-de-stroke-produz-três-séries) — três séries | ✅ Existe, amplia |
 
 **[FATO]** Todos os sensores analógicos são **4-20 mA**. O bloco *Analog Amplifier* do LOGO! entrega o
-laço já reescalonado para `Ax` na faixa −250..750, e `ConversaoSinalAnalogico.axComoSigned` já lê com sinal —
-a base negativa faria `-250` virar `65286` se lido como Word sem sinal.
+laço já reescalonado para `Ax` na faixa −50..750, e `ConversaoSinalAnalogico.axComoSigned` já lê com sinal —
+a base negativa faria `-50` virar `65486` se lido como Word sem sinal.
 
 ⚠️ **Conversão não é endereço.** Tornar o endereço configurável **não** torna a grandeza
 configurável. Peso e torque têm fórmulas próprias com geometria e calibração; um card de peso carrega

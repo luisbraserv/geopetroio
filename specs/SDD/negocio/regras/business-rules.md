@@ -315,12 +315,12 @@ Geopetro-Desktop. `ConversaoPressao`, `ConversaoTemperatura` e `ConversaoTanque`
 e aplicam somente as regras próprias de cada grandeza.
 
 O bloco *Analog Amplifier* do LOGO! já reescalona o laço 4–20 mA para a faixa configurada em
-*Measurement Range*. Conforme o padrão definido em 2026-10-08, o Ax útil vai de `-250` a `750`:
+*Measurement Range*. **[DECIDIDO 2026-10-16]** o Ax útil vai de `-50` a `750` (substitui o `-250..750` de 2026-10-08):
 
 ```
- 4 mA -> Ax = -250       12 mA -> Ax = 250        20 mA -> Ax = 750
+ 4 mA -> Ax = -50        12 mA -> Ax = 350        20 mA -> Ax = 750
 
-fracao = (Ax + 250) / 1000
+fracao = (Ax + 50) / 800
 bar    = fracao × rangeSensorBar        (faixa do transmissor, por canal)
 psi    = bar × 14,5037738 × sensibilidade
 ```
@@ -328,14 +328,14 @@ psi    = bar × 14,5037738 × sensibilidade
 ⚠️ **[FATO] O Ax não é pressão nem corrente** — é a posição no laço. Convertê-lo de novo para mA,
 ou tratá-lo como bar direto, aplica o escalonamento duas vezes e produz números plausíveis e errados.
 
-⚠️ **[FATO] Leitura com sinal.** O offset −250 leva a base da escala a valores negativos. Lido como
-Word *unsigned*, `-250` chega como `65286` e vira pressão absurda. `ConversaoSinalAnalogico.axComoSigned`
+⚠️ **[FATO] Leitura com sinal.** A base da escala é negativa. Lido como
+Word *unsigned*, `-50` chega como `65486` e vira pressão absurda. `ConversaoSinalAnalogico.axComoSigned`
 reinterpreta como inteiro de 16 bits com sinal.
 
-⚠️ **[DECIDIDO 2026-10-08] Limite físico inferior da pressão em zero.** Ax fora de −250..750 é
+⚠️ **[DECIDIDO 2026-10-08] Limite físico inferior da pressão em zero.** Ax fora de −50..750 é
 preservado como veio e **sinalizado** — `WARN` no log com endereço e valor, e o Ax cru visível em
 vermelho no rodapé do card. A grandeza convertida de pressão, porém, nunca fica negativa: Ax abaixo
-de −250 produz `0 bar`/`0 psi`. Assim o Desktop não exibe pressão negativa sem esconder o diagnóstico.
+de −50 produz `0 bar`/`0 psi`. Assim o Desktop não exibe pressão negativa sem esconder o diagnóstico.
 
 **[FATO]** A escala antiga 0–1000 → mA foi **removida** junto com suas constantes, para que não haja
 como reconverter por engano. O núcleo e a pressão têm testes separados em
@@ -932,11 +932,11 @@ já usado** — a numeração sai de somar um, sem contador separado.
 amplificador e aplica a escala do tipo.
 
 ```
-fracao = (Ax − AX_MIN) / (AX_MAX − AX_MIN)      // (Ax + 250) / 1000
+fracao = (Ax − AX_MIN) / (AX_MAX − AX_MIN)      // (Ax + 50) / 800
 ```
 
 **[FATO]** Vale [RN-030](#rn-030--conversão-do-ax-do-logo--psi) inteiro: `Ax` é lido **com sinal**, e a
-faixa −250..750 segue o padrão definido em [OQ-016](../requisitos/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada).
+faixa −50..750 (decidida em 2026-10-16) segue [OQ-016](../requisitos/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada).
 A validação em campo de cada canal permanece pendente.
 
 ### RN-083 · Temperatura é escala linear com mínimo e máximo

@@ -3,14 +3,14 @@ package com.geopetro.desktop.conversao;
 /**
  * Nucleo de conversao dos sinais analogicos recebidos do LOGO!.
  *
- * <p>O bloco Analog Amplifier entrega o laco 4-20 mA como Ax na faixa -250..750. Esta classe
+ * <p>O bloco Analog Amplifier entrega o laco 4-20 mA como Ax na faixa -50..750. Esta classe
  * concentra essa regra eletrica; as conversoes de pressao, temperatura e tanque aplicam depois as
  * respectivas escalas de engenharia.
  */
 public final class ConversaoSinalAnalogico {
 
     /** Ax correspondente a 4 mA. */
-    public static final int AX_MIN = -250;
+    public static final int AX_MIN = -50;
 
     /** Ax correspondente a 20 mA. */
     public static final int AX_MAX = 750;
