@@ -101,7 +101,9 @@ public record CardsDaUnidade(int schemaVersion, long unidadeId, long revisao,
 		PRESSAO("Pressão", 2),
 		TEMPERATURA("Temperatura", 2),
 		NIVEL_TANQUE("Nível do tanque", 2),
-		CONTADOR_STROKE("Contador de stroke", 4);
+		CONTADOR_STROKE("Contador de stroke", 4),
+		/** Contador acumulado de pulsos do cardã — RN-120. */
+		VAZAO_CARDA("Vazão por cardã", 4);
 
 		private final String rotulo;
 		private final int tamanhoEmBytes;
@@ -158,6 +160,9 @@ public record CardsDaUnidade(int schemaVersion, long unidadeId, long revisao,
 	 * <p>⚠️ <b>Calibração de peso e torque não está aqui</b>, e sim na configuração local do
 	 * Desktop, medida na unidade. O card de peso ou torque diz <b>onde ler</b>; quem converte é o
 	 * {@code PesoColunaCalculator} com os parâmetros que já tem.
+	 *
+	 * <p>Os dois últimos são da vazão por cardã — RN-120: a constante em bbl/pulso, com redução,
+	 * deslocamento e eficiência já incorporados, e os pulsos por volta do cardã.
 	 */
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	@JsonIgnoreProperties(ignoreUnknown = true)
@@ -166,7 +171,18 @@ public record CardsDaUnidade(int schemaVersion, long unidadeId, long revisao,
 			Double minimoEscala, Double maximoEscala, String unidade,
 			FormaTanque forma, Double raio, Double altura, Double comprimento, Double largura,
 			Double distanciaMinima, Double distanciaMaxima,
-			Double constanteBomba) {
+			Double constanteBomba,
+			Double constanteCarda, Integer pulsosPorVolta) {
+
+		/** Os tipos anteriores ao cardã, sem os campos dele. */
+		public Parametros(Double rangeSensorBar,
+				Double minimoEscala, Double maximoEscala, String unidade,
+				FormaTanque forma, Double raio, Double altura, Double comprimento, Double largura,
+				Double distanciaMinima, Double distanciaMaxima,
+				Double constanteBomba) {
+			this(rangeSensorBar, minimoEscala, maximoEscala, unidade, forma, raio, altura, comprimento,
+					largura, distanciaMinima, distanciaMaxima, constanteBomba, null, null);
+		}
 
 		public static Parametros vazio() {
 			return new Parametros(null, null, null, null, null, null, null, null, null, null, null, null);

@@ -113,6 +113,9 @@
         @if (unidadeDe(grandeza)) {
           <span class="card__unidade">{{ unidadeDe(grandeza) }}</span>
         }
+        @if (grandeza.nota) {
+          <span class="card__nota">{{ grandeza.nota }}</span>
+        }
         @if (severidadeDe(grandeza); as severidade) {
           <!-- A cor sozinha nao basta: quem nao a distingue precisa ler o nivel. -->
           <span class="card__alarme">{{ severidade === 'CRITICO' ? 'Crítico' : 'Atenção' }}</span>

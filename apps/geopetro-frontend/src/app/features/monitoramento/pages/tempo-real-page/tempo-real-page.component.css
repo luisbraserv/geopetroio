@@ -218,6 +218,13 @@ h1 {
   color: var(--text-tertiary);
 }
 
+/* RN-120: "média de 60 s", "estimada" — o que o número é, abaixo da unidade. */
+.card__nota {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
 /* --- Alarme --- */
 
 /* Fica acima dos cards de propósito: o alarme existe para ser lido por quem não estava olhando a

@@ -25,6 +25,9 @@ public final class CardsDoMonitoramento {
                 adicionar(resultado, card, LeituraDeCards.SERIE_STROKE, "stroke", leituras, conectado);
                 adicionar(resultado, card, LeituraDeCards.SERIE_VAZAO, "bbl/min", leituras, conectado);
                 adicionar(resultado, card, LeituraDeCards.SERIE_VOLUME, "bbl", leituras, conectado);
+            } else if (card.tipo() == CardsDaUnidade.Tipo.VAZAO_CARDA) {
+                adicionar(resultado, card, LeituraDeCards.SERIE_RPM, "RPM", leituras, conectado);
+                adicionar(resultado, card, LeituraDeCards.SERIE_VAZAO, "bbl/min", leituras, conectado);
             } else {
                 String unidade = switch (card.tipo()) {
                     case PESO -> "lbf";

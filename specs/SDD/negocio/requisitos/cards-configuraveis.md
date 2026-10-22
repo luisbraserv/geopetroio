@@ -48,7 +48,7 @@ desenho dos cards **não** deve prever absorver o Horus.
 `Geopetro-Front`, `Geopetro-Desktop` e `Geopetro-Telemetria` —
 [`renomeacao-projetos.md`](../../software/renomeacao-projetos.md).
 
-## 3. Os seis tipos de card
+## 3. Os sete tipos de card
 
 **[DECIDIDO 2026-09-07]** Vocabulário fechado de tipos. O que é aberto é *quantos* cards de cada tipo
 uma unidade tem, o nome deles e onde leem — não a existência de tipos novos, que continua exigindo
@@ -62,6 +62,7 @@ desenvolvimento.
 | `TEMPERATURA` | Analógico | [RN-083](../regras/business-rules.md#rn-083--temperatura-é-escala-linear-com-mínimo-e-máximo) — **a implementar** | 🆕 |
 | `NIVEL_TANQUE` | Analógico | [RN-084](../regras/business-rules.md#rn-084--o-sensor-de-nível-mede-distância-não-nível) — **a implementar** | 🆕 |
 | `CONTADOR_STROKE` | Digital | [RN-090](../regras/business-rules.md#rn-090--um-contador-de-stroke-produz-três-séries) — três séries | ✅ Existe, amplia |
+| `VAZAO_CARDA` | Digital | [RN-120](../regras/business-rules.md#rn-120--vazão-por-cardã-produz-duas-séries) — RPM do cardã e vazão | 🆕 2026-10-22 |
 
 **[FATO]** Todos os sensores analógicos são **4-20 mA**. O bloco *Analog Amplifier* do LOGO! entrega o
 laço já reescalonado para `Ax` na faixa −50..750, e `ConversaoSinalAnalogico.axComoSigned` já lê com sinal —
@@ -106,6 +107,95 @@ ser **por card**.
 **[PENDENTE]** Vazão somada entre bombas. A entrevista respondeu que "vazão total" era o volume
 acumulado *da bomba*, não a soma entre bombas — então a soma **não entra** por ora. Se entrar depois,
 é derivada do conjunto de cards da unidade, sem quebrar nada do que existe.
+
+### Vazão por cardã produz duas séries
+
+**[DECIDIDO 2026-10-22]** Tipo `VAZAO_CARDA`, rotulado **"Vazão por cardã"** na tela. Mede a bomba por
+um sensor de pulsos no **cardã** (o eixo que chega à bomba), não pelo stroke. Segue o fluxo de
+configuração e de tela do `CONTADOR_STROKE`, com duas séries em vez de três —
+[RN-120](../regras/business-rules.md#rn-120--vazão-por-cardã-produz-duas-séries).
+
+| Série | Rótulo na tela | Unidade |
+|---|---|---|
+| `rpm` | `<nome> — RPM do cardã` | RPM |
+| `vazao` | `<nome> — vazão` | bbl/min |
+
+**Não** produz stroke nem volume acumulado. A série `vazao` usa o mesmo nome da do stroke de
+propósito: limite, histórico e consulta tratam as duas igual.
+
+#### Parâmetros
+
+**[DECIDIDO 2026-10-22, revisto no mesmo dia]** A vazão sai **direto de uma constante em
+bbl/pulso** informada pelo usuário. A primeira versão pedia redução, deslocamento ("GPM per 100 RPM")
+e eficiência e montava a constante; esses fatores agora vêm **já incorporados** em `K`.
+
+| Campo | Obrigatório | Regra |
+|---|---|---|
+| Byte inicial | Sim | DWord (4 bytes): contador **acumulado** de pulsos no CLP |
+| Constante do cardã — `K` (bbl/pulso) | Sim | > 0, com pelo menos 8 casas decimais na tela |
+| Pulsos por volta do cardã — `P` | Sim | Inteiro > 0. **1** com um único alvo por volta; novo card nasce com 1 |
+| Janela de cálculo | — | **60 s**, mostrada e não editável |
+
+São os **únicos** parâmetros do tipo. A constante em bbl/stroke não é pedida, e não há teto de RPM.
+
+#### Cálculo
+
+```
+N = pulsos contados na janela          (contador agora − contador ~60 s atrás)
+t = tempo real entre essas duas leituras, em segundos
+RPM do cardã     = (N × 60) / (t × P)
+vazão (bbl/min)  = (N × K × 60) / t
+```
+
+⚠️ **A vazão não passa por `P`.** `K` já é bbl por **pulso**; dividir por `P` de novo daria a vazão
+de uma volta a cada `P` pulsos.
+
+**[DECIDIDO 2026-10-22]** `t` é o **tempo real** entre as duas leituras, não 60 fixo: uma leitura
+atrasada que cobre 61,3 s dividida por 60 inflaria o RPM. A leitura de referência é a mais recente
+com pelo menos 60 s de idade.
+
+**Conferência** (só teste): N = 600, t = 60 s, P = 1, K = 0,001 → **600,00 RPM** e
+**0,60 bbl/min**. Com P = 4 e os mesmos pulsos, **150,00 RPM** e a vazão **não muda**.
+
+#### Contador, virada e saltos — RN-121
+
+**[DECIDIDO 2026-10-22]** O contador é o do **LOGO!**, de **0 a 999.999**, e o LOGO! o zera sozinho depois de
+999.999. A diferença é calculada módulo 1.000.000.
+
+O contador cair pode ser **virada** (passou de 999.999) ou **reinício** (zerado no CLP). Os dois
+terminam num número pequeno; a diferença está em de onde ele partiu:
+
+| Situação | Como se decide | O que acontece |
+|---|---|---|
+| Virada | A diferença módulo 1.000.000 é de no máximo 10.000 pulsos | Conta normalmente, sem perder a janela |
+| Reinício | A diferença módulo 1.000.000 passa de 10.000 | A janela recomeça |
+| Valor fora de 0..999.999 | Não é um contador LOGO! válido | Idem |
+| Reconexão ao CLP | — | A janela recomeça |
+
+⚠️ **10.000 pulsos é margem, não física.** Cobre mais de 10 min a 1.000 pulsos/min sem leitura. Um
+reinício feito com o contador já acima de 990.000 passaria por virada, e daria um pico de até 10.000
+pulsos por um minuto. Sem teto de RPM, também um salto positivo do contador não é filtrado.
+
+**Falha de comunicação não é bomba parada.** Como o contador é acumulado, uma leitura que falha não
+perde pulsos: a próxima leitura válida os conta. Só a reconexão recomeça a janela.
+
+#### Na tela
+
+Cada card configurado vira **dois** cards lado a lado, na posição configurada, com **2 colunas** de
+largura cada, **2 casas decimais**, o mesmo endereço (`DBD0`) e o mesmo valor bruto no rodapé, e a
+indicação **"Média de 60 s"**. A vazão é marcada como **estimada**. Engrenagem e sininho seguem o
+padrão; o alarme é configurado **em cada card separadamente**, sem login (RN-109).
+
+| Estado | RPM do cardã | Vazão |
+|---|---|---|
+| CLP desconectado | `--` · CLP desconectado | `--` · CLP desconectado |
+| Antes da primeira leitura | `--` · Aguardando a primeira leitura | idem |
+| Menos de 60 s de janela (início, reconexão, reinício) | `--` · Coletando dados — janela de 60 s | idem |
+| Faltando `P` (só por documento antigo — a tela não salva assim) | `--` · Pulsos por volta não configurados | Funciona |
+| Faltando `K` (idem) | Funciona | `--` · Constante do cardã não configurada |
+| Janela completa, contador parado | **0,00** | **0,00** |
+
+Por ser média móvel, depois que a bomba para os valores levam **até 60 s** para chegar a zero.
 
 ## 4. Identidade do card — o que vai para o histórico
 
@@ -163,7 +253,7 @@ modelo de CLP variando por unidade, o endereçamento deixa de ser premissa globa
 CardTelemetria
   dispositivoId      (gerado — §4)
   nome               (rótulo editável)
-  tipo               (PESO | TORQUE | PRESSAO | TEMPERATURA | NIVEL_TANQUE | CONTADOR_STROKE)
+  tipo               (PESO | TORQUE | PRESSAO | TEMPERATURA | NIVEL_TANQUE | CONTADOR_STROKE | VAZAO_CARDA)
   byteInicial        (offset dentro do DB)
   ativo              (desativado para de publicar e some da tela — §4)
   visivel            (RN-037 — controla publicação, não gravação)
@@ -171,8 +261,8 @@ CardTelemetria
   parametros         (específicos do tipo — abaixo)
 ```
 
-**Tamanho da leitura vem do tipo**, não é escolhido: analógico é Word (2 bytes), `CONTADOR_STROKE` é
-DWord (4 bytes). Deixar o tamanho livre permitiria ler dois bytes de um contador de quatro e obter um
+**Tamanho da leitura vem do tipo**, não é escolhido: analógico é Word (2 bytes), `CONTADOR_STROKE` e
+`VAZAO_CARDA` são DWord (4 bytes). Deixar o tamanho livre permitiria ler dois bytes de um contador de quatro e obter um
 número plausível e errado.
 
 ### Parâmetros por tipo
@@ -185,6 +275,7 @@ número plausível e errado.
 | `PESO` | os 8 de `PesoColunaConfig` |
 | `TORQUE` | calibração da chave hidráulica |
 | `CONTADOR_STROKE` | `constanteBomba` |
+| `VAZAO_CARDA` | `constanteCarda` (bbl/pulso), `pulsosPorVolta` — §3 |
 
 ### Leitura em bloco, não card a card
 

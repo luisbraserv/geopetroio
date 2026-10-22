@@ -1,5 +1,6 @@
 import {
   CardUnidade,
+  SERIE_RPM,
   SERIE_STROKE,
   SERIE_VAZAO,
   SERIE_VOLUME,
@@ -87,6 +88,31 @@ describe('grandezasDe', () => {
       'Bomba 1 — Vazão',
       'Bomba 1 — Volume acumulado',
     ]);
+  });
+
+  it('uma vazão por cardã produz RPM e vazão, sem stroke nem volume — RN-120', () => {
+    const grandezas = grandezasDe([
+      card({ dispositivoId: 'VAZAO_CARDA_01', nome: 'Bomba de Lama', tipo: 'VAZAO_CARDA' }),
+    ]);
+
+    expect(grandezas.map((g) => g.chave)).toEqual(['VAZAO_CARDA_01|rpm', 'VAZAO_CARDA_01|vazao']);
+    expect(grandezas.map((g) => g.serie)).toEqual([SERIE_RPM, SERIE_VAZAO]);
+    expect(grandezas.map((g) => g.unidade)).toEqual(['RPM', 'bbl/min']);
+    expect(grandezas.map((g) => g.rotulo)).toEqual([
+      'Bomba de Lama — RPM do cardã',
+      'Bomba de Lama — Vazão',
+    ]);
+    expect(grandezas.map((g) => g.casas)).toEqual([2, 2]);
+    expect(grandezas.map((g) => g.nota)).toEqual(['Média de 60 s', 'Estimada · média de 60 s']);
+    expect(new Set(grandezas.map((g) => g.cor)).size).toBe(2);
+  });
+
+  it('o stroke não ganha nota', () => {
+    const grandezas = grandezasDe([
+      card({ dispositivoId: 'CONTADOR_STROKE_01', tipo: 'CONTADOR_STROKE' }),
+    ]);
+
+    expect(grandezas.every((g) => !g.nota)).toBe(true);
   });
 
   it('as três séries de um stroke têm chaves distintas', () => {

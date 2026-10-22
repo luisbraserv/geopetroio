@@ -19,7 +19,8 @@ export type TipoCard =
   | 'PRESSAO'
   | 'TEMPERATURA'
   | 'NIVEL_TANQUE'
-  | 'CONTADOR_STROKE';
+  | 'CONTADOR_STROKE'
+  | 'VAZAO_CARDA';
 
 export type FormaTanque = 'CILINDRICO_VERTICAL' | 'CILINDRICO_HORIZONTAL' | 'RETANGULAR';
 
@@ -37,6 +38,10 @@ export interface ParametrosCard {
   distanciaMinima?: number | null;
   distanciaMaxima?: number | null;
   constanteBomba?: number | null;
+  /** Vazão por cardã — RN-120: bbl por pulso, com redução, deslocamento e eficiência incorporados. */
+  constanteCarda?: number | null;
+  /** Pulsos numa volta do cardã; 1 com um alvo só. */
+  pulsosPorVolta?: number | null;
 }
 
 export interface CardUnidade {
@@ -81,6 +86,9 @@ export const SERIE_STROKE = 'stroke';
 export const SERIE_VAZAO = 'vazao';
 export const SERIE_VOLUME = 'volumeAcumulado';
 
+/** A série de RPM da vazão por cardã — RN-120. A outra é `SERIE_VAZAO`, de mesmo nome que a do stroke. */
+export const SERIE_RPM = 'rpm';
+
 /**
  * Uma grandeza que a unidade publica: o que vira um card e um gráfico na tela.
  *
@@ -97,6 +105,8 @@ export interface GrandezaDeCard {
   unidade: string;
   casas: number;
   cor: string;
+  /** O que o número é, quando a unidade sozinha não diz — "média de 60 s", "estimada". */
+  nota?: string | null;
 }
 
 /**
@@ -137,6 +147,8 @@ function unidadeDe(tipo: TipoCard, serie: string | null, parametros?: Parametros
       if (serie === SERIE_VAZAO) return 'bbl/min';
       if (serie === SERIE_VOLUME) return 'bbl';
       return 'stroke';
+    case 'VAZAO_CARDA':
+      return serie === SERIE_VAZAO ? 'bbl/min' : 'RPM';
   }
 }
 
@@ -153,7 +165,15 @@ function casasDe(tipo: TipoCard, serie: string | null): number {
       if (serie === SERIE_VAZAO) return 3;
       if (serie === SERIE_VOLUME) return 2;
       return 0;
+    case 'VAZAO_CARDA':
+      return 2;
   }
+}
+
+/** RN-120: as duas séries do cardã são média móvel, e a vazão é estimada pela rotação. */
+function notaDe(tipo: TipoCard, serie: string | null): string | null {
+  if (tipo !== 'VAZAO_CARDA') return null;
+  return serie === SERIE_VAZAO ? 'Estimada · média de 60 s' : 'Média de 60 s';
 }
 
 /**
@@ -170,17 +190,26 @@ const CORES: Record<TipoCard, string[]> = {
   TEMPERATURA: ['#d97706', '#b45309'],
   NIVEL_TANQUE: ['#0d9488', '#0f766e'],
   CONTADOR_STROKE: ['#059669', '#0891b2', '#4f46e5'],
+  VAZAO_CARDA: ['#65a30d', '#0e7490'],
 };
 
 const SUFIXO_SERIE: Record<string, string> = {
   [SERIE_STROKE]: 'Stroke',
   [SERIE_VAZAO]: 'Vazão',
   [SERIE_VOLUME]: 'Volume acumulado',
+  [SERIE_RPM]: 'RPM do cardã',
 };
 
-/** Um card de stroke vira três linhas; os demais, uma. */
+/** Um card de stroke vira três linhas, um de vazão por cardã duas (RN-120); os demais, uma. */
 function seriesDe(tipo: TipoCard): (string | null)[] {
-  return tipo === 'CONTADOR_STROKE' ? [SERIE_STROKE, SERIE_VAZAO, SERIE_VOLUME] : [null];
+  switch (tipo) {
+    case 'CONTADOR_STROKE':
+      return [SERIE_STROKE, SERIE_VAZAO, SERIE_VOLUME];
+    case 'VAZAO_CARDA':
+      return [SERIE_RPM, SERIE_VAZAO];
+    default:
+      return [null];
+  }
 }
 
 /**
@@ -242,6 +271,7 @@ export function grandezasVigiaveis(
         unidade: unidadeDe(card.tipo, serie, card.parametros),
         casas: casasDe(card.tipo, serie),
         cor: paleta[posicao % paleta.length],
+        nota: notaDe(card.tipo, serie),
         cardAtivo: !!card.ativo,
         cardVisivel: !!card.visivel,
       });
@@ -269,8 +299,8 @@ export function grandezasDe(cards: readonly CardUnidade[] | null | undefined): G
     const paleta = CORES[card.tipo];
 
     for (const [posicao, serie] of seriesDe(card.tipo).entries()) {
-      // Para stroke a variante identifica a série; para os demais, o card entre os do mesmo tipo.
-      const variante = card.tipo === 'CONTADOR_STROKE' ? posicao : indice;
+      // Com várias séries a variante identifica a série; para os demais, o card entre os do mesmo tipo.
+      const variante = seriesDe(card.tipo).length > 1 ? posicao : indice;
       const sufixo = serie ? SUFIXO_SERIE[serie] : null;
 
       grandezas.push({
@@ -282,6 +312,7 @@ export function grandezasDe(cards: readonly CardUnidade[] | null | undefined): G
         unidade: unidadeDe(card.tipo, serie, card.parametros),
         casas: casasDe(card.tipo, serie),
         cor: paleta[variante % paleta.length],
+        nota: notaDe(card.tipo, serie),
       });
     }
   }

@@ -153,6 +153,7 @@ public class PlcConnectionService {
         ultimaLeitura = null;
         strokeCalculatorService.reset();
         flowRateCalculatorService.reset();
+        leituraDeCards.reiniciarJanelas();
 
         var conexao = documento == null ? null : documento.conexao();
         if (conexao == null || LeituraDeCards.ativos(documento.cards()).isEmpty()) {

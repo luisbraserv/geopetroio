@@ -60,7 +60,9 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeId, long revisao,
 		PRESSAO(Sinal.ANALOGICO),
 		TEMPERATURA(Sinal.ANALOGICO),
 		NIVEL_TANQUE(Sinal.ANALOGICO),
-		CONTADOR_STROKE(Sinal.DIGITAL);
+		CONTADOR_STROKE(Sinal.DIGITAL),
+		/** Contador acumulado de pulsos do cardã — RN-120. */
+		VAZAO_CARDA(Sinal.DIGITAL);
 
 		private final Sinal sinal;
 
@@ -107,13 +109,27 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeId, long revisao,
 	 * <p>⚠️ <b>A geometria não está aqui de propósito.</b> Trazê-la seria migração de valores
 	 * calibrados, não acréscimo de campo. O card declara <b>onde ler e em que escala</b>; a estação
 	 * aplica a calibração que mediu.
+	 *
+	 * <p>Os dois últimos são de {@code VAZAO_CARDA} — RN-120: a constante em bbl/pulso, com
+	 * redução, deslocamento e eficiência já incorporados, e os pulsos por volta do cardã.
 	 */
 	public record Parametros(
 			Double rangeSensorBar,
 			Double minimoEscala, Double maximoEscala, String unidade,
 			FormaTanque forma, Double raio, Double altura, Double comprimento, Double largura,
 			Double distanciaMinima, Double distanciaMaxima,
-			Double constanteBomba) {
+			Double constanteBomba,
+			Double constanteCarda, Integer pulsosPorVolta) {
+
+		/** Os tipos anteriores ao cardã, sem os campos dele. */
+		public Parametros(Double rangeSensorBar,
+				Double minimoEscala, Double maximoEscala, String unidade,
+				FormaTanque forma, Double raio, Double altura, Double comprimento, Double largura,
+				Double distanciaMinima, Double distanciaMaxima,
+				Double constanteBomba) {
+			this(rangeSensorBar, minimoEscala, maximoEscala, unidade, forma, raio, altura, comprimento,
+					largura, distanciaMinima, distanciaMaxima, constanteBomba, null, null);
+		}
 	}
 
 	private static final int MAXIMO_CARDS = 100;
@@ -225,6 +241,17 @@ public record ConfiguracaoCards(int schemaVersion, long unidadeId, long revisao,
 			case NIVEL_TANQUE -> validarTanque(card, p);
 			case CONTADOR_STROKE -> exigirPositivo(p == null ? null : p.constanteBomba(),
 					"Informe a constante da bomba no card " + card.nome() + ".");
+			case VAZAO_CARDA -> validarCarda(card, p);
+		}
+	}
+
+	/** RN-120: constante em bbl/pulso e pulsos por volta, os dois obrigatórios e positivos. */
+	private static void validarCarda(Card card, Parametros p) {
+		exigirPositivo(p == null ? null : p.constanteCarda(),
+				"Informe a constante do carda (bbl/pulso) no card " + card.nome() + ".");
+		if (p.pulsosPorVolta() == null || p.pulsosPorVolta() <= 0) {
+			throw new BusinessException("Informe os pulsos por volta do carda, inteiro positivo, no card "
+					+ card.nome() + ".");
 		}
 	}
 

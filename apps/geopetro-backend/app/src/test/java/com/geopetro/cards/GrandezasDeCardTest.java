@@ -27,6 +27,14 @@ class GrandezasDeCardTest {
 	}
 
 	@Test
+	void umaVazaoPorCardaRendeRpmEVazaoSobOMesmoDispositivoId() {
+		assertThat(GrandezasDeCard.de(card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, true)))
+				.containsExactly(
+						new Grandeza("VAZAO_CARDA_01", "rpm"),
+						new Grandeza("VAZAO_CARDA_01", "vazao"));
+	}
+
+	@Test
 	void osDemaisTiposRendemUmaGrandezaSemSerie() {
 		for (Tipo tipo : List.of(Tipo.PESO, Tipo.TORQUE, Tipo.PRESSAO, Tipo.TEMPERATURA, Tipo.NIVEL_TANQUE)) {
 			assertThat(GrandezasDeCard.de(card(tipo.name() + "_01", tipo, true)))

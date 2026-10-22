@@ -2,6 +2,7 @@ package com.geopetro.desktop.aquisicao;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalDouble;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import com.geopetro.desktop.calculos.FlowRateCalculatorService;
 import com.geopetro.desktop.calculos.HydraulicTorqueCalculator;
 import com.geopetro.desktop.calculos.PesoColunaCalculator;
 import com.geopetro.desktop.calculos.StrokeCalculatorService;
+import com.geopetro.desktop.calculos.VazaoCardaCalculatorService;
 import com.geopetro.desktop.cards.CardsDaUnidade.Card;
 import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
 import com.geopetro.desktop.cards.CardsDaUnidade.Tipo;
@@ -97,15 +99,29 @@ public class LeituraDeCards {
 	public static final String SERIE_VAZAO = "vazao";
 	public static final String SERIE_VOLUME = "volumeAcumulado";
 
+	/** A série de RPM da vazão por cardã — RN-120. A outra é {@link #SERIE_VAZAO}. */
+	public static final String SERIE_RPM = "rpm";
+
+	static final String COLETANDO_JANELA = "Coletando dados — janela de 60 s";
+	static final String SEM_PULSOS_POR_VOLTA = "Pulsos por volta não configurados";
+	static final String SEM_CONSTANTE_DO_CARDA = "Constante do cardã não configurada";
+
 	private final CalibracaoDeCards calibracoes;
 	private final StrokeCalculatorService strokes;
 	private final FlowRateCalculatorService vazoes;
+	private final VazaoCardaCalculatorService cardas;
 
 	public LeituraDeCards(CalibracaoDeCards calibracoes, StrokeCalculatorService strokes,
-			FlowRateCalculatorService vazoes) {
+			FlowRateCalculatorService vazoes, VazaoCardaCalculatorService cardas) {
 		this.calibracoes = calibracoes;
 		this.strokes = strokes;
 		this.vazoes = vazoes;
+		this.cardas = cardas;
+	}
+
+	/** Recomeça as janelas do cardã. Chamado ao (re)conectar ao CLP — RN-121. */
+	public void reiniciarJanelas() {
+		cardas.reset();
 	}
 
 	/**
@@ -165,6 +181,7 @@ public class LeituraDeCards {
 				case TORQUE -> grandezas.add(torque(card, bloco));
 				case PRESSAO -> grandezas.add(pressao(card, bloco));
 				case CONTADOR_STROKE -> grandezas.addAll(stroke(card, bloco));
+				case VAZAO_CARDA -> grandezas.addAll(carda(card, bloco));
 				case TEMPERATURA -> grandezas.add(temperatura(card, bloco));
 				case NIVEL_TANQUE -> grandezas.add(tanque(card, bloco));
 			}
@@ -305,6 +322,38 @@ public class LeituraDeCards {
 				// O contador ja e cumulativo: multiplicado pela constante da bomba da quanto aquela
 				// bomba bombeou desde o inicio.
 				Grandeza.de(card, SERIE_VOLUME, cumulativo * constante, "bbl", cumulativo));
+	}
+
+	// ============================================================ vazão por cardã
+
+	/**
+	 * RPM do cardã e vazão estimada — RN-120, RN-121. Não há stroke nem volume acumulado.
+	 *
+	 * <p>As duas séries ficam sem valor até a janela ter 60 s: no início, na reconexão e depois de
+	 * reinício do contador. Cada uma depende só do seu parâmetro: sem P o RPM fica sem valor, sem K
+	 * a vazão — a outra continua.
+	 */
+	private List<Grandeza> carda(Card card, BlocoDeLeitura bloco) {
+		long contador = bloco.dword(card.byteInicial());
+		Parametros p = card.parametros() == null ? Parametros.vazio() : card.parametros();
+
+		OptionalDouble pulsosPorMinuto = cardas.pulsosPorMinuto(card.dispositivoId(), contador);
+		if (pulsosPorMinuto.isEmpty()) {
+			return List.of(
+					Grandeza.sem(card, SERIE_RPM, "RPM", contador, COLETANDO_JANELA),
+					Grandeza.sem(card, SERIE_VAZAO, "bbl/min", contador, COLETANDO_JANELA));
+		}
+
+		double ppm = pulsosPorMinuto.getAsDouble();
+		Double rpm = VazaoCardaCalculatorService.rpmDoCarda(ppm, p.pulsosPorVolta());
+		Double vazao = VazaoCardaCalculatorService.vazaoBblPorMinuto(ppm, p.constanteCarda());
+		return List.of(
+				rpm == null
+						? Grandeza.sem(card, SERIE_RPM, "RPM", contador, SEM_PULSOS_POR_VOLTA)
+						: Grandeza.de(card, SERIE_RPM, rpm, "RPM", contador),
+				vazao == null
+						? Grandeza.sem(card, SERIE_VAZAO, "bbl/min", contador, SEM_CONSTANTE_DO_CARDA)
+						: Grandeza.de(card, SERIE_VAZAO, vazao, "bbl/min", contador));
 	}
 
 	// ============================================================ parâmetros

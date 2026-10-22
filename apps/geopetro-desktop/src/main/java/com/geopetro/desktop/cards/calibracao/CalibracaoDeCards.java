@@ -202,7 +202,7 @@ public class CalibracaoDeCards {
 					? Calibracao.padrao().comSensibilidade(sensibilidade(legado, 4))
 					: null;
 			// Tipos novos nao tinham endereco fixo: nao ha o que herdar.
-			case TEMPERATURA, NIVEL_TANQUE, CONTADOR_STROKE -> null;
+			case TEMPERATURA, NIVEL_TANQUE, CONTADOR_STROKE, VAZAO_CARDA -> null;
 		};
 	}
 

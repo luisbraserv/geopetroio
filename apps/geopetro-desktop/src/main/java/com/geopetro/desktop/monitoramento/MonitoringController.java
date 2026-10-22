@@ -160,7 +160,7 @@ public class MonitoringController {
         Button sininho = new Button();
         sininho.setOnAction(e -> abrirAlarmeDoCard(g, sininho));
 
-        Node no = buildCardDinamico(rotulo(g), g.unidade(), visual, iconeDe(g.tipo()),
+        Node no = buildCardDinamico(rotulo(g), unidadeNaTela(g), visual, iconeDe(g.tipo()),
                 valor, estado, engrenagem, bruto, alarme, sininho);
         var card = new CardDinamico(no, valor, bruto, estado, visual, alarme, sininho);
         atualizarSininho(card, g, null);
@@ -260,9 +260,23 @@ public class MonitoringController {
             case LeituraDeCards.SERIE_STROKE -> "stroke";
             case LeituraDeCards.SERIE_VAZAO -> "vazão";
             case LeituraDeCards.SERIE_VOLUME -> "volume acumulado";
+            case LeituraDeCards.SERIE_RPM -> "RPM do cardã";
             default -> g.serie();
         };
         return g.nome() + " — " + legivel;
+    }
+
+    /**
+     * A unidade, e na vazão por cardã também o que o número é — RN-120: média móvel, e a vazão
+     * estimada pela rotação, não medida.
+     */
+    static String unidadeNaTela(LeituraDeCards.Grandeza g) {
+        if (g.tipo() != CardsDaUnidade.Tipo.VAZAO_CARDA) {
+            return g.unidade();
+        }
+        return LeituraDeCards.SERIE_VAZAO.equals(g.serie())
+                ? g.unidade() + " · estimada · média de 60 s"
+                : g.unidade() + " · média de 60 s";
     }
 
     /**
@@ -288,7 +302,7 @@ public class MonitoringController {
             case PESO -> ICON_WEIGHT;
             case TORQUE -> ICON_WRENCH;
             case PRESSAO, TEMPERATURA -> ICON_GAUGE;
-            case CONTADOR_STROKE, NIVEL_TANQUE -> ICON_DROP;
+            case CONTADOR_STROKE, NIVEL_TANQUE, VAZAO_CARDA -> ICON_DROP;
         };
     }
 
@@ -368,7 +382,7 @@ public class MonitoringController {
             case PESO, TORQUE -> String.format("%.0f", valor);
             case PRESSAO, TEMPERATURA -> String.format("%.1f", valor);
             case NIVEL_TANQUE -> String.format("%.1f", valor);
-            case CONTADOR_STROKE -> String.format("%.2f", valor);
+            case CONTADOR_STROKE, VAZAO_CARDA -> String.format("%.2f", valor);
         };
     }
 

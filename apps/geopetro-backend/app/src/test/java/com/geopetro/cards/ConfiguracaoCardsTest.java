@@ -31,6 +31,11 @@ class ConfiguracaoCardsTest {
 		return new Parametros(400.0, null, null, null, null, null, null, null, null, null, null, null);
 	}
 
+	private static Parametros carda(Double constante, Integer pulsosPorVolta) {
+		return new Parametros(null, null, null, null, null, null, null, null, null, null, null, null,
+				constante, pulsosPorVolta);
+	}
+
 	private static Alteracao alteracao(List<Card> cards) {
 		return new Alteracao(0, CONEXAO, cards);
 	}
@@ -171,6 +176,52 @@ class ConfiguracaoCardsTest {
 			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
 					alteracao(List.of(card(null, Tipo.CONTADOR_STROKE, 0, 0, null))), List.of()))
 					.hasMessageContaining("constante da bomba");
+		}
+
+		@Test
+		@DisplayName("vazao por carda exige a constante em bbl/pulso e os pulsos por volta — RN-120")
+		void cardaExigeConstanteEPulsos() {
+			assertThatCode(() -> ConfiguracaoCards.validarEIdentificar(alteracao(List.of(
+					card(null, Tipo.VAZAO_CARDA, 0, 0, carda(0.00012345, 1)))), List.of()))
+					.doesNotThrowAnyException();
+
+			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
+					alteracao(List.of(card(null, Tipo.VAZAO_CARDA, 0, 0, null))), List.of()))
+					.hasMessageContaining("constante do carda");
+			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
+					alteracao(List.of(card(null, Tipo.VAZAO_CARDA, 0, 0, carda(0.0, 1)))), List.of()))
+					.hasMessageContaining("constante do carda");
+			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
+					alteracao(List.of(card(null, Tipo.VAZAO_CARDA, 0, 0, carda(0.001, null)))), List.of()))
+					.hasMessageContaining("pulsos por volta");
+			assertThatThrownBy(() -> ConfiguracaoCards.validarEIdentificar(
+					alteracao(List.of(card(null, Tipo.VAZAO_CARDA, 0, 0, carda(0.001, 0)))), List.of()))
+					.hasMessageContaining("pulsos por volta");
+		}
+
+		@Test
+		@DisplayName("os parametros do carda sobrevivem ao JSON, e documento antigo continua legivel")
+		void cardaNoJson() {
+			var json = tools.jackson.databind.json.JsonMapper.builder().build();
+			var original = carda(0.00012345, 4);
+
+			assertThat(json.readValue(json.writeValueAsString(original), Parametros.class)).isEqualTo(original);
+
+			// Gravado antes do tipo existir: sem os dois campos, que voltam nulos.
+			var antigo = json.readValue("{\"constanteBomba\":0.125}", Parametros.class);
+			assertThat(antigo.constanteBomba()).isEqualTo(0.125);
+			assertThat(antigo.constanteCarda()).isNull();
+			assertThat(antigo.pulsosPorVolta()).isNull();
+		}
+
+		@Test
+		@DisplayName("vazao por carda recebe id VAZAO_CARDA_NN")
+		void cardaGeraId() {
+			var cards = ConfiguracaoCards.validarEIdentificar(alteracao(List.of(
+					card(null, Tipo.VAZAO_CARDA, 0, 0, carda(0.001, 1)))), List.of());
+
+			assertThat(cards).singleElement().extracting(Card::dispositivoId).isEqualTo("VAZAO_CARDA_01");
+			assertThat(Tipo.VAZAO_CARDA.tamanhoEmBytes()).isEqualTo(4);
 		}
 
 		@Test

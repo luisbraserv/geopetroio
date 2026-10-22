@@ -1651,3 +1651,42 @@ payloads de configuração, `/api/unidades/**` no Core, `/api/monitoramento/unid
 `/topic/.../unidades/{id}` no WebSocket e `idUnidade` para o nome no MQTT/InfluxDB. O tipo `SONDA`
 continua existindo. Lista completa:
 [braserv-core.md §9](../../software/backend/braserv-core.md#9-contrato-de-unidade-rn-119).
+
+### RN-120 · Vazão por cardã produz duas séries
+**[DECIDIDO 2026-10-22]** Um card `VAZAO_CARDA` lê o contador **acumulado** de pulsos de um sensor
+no cardã (DWord) e publica, sob o próprio `dispositivoId`:
+
+| Série | O que é |
+|---|---|
+| `rpm` | Rotação do **cardã**, média de 60 s: `(N × 60) / (t × P)` |
+| `vazao` (`bbl/min`) | `(N × K × 60) / t` — **estimada** |
+
+`N` são os pulsos da janela, `t` o tempo **real** entre as duas leituras que a delimitam, `K` a
+constante em bbl/pulso — com redução, deslocamento e eficiência já incorporados — e `P` os pulsos por
+volta do cardã. `K` e `P` são os únicos parâmetros, e os dois são obrigatórios. **A vazão não passa
+por `P`.**
+
+Não produz stroke nem volume acumulado. `vazao` tem o mesmo nome da série do stroke
+([RN-098](#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)), para que limite e
+histórico não precisem distinguir de onde a vazão veio.
+
+Detalhes, tela e conferência: [cards-configuraveis §3](../requisitos/cards-configuraveis.md#vazão-por-cardã-produz-duas-séries).
+
+### RN-121 · O contador de pulsos do cardã vira em 999.999 e não gera pico
+**[DECIDIDO 2026-10-22]** O contador é o do LOGO!, `0..999.999`, e o LOGO! o zera sozinho ao passar disso. A
+diferença entre leituras é módulo
+1.000.000.
+
+| Caso | Regra |
+|---|---|
+| Queda com diferença módulo 1.000.000 ≤ 10.000 | Virada: conta normalmente |
+| Queda com diferença maior | Reinício: a janela recomeça |
+| Valor fora de `0..999.999` | Inválido: a janela recomeça |
+| Reconexão ao CLP | A janela recomeça |
+
+Enquanto a janela não tem 60 s, os dois cards mostram `--` com "Coletando dados — janela de 60 s"
+([RN-099](#rn-099--grandeza-sem-valor-não-é-publicada): sem valor, não publica).
+
+⚠️ **Falha de leitura não é bomba parada.** O contador é acumulado: a próxima leitura válida conta os
+pulsos do intervalo, e a média continua certa. Zero só aparece com a janela completa e o contador
+parado.
