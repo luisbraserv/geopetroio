@@ -85,7 +85,57 @@ class CalculadoresPorCardTest {
 	@DisplayName("vazão")
 	class Vazao {
 
-		private final FlowRateCalculatorService calculador = new FlowRateCalculatorService();
+		private long agora = 1_000_000;
+		private final FlowRateCalculatorService calculador = new FlowRateCalculatorService(() -> agora);
+
+		/** Avanca o relogio e le: um ciclo de aquisicao. */
+		private double ciclo(String bomba, long strokes, double constante, long passoMs) {
+			agora += passoMs;
+			return calculador.calculateBblPerMinute(bomba, strokes, constante);
+		}
+
+		@Test
+		@DisplayName("ritmo constante dá exatamente strokes/min × constante, com a janela cheia")
+		void ritmoConstante() {
+			// 2 strokes/s = 120 strokes/min; × 0,1 bbl/stroke = 12 bbl/min.
+			calculador.calculateBblPerMinute(BOMBA_A, 0, 0.1);
+			double vazao = 0;
+			for (int i = 0; i < 120; i++) {
+				vazao = ciclo(BOMBA_A, 2, 0.1, 1_000);
+			}
+
+			// Somar os strokes da leitura mais antiga dava 61 deltas sobre 60 s: 12,2 bbl/min.
+			assertEquals(12.0, vazao, 1e-9);
+		}
+
+		@Test
+		@DisplayName("ritmo constante também é exato com a janela ainda enchendo")
+		void ritmoConstanteJanelaEnchendo() {
+			calculador.calculateBblPerMinute(BOMBA_A, 0, 0.1);
+			ciclo(BOMBA_A, 2, 0.1, 1_000);
+			assertEquals(12.0, ciclo(BOMBA_A, 2, 0.1, 1_000), 1e-9);
+		}
+
+		@Test
+		@DisplayName("depois de mais de 60 s sem leitura, a vazão é zero — não a constante da bomba")
+		void voltaDepoisDeLacuna() {
+			calculador.calculateBblPerMinute(BOMBA_A, 0, 0.125);
+			ciclo(BOMBA_A, 2, 0.125, 1_000);
+
+			// A janela esvazia e fica so a leitura nova: sem intervalo nao ha vazao. Antes saia
+			// 0,125 — bbl/stroke exibido como bbl/min.
+			assertEquals(0.0, ciclo(BOMBA_A, 300, 0.125, 90_000));
+			// E o ciclo seguinte ja mede normalmente.
+			assertEquals(0.125 * 2 * 60, ciclo(BOMBA_A, 2, 0.125, 1_000), 1e-9);
+		}
+
+		@Test
+		@DisplayName("duas leituras no mesmo instante não produzem vazão")
+		void intervaloZero() {
+			calculador.calculateBblPerMinute(BOMBA_A, 0, 0.1);
+
+			assertEquals(0.0, calculador.calculateBblPerMinute(BOMBA_A, 10, 0.1));
+		}
 
 		@Test
 		@DisplayName("a primeira leitura de cada card devolve zero: sem intervalo não há vazão")
@@ -102,11 +152,11 @@ class CalculadoresPorCardTest {
 
 			// A bombeia forte; B segue parada.
 			for (int i = 0; i < 5; i++) {
-				calculador.calculateBblPerMinute(BOMBA_A, 50, 0.1);
+				ciclo(BOMBA_A, 50, 0.1, 1_000);
 			}
 			double vazaoDeB = 0;
 			for (int i = 0; i < 5; i++) {
-				vazaoDeB = calculador.calculateBblPerMinute(BOMBA_B, 0, 0.1);
+				vazaoDeB = ciclo(BOMBA_B, 0, 0.1, 1_000);
 			}
 
 			// Com uma janela compartilhada, os strokes de A entrariam na conta de B.
@@ -122,8 +172,8 @@ class CalculadoresPorCardTest {
 			double a = 0;
 			double b = 0;
 			for (int i = 0; i < 4; i++) {
-				a = calculador.calculateBblPerMinute(BOMBA_A, 10, 0.10);
-				b = calculador.calculateBblPerMinute(BOMBA_B, 10, 0.50);
+				a = ciclo(BOMBA_A, 10, 0.10, 1_000);
+				b = ciclo(BOMBA_B, 10, 0.50, 0);
 			}
 
 			assertTrue(a > 0 && b > 0, "as duas bombeando");
@@ -136,14 +186,14 @@ class CalculadoresPorCardTest {
 		void resetSeletivo() {
 			calculador.calculateBblPerMinute(BOMBA_A, 0, 0.1);
 			calculador.calculateBblPerMinute(BOMBA_B, 0, 0.1);
-			calculador.calculateBblPerMinute(BOMBA_A, 10, 0.1);
-			calculador.calculateBblPerMinute(BOMBA_B, 10, 0.1);
+			ciclo(BOMBA_A, 10, 0.1, 1_000);
+			ciclo(BOMBA_B, 10, 0.1, 0);
 
 			calculador.reset(BOMBA_A);
 
-			assertEquals(0.0, calculador.calculateBblPerMinute(BOMBA_A, 10, 0.1),
+			assertEquals(0.0, ciclo(BOMBA_A, 10, 0.1, 1_000),
 					"A recomeca e a primeira leitura devolve zero");
-			assertTrue(calculador.calculateBblPerMinute(BOMBA_B, 10, 0.1) > 0, "B continua com janela");
+			assertTrue(ciclo(BOMBA_B, 10, 0.1, 0) > 0, "B continua com janela");
 		}
 
 		@Test
@@ -151,7 +201,7 @@ class CalculadoresPorCardTest {
 		void janelaSemStroke() {
 			calculador.calculateBblPerMinute(BOMBA_A, 0, 0.1);
 
-			assertEquals(0.0, calculador.calculateBblPerMinute(BOMBA_A, 0, 0.1));
+			assertEquals(0.0, ciclo(BOMBA_A, 0, 0.1, 1_000));
 		}
 	}
 }
