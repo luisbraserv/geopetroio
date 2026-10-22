@@ -45,7 +45,7 @@ import { AppToast, ToastKind, ToastService } from './toast.service';
       border-radius: 8px;
       background: #ffffff;
       color: var(--color-text-primary);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+      box-shadow: 0 18px 45px rgba(20, 27, 69, 0.18);
       pointer-events: auto;
     }
 
@@ -94,10 +94,10 @@ import { AppToast, ToastKind, ToastService } from './toast.service';
       color: var(--color-text-primary);
     }
 
-    .app-toast--success { --toast-accent: var(--color-success); --toast-bg: var(--color-success-soft); --toast-border: rgba(22, 163, 74, 0.24); }
-    .app-toast--error { --toast-accent: var(--color-error); --toast-bg: var(--color-error-soft); --toast-border: rgba(220, 38, 38, 0.24); }
-    .app-toast--warning { --toast-accent: var(--color-warning); --toast-bg: var(--color-warning-soft); --toast-border: rgba(217, 119, 6, 0.26); }
-    .app-toast--info { --toast-accent: var(--color-info); --toast-bg: var(--color-info-soft); --toast-border: rgba(37, 99, 235, 0.22); }
+    .app-toast--success { --toast-accent: var(--color-success); --toast-bg: var(--color-success-soft); --toast-border: rgba(168, 185, 55, 0.24); }
+    .app-toast--error { --toast-accent: var(--color-error); --toast-bg: var(--color-error-soft); --toast-border: rgba(217, 45, 32, 0.24); }
+    .app-toast--warning { --toast-accent: var(--color-warning); --toast-bg: var(--color-warning-soft); --toast-border: rgba(247, 135, 59, 0.26); }
+    .app-toast--info { --toast-accent: var(--color-info); --toast-bg: var(--color-info-soft); --toast-border: rgba(62, 122, 194, 0.22); }
 
     @media (max-width: 640px) {
       .toast-stack {

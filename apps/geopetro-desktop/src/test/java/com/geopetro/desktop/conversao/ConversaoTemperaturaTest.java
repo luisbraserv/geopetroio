@@ -87,8 +87,8 @@ class ConversaoTemperaturaTest {
 	void foraDaFaixa() {
 		var p = escala(0.0, 100.0, "°C");
 
-		// Nao limita: abaixo de -250 significa laco aberto, e um valor claramente fora da escala
+		// Nao limita: abaixo de -50 significa laco aberto, e um valor claramente fora da escala
 		// denuncia isso melhor que um zero limitado, que pareceria medicao real.
-		assertEquals(-12.5, ConversaoTemperatura.valor(-375, p), 0.0001);
+		assertEquals(-12.5, ConversaoTemperatura.valor(-150, p), 0.0001);
 	}
 }

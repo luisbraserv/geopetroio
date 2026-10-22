@@ -116,6 +116,9 @@
 					<include>**/*.json</include>
 					<include>**/*.csv</include>
 					<include>**/*.tsv</include>
+					<!-- Fontes do Braserv DS 1.1 e suas licencas OFL, que precisam acompanha-las -->
+					<include>**/*.ttf</include>
+					<include>views/fonts/*.txt</include>
 				</includes>
 			</resource>
 		</resources>

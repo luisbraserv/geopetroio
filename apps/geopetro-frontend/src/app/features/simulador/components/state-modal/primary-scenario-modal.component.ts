@@ -77,40 +77,40 @@ import { SimuladorStateApiService, type CenarioApi, type PastaApi } from '../../
   `,
   styles: [`
     .psm-backdrop { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center;
-      justify-content: center; padding: 24px; background: rgba(5, 24, 51, .45); }
+      justify-content: center; padding: 24px; background: rgba(20, 27, 69, .45); }
     .psm-modal { width: min(760px, 100%); max-height: 88vh; overflow: auto; border-radius: 10px;
       background: #fff; box-shadow: 0 18px 48px rgba(0, 0, 0, .28); }
     .psm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-      padding: 16px 18px; border-bottom: 1px solid var(--color-card-border, #d6deeb); }
-    .psm-head h2 { margin: 2px 0 0; font-size: 1.05rem; color: var(--color-text-strong, #051833); }
+      padding: 16px 18px; border-bottom: 1px solid var(--color-card-border); }
+    .psm-head h2 { margin: 2px 0 0; font-size: 1.05rem; color: var(--color-text-strong); }
     .psm-eyebrow { font-size: .68rem; font-weight: 800; letter-spacing: .12em;
-      text-transform: uppercase; color: var(--color-text-body, #64748b); }
-    .psm-icon { width: 28px; height: 28px; border: 1px solid var(--color-card-border, #d6deeb);
-      border-radius: 6px; background: #f8fafc; cursor: pointer; font-size: .85rem; line-height: 1; }
+      text-transform: uppercase; color: var(--color-text-body); }
+    .psm-icon { width: 28px; height: 28px; border: 1px solid var(--color-card-border);
+      border-radius: 6px; background: var(--surface-canvas); cursor: pointer; font-size: .85rem; line-height: 1; }
     .psm-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
     .psm-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
     .psm-field, .psm-file { display: flex; flex-direction: column; gap: 3px; font-size: .72rem;
-      color: var(--color-text-body, #475569); }
+      color: var(--color-text-body); }
     .psm-field input, .psm-file input { padding: 6px 8px; border-radius: 6px; font: inherit;
-      font-size: .82rem; border: 1px solid var(--color-card-border, #d6deeb); }
-    .psm-btn { padding: 7px 14px; border: 1px solid var(--color-card-border, #d6deeb);
-      border-radius: 6px; background: #f8fafc; font: inherit; font-size: .78rem; font-weight: 650;
+      font-size: .82rem; border: 1px solid var(--color-card-border); }
+    .psm-btn { padding: 7px 14px; border: 1px solid var(--color-card-border);
+      border-radius: 6px; background: var(--surface-canvas); font: inherit; font-size: .78rem; font-weight: 650;
       cursor: pointer; }
-    .psm-btn--primary { background: var(--color-primary, #154a7a); color: #fff;
+    .psm-btn--primary { background: var(--color-primary); color: #fff;
       border-color: transparent; }
     .psm-badge { padding: 5px 10px; border-radius: 999px; font-size: .72rem; font-weight: 700;
-      background: #f1f5f9; color: var(--color-text-body, #64748b); }
-    .psm-badge--saved { background: rgba(15, 118, 110, .12); color: #0f766e; }
-    .psm-badge--failed { background: rgba(217, 45, 32, .12); color: #b42318; }
-    .psm-warn { margin: 0; font-size: .76rem; color: #b45309; }
+      background: var(--surface-subtle); color: var(--color-text-body); }
+    .psm-badge--saved { background: rgba(95, 109, 23, .12); color: #0f766e; }
+    .psm-badge--failed { background: rgba(217, 45, 32, .12); color: var(--danger-700); }
+    .psm-warn { margin: 0; font-size: .76rem; color: var(--warning-700); }
     .psm-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
     .psm-table th, .psm-table td { padding: 6px 8px; text-align: left;
-      border-bottom: 1px solid var(--color-card-border, #e2e8f0); }
-    .psm-import { border: 1px dashed var(--brand-orange-600, #d4852f); border-radius: 8px;
+      border-bottom: 1px solid var(--color-card-border); }
+    .psm-import { border: 1px dashed var(--brand-yellow-500); border-radius: 8px;
       padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: .78rem; }
-    .psm-import p { margin: 0; color: var(--color-text-body, #475569); }
+    .psm-import p { margin: 0; color: var(--color-text-body); }
   
-    .psm-modal{width:min(1100px,100%)}.psm-layout{display:grid;grid-template-columns:240px minmax(0,1fr)}.psm-folders{padding:16px;border-right:1px solid #d6deeb;display:flex;flex-direction:column;gap:9px;background:#f8fafc}.psm-folders button{border:0;background:transparent;text-align:left;padding:7px;border-radius:5px;cursor:pointer;color:#334155}.psm-folders button.active{background:#e2e8f0;color:#051833;font-weight:700}.psm-folder-row{display:flex;gap:3px}.psm-folder-row button:first-child{flex:1;overflow-wrap:anywhere}.psm-field select{padding:7px;border:1px solid #d6deeb;border-radius:6px;max-width:220px}.psm-hint{font-size:.72rem;color:#64748b;margin:0}.psm-body{min-width:0;overflow:auto}.psm-btn:disabled{opacity:.45;cursor:not-allowed}@media(max-width:700px){.psm-layout{grid-template-columns:1fr}.psm-folders{max-height:180px;overflow:auto;border-right:0;border-bottom:1px solid #d6deeb}.psm-backdrop{padding:10px}}
+    .psm-modal{width:min(1100px,100%)}.psm-layout{display:grid;grid-template-columns:240px minmax(0,1fr)}.psm-folders{padding:16px;border-right:1px solid var(--border-default);display:flex;flex-direction:column;gap:9px;background:var(--surface-canvas)}.psm-folders button{border:0;background:transparent;text-align:left;padding:7px;border-radius:5px;cursor:pointer;color:var(--text-primary)}.psm-folders button.active{background:var(--border-default);color:var(--brand-blue-700);font-weight:700}.psm-folder-row{display:flex;gap:3px}.psm-folder-row button:first-child{flex:1;overflow-wrap:anywhere}.psm-field select{padding:7px;border:1px solid var(--border-default);border-radius:6px;max-width:220px}.psm-hint{font-size:.72rem;color:var(--text-secondary);margin:0}.psm-body{min-width:0;overflow:auto}.psm-btn:disabled{opacity:.45;cursor:not-allowed}@media(max-width:700px){.psm-layout{grid-template-columns:1fr}.psm-folders{max-height:180px;overflow:auto;border-right:0;border-bottom:1px solid var(--border-default)}.psm-backdrop{padding:10px}}
   `],
 })
 export class PrimaryScenarioModalComponent implements OnChanges {

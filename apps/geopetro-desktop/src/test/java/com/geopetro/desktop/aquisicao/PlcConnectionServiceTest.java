@@ -15,6 +15,7 @@ import com.geopetro.desktop.alarmes.AlarmesLocais;
 import com.geopetro.desktop.calculos.FlowRateCalculatorService;
 import com.geopetro.desktop.calculos.PesoColunaConfig;
 import com.geopetro.desktop.calculos.StrokeCalculatorService;
+import com.geopetro.desktop.calculos.VazaoCardaCalculatorService;
 import com.geopetro.desktop.cards.CardsDaUnidade.*;
 import com.geopetro.desktop.cards.CardsDaUnidade;
 import com.geopetro.desktop.cards.calibracao.CalibracaoDeCards;
@@ -61,7 +62,7 @@ class PlcConnectionServiceTest {
         var strokes = new StrokeCalculatorService();
         var vazoes = new FlowRateCalculatorService();
         plc = new PlcConnectionService(settingsService, strokes, vazoes, historico, sonda, mqtt,
-                realtime, new LeituraDeCards(calibracoes, strokes, vazoes), calibracoes, mock(AlarmesLocais.class)) {
+                realtime, new LeituraDeCards(calibracoes, strokes, vazoes, new VazaoCardaCalculatorService()), calibracoes, mock(AlarmesLocais.class)) {
             @Override S7Client criarCliente() { return driver; }
             @Override void startReading(int intervaloMs) { /* ciclos dirigidos pelo teste */ }
         };

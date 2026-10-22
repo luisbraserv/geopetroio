@@ -22,8 +22,8 @@
                      <children>
                         <Label text="Carta Operacao"><font><Font name="System Bold" size="22.0" /></font></Label>
                         <Region HBox.hgrow="ALWAYS" />
-                        <Button fx:id="btnNewChart" mnemonicParsing="false" style="-fx-background-color: #051833; -fx-background-radius: 5; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 9 14;" text="&#x2795; Gerar Carta Opera&#xE7;&#xE3;o" />
-                        <Button fx:id="btnExportPdf" mnemonicParsing="false" style="-fx-background-color: #ffffff; -fx-border-color: #154a7a; -fx-border-radius: 5; -fx-background-radius: 5; -fx-text-fill: #051833; -fx-font-weight: bold; -fx-padding: 9 14;" text="&#x1F4C4; Gerar PDF" />
+                        <Button fx:id="btnNewChart" mnemonicParsing="false" style="-fx-background-color: #293684; -fx-background-radius: 5; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 9 14;" text="&#x2795; Gerar Carta Opera&#xE7;&#xE3;o" />
+                        <Button fx:id="btnExportPdf" mnemonicParsing="false" style="-fx-background-color: #ffffff; -fx-border-color: #2f64a6; -fx-border-radius: 5; -fx-background-radius: 5; -fx-text-fill: #293684; -fx-font-weight: bold; -fx-padding: 9 14;" text="&#x1F4C4; Gerar PDF" />
                      </children>
                   </HBox>
                </children>

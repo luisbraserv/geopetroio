@@ -229,13 +229,17 @@ public class CartaOperacao implements Initializable {
         }
     }
 
+    // Sucesso e erro do Braserv DS 1.1, os mesmos do Geopetro-Desktop. O texto ao lado repete o estado.
+    private static final Color COR_CONECTADO = Color.web("#a8b937");
+    private static final Color COR_DESCONECTADO = Color.web("#d92d20");
+
     private void atualizarStatusPlc(boolean conectado) {
         Platform.runLater(() -> {
             if (conectado) {
-                plcStatusCircle.setFill(Color.LIMEGREEN);
+                plcStatusCircle.setFill(COR_CONECTADO);
                 plcStatusLabel.setText("Conectado");
             } else {
-                plcStatusCircle.setFill(Color.RED);
+                plcStatusCircle.setFill(COR_DESCONECTADO);
                 plcStatusLabel.setText("Não conectado");
             }
         });

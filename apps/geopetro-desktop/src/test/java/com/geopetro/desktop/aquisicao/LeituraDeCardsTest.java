@@ -16,6 +16,7 @@ import com.geopetro.desktop.calculos.ChaveHidraulicaConfig;
 import com.geopetro.desktop.calculos.FlowRateCalculatorService;
 import com.geopetro.desktop.calculos.PesoColunaConfig;
 import com.geopetro.desktop.calculos.StrokeCalculatorService;
+import com.geopetro.desktop.calculos.VazaoCardaCalculatorService;
 import com.geopetro.desktop.calculos.TipoMovimento;
 import com.geopetro.desktop.cards.CardsDaUnidade.Card;
 import com.geopetro.desktop.cards.CardsDaUnidade.Parametros;
@@ -43,7 +44,8 @@ class LeituraDeCardsTest {
 
 	private LeituraDeCards leitura() {
 		calibracoes = new CalibracaoDeCards(pasta.resolve("calibracao.json"));
-		return new LeituraDeCards(calibracoes, new StrokeCalculatorService(), new FlowRateCalculatorService());
+		return new LeituraDeCards(calibracoes, new StrokeCalculatorService(), new FlowRateCalculatorService(),
+				new VazaoCardaCalculatorService());
 	}
 
 	// ============================================================ apoio
@@ -322,6 +324,123 @@ class LeituraDeCardsTest {
 		assertTrue(grandezas.get(2).semValorPorque().contains("constante"));
 	}
 
+	// ============================================================ vazão por cardã — RN-120
+
+	private static Parametros carda(Double constanteBblPorPulso, Integer pulsosPorVolta) {
+		return new Parametros(null, null, null, null, null, null, null, null, null, null, null, null,
+				constanteBblPorPulso, pulsosPorVolta);
+	}
+
+	private long agora = 1_000_000;
+
+	/** Leitura com o relógio do cardã nas mãos do teste: a janela de 60 s não espera um minuto. */
+	private LeituraDeCards leituraComRelogio() {
+		calibracoes = new CalibracaoDeCards(pasta.resolve("calibracao.json"));
+		return new LeituraDeCards(calibracoes, new StrokeCalculatorService(), new FlowRateCalculatorService(),
+				new VazaoCardaCalculatorService(() -> agora));
+	}
+
+	private static BlocoDeLeitura contador(long pulsos) {
+		return bloco(0, 4, bytes -> S7.SetDIntAt(bytes, 0, (int) pulsos));
+	}
+
+	/** A conferência da especificação, de ponta a ponta: 600 pulsos em 60 s. */
+	private List<Grandeza> sessentaSegundosA600Rpm(LeituraDeCards leitura, Card card) {
+		List<Grandeza> grandezas = leitura.converter(List.of(card), contador(0));
+		for (int s = 1; s <= 60; s++) {
+			agora += 1_000;
+			grandezas = leitura.converter(List.of(card), contador(s * 10L));
+		}
+		return grandezas;
+	}
+
+	@Test
+	@DisplayName("vazao por carda produz DUAS series, RPM e vazao — sem stroke nem volume")
+	void cardaProduzDuasSeries() {
+		var grandezas = leitura().converter(
+				List.of(card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(0.001, 1))), contador(1_000));
+
+		assertEquals(List.of(LeituraDeCards.SERIE_RPM, LeituraDeCards.SERIE_VAZAO),
+				grandezas.stream().map(Grandeza::serie).toList());
+		assertEquals(List.of("RPM", "bbl/min"), grandezas.stream().map(Grandeza::unidade).toList());
+		assertEquals(List.of("DBD0", "DBD0"), grandezas.stream().map(Grandeza::enderecoDb).toList());
+	}
+
+	@Test
+	@DisplayName("antes de 60 s de janela, as duas series dizem que estao coletando, e nada e publicado")
+	void cardaColetando() {
+		var grandezas = leitura().converter(
+				List.of(card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(0.001, 1))), contador(1_000));
+
+		for (Grandeza g : grandezas) {
+			assertFalse(g.temValor());
+			assertEquals("Coletando dados — janela de 60 s", g.semValorPorque());
+			assertEquals(1_000.0, g.bruto(), "o bruto aparece mesmo sem valor");
+		}
+		assertTrue(LeituraDeCards.paraPublicar(grandezas).isEmpty(), "RN-099: sem valor nao publica");
+	}
+
+	@Test
+	@DisplayName("600 pulsos em 60 s, K de 8 casas e P = 1: RPM = N×60/(t×P) e vazao = N×K×60/t")
+	void cardaConferencia() {
+		var card = card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(0.00012345, 1));
+
+		var grandezas = sessentaSegundosA600Rpm(leituraComRelogio(), card);
+
+		assertEquals(600.0, grandezas.get(0).valor(), 1e-9);
+		assertEquals(600.0 * 0.00012345, grandezas.get(1).valor(), 1e-15,
+				"precisao completa no calculo; as duas casas sao so da tela");
+		assertEquals(600.0, grandezas.get(0).bruto(), "o bruto e o contador acumulado");
+	}
+
+	@Test
+	@DisplayName("com P = 4, o RPM cai a um quarto e a vazao nao muda: K ja e por pulso")
+	void cardaComQuatroPulsosPorVolta() {
+		var card = card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(0.001, 4));
+
+		var grandezas = sessentaSegundosA600Rpm(leituraComRelogio(), card);
+
+		assertEquals(150.0, grandezas.get(0).valor(), 1e-9);
+		assertEquals(0.6, grandezas.get(1).valor(), 1e-12);
+	}
+
+	@Test
+	@DisplayName("sem constante, o RPM continua e so a vazao fica sem valor")
+	void cardaSemConstante() {
+		var card = card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(null, 1));
+
+		var grandezas = sessentaSegundosA600Rpm(leituraComRelogio(), card);
+
+		assertEquals(600.0, grandezas.get(0).valor(), 1e-9);
+		assertFalse(grandezas.get(1).temValor());
+		assertEquals("Constante do cardã não configurada", grandezas.get(1).semValorPorque());
+	}
+
+	@Test
+	@DisplayName("sem pulsos por volta, a vazao continua e so o RPM fica sem valor")
+	void cardaSemPulsosPorVolta() {
+		var card = card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(0.001, null));
+
+		var grandezas = sessentaSegundosA600Rpm(leituraComRelogio(), card);
+
+		assertFalse(grandezas.get(0).temValor());
+		assertEquals("Pulsos por volta não configurados", grandezas.get(0).semValorPorque());
+		assertEquals(0.6, grandezas.get(1).valor(), 1e-12);
+	}
+
+	@Test
+	@DisplayName("reconectar recomeca a janela do carda")
+	void cardaReconexao() {
+		var leitura = leituraComRelogio();
+		var card = card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, 0, carda(0.001, 1));
+		sessentaSegundosA600Rpm(leitura, card);
+
+		leitura.reiniciarJanelas();
+		agora += 1_000;
+
+		assertFalse(leitura.converter(List.of(card), contador(610)).get(0).temValor());
+	}
+
 	// ============================================================ temperatura e tanque
 
 	private static Parametros escala(double minimo, double maximo, String unidade) {
@@ -334,7 +453,7 @@ class LeituraDeCardsTest {
 	}
 
 	/** Ax no meio da faixa −250..750 do amplificador. */
-	private static final int AX_MEIO = 250;
+	private static final int AX_MEIO = 350;
 
 	@Test
 	@DisplayName("temperatura converte pela escala do card, e a unidade vem dele")
@@ -433,14 +552,14 @@ class LeituraDeCardsTest {
 	}
 
 	@Test
-	@DisplayName("o bruto vem com sinal: a escala do amplificador comeca em -250")
+	@DisplayName("o bruto vem com sinal: a escala do amplificador comeca em -50")
 	void brutoComSinal() {
-		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, 0xFF06)); // -250
+		var bloco = bloco(0, 2, bytes -> S7.SetWordAt(bytes, 0, 0xFFCE)); // -50
 
 		var g = leitura().converter(List.of(card("PRESSAO_01", Tipo.PRESSAO, 0, range(400))), bloco).get(0);
 
-		// Lido como Word sem sinal, -250 viraria 65286 e a pressao sairia enorme e plausivel.
-		assertEquals(-250.0, g.bruto());
-		assertEquals(0.0, g.valor(), 0.0001, "-250 e o zero da escala");
+		// Lido como Word sem sinal, -50 viraria 65486 e a pressao sairia enorme e plausivel.
+		assertEquals(-50.0, g.bruto());
+		assertEquals(0.0, g.valor(), 0.0001, "-50 e o zero da escala");
 	}
 }

@@ -234,6 +234,30 @@
                   <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
                          text="Cada bomba tem a sua. Deste card saem stroke atual, bbl/min e o volume acumulado da bomba." />
                </VBox>
+
+               <!--
+                  RN-120. O byte inicial e o contador ACUMULADO de pulsos do carda. A vazao sai direto
+                  da constante em bbl/pulso, que ja incorpora reducao, deslocamento e eficiencia.
+               -->
+               <VBox fx:id="paramCarda" spacing="10.0" visible="false" managed="false">
+                  <GridPane hgap="12.0" vgap="5.0">
+                     <columnConstraints>
+                        <ColumnConstraints percentWidth="50.0" />
+                        <ColumnConstraints percentWidth="50.0" />
+                     </columnConstraints>
+                     <Label text="Constante do cardã (bbl/pulso)" styleClass="rotulo"
+                            GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                     <TextField fx:id="txtConstanteCarda" promptText="Ex.: 0.00012345"
+                                GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                     <Label text="Pulsos por volta do cardã" styleClass="rotulo"
+                            GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                     <TextField fx:id="txtPulsosPorVolta" promptText="1"
+                                GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                  </GridPane>
+                  <Label styleClass="mono" text="Janela de cálculo: 60 segundos" />
+                  <Label styleClass="ajuda" wrapText="true" maxWidth="Infinity"
+                         text="A constante é o volume de cada pulso do sensor, com redução, deslocamento e eficiência já incorporados. Pulsos por volta: 1 quando há um único alvo por volta. Deste card saem o RPM do cardã e a vazão estimada em bbl/min." />
+               </VBox>
             </VBox>
          </VBox>
       </ScrollPane>

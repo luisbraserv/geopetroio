@@ -63,6 +63,8 @@ public class JavaFXConfiguration extends Application {
     }
 
     private void showSplash() {
+        // Antes da primeira tela: o splash ja usa as fontes da marca.
+        FontesDaMarca.carregar();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/app/splash.fxml"));
             Parent root = loader.load();

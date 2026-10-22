@@ -37,6 +37,9 @@ public final class GrandezasDeCard {
 	public static final String SERIE_VAZAO = "vazao";
 	public static final String SERIE_VOLUME = "volumeAcumulado";
 
+	/** A série de RPM de um card de vazão por cardã — RN-120. A outra é {@link #SERIE_VAZAO}. */
+	public static final String SERIE_RPM = "rpm";
+
 	private GrandezasDeCard() {
 	}
 
@@ -109,10 +112,12 @@ public final class GrandezasDeCard {
 		return List.copyOf(resultado);
 	}
 
-	/** Um contador de stroke rende três séries; os demais tipos, uma sem série. */
+	/** Stroke rende três séries, vazão por cardã duas (RN-120); os demais tipos, uma sem série. */
 	private static List<String> seriesDe(Tipo tipo) {
-		return tipo == Tipo.CONTADOR_STROKE
-				? List.of(SERIE_STROKE, SERIE_VAZAO, SERIE_VOLUME)
-				: Collections.singletonList(null);
+		return switch (tipo) {
+			case CONTADOR_STROKE -> List.of(SERIE_STROKE, SERIE_VAZAO, SERIE_VOLUME);
+			case VAZAO_CARDA -> List.of(SERIE_RPM, SERIE_VAZAO);
+			default -> Collections.singletonList(null);
+		};
 	}
 }

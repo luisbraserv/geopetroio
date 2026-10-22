@@ -1,38 +1,45 @@
 /*
- * Braserv Design System para JavaFX.
+ * Braserv Design System 1.1 para JavaFX.
  * Fonte normativa: specs/SDD/software/frontend/index.html
  *
  * JavaFX CSS nao oferece custom properties. Por isso os tokens ficam centralizados neste arquivo;
  * FXMLs devem usar styleClass e reservar estilos inline apenas para estados realmente dinamicos.
  *
- * Tokens da fonte normativa, transcritos (rem convertido para px, base 16):
- *   brand-navy-950  #010e22    brand-navy-900  #051833    brand-navy-800  #061c39
- *   brand-navy-700  #0b2b52    brand-blue-600  #154a7a    brand-blue-100  #dce6f0
- *   brand-orange-800 #8d551f   brand-orange-700 #a96525   brand-orange-600 #d4852f
- *   brand-orange-500 #e59a4c   brand-orange-200 #f4d6b8
- *   danger-700 #b42318   danger-600 #d92d20   danger-200 #fda29b
- *   success-700 #2e8b3a  success-500 #5fbf61  warning-500 #e5bd02
- *   surface-canvas #f7f9fc   surface-subtle #edf1f8   surface-soft #eaf1f8
- *   border-default #d6deeb   border-strong  #b7c3d5
- *   text-primary #051833     text-secondary #5a667a   text-tertiary #757b86
+ * Tokens da fonte normativa, transcritos (rem convertido para px, base 16).
+ * Paleta do Manual de Identidade Corporativa — nao introduzir cores fora dela:
+ *   brand-blue-900 #141b45   brand-blue-800 #1f2a6b   brand-blue-700 #293684 (azul corporativo)
+ *   brand-blue-100 #d4d7e6   brand-yellow-500 #e8aa21 (amarelo corporativo) brand-yellow-200 #faeed3
+ *   brand-midblue-700 #2f64a6  brand-midblue-500 #3e7ac2  brand-midblue-200 #d8e4f3
+ *   brand-orange-500 #f7873b   brand-orange-200 #fde7d8   brand-green-500 #a8b937  brand-green-200 #eef1d7
+ *   danger-700 #b42318  danger-600 #d92d20  danger-200 #fda29b
+ *   success-700 #5f6d17  success-500 #a8b937  warning-700 #a1501a  warning-500 #f7873b
+ *   surface-canvas #f6f7fb   surface-subtle #eef0f6   surface-soft #eaebf3
+ *   border-default #dadce8   border-strong  #b9bdd3
+ *   text-heading #293684  text-primary #1e2452  text-secondary #5f6b85  text-tertiary #7a8199
  *   radius: sm 3px · md 5px · lg 7px · xl 9px
+ *
+ * Tipografia: Exo 2 (no lugar da Exo Soft) em titulos e numeros de destaque; Montserrat no resto.
+ * As fontes vao embutidas em views/fonts (no Horus, em fonts/), SIL OFL 1.1, e sao registradas
+ * por FontesDaMarca na inicializacao — NAO por @font-face: o JavaFX nao carrega a fonte quando a
+ * URL tem espaco (%20), o que acontece no OneDrive e em C:\Program Files\. Sem elas, Arial e a
+ * alternativa do manual.
  */
 
 .root {
-    -fx-background-color: #f7f9fc;
-    -fx-font-family: "Coco Gothic", "Century Gothic", "Trebuchet MS", sans-serif;
+    -fx-background-color: #f6f7fb;
+    -fx-font-family: "Montserrat", "Arial", sans-serif;
     -fx-font-size: 13px;
 }
 
 .label {
-    -fx-text-fill: #051833;
+    -fx-text-fill: #1e2452;
 }
 
 /*
  * Texto sobre fundo escuro (barra superior, rodapes escuros).
  *
- * Precisa existir porque `.label` acima pinta tudo de #051833: no cabecalho azul o texto ficava
- * azul-escuro sobre azul-escuro e sumia. O atributo textFill="WHITE" do FXML nao resolve — em
+ * Precisa existir porque `.label` acima pinta tudo de #1e2452: no cabecalho azul o texto ficava
+ * azul-escuro sobre azul e sumia. O atributo textFill="WHITE" do FXML nao resolve — em
  * JavaFX o stylesheet tem precedencia sobre valores vindos do FXML, entao a cor branca era
  * descartada. Precisa vir DEPOIS de `.label`: mesma especificidade, quem vence e a ultima regra.
  */
@@ -41,20 +48,21 @@
 }
 
 .heading {
+    -fx-font-family: "Exo 2", "Arial", sans-serif;
     -fx-font-size: 19px;
     -fx-font-weight: bold;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #293684;
 }
 
 .muted {
-    -fx-text-fill: #5a667a;
+    -fx-text-fill: #5f6b85;
 }
 
-/* Eyebrow: rotulo de secao. Laranja escuro, o unico lugar em que o acento vira texto. */
+/* Eyebrow: rotulo de secao, em azul medio como no DS 1.1. O amarelo nao vira texto: falta contraste. */
 .eyebrow {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: #8d551f;
+    -fx-text-fill: #2f64a6;
 }
 
 .mono {
@@ -63,9 +71,9 @@
 
 /* --- Botoes --------------------------------------------------------------
  *
- * O primario e AZUL-MARINHO, nao vermelho. Vermelho e reservado a acao destrutiva
+ * O primario e o AZUL CORPORATIVO, nao vermelho. Vermelho e reservado a acao destrutiva
  * (`.botao-perigo`) e a estados de alerta — usa-lo como cor de acao comum gasta o unico sinal
- * que faz o operador parar e reler antes de clicar.
+ * que faz o operador parar e reler antes de clicar. O amarelo marca selecao, nunca acao.
  */
 
 .button {
@@ -73,16 +81,16 @@
     -fx-padding: 8 16 8 16;
     -fx-background-color: #ffffff;
     -fx-background-radius: 5;
-    -fx-border-color: #d6deeb;
+    -fx-border-color: #b9bdd3;
     -fx-border-radius: 5;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #1e2452;
     -fx-font-weight: bold;
     -fx-font-size: 13px;
     -fx-cursor: hand;
 }
 
 .button:hover {
-    -fx-background-color: #eaf1f8;
+    -fx-border-color: #3e7ac2;
 }
 
 .button:disabled {
@@ -92,28 +100,28 @@
 
 .botao-primario,
 .primary-button {
-    -fx-background-color: #051833;
-    -fx-border-color: #051833;
+    -fx-background-color: #293684;
+    -fx-border-color: #293684;
     -fx-text-fill: #ffffff;
 }
 
 .botao-primario:hover,
 .primary-button:hover {
-    -fx-background-color: #0b2b52;
-    -fx-border-color: #0b2b52;
+    -fx-background-color: #1f2a6b;
+    -fx-border-color: #1f2a6b;
 }
 
 .botao-secundario,
 .secondary-button {
     -fx-background-color: #ffffff;
-    -fx-border-color: #154a7a;
-    -fx-text-fill: #051833;
+    -fx-border-color: #3e7ac2;
+    -fx-text-fill: #293684;
 }
 
 .botao-secundario:hover,
 .secondary-button:hover {
-    -fx-background-color: #154a7a;
-    -fx-border-color: #154a7a;
+    -fx-background-color: #2f64a6;
+    -fx-border-color: #2f64a6;
     -fx-text-fill: #ffffff;
 }
 
@@ -126,17 +134,19 @@
 
 .botao-perigo:hover {
     -fx-background-color: #fdeaeb;
+    -fx-border-color: #fda29b;
 }
 
 /* Sem moldura, para acoes secundarias dentro de cards e barras. */
 .botao-fantasma {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #293684;
 }
 
 .botao-fantasma:hover {
-    -fx-background-color: #eaf1f8;
+    -fx-background-color: #eaebf3;
+    -fx-border-color: transparent;
 }
 
 /* --- Campos --- */
@@ -147,38 +157,38 @@
     -fx-min-height: 36px;
     -fx-padding: 8 11 8 11;
     -fx-background-color: #ffffff;
-    -fx-border-color: #b7c3d5;
+    -fx-border-color: #b9bdd3;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #1e2452;
     -fx-font-size: 13px;
-    -fx-prompt-text-fill: #8994a7;
+    -fx-prompt-text-fill: #8a90ab;
 }
 
 .text-field:hover,
 .password-field:hover,
 .text-area:hover {
-    -fx-border-color: #154a7a;
+    -fx-border-color: #3e7ac2;
 }
 
 .text-field:focused,
 .password-field:focused,
 .text-area:focused {
-    -fx-border-color: #154a7a;
+    -fx-border-color: #3e7ac2;
     -fx-border-width: 1.5;
 }
 
 .text-field:disabled,
 .password-field:disabled {
-    -fx-background-color: #edf1f8;
-    -fx-text-fill: #757b86;
+    -fx-background-color: #eef0f6;
+    -fx-text-fill: #7a8199;
 }
 
 .combo-box,
 .date-picker,
 .choice-box {
     -fx-background-color: #ffffff;
-    -fx-border-color: #b7c3d5;
+    -fx-border-color: #b9bdd3;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
     -fx-min-height: 36px;
@@ -186,35 +196,35 @@
 
 .combo-box:hover,
 .date-picker:hover {
-    -fx-border-color: #154a7a;
+    -fx-border-color: #3e7ac2;
 }
 
 .combo-box:focused,
 .date-picker:focused {
-    -fx-border-color: #154a7a;
+    -fx-border-color: #3e7ac2;
     -fx-border-width: 1.5;
 }
 
 .check-box {
     -fx-font-size: 13px;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #1e2452;
 }
 
 .check-box:selected .box {
-    -fx-background-color: #154a7a;
-    -fx-border-color: #154a7a;
+    -fx-background-color: #3e7ac2;
+    -fx-border-color: #3e7ac2;
 }
 
 .rotulo {
     -fx-font-size: 12px;
-    -fx-text-fill: #061c39;
+    -fx-text-fill: #293684;
     -fx-font-weight: bold;
 }
 
 /* Explicacao sob um campo: menor e mais clara que o rotulo, para nao competir com ele. */
 .ajuda {
     -fx-font-size: 11px;
-    -fx-text-fill: #5a667a;
+    -fx-text-fill: #5f6b85;
     -fx-wrap-text: true;
 }
 
@@ -224,26 +234,26 @@
 .cartao {
     -fx-background-color: #ffffff;
     -fx-background-radius: 7;
-    -fx-border-color: #d6deeb;
+    -fx-border-color: #dadce8;
     -fx-border-radius: 7;
     -fx-padding: 20;
-    -fx-effect: dropshadow(gaussian, rgba(0, 12, 75, 0.05), 4, 0, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(20, 27, 69, 0.06), 4, 0, 0, 1);
 }
 
 .cartao-muted {
-    -fx-background-color: #edf1f8;
+    -fx-background-color: #eef0f6;
     -fx-effect: null;
 }
 
 .cartao-titulo {
     -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #293684;
 }
 
 .cartao-nota {
     -fx-font-size: 11px;
-    -fx-text-fill: #5a667a;
+    -fx-text-fill: #5f6b85;
     -fx-wrap-text: true;
 }
 
@@ -261,25 +271,26 @@
 .cabecalho {
     -fx-background-color: #ffffff;
     -fx-padding: 18 24 18 24;
-    -fx-border-color: transparent transparent #d6deeb transparent;
+    -fx-border-color: transparent transparent #dadce8 transparent;
     -fx-border-width: 0 0 1 0;
 }
 
 .cabecalho-titulo {
+    -fx-font-family: "Exo 2", "Arial", sans-serif;
     -fx-font-size: 19px;
     -fx-font-weight: bold;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #293684;
 }
 
 .cabecalho-subtitulo {
     -fx-font-size: 12px;
-    -fx-text-fill: #5a667a;
+    -fx-text-fill: #5f6b85;
 }
 
 .rodape {
     -fx-background-color: #ffffff;
     -fx-padding: 14 24 14 24;
-    -fx-border-color: #d6deeb transparent transparent transparent;
+    -fx-border-color: #dadce8 transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
 }
 
@@ -287,30 +298,31 @@
 
 .table-view {
     -fx-background-color: #ffffff;
-    -fx-border-color: #d6deeb;
+    -fx-border-color: #dadce8;
     -fx-border-radius: 7;
     -fx-background-radius: 7;
 }
 
 .table-view .column-header {
-    -fx-background-color: #edf1f8;
-    -fx-text-fill: #757b86;
+    -fx-background-color: #eef0f6;
+    -fx-text-fill: #5f6b85;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
 }
 
 .table-row-cell:selected {
-    -fx-background-color: #dce6f0;
-    -fx-text-fill: #051833;
+    -fx-background-color: #d8e4f3;
+    -fx-text-fill: #1e2452;
 }
 
 /* --- Estados semanticos ---
  *
- * Separados do acento da marca: verde/ambar/vermelho comunicam condicao, nao identidade.
+ * Separados do acento da marca: verde/laranja/vermelho comunicam condicao, nao identidade.
+ * No DS 1.1 a atencao e laranja (complementar da marca), nao ambar.
  */
 
-.estado-ok      { -fx-text-fill: #2e8b3a; }
-.estado-atencao { -fx-text-fill: #725c00; }
+.estado-ok      { -fx-text-fill: #5f6d17; }
+.estado-atencao { -fx-text-fill: #a1501a; }
 .estado-erro    { -fx-text-fill: #b42318; }
 
 /* =========================================================================
@@ -321,15 +333,16 @@
  * ========================================================================= */
 
 .titulo-tela {
+    -fx-font-family: "Exo 2", "Arial", sans-serif;
     -fx-font-size: 19px;
     -fx-font-weight: bold;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #293684;
 }
 
 .rotulo-campo {
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-text-fill: #061c39;
+    -fx-text-fill: #293684;
 }
 
 /* --- Cards de grandeza (pressao, stroke, volume, vazao) --- */
@@ -337,22 +350,23 @@
 .card-grandeza {
     -fx-background-color: #ffffff;
     -fx-background-radius: 7;
-    -fx-border-color: #d6deeb;
+    -fx-border-color: #dadce8;
     -fx-border-radius: 7;
-    -fx-effect: dropshadow(gaussian, rgba(0, 12, 75, 0.05), 4, 0, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(20, 27, 69, 0.06), 4, 0, 0, 1);
 }
 
 .card-grandeza-titulo {
     -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-text-fill: #061c39;
+    -fx-text-fill: #293684;
 }
 
 /* O numero e o que se le a distancia, no meio da operacao: por isso o tamanho. */
 .card-grandeza-valor {
+    -fx-font-family: "Exo 2", "Arial", sans-serif;
     -fx-font-size: 42px;
     -fx-font-weight: bold;
-    -fx-text-fill: #051833;
+    -fx-text-fill: #293684;
 }
 
 /* Engrenagem sobreposta ao card: sem fundo para nao competir com o valor. */
@@ -360,34 +374,35 @@
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-font-size: 16px;
-    -fx-text-fill: #5a667a;
+    -fx-text-fill: #5f6b85;
     -fx-padding: 2 6 2 6;
     -fx-cursor: hand;
     -fx-min-height: 0;
 }
 
 .botao-icone:hover {
-    -fx-background-color: #eaf1f8;
-    -fx-text-fill: #051833;
+    -fx-background-color: #eaebf3;
+    -fx-border-color: transparent;
+    -fx-text-fill: #293684;
 }
 
 /* --- Barra de ferramentas --- */
 
 .tool-bar {
     -fx-background-color: #ffffff;
-    -fx-border-color: transparent transparent #d6deeb transparent;
+    -fx-border-color: transparent transparent #dadce8 transparent;
     -fx-border-width: 0 0 1 0;
     -fx-padding: 6 12 6 12;
 }
 
 .rotulo-status {
     -fx-font-size: 12px;
-    -fx-text-fill: #061c39;
+    -fx-text-fill: #1e2452;
 }
 
 .rotulo-debug {
     -fx-font-size: 11px;
-    -fx-text-fill: #757b86;
+    -fx-text-fill: #7a8199;
 }
 
 /*
@@ -401,12 +416,12 @@
 }
 
 .progress-bar > .track {
-    -fx-background-color: #edf1f8;
+    -fx-background-color: #eef0f6;
     -fx-background-radius: 5;
 }
 
 .progress-bar > .bar {
-    -fx-background-color: #154a7a;
+    -fx-background-color: #3e7ac2;
     -fx-background-radius: 5;
 }
 
@@ -421,30 +436,25 @@
 }
 
 /*
- * Barra de marca: logo a esquerda, status e ajustes a direita.
- *
- * Fundo claro porque o logo horizontal tem o texto em azul-marinho — sobre o navy do cabecalho
- * seria preciso uma versao invertida do logo, que a identidade visual nao fornece.
- */
-/*
- * Barra de marca em azul institucional.
+ * Barra de marca em azul corporativo, fechada pela faixa amarela — a mesma composicao da
+ * navegacao do DS 1.1.
  *
  * Usa `logo2-inverso.png` — versao reversa do logo, com tracos brancos e o dourado preservado.
- * O logo normal tem texto azul-marinho: sobre esta barra exigiria um cartao branco atras, que e
+ * O logo normal tem texto escuro: sobre esta barra exigiria um cartao branco atras, que e
  * exatamente o remendo que se queria evitar.
  */
 .barra-marca {
-    -fx-background-color: #051833;
-    -fx-border-color: transparent transparent #d4852f transparent;
-    -fx-border-width: 0 0 3 0;
+    -fx-background-color: #293684;
+    -fx-border-color: transparent transparent #e8aa21 transparent;
+    -fx-border-width: 0 0 4 0;
     -fx-padding: 10 24 10 24;
 }
 
 /* Barra que tambem carrega a navegacao: fecha com a faixa de acento da marca. */
 .barra-marca-nav {
-    -fx-background-color: #051833;
-    -fx-border-color: transparent transparent #d4852f transparent;
-    -fx-border-width: 0 0 3 0;
+    -fx-background-color: #293684;
+    -fx-border-color: transparent transparent #e8aa21 transparent;
+    -fx-border-width: 0 0 4 0;
     -fx-padding: 10 24 10 24;
 }
 
@@ -462,5 +472,92 @@
 .botao-icone-inverso:hover {
     -fx-background-color: rgba(255, 255, 255, 0.12);
     -fx-background-radius: 5;
+    -fx-border-color: transparent;
     -fx-text-fill: #ffffff;
+}
+
+/* =====================================================================
+   Alarme local — passo 3 de specs/SDD/negocio/requisitos/alarmes.md.
+   A estacao SINALIZA; quem registra o evento e o Backend.
+
+   ATENCAO: a borda grossa e o rotulo carregam a informacao junto com a
+   cor. Numa sonda, quem olha a tela pode estar de oculos de seguranca,
+   sob sol, ou nao distinguir vermelho de laranja — cor sozinha nao avisa.
+   ===================================================================== */
+.card-grandeza-atencao {
+    -fx-background-color: #fef3eb;
+    -fx-border-color: #f7873b;
+    -fx-border-width: 2;
+}
+
+.card-grandeza-critico {
+    -fx-background-color: #fff1f2;
+    -fx-border-color: #d92d20;
+    -fx-border-width: 3;
+}
+
+.card-grandeza-alarme {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.card-grandeza-alarme-atencao {
+    -fx-text-fill: #a1501a;
+}
+
+.card-grandeza-alarme-critico {
+    -fx-text-fill: #b42318;
+}
+
+/* =====================================================================
+   Sininho do card: o alarme DESTA estacao.
+
+   Quatro estados, e a diferenca entre eles precisa ser legivel de longe
+   e sem depender de cor -- o sino desligado troca de simbolo (nao so de
+   tom), porque numa sonda quem olha pode estar sob sol ou nao distinguir
+   cinza de laranja.
+
+   Fica na esquerda do card, oposto a engrenagem: sao autoridades
+   diferentes e nao devem parecer o mesmo botao. A engrenagem exige login
+   e muda o que a unidade le; o sininho, nao.
+   ===================================================================== */
+
+/* Apagado: sem alarme configurado. Herda .botao-icone, so mais discreto. */
+.botao-icone.sininho-aceso {
+    -fx-text-fill: #5f6d17;
+}
+
+.botao-icone.sininho-desligado {
+    -fx-text-fill: #7a8199;
+}
+
+/* Disparado agora: acompanha a borda do card, que ja esta vermelha. */
+.botao-icone.sininho-disparado {
+    -fx-text-fill: #b42318;
+    -fx-font-size: 18px;
+}
+
+/* =====================================================================
+   Aviso de configuracao: uma escolha valida que tem consequencia nao
+   obvia. Nao e erro -- o campo continua aceitando o valor.
+
+   Usado em Cards para o card ATIVO e INVISIVEL: ele e lido e gravado na
+   borda, e nao chega ao servidor (RN-037), entao o limite de alarme
+   sobre ele nunca dispara remotamente -- OQ-050.
+   ===================================================================== */
+.aviso-configuracao {
+    -fx-font-size: 11px;
+    -fx-text-fill: #8f4612;
+    -fx-background-color: #fef3eb;
+    -fx-border-color: #fbc39d;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 6 8 6 8;
+    -fx-wrap-text: true;
+}
+
+.card-grandeza:dragging {
+    -fx-border-color: #3e7ac2;
+    -fx-border-width: 3;
+    -fx-effect: dropshadow(gaussian, rgba(62, 122, 194, 0.28), 14, 0.12, 0, 2);
 }

@@ -13,14 +13,14 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox spacing="0" style="-fx-background-color: #f7f9fc;"
+<VBox spacing="0" style="-fx-background-color: #f6f7fb;"
       stylesheets="@../geopetro-design-system.css"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.geopetro.desktop.historico.GraficosController">
 
    <!-- Filtros -->
    <VBox spacing="12.0" style="-fx-background-color: white; -fx-padding: 16 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 2);">
-      <Label text="Graficos de Operacao" style="-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #051833;" />
+      <Label text="Graficos de Operacao" style="-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #293684;" />
 
       <HBox spacing="16.0" alignment="CENTER_LEFT">
          <Label text="Data inicio:" style="-fx-font-size: 12;" />
@@ -32,7 +32,7 @@
          <Label text="Hora:" style="-fx-font-size: 12;" />
          <TextField fx:id="timeEnd" prefWidth="90" />
          <Button fx:id="btnAtualizar" text="Atualizar" onAction="#onAtualizar"
-                 style="-fx-background-color: #051833; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 6 16; -fx-font-weight: bold;" />
+                 style="-fx-background-color: #293684; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 6 16; -fx-font-weight: bold;" />
       </HBox>
 
       <!--
@@ -45,20 +45,20 @@
 
       <HBox spacing="10.0" alignment="CENTER_LEFT">
          <Button fx:id="btnZoomIn"  text="＋ Zoom In"  onAction="#onZoomIn"
-                 style="-fx-background-color: #eaf1f8; -fx-text-fill: #154a7a; -fx-background-radius: 5; -fx-padding: 4 12;" />
+                 style="-fx-background-color: #eaebf3; -fx-text-fill: #2f64a6; -fx-background-radius: 5; -fx-padding: 4 12;" />
          <Button fx:id="btnZoomOut" text="－ Zoom Out" onAction="#onZoomOut"
-                 style="-fx-background-color: #eaf1f8; -fx-text-fill: #154a7a; -fx-background-radius: 5; -fx-padding: 4 12;" />
+                 style="-fx-background-color: #eaebf3; -fx-text-fill: #2f64a6; -fx-background-radius: 5; -fx-padding: 4 12;" />
          <Button fx:id="btnReset"   text="↺ Resetar"  onAction="#onReset"
-                 style="-fx-background-color: #edf1f8; -fx-text-fill: #051833; -fx-background-radius: 5; -fx-padding: 4 12;" />
-         <Label fx:id="lblZoom" text="Zoom: 100%" style="-fx-font-size: 12; -fx-text-fill: #5a667a;" />
+                 style="-fx-background-color: #eef0f6; -fx-text-fill: #293684; -fx-background-radius: 5; -fx-padding: 4 12;" />
+         <Label fx:id="lblZoom" text="Zoom: 100%" style="-fx-font-size: 12; -fx-text-fill: #5f6b85;" />
       </HBox>
    </VBox>
 
    <!-- Área dos gráficos -->
    <ScrollPane fx:id="scrollPane" fitToWidth="true" pannable="true" VBox.vgrow="ALWAYS"
-               style="-fx-background: #f7f9fc; -fx-background-color: #f7f9fc;">
+               style="-fx-background: #f6f7fb; -fx-background-color: #f6f7fb;">
       <padding><Insets top="20" right="20" bottom="20" left="20" /></padding>
-      <VBox fx:id="chartsContainer" spacing="20.0" style="-fx-background-color: #f7f9fc;" />
+      <VBox fx:id="chartsContainer" spacing="20.0" style="-fx-background-color: #f6f7fb;" />
    </ScrollPane>
 
 </VBox>

@@ -33,7 +33,7 @@ Chart.register(...registerables);
       position: fixed;
       inset: 0;
       z-index: 1000;
-      background: rgba(15, 23, 42, .55);
+      background: rgba(20, 27, 69, .55);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -44,9 +44,9 @@ Chart.register(...registerables);
       height: min(820px, 88vh);
       display: flex;
       flex-direction: column;
-      background: var(--color-card, #fff);
+      background: var(--color-card);
       border-radius: 12px;
-      box-shadow: 0 24px 64px rgba(15, 23, 42, .35);
+      box-shadow: 0 24px 64px rgba(20, 27, 69, .35);
       overflow: hidden;
     }
     .czm-head {
@@ -55,20 +55,20 @@ Chart.register(...registerables);
       justify-content: space-between;
       gap: 12px;
       padding: 14px 18px;
-      border-bottom: 1px solid var(--color-card-border, #e2e8f0);
+      border-bottom: 1px solid var(--color-card-border);
     }
-    .czm-title { font-size: 1rem; font-weight: 800; color: var(--color-text-strong, #1e293b); }
+    .czm-title { font-size: 1rem; font-weight: 800; color: var(--color-text-strong); }
     .czm-close {
-      border: 1px solid var(--color-card-border, #e2e8f0);
-      background: #f8fafc;
-      color: var(--color-text-body, #64748b);
+      border: 1px solid var(--color-card-border);
+      background: var(--surface-canvas);
+      color: var(--color-text-body);
       border-radius: 6px;
       width: 30px;
       height: 30px;
       font-size: .85rem;
       cursor: pointer;
     }
-    .czm-close:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+    .czm-close:hover { background: var(--color-error-soft); color: var(--danger-700); border-color: var(--danger-200); }
     .czm-body { flex: 1; position: relative; padding: 12px 16px 16px; min-height: 0; }
     .czm-body canvas { display: block; width: 100% !important; height: 100% !important; }
   `],

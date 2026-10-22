@@ -54,7 +54,8 @@ no backend; não há exclusão em cascata.
 
 **[FATO]** O par `dispositivoId` + `serie` identifica a grandeza. `serie` é `null` para card de uma
 grandeza só e obrigatória num card `CONTADOR_STROKE`, que publica três séries — `stroke`, `vazao` e
-`volumeAcumulado` — sob o mesmo `dispositivoId` ([RN-098](../../negocio/regras/business-rules.md#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)).
+`volumeAcumulado` — sob o mesmo `dispositivoId`, e num card `VAZAO_CARDA`, que publica duas — `rpm`
+e `vazao` ([RN-120](../../negocio/regras/business-rules.md#rn-120--vazão-por-cardã-produz-duas-séries)) — ([RN-098](../../negocio/regras/business-rules.md#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)).
 
 ⚠️ **Sem `serie` o limite seria ambíguo.** "Acima de 8" é alarme plausível para vazão e não quer
 dizer nada para volume acumulado, que só cresce: dispararia uma vez e nunca mais fecharia. É o mesmo
@@ -173,7 +174,11 @@ inteira seria monitoramento, não configuração.
 sem id ao criar; renomear nunca o altera.
 
 **[DECIDIDO]** O tamanho da leitura **vem do tipo**, não do payload: analógico é Word (2 bytes),
-`CONTADOR_STROKE` é DWord (4 bytes).
+`CONTADOR_STROKE` e `VAZAO_CARDA` são DWord (4 bytes).
+
+**[DECIDIDO 2026-10-22]** Parâmetros de `VAZAO_CARDA`: `constanteCarda` (bbl/pulso, > 0) e
+`pulsosPorVolta` (inteiro > 0), os dois obrigatórios. Os demais campos vêm nulos —
+[cards-configuraveis §3](../../negocio/requisitos/cards-configuraveis.md#vazão-por-cardã-produz-duas-séries).
 
 **[DECIDIDO 2026-09-07]** Não há remoção de card: `ativo: false` para de publicar e some da tela, mas
 o card permanece no documento — [RN-091](../../negocio/regras/business-rules.md#rn-091--card-se-desativa-nunca-se-exclui).

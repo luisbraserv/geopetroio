@@ -122,15 +122,15 @@ public class TanqueView extends Canvas {
 		g.fillRect(x, topoOval + alturaOval - h, largura, h);
 		g.restore();
 
-		g.setStroke(Color.web("#94a3b8"));
+		g.setStroke(Color.web("#7a8199"));
 		g.setLineWidth(1.5);
 		g.strokeOval(x, topoOval, largura, alturaOval);
 	}
 
 	private void corpo(GraphicsContext g, Runnable forma) {
-		g.setFill(Color.web("#eef2f7"));
+		g.setFill(Color.web("#eef0f6"));
 		forma.run();
-		g.setStroke(Color.web("#94a3b8"));
+		g.setStroke(Color.web("#7a8199"));
 		g.setLineWidth(1.5);
 	}
 
@@ -139,14 +139,14 @@ public class TanqueView extends Canvas {
 			g.setFill(corDoLiquido());
 			forma.run();
 		}
-		g.setStroke(Color.web("#94a3b8"));
+		g.setStroke(Color.web("#7a8199"));
 		g.setLineWidth(1.5);
 		g.strokeRect(x, y, largura, altura);
 	}
 
 	private Color corDoLiquido() {
 		// Marrom-esverdeado de lama; nao muda com o nivel, porque nivel baixo nao e alarme por si.
-		return temLeitura ? Color.web("#8a6d3b") : Color.web("#cbd5e1");
+		return temLeitura ? Color.web("#8a6d3b") : Color.web("#b9bdd3");
 	}
 
 	// ============================================================ sensor
@@ -160,9 +160,9 @@ public class TanqueView extends Canvas {
 	private void desenharSensor(GraphicsContext g, double topoTanque, double alturaTanque) {
 		double centroX = getWidth() / 2;
 
-		g.setFill(Color.web("#334155"));
+		g.setFill(Color.web("#1e2452"));
 		g.fillRect(centroX - 9, TOPO - 12, 18, 10);
-		g.setFill(Color.web("#f8fafc"));
+		g.setFill(Color.web("#f6f7fb"));
 		g.setFont(Font.font(7));
 		g.setTextAlign(TextAlignment.CENTER);
 		g.fillText("4-20", centroX, TOPO - 4.5);
@@ -173,14 +173,14 @@ public class TanqueView extends Canvas {
 
 		// Traco pontilhado do sensor ate a superficie: a distancia medida.
 		double superficie = topoTanque + alturaTanque * (1 - fracaoCheia);
-		g.setStroke(Color.web("#64748b"));
+		g.setStroke(Color.web("#5f6b85"));
 		g.setLineWidth(1);
 		g.setLineDashes(3, 3);
 		g.strokeLine(centroX, TOPO, centroX, superficie);
 		g.setLineDashes();
 
 		// Ponta de seta na superficie.
-		g.setFill(Color.web("#64748b"));
+		g.setFill(Color.web("#5f6b85"));
 		g.fillPolygon(new double[] { centroX - 3.5, centroX + 3.5, centroX },
 				new double[] { superficie - 5, superficie - 5, superficie }, 3);
 	}

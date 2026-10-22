@@ -33,7 +33,7 @@ import { Component, computed, input, output } from '@angular/core';
       font: inherit; font-weight: 600; cursor: pointer;
     }
     .pg-btn:hover:not(:disabled) { border-color: var(--border-strong) !important; background: var(--surface-subtle) !important; }
-    .pg-btn--active { background: var(--brand-blue-600) !important; border-color: var(--brand-blue-600) !important; color: #fff !important; }
+    .pg-btn--active { background: var(--brand-midblue-700) !important; border-color: var(--brand-midblue-700) !important; color: #fff !important; }
     .pg-btn:disabled { opacity: 0.5; cursor: default; }
   `],
 })

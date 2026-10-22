@@ -42,7 +42,7 @@ import { AuthState } from '../../../auth/state/auth.state';
     .page-subtitle { margin-top: 6px; line-height: 1.45; }
     .cadastro-tabs { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface-muted); width: fit-content; max-width: 100%; }
     .cadastro-tab { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid transparent; border-radius: 6px; color: var(--color-text-secondary); font-size: 13px; font-weight: 800; text-decoration: none; white-space: nowrap; }
-    .cadastro-tab:hover, .cadastro-tab--active { border-color: rgba(82, 140, 156, .34); background: #fff; color: var(--color-primary-hover); box-shadow: 0 2px 8px rgba(82, 140, 156, .12); }
+    .cadastro-tab:hover, .cadastro-tab--active { border-color: rgba(62, 122, 194, .34); background: #fff; color: var(--color-primary-hover); box-shadow: 0 2px 8px rgba(62, 122, 194, .12); }
     .cadastro-content { min-width: 0; }
     .cadastro-content ::ng-deep > * > .page, .cadastro-content ::ng-deep > * > .usuarios-page { padding: 0 !important; }
     @media (max-width: 760px) { .cadastros-page { padding: 16px; } .cadastro-tabs, .cadastro-tab { width: 100%; } }

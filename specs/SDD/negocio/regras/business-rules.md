@@ -315,12 +315,12 @@ Geopetro-Desktop. `ConversaoPressao`, `ConversaoTemperatura` e `ConversaoTanque`
 e aplicam somente as regras próprias de cada grandeza.
 
 O bloco *Analog Amplifier* do LOGO! já reescalona o laço 4–20 mA para a faixa configurada em
-*Measurement Range*. Conforme o padrão definido em 2026-10-08, o Ax útil vai de `-250` a `750`:
+*Measurement Range*. **[DECIDIDO 2026-10-16]** o Ax útil vai de `-50` a `750` (substitui o `-250..750` de 2026-10-08):
 
 ```
- 4 mA -> Ax = -250       12 mA -> Ax = 250        20 mA -> Ax = 750
+ 4 mA -> Ax = -50        12 mA -> Ax = 350        20 mA -> Ax = 750
 
-fracao = (Ax + 250) / 1000
+fracao = (Ax + 50) / 800
 bar    = fracao × rangeSensorBar        (faixa do transmissor, por canal)
 psi    = bar × 14,5037738 × sensibilidade
 ```
@@ -328,14 +328,14 @@ psi    = bar × 14,5037738 × sensibilidade
 ⚠️ **[FATO] O Ax não é pressão nem corrente** — é a posição no laço. Convertê-lo de novo para mA,
 ou tratá-lo como bar direto, aplica o escalonamento duas vezes e produz números plausíveis e errados.
 
-⚠️ **[FATO] Leitura com sinal.** O offset −250 leva a base da escala a valores negativos. Lido como
-Word *unsigned*, `-250` chega como `65286` e vira pressão absurda. `ConversaoSinalAnalogico.axComoSigned`
+⚠️ **[FATO] Leitura com sinal.** A base da escala é negativa. Lido como
+Word *unsigned*, `-50` chega como `65486` e vira pressão absurda. `ConversaoSinalAnalogico.axComoSigned`
 reinterpreta como inteiro de 16 bits com sinal.
 
-⚠️ **[DECIDIDO 2026-10-08] Limite físico inferior da pressão em zero.** Ax fora de −250..750 é
+⚠️ **[DECIDIDO 2026-10-08] Limite físico inferior da pressão em zero.** Ax fora de −50..750 é
 preservado como veio e **sinalizado** — `WARN` no log com endereço e valor, e o Ax cru visível em
 vermelho no rodapé do card. A grandeza convertida de pressão, porém, nunca fica negativa: Ax abaixo
-de −250 produz `0 bar`/`0 psi`. Assim o Desktop não exibe pressão negativa sem esconder o diagnóstico.
+de −50 produz `0 bar`/`0 psi`. Assim o Desktop não exibe pressão negativa sem esconder o diagnóstico.
 
 **[FATO]** A escala antiga 0–1000 → mA foi **removida** junto com suas constantes, para que não haja
 como reconverter por engano. O núcleo e a pressão têm testes separados em
@@ -932,11 +932,11 @@ já usado** — a numeração sai de somar um, sem contador separado.
 amplificador e aplica a escala do tipo.
 
 ```
-fracao = (Ax − AX_MIN) / (AX_MAX − AX_MIN)      // (Ax + 250) / 1000
+fracao = (Ax − AX_MIN) / (AX_MAX − AX_MIN)      // (Ax + 50) / 800
 ```
 
 **[FATO]** Vale [RN-030](#rn-030--conversão-do-ax-do-logo--psi) inteiro: `Ax` é lido **com sinal**, e a
-faixa −250..750 segue o padrão definido em [OQ-016](../requisitos/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada).
+faixa −50..750 (decidida em 2026-10-16) segue [OQ-016](../requisitos/open-questions.md#oq-016--a-escala-analógica-do-clp-foi-confirmada).
 A validação em campo de cada canal permanece pendente.
 
 ### RN-083 · Temperatura é escala linear com mínimo e máximo
@@ -1651,3 +1651,42 @@ payloads de configuração, `/api/unidades/**` no Core, `/api/monitoramento/unid
 `/topic/.../unidades/{id}` no WebSocket e `idUnidade` para o nome no MQTT/InfluxDB. O tipo `SONDA`
 continua existindo. Lista completa:
 [braserv-core.md §9](../../software/backend/braserv-core.md#9-contrato-de-unidade-rn-119).
+
+### RN-120 · Vazão por cardã produz duas séries
+**[DECIDIDO 2026-10-22]** Um card `VAZAO_CARDA` lê o contador **acumulado** de pulsos de um sensor
+no cardã (DWord) e publica, sob o próprio `dispositivoId`:
+
+| Série | O que é |
+|---|---|
+| `rpm` | Rotação do **cardã**, média de 60 s: `(N × 60) / (t × P)` |
+| `vazao` (`bbl/min`) | `(N × K × 60) / t` — **estimada** |
+
+`N` são os pulsos da janela, `t` o tempo **real** entre as duas leituras que a delimitam, `K` a
+constante em bbl/pulso — com redução, deslocamento e eficiência já incorporados — e `P` os pulsos por
+volta do cardã. `K` e `P` são os únicos parâmetros, e os dois são obrigatórios. **A vazão não passa
+por `P`.**
+
+Não produz stroke nem volume acumulado. `vazao` tem o mesmo nome da série do stroke
+([RN-098](#rn-098--as-três-séries-do-contador-de-stroke-se-distinguem-por-serie)), para que limite e
+histórico não precisem distinguir de onde a vazão veio.
+
+Detalhes, tela e conferência: [cards-configuraveis §3](../requisitos/cards-configuraveis.md#vazão-por-cardã-produz-duas-séries).
+
+### RN-121 · O contador de pulsos do cardã vira em 999.999 e não gera pico
+**[DECIDIDO 2026-10-22]** O contador é o do LOGO!, `0..999.999`, e o LOGO! o zera sozinho ao passar disso. A
+diferença entre leituras é módulo
+1.000.000.
+
+| Caso | Regra |
+|---|---|
+| Queda com diferença módulo 1.000.000 ≤ 10.000 | Virada: conta normalmente |
+| Queda com diferença maior | Reinício: a janela recomeça |
+| Valor fora de `0..999.999` | Inválido: a janela recomeça |
+| Reconexão ao CLP | A janela recomeça |
+
+Enquanto a janela não tem 60 s, os dois cards mostram `--` com "Coletando dados — janela de 60 s"
+([RN-099](#rn-099--grandeza-sem-valor-não-é-publicada): sem valor, não publica).
+
+⚠️ **Falha de leitura não é bomba parada.** O contador é acumulado: a próxima leitura válida conta os
+pulsos do intervalo, e a média continua certa. Zero só aparece com a janela completa e o contador
+parado.

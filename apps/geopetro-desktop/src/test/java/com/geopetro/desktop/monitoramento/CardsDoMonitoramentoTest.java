@@ -33,6 +33,20 @@ class CardsDoMonitoramentoTest {
         assertTrue(LeituraDeCards.paraPublicar(painel).isEmpty(), "placeholder não é telemetria");
     }
 
+    /** RN-120: dois indicadores lado a lado, na posição do card; o stroke continua com três. */
+    @Test void vazaoPorCardaMostraRpmEVazaoNaPosicaoDoCard() {
+        var doc = documento(1, 3, card("PRESSAO_01", Tipo.PRESSAO, true, true, 0),
+                card("VAZAO_CARDA_01", Tipo.VAZAO_CARDA, true, true, 1),
+                card("CONTADOR_STROKE_01", Tipo.CONTADOR_STROKE, true, true, 2));
+        var painel = CardsDoMonitoramento.montar(doc, List.of(), true);
+        assertEquals(List.of("", "rpm", "vazao", "stroke", "vazao", "volumeAcumulado"),
+                painel.stream().map(Grandeza::serie).toList());
+        assertEquals(List.of("RPM", "bbl/min"), painel.subList(1, 3).stream().map(Grandeza::unidade).toList());
+        assertEquals("RPM · média de 60 s", MonitoringController.unidadeNaTela(painel.get(1)));
+        assertEquals("bbl/min · estimada · média de 60 s", MonitoringController.unidadeNaTela(painel.get(2)));
+        assertEquals("bbl/min", MonitoringController.unidadeNaTela(painel.get(4)), "o stroke nao muda");
+    }
+
     @Test void ativoInvisivelContinuaNaEstacaoEInativoSaiMesmoComLeituraAntiga() {
         var doc = documento(1, 1, card("PRESSAO_01", Tipo.PRESSAO, false, true, 0),
                 card("TEMPERATURA_01", Tipo.TEMPERATURA, true, false, 2),

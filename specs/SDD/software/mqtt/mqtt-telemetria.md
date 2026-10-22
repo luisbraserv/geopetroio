@@ -136,7 +136,7 @@ gravaria dado que não sabe interpretar.
 |---|---|---|---|
 | `dispositivoId` | string | Sim | `<TIPO>_<NN>`, gerado pelo sistema e imutável — [RN-081](../../negocio/regras/business-rules.md#rn-081--o-id-do-card-é-gerado-o-nome-é-rótulo) |
 | `serie` | string | Só multi-série | Ausente para card de uma grandeza. Ver [§4](#as-três-séries-do-contador-de-stroke) |
-| `tipo` | string | Sim | `PESO` · `TORQUE` · `PRESSAO` · `TEMPERATURA` · `NIVEL_TANQUE` · `CONTADOR_STROKE` |
+| `tipo` | string | Sim | `PESO` · `TORQUE` · `PRESSAO` · `TEMPERATURA` · `NIVEL_TANQUE` · `CONTADOR_STROKE` · `VAZAO_CARDA` |
 | `unidade` | string | Sim | Unidade de engenharia do `valor` |
 | `enderecoDb` | string | Sim | Onde foi lido neste ciclo: `DBW10`, `DBD0`. Substitui `codigoOrigem` |
 | `valor` | number | Sim | Grandeza convertida |
@@ -214,6 +214,16 @@ Elas se distinguem pelo campo **`serie`**, mantendo **um** `dispositivoId` — o
 | `CONTADOR_STROKE_01` | `stroke` | `stroke` | Contagem no ciclo |
 | `CONTADOR_STROKE_01` | `vazao` | `bbl/min` | Delta × constante da bomba, no intervalo |
 | `CONTADOR_STROKE_01` | `volumeAcumulado` | `bbl` | Contagem cumulativa × constante da bomba |
+
+**[DECIDIDO 2026-10-22]** Um card `VAZAO_CARDA` publica **duas**, pela mesma regra
+([RN-120](../../negocio/regras/business-rules.md#rn-120--vazão-por-cardã-produz-duas-séries)):
+
+| `dispositivoId` | `serie` | `unidade` | O que é |
+|---|---|---|---|
+| `VAZAO_CARDA_01` | `rpm` | `RPM` | Rotação do cardã, média de 60 s: `(N × 60) / (t × P)` |
+| `VAZAO_CARDA_01` | `vazao` | `bbl/min` | Vazão estimada, média de 60 s: `(N × K × 60) / t` |
+
+Enquanto a janela de 60 s não está completa, nenhuma das duas é publicada (RN-099, RN-121).
 
 `serie` é **ausente** para todo card de uma grandeza só — não há `serie: "valor"` genérico poluindo
 as outras leituras.

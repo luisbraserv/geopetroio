@@ -113,11 +113,11 @@ export const WELL_PHASE_TYPES: { value: WellPhaseType; label: string }[] = [
     </button>
   `,
   styles: [`
-    .acc-hint { margin: 0 0 10px; font-size: 11px; line-height: 1.4; color: #64748b; background: #f1f5f9; border-radius: 6px; padding: 7px 9px; }
+    .acc-hint { margin: 0 0 10px; font-size: 11px; line-height: 1.4; color: var(--text-secondary); background: var(--surface-subtle); border-radius: 6px; padding: 7px 9px; }
     .wsf-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
-    .wsf-phase { border: 1px solid rgba(77, 87, 97, .18); border-radius: 8px; padding: 9px; background: rgba(255,255,255,.6); }
+    .wsf-phase { border: 1px solid rgba(30, 36, 82, .18); border-radius: 8px; padding: 9px; background: rgba(255,255,255,.6); }
     .wsf-phase-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
-    .wsf-phase-index { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #e2e8f0; color: #475569; font-size: .68rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+    .wsf-phase-index { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--border-default); color: var(--text-secondary); font-size: .68rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
     .wsf-name { flex: 1; min-width: 0; }
     .btn-rm { flex-shrink: 0; }
 
@@ -127,14 +127,14 @@ export const WELL_PHASE_TYPES: { value: WellPhaseType; label: string }[] = [
     .wsf-field-hint { display: block; margin-top: 4px; color: var(--color-text-body); font-size: .68rem; line-height: 1.4; }
     input[type="number"], input[type="text"], select {
       width: 100%; min-height: 30px; box-sizing: border-box; padding: 5px 7px;
-      border: 1px solid rgba(77, 87, 97, .22); border-radius: 8px; background: rgba(255,255,255,.86);
+      border: 1px solid rgba(30, 36, 82, .22); border-radius: 8px; background: rgba(255,255,255,.86);
       color: var(--color-text-strong); font: inherit; font-size: .76rem; line-height: 1.25;
     }
-    input:focus, select:focus { outline: none; border-color: var(--color-focus); background: #fff; box-shadow: 0 0 0 3px rgba(66,145,225,.15); }
+    input:focus, select:focus { outline: none; border-color: var(--color-focus); background: #fff; box-shadow: 0 0 0 3px rgba(62, 122, 194,.15); }
 
     .wsf-issues { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-    .wsf-issue { display: flex; align-items: flex-start; gap: 6px; font-size: .69rem; line-height: 1.35; color: #991b1b; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 8px; }
-    .wsf-issue--warn { color: #854d0e; background: #fef9c3; border-color: #fde68a; }
+    .wsf-issue { display: flex; align-items: flex-start; gap: 6px; font-size: .69rem; line-height: 1.35; color: var(--danger-700); background: var(--color-error-soft); border: 1px solid var(--danger-200); border-radius: 6px; padding: 6px 8px; }
+    .wsf-issue--warn { color: var(--warning-700); background: var(--brand-orange-200); border-color: #fbc39d; }
     .wsf-issue-dot { flex-shrink: 0; width: 6px; height: 6px; margin-top: 5px; border-radius: 50%; background: currentColor; }
   `],
 })

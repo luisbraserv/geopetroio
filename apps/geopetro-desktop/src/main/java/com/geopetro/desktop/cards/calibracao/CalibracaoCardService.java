@@ -47,7 +47,8 @@ public class CalibracaoCardService {
 		Parametros p = card.parametros() == null ? Parametros.vazio() : card.parametros();
 		Parametros atualizados = new Parametros(rangeBar, p.minimoEscala(), p.maximoEscala(), p.unidade(),
 				p.forma(), p.raio(), p.altura(), p.comprimento(), p.largura(),
-				p.distanciaMinima(), p.distanciaMaxima(), p.constanteBomba());
+				p.distanciaMinima(), p.distanciaMaxima(), p.constanteBomba(),
+				p.constanteCarda(), p.pulsosPorVolta());
 		return new Card(card.dispositivoId(), card.nome(), card.tipo(), card.byteInicial(), card.ativo(),
 				card.visivel(), card.ordem(), atualizados);
 	}

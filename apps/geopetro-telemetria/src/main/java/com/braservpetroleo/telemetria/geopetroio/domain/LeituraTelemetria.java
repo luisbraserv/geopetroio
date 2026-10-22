@@ -24,7 +24,7 @@ package com.braservpetroleo.telemetria.geopetroio.domain;
  *
  * @param dispositivoId identificador gerado {@code <TIPO>_<NN>}, imutavel (RN-081)
  * @param serie         distingue as tres grandezas de um card de stroke (RN-098); {@code null} nas demais
- * @param tipo          PESO | TORQUE | PRESSAO | TEMPERATURA | NIVEL_TANQUE | CONTADOR_STROKE
+ * @param tipo          PESO | TORQUE | PRESSAO | TEMPERATURA | NIVEL_TANQUE | CONTADOR_STROKE | VAZAO_CARDA
  * @param unidade       unidade de engenharia do valor (lbf, psi, bbl/min, bbl, °C)
  * @param enderecoDb    onde foi lido neste ciclo (ex.: {@code DBW10}) — rastreabilidade
  * @param valor         grandeza convertida

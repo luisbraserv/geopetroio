@@ -18,19 +18,19 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 h1 {
   margin: 4px 0 0;
   font-size: 24px;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .page-subtitle {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 /* --- Indicador de conexão --- */
@@ -53,16 +53,16 @@ h1 {
 }
 
 .status--online {
-  color: #047857;
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+  color: var(--success-700);
+  background: var(--brand-green-200);
+  border-color: #d4dca0;
 }
 
 .status--conectando,
 .status--reconectando {
-  color: #b45309;
-  background: #fffbeb;
-  border-color: #fde68a;
+  color: var(--warning-700);
+  background: var(--brand-orange-200);
+  border-color: #fbc39d;
 }
 
 /* Pulsa enquanto tenta conectar: deixa claro que há algo em curso. */
@@ -77,9 +77,9 @@ h1 {
 }
 
 .status--offline {
-  color: #64748b;
-  background: #f1f5f9;
-  border-color: #e2e8f0;
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+  border-color: var(--border-default);
 }
 
 /* --- Controles --- */
@@ -99,12 +99,12 @@ h1 {
 
 .control-field span {
   font-size: 13px;
-  color: #334155;
+  color: var(--text-primary);
 }
 
 .control-field select {
   padding: 9px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   font-size: 14px;
   background: #fff;
@@ -119,23 +119,23 @@ h1 {
 }
 
 .alerta--erro {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+  background: var(--color-error-soft);
+  border-color: var(--danger-200);
+  color: var(--danger-700);
 }
 
 .alerta--atencao {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background: var(--brand-orange-200);
+  border-color: #fbc39d;
+  color: var(--warning-700);
 }
 
 .vazio {
   padding: 32px;
   text-align: center;
-  color: #64748b;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  color: var(--text-secondary);
+  background: var(--surface-canvas);
+  border: 1px dashed var(--border-strong);
   border-radius: 12px;
 }
 
@@ -178,7 +178,7 @@ h1 {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: var(--text-primary);
 }
 
 /* Desconectado: os valores continuam visíveis mas esmaecidos, sinalizando que
@@ -193,7 +193,7 @@ h1 {
   gap: 4px;
   padding: 18px 20px;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
 }
@@ -202,20 +202,27 @@ h1 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .card__valor {
   font-size: 30px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 
 .card__unidade {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
+}
+
+/* RN-120: "média de 60 s", "estimada" — o que o número é, abaixo da unidade. */
+.card__nota {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-tertiary);
 }
 
 /* --- Alarme --- */
@@ -224,8 +231,8 @@ h1 {
    tela, e um destaque só nos cards obrigaria a varrer a grade para descobrir onde ele está. */
 .alarmes {
   border-radius: 12px;
-  border: 1px solid #fecaca;
-  background: #fef2f2;
+  border: 1px solid var(--danger-200);
+  background: var(--color-error-soft);
   padding: 14px 16px;
 }
 
@@ -233,7 +240,7 @@ h1 {
   margin: 0 0 10px;
   font-size: 14px;
   font-weight: 700;
-  color: #b91c1c;
+  color: var(--danger-700);
 }
 
 .alarmes__lista {
@@ -255,8 +262,8 @@ h1 {
   padding-left: 10px;
 }
 
-.alarme--critico { color: #b91c1c; }
-.alarme--atencao { color: #92400e; }
+.alarme--critico { color: var(--danger-700); }
+.alarme--atencao { color: var(--warning-700); }
 
 .alarme__nivel {
   font-weight: 700;
@@ -265,20 +272,20 @@ h1 {
   letter-spacing: 0.05em;
 }
 
-.alarme__grandeza { font-weight: 600; color: #0f172a; }
-.alarme__detalhe { color: #475569; }
-.alarme__desde { color: #94a3b8; margin-left: auto; font-variant-numeric: tabular-nums; }
+.alarme__grandeza { font-weight: 600; color: var(--text-primary); }
+.alarme__detalhe { color: var(--text-secondary); }
+.alarme__desde { color: var(--text-tertiary); margin-left: auto; font-variant-numeric: tabular-nums; }
 
 /* A borda e o rótulo carregam a informação junto com a cor: quem não distingue vermelho de âmbar
    ainda lê "Crítico" e "Atenção" no card. */
 .card--atencao {
-  border-color: #fbbf24;
-  background: #fffbeb;
+  border-color: var(--warning-500);
+  background: var(--brand-orange-200);
 }
 
 .card--critico {
-  border-color: #ef4444;
-  background: #fef2f2;
+  border-color: var(--danger-600);
+  background: var(--color-error-soft);
 }
 
 .card__alarme {
@@ -289,15 +296,15 @@ h1 {
   letter-spacing: 0.05em;
 }
 
-.card--atencao .card__alarme { color: #92400e; }
-.card--critico .card__alarme { color: #b91c1c; }
+.card--atencao .card__alarme { color: var(--warning-700); }
+.card--critico .card__alarme { color: var(--danger-700); }
 
 .rodape {
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #64748b;
-  border-top: 1px solid #e2e8f0;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-default);
   padding-top: 12px;
 }

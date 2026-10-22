@@ -140,6 +140,9 @@ public class CardsConfigController {
 	@FXML private TextField txtDistanciaMaxima;
 	@FXML private VBox paramStroke;
 	@FXML private TextField txtConstanteBomba;
+	@FXML private VBox paramCarda;
+	@FXML private TextField txtConstanteCarda;
+	@FXML private TextField txtPulsosPorVolta;
 
 	private final ObservableList<Card> rascunho = FXCollections.observableArrayList();
 
@@ -272,7 +275,8 @@ public class CardsConfigController {
 	private void configurarEscutasDoFormulario() {
 		List<TextField> campos = List.of(txtNome, txtByteInicial, txtRangeBar, txtMinimoEscala,
 				txtMaximoEscala, txtRaio, txtAltura, txtComprimento, txtLargura,
-				txtDistanciaMinima, txtDistanciaMaxima, txtConstanteBomba);
+				txtDistanciaMinima, txtDistanciaMaxima, txtConstanteBomba,
+				txtConstanteCarda, txtPulsosPorVolta);
 		campos.forEach(campo -> campo.textProperty().addListener((obs, a, b) -> aplicarNoSelecionado()));
 
 		chkAtivo.selectedProperty().addListener((obs, a, b) -> {
@@ -293,6 +297,10 @@ public class CardsConfigController {
 			// onde a forma gravada e quem manda.
 			if (!preenchendo && atual == Tipo.NIVEL_TANQUE && cbFormaTanque.getValue() == null) {
 				cbFormaTanque.setValue(FormaTanque.CILINDRICO_VERTICAL);
+			}
+			// RN-120: o card novo nasce com um pulso por volta, o caso de um alvo so no carda.
+			if (!preenchendo && atual == Tipo.VAZAO_CARDA && txtPulsosPorVolta.getText().isBlank()) {
+				txtPulsosPorVolta.setText("1");
 			}
 			aplicarNoSelecionado();
 		});
@@ -392,6 +400,8 @@ public class CardsConfigController {
 			txtDistanciaMinima.setText(numero(p.distanciaMinima()));
 			txtDistanciaMaxima.setText(numero(p.distanciaMaxima()));
 			txtConstanteBomba.setText(numero(p.constanteBomba()));
+			txtConstanteCarda.setText(numero(p.constanteCarda()));
+			txtPulsosPorVolta.setText(p.pulsosPorVolta() == null ? "" : String.valueOf(p.pulsosPorVolta()));
 
 			mostrarParametrosDe(card.tipo());
 			mostrarDimensoesDe(p.forma());
@@ -457,6 +467,9 @@ public class CardsConfigController {
 					null);
 			case CONTADOR_STROKE -> new Parametros(null, null, null, null, null, null, null, null,
 					null, null, null, decimal(txtConstanteBomba.getText()));
+			case VAZAO_CARDA -> new Parametros(null, null, null, null, null, null, null, null,
+					null, null, null, null,
+					decimal(txtConstanteCarda.getText()), inteiroOuNulo(txtPulsosPorVolta.getText()));
 		};
 	}
 
@@ -466,6 +479,7 @@ public class CardsConfigController {
 		exibir(paramTemperatura, escolhido == Tipo.TEMPERATURA);
 		exibir(paramTanque, escolhido == Tipo.NIVEL_TANQUE);
 		exibir(paramStroke, escolhido == Tipo.CONTADOR_STROKE);
+		exibir(paramCarda, escolhido == Tipo.VAZAO_CARDA);
 		boolean calibracaoLocal = escolhido == Tipo.PESO || escolhido == Tipo.TORQUE;
 		exibir(paramCalibracaoLocal, calibracaoLocal);
 		if (calibracaoLocal) {
@@ -807,10 +821,12 @@ public class CardsConfigController {
 		if (valor == null) {
 			return "";
 		}
-		// Sem o ".0" quando e inteiro: "250" le melhor que "250.0" num campo de range.
-		return valor == Math.floor(valor) && !valor.isInfinite()
-				? String.valueOf(valor.longValue())
-				: String.valueOf(valor);
+		if (valor.isInfinite() || valor.isNaN()) {
+			return String.valueOf(valor);
+		}
+		// Sem o ".0" quando e inteiro ("250", nao "250.0") e sem notacao cientifica: a constante do
+		// carda tem 8 casas ou mais, e String.valueOf(0.00012345) escreveria "1.2345E-4".
+		return java.math.BigDecimal.valueOf(valor).stripTrailingZeros().toPlainString();
 	}
 
 	/** Campo em branco ou meio digitado não é erro: vira {@code null} e o backend cobra. */
@@ -820,6 +836,18 @@ public class CardsConfigController {
 		}
 		try {
 			return Double.valueOf(texto.trim().replace(',', '.'));
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	/** Como {@link #decimal}: em branco, meio digitado ou fracionario vira {@code null} e o backend cobra. */
+	private static Integer inteiroOuNulo(String texto) {
+		if (texto == null || texto.isBlank()) {
+			return null;
+		}
+		try {
+			return Integer.valueOf(texto.trim());
 		} catch (NumberFormatException e) {
 			return null;
 		}

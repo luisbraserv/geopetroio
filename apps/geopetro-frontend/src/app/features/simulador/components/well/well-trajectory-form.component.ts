@@ -36,15 +36,15 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular
     </fieldset>
   `,
   styles: [`
-    fieldset { margin: 0 0 12px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    fieldset { margin: 0 0 12px; padding: 10px; border: 1px solid var(--border-strong); border-radius: 6px; }
     legend, label, th { font-size: .75rem; }
-    p { font-size: .7rem; color: #475569; line-height: 1.5; }
+    p { font-size: .7rem; color: var(--text-secondary); line-height: 1.5; }
     .survey-scroll { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
     td, th { padding: 3px; text-align: left; }
     input[type=number] { width: 100%; min-width: 60px; box-sizing: border-box; }
-    button, input[type=number] { padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; font: inherit; font-size: .75rem; }
-    button { cursor: pointer; background: #f1f5f9; }
+    button, input[type=number] { padding: 5px; border: 1px solid var(--border-strong); border-radius: 4px; font: inherit; font-size: .75rem; }
+    button { cursor: pointer; background: var(--surface-subtle); }
   `],
 })
 export class WellTrajectoryFormComponent {

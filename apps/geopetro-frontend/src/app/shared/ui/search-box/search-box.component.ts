@@ -24,16 +24,16 @@ import { FormsModule } from '@angular/forms';
     .search-box {
       display: inline-flex; align-items: center; gap: 0.5rem; width: 100%;
       min-height: 40px; padding: 0 0.75rem;
-      border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
-      color: #64748b; width: min(360px, 100%);
+      border: 1px solid var(--border-strong); border-radius: 10px; background: #fff;
+      color: var(--text-secondary); width: min(360px, 100%);
     }
-    .search-box:focus-within { border-color: rgba(31,111,235,.6); box-shadow: 0 0 0 3px rgba(31,111,235,.14); }
+    .search-box:focus-within { border-color: rgba(62, 122, 194,.6); box-shadow: 0 0 0 3px rgba(62, 122, 194,.14); }
     .search-box input {
       border: 0 !important; outline: 0; background: transparent !important; flex: 1;
-      min-height: auto !important; padding: 0 !important; color: #1f2937; font: inherit;
+      min-height: auto !important; padding: 0 !important; color: var(--text-primary); font: inherit;
     }
     .search-box__clear {
-      border: 0 !important; background: transparent !important; color: #94a3b8 !important;
+      border: 0 !important; background: transparent !important; color: var(--text-tertiary) !important;
       font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 0 0.2rem !important; min-height: auto !important;
     }
   `],

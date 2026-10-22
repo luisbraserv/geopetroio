@@ -32,6 +32,9 @@ public class JavaFxApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
+        // Antes da primeira tela: o CSS do design system referencia as fontes pelo nome.
+        FontesDaMarca.carregar();
+
         FXMLLoader loader = new FXMLLoader(
                 getClass().getResource("/carta.operacao.fxml")
         );

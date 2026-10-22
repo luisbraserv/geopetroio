@@ -147,7 +147,7 @@ public class GenerateOperationChartController {
         }
         if (caixas.isEmpty()) {
             Label vazio = new Label("Nenhum dado gravado no periodo escolhido.");
-            vazio.setStyle("-fx-font-size: 12; -fx-text-fill: #5a667a;");
+            vazio.setStyle("-fx-font-size: 12; -fx-text-fill: #5f6b85;");
             painelSeries.getChildren().add(vazio);
         }
     }

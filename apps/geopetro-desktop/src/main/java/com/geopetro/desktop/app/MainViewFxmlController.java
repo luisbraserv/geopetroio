@@ -43,13 +43,13 @@ import java.io.InputStream;
 public class MainViewFxmlController {
 
     private static final Logger logger = LoggerFactory.getLogger(MainViewFxmlController.class);
-    // Aba ativa conforme o design system: sublinhado no laranja de acento, sem preenchimento.
+    // Aba ativa conforme o design system: sublinhado no amarelo de acento, sem preenchimento.
     // O vermelho anterior competia com os alertas de estado — a mesma cor dizia "voce esta aqui"
     // e "algo esta errado".
-    // Menu sobre a barra azul: texto claro, ativo sublinhado no laranja de acento.
+    // Menu sobre a barra azul: texto claro, ativo sublinhado no amarelo de acento.
     // A borda inferior existe também no inativo, transparente, para o texto não saltar 3px
     // ao trocar de aba.
-    private static final String ACTIVE_MENU_STYLE = "-fx-background-color: transparent; -fx-border-color: transparent transparent #d4852f transparent; -fx-border-width: 0 0 3 0; -fx-text-fill: #ffffff; -fx-font-weight: bold; -fx-padding: 10 16;";
+    private static final String ACTIVE_MENU_STYLE = "-fx-background-color: transparent; -fx-border-color: transparent transparent #e8aa21 transparent; -fx-border-width: 0 0 3 0; -fx-text-fill: #ffffff; -fx-font-weight: bold; -fx-padding: 10 16;";
     private static final String INACTIVE_MENU_STYLE = "-fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 0 0 3 0; -fx-text-fill: rgba(255,255,255,0.72); -fx-font-weight: bold; -fx-padding: 10 16;";
 
     @Autowired
@@ -133,7 +133,7 @@ public class MainViewFxmlController {
     private void updatePlcStatus() {
         boolean connected = plcConnectionService.isConnected();
         plcStatusLabel.setText(connected ? "PLC Conectado" : "PLC Desconectado");
-        plcStatusCircle.setFill(connected ? Color.web("#2e8b3a") : Color.web("#d92d20"));
+        plcStatusCircle.setFill(connected ? Color.web("#a8b937") : Color.web("#d92d20"));
         btnPlcConnection.setText(connected ? "\u23fb Desconectar" : "\u26d3 Conectar");
         // Conectar e acao comum (primario azul); desconectar interrompe a leitura em curso, entao
         // usa o estilo de acao destrutiva. Antes os dois eram vermelhos e nada distinguia um do
@@ -211,14 +211,14 @@ public class MainViewFxmlController {
         VBox content = new VBox(14);
         content.setAlignment(Pos.CENTER);
         content.setPadding(new Insets(24));
-        content.setStyle("-fx-background-color: white; -fx-background-radius: 7; -fx-border-color: #d6deeb; -fx-border-radius: 7;");
+        content.setStyle("-fx-background-color: white; -fx-background-radius: 7; -fx-border-color: #dadce8; -fx-border-radius: 7;");
 
         content.getChildren().add(createLoadingGraphic());
 
         Label label = new Label("Conectando e verificando a leitura...");
         label.setWrapText(true);
         label.setAlignment(Pos.CENTER);
-        label.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #051833;");
+        label.setStyle("-fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: #293684;");
         content.getChildren().add(label);
 
         modal.setScene(new Scene(content, 260, 170));
@@ -329,7 +329,7 @@ public class MainViewFxmlController {
 
     private void updateInternetStatus(boolean online) {
         internetStatusLabel.setText(online ? "Internet conectada" : "Sem internet");
-        internetStatusCircle.setFill(online ? Color.web("#2e8b3a") : Color.web("#d92d20"));
+        internetStatusCircle.setFill(online ? Color.web("#a8b937") : Color.web("#d92d20"));
     }
 
     /**

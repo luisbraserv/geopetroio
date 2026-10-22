@@ -45,14 +45,14 @@ import { trajectoryFromForm } from '../../models/well-trajectory.form';
     </fieldset>
   `,
   styles: [`
-    fieldset { border: 1px solid #cbd5e1; border-radius: 8px; margin: 8px 0 14px; padding: 10px; }
+    fieldset { border: 1px solid var(--border-strong); border-radius: 8px; margin: 8px 0 14px; padding: 10px; }
     legend { font-weight: 700; }
     p, label, legend { font-size: .75rem; line-height: 1.5; }
     .row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-    input, select, button { font: inherit; font-size: .75rem; padding: 6px; border: 1px solid #cbd5e1; border-radius: 5px; max-width: 100%; }
+    input, select, button { font: inherit; font-size: .75rem; padding: 6px; border: 1px solid var(--border-strong); border-radius: 5px; max-width: 100%; }
     label, input { display: block; } input { width: 100%; box-sizing: border-box; }
-    button { background: #eff6ff; cursor: pointer; } button:disabled { opacity: .5; cursor: default; }
-    select { min-width: 0; flex: 1; } .warning { color: #991b1b; }
+    button { background: var(--brand-midblue-200); cursor: pointer; } button:disabled { opacity: .5; cursor: default; }
+    select { min-width: 0; flex: 1; } .warning { color: var(--danger-700); }
   `],
 })
 export class PocoSelectorComponent implements OnChanges {

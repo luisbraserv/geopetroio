@@ -63,28 +63,28 @@ import type { CriticalPointView, OperationCriticalPoints } from '../../services/
     }
   `,
   styles: [`
-    .pw-card { padding: 16px; border: 1px solid var(--color-card-border, #d6deeb); border-radius: 9px; background: var(--color-card, #fff); }
-    header h3 { margin: 0; color: var(--color-text-strong, #051833); font-size: .94rem; }
-    header p { margin: 4px 0 10px; color: var(--color-text-body, #64748b); font-size: .73rem; }
-    .pw-worst { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid #dbe5f1; border-radius: 8px; background: #f8fafc; margin-bottom: 10px; }
+    .pw-card { padding: 16px; border: 1px solid var(--color-card-border); border-radius: 9px; background: var(--color-card); }
+    header h3 { margin: 0; color: var(--color-text-strong); font-size: .94rem; }
+    header p { margin: 4px 0 10px; color: var(--color-text-body); font-size: .73rem; }
+    .pw-worst { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--surface-canvas); margin-bottom: 10px; }
     dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 14px; margin: 0; }
-    dt { color: #64748b; font-size: .66rem; }
-    dd { margin: 0; color: #0f172a; font-size: .8rem; font-weight: 700; }
+    dt { color: var(--text-secondary); font-size: .66rem; }
+    dd { margin: 0; color: var(--text-primary); font-size: .8rem; font-weight: 700; }
     .pw-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: .7rem; font-weight: 800; white-space: nowrap; }
-    .pw-badge[data-status="normal"] { background: #dcfce7; color: #166534; }
-    .pw-badge[data-status="atencao"] { background: #fef9c3; color: #854d0e; }
-    .pw-badge[data-status="alerta"] { background: #ffedd5; color: #9a3412; }
-    .pw-badge[data-status="critico"] { background: #fee2e2; color: #b91c1c; }
-    .pw-badge[data-status="fratura"] { background: #b91c1c; color: #fff; }
-    .pw-badge[data-status="influxo"] { background: #0369a1; color: #fff; }
+    .pw-badge[data-status="normal"] { background: var(--brand-green-200); color: var(--success-700); }
+    .pw-badge[data-status="atencao"] { background: var(--brand-yellow-200); color: var(--brand-blue-700); }
+    .pw-badge[data-status="alerta"] { background: var(--brand-orange-200); color: var(--warning-700); }
+    .pw-badge[data-status="critico"] { background: var(--color-error-soft); color: var(--danger-700); }
+    .pw-badge[data-status="fratura"] { background: var(--danger-700); color: #fff; }
+    .pw-badge[data-status="influxo"] { background: var(--brand-midblue-700); color: #fff; }
     .pw-table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: .74rem; }
-    th, td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
-    th { color: #475569; font-weight: 750; background: #f8fafc; }
-    .pw-row--worst td { background: #fff7ed; }
-    .pw-empty { color: #64748b; font-size: .75rem; }
-    .pw-casing { margin: 10px 0 0; padding: 7px 9px; border-left: 3px solid #64748b; border-radius: 4px; background: #f8fafc; color: #475569; font-size: .72rem; }
-    .pw-casing--bad { border-left-color: #b91c1c; background: #fef2f2; color: #991b1b; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid var(--border-default); text-align: left; vertical-align: top; }
+    th { color: var(--text-secondary); font-weight: 750; background: var(--surface-canvas); }
+    .pw-row--worst td { background: var(--brand-orange-200); }
+    .pw-empty { color: var(--text-secondary); font-size: .75rem; }
+    .pw-casing { margin: 10px 0 0; padding: 7px 9px; border-left: 3px solid var(--text-secondary); border-radius: 4px; background: var(--surface-canvas); color: var(--text-secondary); font-size: .72rem; }
+    .pw-casing--bad { border-left-color: var(--danger-700); background: var(--color-error-soft); color: var(--danger-700); }
     @media (max-width: 760px) { dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pw-worst { grid-template-columns: 1fr; } }
   `],
 })

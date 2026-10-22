@@ -39,17 +39,17 @@ h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--color-text-str
 
 select, input[type="datetime-local"] {
   height: 2.45rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: #fff;
-  color: #1f2937;
+  color: var(--text-primary);
   padding: 0 0.7rem;
   font: inherit;
 }
 
 select:focus, input:focus {
-  border-color: rgba(82, 140, 156, 0.72);
-  outline: 3px solid rgba(82, 140, 156, 0.16);
+  border-color: rgba(62, 122, 194, 0.72);
+  outline: 3px solid rgba(62, 122, 194, 0.16);
 }
 
 .alerta {
@@ -63,22 +63,22 @@ select:focus, input:focus {
   line-height: 1.5;
 }
 
-.alerta--erro { border: 1px solid #f2b8b5; background: #fdf2f2; color: #b42318; }
-.alerta--aviso { border: 1px solid #f4c96b; background: #fff8e6; color: #7a4b00; }
+.alerta--erro { border: 1px solid var(--danger-200); background: var(--color-error-soft); color: var(--danger-700); }
+.alerta--aviso { border: 1px solid #fbc39d; background: var(--brand-orange-200); color: var(--warning-700); }
 
 .lista { display: flex; flex-direction: column; gap: 0.6rem; }
 
 .episodio {
   background: #fff;
   border: 1px solid var(--color-border);
-  border-left: 3px solid #cbd5e1;
+  border-left: 3px solid var(--border-strong);
   border-radius: 8px;
   padding: 0.75rem 0.9rem;
   box-shadow: var(--shadow-card);
 }
 
-.episodio--critico { border-left-color: #ef4444; }
-.episodio--atencao { border-left-color: #fbbf24; }
+.episodio--critico { border-left-color: var(--danger-600); }
+.episodio--atencao { border-left-color: var(--warning-500); }
 
 .episodio__resumo {
   display: grid;
@@ -95,8 +95,8 @@ select:focus, input:focus {
   letter-spacing: 0.05em;
 }
 
-.episodio--critico .episodio__nivel { color: #b91c1c; }
-.episodio--atencao .episodio__nivel { color: #92400e; }
+.episodio--critico .episodio__nivel { color: var(--danger-700); }
+.episodio--atencao .episodio__nivel { color: var(--warning-700); }
 
 .episodio__grandeza { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
 .episodio__rotulo { font-size: 0.86rem; font-weight: 700; color: var(--color-text-strong); }
@@ -115,10 +115,10 @@ select:focus, input:focus {
 
 .episodio__duracao { font-weight: 700; color: var(--color-text-primary); }
 /* Em curso e um estado, nao uma duracao: a cor separa os dois sem exigir leitura atenta. */
-.episodio__duracao--aberto { color: #b91c1c; }
+.episodio__duracao--aberto { color: var(--danger-700); }
 
 .episodio__detalhe {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   background: #fff;
   color: var(--color-text-primary);
@@ -130,7 +130,7 @@ select:focus, input:focus {
   white-space: nowrap;
 }
 
-.episodio__detalhe:hover { background: #f8fafc; }
+.episodio__detalhe:hover { background: var(--surface-canvas); }
 
 .fatos {
   list-style: none;
