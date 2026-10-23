@@ -174,7 +174,7 @@
                </VBox>
 
                <Label styleClass="ajuda"
-                      text="Estas credenciais são exclusivas da transmissão automática em tempo real. Buscar e configurar Unidades reutiliza a sessão ADMIN ou SUPORTE já autenticada." />
+                      text="É com este usuário que a estação busca os cards da unidade e transmite em tempo real. Vazio, recebe o login de quem desbloqueou esta tela." />
             </VBox>
 
             <!--

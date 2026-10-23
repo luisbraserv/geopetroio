@@ -26,10 +26,13 @@ import com.geopetro.desktop.configuracoes.SettingsService;
  * app fechar.
  *
  * <h2>Vive só em memória</h2>
- * Nada é gravado em disco. Persistir credencial na borda é o oposto do que
- * {@code SEC-011} já registra como risco aceito: existe <b>uma</b> credencial de serviço para toda a
- * frota, e um segundo segredo na máquina da unidade ampliaria a superfície sem necessidade —
- * configurar é ato raro e deliberado.
+ * A sessão em si não é gravada em disco: fechar o app a encerra. A credencial dela só chega ao disco
+ * por um caminho, e visível: a tela de Configurações a oferece como usuário de serviço quando a
+ * estação ainda não tem um ({@link #credencial()}), e quem salva grava o que está no campo.
+ *
+ * <p>⚠️ Antes de 2026-10-23 a estação recém-instalada exigia o usuário de serviço digitado à parte.
+ * Quem escolhia a unidade e salvava deixava o campo vazio, o canal de tempo real nem tentava
+ * conectar, e a tela de Monitoramento ficava sem os cards que a unidade já tinha no servidor.
  *
  * <h2>Sem rede não se configura</h2>
  * Por desenho. Não há validação local de credencial, o que exigiria guardar hash de senha na borda.
@@ -64,7 +67,13 @@ public class SessaoConfiguracao {
 		this.login = login;
 	}
 
-	private record Sessao(String usuario, String token, Instant expiraEm) {
+	private record Sessao(String usuario, String senha, String token, Instant expiraEm) {
+		@Override public String toString() { return "Sessao[" + usuario + "]"; }
+	}
+
+	/** Login de quem abriu a sessão — ver {@link #credencial()}. */
+	public record Credencial(String usuario, String senha) {
+		@Override public String toString() { return "Credencial[" + usuario + "]"; }
 	}
 
 	/** O que a tela precisa mostrar quando o login não passa. */
@@ -144,7 +153,7 @@ public class SessaoConfiguracao {
 			return new Resultado.PerfilSemPermissao(usuario.trim());
 		}
 
-		atual = new Sessao(usuario.trim(), identidade.token(), expiracao(identidade.token()).orElse(null));
+		atual = new Sessao(usuario.trim(), senha, identidade.token(), expiracao(identidade.token()).orElse(null));
 
 		// O endereco so e gravado depois de o servidor ACEITAR a credencial: um endereco digitado
 		// errado nao substitui o que estava funcionando.
@@ -172,6 +181,18 @@ public class SessaoConfiguracao {
 	public synchronized Optional<String> token() {
 		descartarSeExpirada();
 		return Optional.ofNullable(atual).map(Sessao::token);
+	}
+
+	/**
+	 * Usuário e senha de quem abriu a sessão, para a tela de Configurações oferecer como usuário de
+	 * serviço da estação.
+	 *
+	 * <p>É a mesma credencial que acabou de autenticar no Core, então o canal de tempo real conecta
+	 * com ela. O token não serve no lugar: expira, e o canal precisa entrar sozinho a cada reinício.
+	 */
+	public synchronized Optional<Credencial> credencial() {
+		descartarSeExpirada();
+		return Optional.ofNullable(atual).map(s -> new Credencial(s.usuario(), s.senha()));
 	}
 
 	/** Encerra antes de fechar o app. Fechar sem chamar isto tem o mesmo efeito: nada persiste. */

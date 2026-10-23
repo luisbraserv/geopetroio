@@ -115,6 +115,32 @@ public class SettingsController {
         faixaPortao.setVisible(!liberado);
         faixaPortao.setManaged(!liberado);
         lblPortao.setText("Estas configurações exigem ADMIN ou SUPORTE.");
+
+        if (liberado) {
+            preencherUsuarioDeServico();
+        }
+    }
+
+    /**
+     * Estação sem usuário de serviço recebe o login de quem desbloqueou a tela.
+     *
+     * <p>⚠️ <b>Sem usuário de serviço a estação não mostra cards.</b> O canal de tempo real é quem
+     * traz o documento de cards da unidade, e ele não conecta sem credencial. Numa instalação nova
+     * o campo vinha vazio, quem configurava escolhia a unidade e salvava, e o Monitoramento ficava
+     * sem os cards que a unidade já tinha no servidor.
+     *
+     * <p>Só preenche campo vazio: um usuário de serviço já gravado não é trocado pelo de quem abriu
+     * a tela para mudar outra coisa.
+     */
+    private void preencherUsuarioDeServico() {
+        String usuario = txtBackendUsuario.getText();
+        if (usuario != null && !usuario.isBlank()) {
+            return;
+        }
+        sessao.credencial().ifPresent(credencial -> {
+            txtBackendUsuario.setText(credencial.usuario());
+            txtBackendSenha.setText(credencial.senha());
+        });
     }
 
     private void desbloquear() {

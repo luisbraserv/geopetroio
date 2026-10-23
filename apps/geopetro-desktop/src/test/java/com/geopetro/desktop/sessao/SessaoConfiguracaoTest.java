@@ -205,14 +205,29 @@ class SessaoConfiguracaoTest {
 	}
 
 	@Test
-	@DisplayName("a senha vai no corpo do login e nao fica na sessao")
-	void senhaNaoFicaNaSessao() {
+	@DisplayName("a credencial de quem abriu a sessao fica disponivel para virar usuario de servico")
+	void credencialDaSessao() {
 		var sessao = sessao();
-		sessao.abrir("ana", "segredo-que-nao-persiste");
+		sessao.abrir("ana", "segredo");
 
-		assertTrue(chamadas.peek().contains("segredo-que-nao-persiste"), "vai para o backend");
-		// A sessao guarda o token, nunca a credencial: nada de re-login silencioso depois.
+		assertTrue(chamadas.peek().contains("segredo"), "vai para o backend");
 		assertEquals("t", sessao.token().orElseThrow());
+		// A tela de Configuracoes oferece esta credencial a estacao sem usuario de servico: sem ela
+		// o canal de tempo real nao conecta e o Monitoramento fica sem cards.
+		var credencial = sessao.credencial().orElseThrow();
+		assertEquals("ana", credencial.usuario());
+		assertEquals("segredo", credencial.senha());
+		assertFalse(credencial.toString().contains("segredo"), "a senha nao vai parar em log");
+	}
+
+	@Test
+	@DisplayName("sessao encerrada nao oferece credencial")
+	void semSessaoSemCredencial() {
+		var sessao = sessao();
+		sessao.abrir("ana", "segredo");
+		sessao.encerrar();
+
+		assertTrue(sessao.credencial().isEmpty());
 	}
 
 	@Test
