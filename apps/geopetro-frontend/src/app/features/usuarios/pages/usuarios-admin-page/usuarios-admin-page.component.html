@@ -132,7 +132,7 @@
         <div class="chips">
           <span class="chip chip--locked">{{ roleLabel(roleBase()) }}</span>
           @for (role of rolesAdicionais; track role) {
-            @if (role !== 'UNIDADE' || tipo() === 'INTERNO') {
+            @if (roleDisponivel(role)) {
               <button type="button" class="chip" [class.chip--on]="roleSelecionada(role)" (click)="alternarRole(role, !roleSelecionada(role))">
                 {{ roleLabel(role) }}
               </button>

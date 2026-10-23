@@ -69,8 +69,22 @@ export class UsuariosAdminPageComponent {
     'SIMULADOR',
     'CIMENTACAO',
     'UNIDADE',
+    'SUPORTE',
     'ADMIN',
   ];
+
+  /**
+   * Roles que só um interno recebe.
+   *
+   * `SUPORTE` está aqui porque grava os cards de **qualquer** unidade, sem escopo (RN-086): num
+   * cliente, reconfiguraria sondas que não são dele. Ficou fora de `rolesAdicionais` de 2026-09-30
+   * a 2026-10-23, e sem ela ninguém entrava nas Configurações do Desktop a não ser como `ADMIN`.
+   */
+  protected readonly rolesSoInterno: readonly UserRole[] = ['UNIDADE', 'SUPORTE'];
+
+  protected roleDisponivel(role: UserRole): boolean {
+    return this.tipo() === 'INTERNO' || !this.rolesSoInterno.includes(role);
+  }
 
   protected readonly form = {
     id: 1,
@@ -116,7 +130,7 @@ export class UsuariosAdminPageComponent {
     if (this.editando()) return;
     this.tipo.set(tipo);
     if (tipo === 'CLIENTE') {
-      this.rolesSel.update((roles) => roles.filter((role) => role !== 'UNIDADE'));
+      this.rolesSel.update((roles) => roles.filter((role) => !this.rolesSoInterno.includes(role)));
     }
   }
 
